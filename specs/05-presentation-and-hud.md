@@ -77,10 +77,27 @@ Scenario: Time controls affect timing only, never simulation content
 - Whatever GUT can drive without a real render context (the pure-function pieces above)
   gets automated coverage; anything requiring an actual visual frame (does it *look*
   right) is manual playtest, per the plan's Verification section — this is stated
-  plainly rather than claimed as automated.
+  plainly rather than claimed as automated. `TickInterpolation`'s math is fully
+  unit-tested; `LaneView` itself has only a construction smoke test (catches a real
+  type-inference compile error hit while writing this item) plus a direct test of its
+  position-snapshot logic — its `_ready`/`_process`/`_draw` engine callbacks are
+  genuinely deferred to manual playtest once a running scene exists (item 11).
 - `LaneView` and `HUD` both only ever read simulation state via `SimEvents` payloads or
   direct read-only queries (e.g. `CommandQueue.pending_commands` for display) — neither
   holds simulation state of its own that could drift from the source of truth.
+- **`LaneView` self-subscribes to `SimEvents.tick_advanced` in `_ready()`** — unlike
+  every `sim/` `RefCounted` component in this project (which take an explicit
+  `on_x()` method instead, per Decision-tier reasoning in `specs/01`/`03`/`04`), a
+  Node's scene-tree lifecycle handles signal disconnection automatically when it
+  exits the tree, so the reference-lifetime leak that ruled out self-subscription for
+  `RefCounted` classes doesn't apply to Nodes. Self-subscription here is the
+  idiomatic Godot pattern, not an inconsistency with the `sim/` convention.
+- **Scoped to this slice's actual content shape**: `LaneView` tracks at most one
+  player wave and one moving blocker (Hero Party) as two named positions, not a
+  generic multi-entity id scheme, since `specs/00`'s scripted scenario never has
+  simultaneous waves. A future map needing that would first need `LaneSimulation` to
+  hand out stable per-entity ids — not built ahead of that real need, same reasoning
+  already applied to `ScriptedBeatWatcher` (`specs/06`).
 
 ## Rubric answers (qualitative, spec-baseline)
 
@@ -94,9 +111,13 @@ Scenario: Time controls affect timing only, never simulation content
   a new `if` branch.
 - `lsp-contract-scope`: not applicable — no shared contract with multiple
   implementations at this layer yet.
-- `isp-fit`: `LaneView`'s public surface (other than its rendering pass) is empty — it
-  only reacts to signals and read-only queries, no methods for other code to call.
-  `HUD` similarly exposes no methods beyond its own signal handlers.
+- `isp-fit`: revised from this spec's original anticipation — `LaneView` ended up with
+  one real public method beyond its engine callbacks, `snap_to_current_tick()` (called
+  by time controls in item 10, to avoid a visible partial-interpolation frame on
+  skip-to-marker per this spec's own scenario), plus public `lane`/
+  `tick_duration_seconds`/`node_spacing` fields the composition root sets — still a
+  small, focused surface, just not literally zero. `HUD` (item 10) remains
+  unimplemented as of this item.
 - `dip-direction`: this spec *is* the DIP boundary — every dependency here points from
   presentation into simulation (`SimEvents`, `CommandQueue`, read-only queries), never
   the reverse. The dependency-direction check (`ci/godot/`) should treat any import
