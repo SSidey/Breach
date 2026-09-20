@@ -98,13 +98,36 @@ Scenario: Time controls affect timing only, never simulation content
   simultaneous waves. A future map needing that would first need `LaneSimulation` to
   hand out stable per-entity ids — not built ahead of that real need, same reasoning
   already applied to `ScriptedBeatWatcher` (`specs/06`).
+- **`HUD` split into four separate files, not one**, per `ai-first-organisation.md`'s
+  one-concern-per-file test: `resource_bar.gd`, `wave_command_panel.gd`,
+  `narrative_log.gd`, `time_controls.gd`. The spec's original "HUD" framing was a
+  conjunction of concerns ("resource bar, wave-command panel, narrative log, time
+  controls") that would fail the single-noun-phrase test if built as one file —
+  splitting also cleanly separates each piece's testable pure logic
+  (`NarrativeLog.message_for_tier`, `WaveCommandPanel.status_text`) from its
+  Node-based rendering, mirroring `LaneView`/`TickInterpolation`'s split.
+- **Wave-command status shows pending/committed only, not a numeric "X/Y filled"
+  count**, despite this spec's original scenario wanting the latter. Two real gaps,
+  not one glossed-over decision: `CommandQueue.is_filled_check` (`specs/01`) is a
+  boolean predicate by design, generic across whatever "filled" means per command
+  type, with no numeric progress to read; and nothing in this slice's content
+  authors a wave "size" for a count to be measured against in the first place. Adding
+  numeric progress now would mean extending `CommandQueue`'s already-shipped contract
+  speculatively, with no real wave-forming content yet to drive it. Revisit once such
+  content exists (likely alongside real wave-command authoring, a later item).
 
 ## Rubric answers (qualitative, spec-baseline)
 
 - `single-noun-phrase`: split at implementation into `presentation/lane_view.gd`
-  ("tick interpolation and lane rendering") and `presentation/hud.gd` ("player-facing
-  readouts and controls") — grouped in this spec because both consume the same event
-  set and share the "read-only, never mutates sim state" constraint being specified.
+  ("lane rendering"), `presentation/tick_interpolation.gd` ("tick-boundary
+  interpolation math"), `presentation/resource_bar.gd` ("resource pool readout"),
+  `presentation/wave_command_panel.gd` ("wave-command status readout"),
+  `presentation/narrative_log.gd` ("tier-to-message mapping"), and
+  `presentation/time_controls.gd` ("play/pause and skip controls") — six files, each
+  one noun phrase, no conjunction. Grouped in this one spec because they all consume
+  the same event set and share the "read-only, never mutates sim state" constraint
+  being specified, not because they're one file-level concern (see Notes above for
+  why "HUD" as originally framed would have failed this same test).
 - `ocp-extension-point`: a new `SimEvents` signal (e.g. a future Scout reveal event)
   plugs into `HUD` as a new subscriber method, not an edit to existing subscriber
   logic; a new narrative log line is a new entry in the tier→string mapping table, not
@@ -113,11 +136,13 @@ Scenario: Time controls affect timing only, never simulation content
   implementations at this layer yet.
 - `isp-fit`: revised from this spec's original anticipation — `LaneView` ended up with
   one real public method beyond its engine callbacks, `snap_to_current_tick()` (called
-  by time controls in item 10, to avoid a visible partial-interpolation frame on
-  skip-to-marker per this spec's own scenario), plus public `lane`/
-  `tick_duration_seconds`/`node_spacing` fields the composition root sets — still a
-  small, focused surface, just not literally zero. `HUD` (item 10) remains
-  unimplemented as of this item.
+  by `TimeControls`, to avoid a visible partial-interpolation frame on skip-to-marker
+  per this spec's own scenario), plus public `lane`/`tick_duration_seconds`/
+  `node_spacing` fields the composition root sets — still a small, focused surface,
+  just not literally zero. Of item 10's four files: `NarrativeLog` is one static
+  method; `WaveCommandPanel` has `status_text()` plus its fields; `TimeControls` has
+  `on_pause_pressed()`/`on_skip_pressed()` plus its fields; `ResourceBar` has no
+  methods beyond its engine callbacks. All well under threshold.
 - `dip-direction`: this spec *is* the DIP boundary — every dependency here points from
   presentation into simulation (`SimEvents`, `CommandQueue`, read-only queries), never
   the reverse. The dependency-direction check (`ci/godot/`) should treat any import
