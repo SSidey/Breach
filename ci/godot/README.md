@@ -58,13 +58,16 @@ real, not an oversight.
   matching Sweepminer's literal reading of the rubric text — kept narrow instead, since
   that would flag legitimately specific, widely-used names as the codebase grows; a
   deliberate choice, not an oversight.)
-- `check_isp.py` — stub-detection flags *any* function whose only statement is
+- `check_isp.py` — scans production code only (`tests/` is excluded — a test suite's
+  many `test_*` methods aren't an ISP concern; scanning it produced exactly that false
+  positive, a 9-test suite flagged as "too fat," before the exclusion was added).
+  Stub-detection flags *any* function whose only statement is
   `pass`/`push_error(...)`/`assert(false, ...)`, not only true overrides of a base
   method with real behaviour (no inheritance graph is built) — a legitimate no-op
-  virtual hook will false-positive. Method-count is applied to every `.gd` file, not
-  only files genuinely acting as an interface for multiple implementers, since GDScript
-  has no formal interface keyword to detect that distinction mechanically — treat a hit
-  as a prompt to check which case it is.
+  virtual hook will false-positive. Method-count is applied to every remaining `.gd`
+  file, not only files genuinely acting as an interface for multiple implementers,
+  since GDScript has no formal interface keyword to detect that distinction
+  mechanically — treat a hit as a prompt to check which case it is.
 - `check_ocp_shotgun_surgery.py` — counts pre-existing files modified in a diff; it
   cannot distinguish "one new case forced N files open" from any other reason N files
   changed together (e.g. a deliberate, justified refactor). Only meaningful with a real
