@@ -17,6 +17,12 @@ enum NodeType { ORIGIN, RESOURCE, FORT }
 ## validated in this slice since nothing consumes it yet.
 @export var structure_slots: int = 0
 
+## Pooled blocker stats CombatResolver fights against, required when garrison > 0.
+## See specs/02-lane-movement-and-combat.md, Decision 11 - `garrison` is a
+## presence/count check, these are the real combat numbers.
+@export var garrison_hp: int = 0
+@export var garrison_dmg: int = 0
+
 
 func validate() -> PackedStringArray:
 	var errors := PackedStringArray()
@@ -29,4 +35,9 @@ func validate() -> PackedStringArray:
 			errors.append("decay_interval_ticks must be > 0 for a RESOURCE node")
 		if decay_floor_food < 0:
 			errors.append("decay_floor_food must be >= 0, got %d" % decay_floor_food)
+	if garrison > 0:
+		if garrison_hp <= 0:
+			errors.append("garrison_hp must be > 0 when garrison > 0")
+		if garrison_dmg <= 0:
+			errors.append("garrison_dmg must be > 0 when garrison > 0")
 	return errors

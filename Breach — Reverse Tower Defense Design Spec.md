@@ -158,7 +158,7 @@ This is presentation layered on the existing math, not a rewrite of the round re
 - **State machine for enemy AI**, matching the suspicion escalation diagram above — each tier is a state with its own entry action (spawn response unit) and transition conditions (unit returns / doesn't / times out).
 - **Fog-of-war as a data flag, not a rendering trick.** Each structure/unit has a `revealed: bool` (or `revealed_until: round`) that Scout presence sets; rendering just checks the flag. Keeps stealth and hero "see invisibility" trivial to add later as another reveal condition.
 - **Port the prototype's balance numbers as starting defaults** (unit costs, fort hp/dmg, alarm increment, hero stats) rather than re-deriving them — they've already had six rounds of tuning.
-- Treat the live HTML prototype as the reference implementation for exact current behavior when anything in this doc is ambiguous — it's the ground truth for what's been validated.
+- Treat the live HTML prototype as the reference implementation for exact current behavior when anything in this doc is ambiguous — it's the ground truth for what's been validated. Vendored at `reference/breach-prototype.html` as of Decision 11 — read the actual source there rather than re-deriving behavior from this doc's prose when the two could conceivably differ.
 
 ## Decisions
 
@@ -376,3 +376,52 @@ checked by a human/agent at spec-baseline review time. This Decision can itself 
 superseded later (per `AI_First_Development_Kit/principles/decision-ledger.md`) if a
 maintained GDScript coverage tool becomes available — that would be new information,
 not a reason this Decision was wrong when made.
+
+### Decision 11 — Ported the real combat resolution algorithm from the prototype
+
+**Rationale:** The prototype referenced throughout this doc (`reference/breach-prototype.html`,
+provided during Phase 3 item 4) was read directly rather than guessed at, since a
+placeholder formula was about to be implemented in its absence. The real algorithm
+(`killUnitsWithDamage`, `resolveFrontCombat`, `resolveHeroParty` in the reference file)
+is meaningfully different from — and more considered than — any formula that would
+have been invented from scratch:
+
+- Every clash is between the player's **horde** (an array of individually-tracked
+  units, each with its own hp/dmg) and a **blocker** (a single pooled-hp/dmg entity —
+  a fort, a resource garrison, or a Hero Party are all this same shape).
+- Combat is **sequential and asymmetric, not simultaneous**: the horde's total damage
+  output (sum of every surviving unit's `dmg`) always hits the blocker first,
+  regardless of which side is "attacking" in the fictional sense (a horde marching
+  into a fort, and a Hero Party marching into a horde, both resolve with the horde
+  striking first).
+- **Winning costs nothing.** If the horde's damage destroys the blocker outright, the
+  horde takes zero casualties that exchange — the blocker never gets to retaliate.
+- **Losing is not simultaneous either.** Only if the blocker survives does it deal its
+  own `dmg` back to the horde, and that damage is applied **weakest-hp-unit-first,
+  with overkill spilling onto the next-weakest unit** (`killUnitsWithDamage`'s sort +
+  carry-over-remainder loop) — not a flat subtraction from a pooled total.
+- If the horde survives with any units left, the engagement holds (neither side
+  advances) and repeats next tick against the same blocker — this is what makes
+  "grinding down a fort over multiple rounds" a real, multi-tick siege rather than a
+  single roll.
+
+**Deliberately not ported** (out of scope for this system, belongs elsewhere or not at
+all in this slice): the prototype's per-kill defender-currency bounty (`dgold`) has no
+analog in this project's economy (`specs/03`'s five resources have no defender-side
+currency); alarm-meter increments and messenger-spawn chance on a *surviving* blocker
+are `specs/04`'s (`SuspicionSystem`) concern, not `CombatResolver`'s.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Simultaneous pooled-damage exchange (the placeholder proposed before the prototype was provided) | Would have been an invented formula standing in for "port the prototype," directly against this doc's own explicit instruction, now that the real one is available and reads cleanly. |
+| Port the bounty/alarm mechanics into `CombatResolver` too, since they're in the same prototype functions | Bounty has no destination system in this project yet; alarm is explicitly `specs/04`'s concern (`SuspicionSystem`) per the existing spec split — bundling them into combat resolution would violate that separation for no benefit. |
+
+**Consequences:** `specs/02-lane-movement-and-combat.md` is rewritten to describe this
+exact algorithm rather than a placeholder. Real unit/blocker *numbers* (Grem's actual
+hp/dmg, Fort's actual garrison stats) remain deferred to `specs/06` content-authoring
+per Decision 6 — this Decision fixes the mechanism, not the balance figures, though
+`reference/breach-prototype.html` now also has real starting-point numbers for that
+later work (`raider`/`bruiser`/fort/garrison constants) instead of needing to be
+re-derived from scratch then either.

@@ -7,3 +7,5 @@ extends Node
 
 signal tick_advanced(tick_number: int)
 signal command_committed(command: Variant)
+signal node_captured(node_index: int)
+signal combat_resolved(node_index: int, outcome: Dictionary)
