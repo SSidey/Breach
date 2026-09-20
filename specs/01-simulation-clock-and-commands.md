@@ -26,8 +26,23 @@ commands. Implements Decisions 1 and 3 of the parent spec.
   commits commands on the tick boundary `SimulationClock` announces. One concern:
   *whether and when* a queued command takes effect. It has no knowledge of what a
   command does once committed (that's the consuming system's job — `LaneSimulation`,
-  `EconomySystem`, etc. — each owns applying its own committed commands). Same
-  plain-`RefCounted` reasoning as `SimulationClock`.
+  `EconomySystem`, etc. — each owns applying its own committed commands), and — as of
+  this item — no knowledge of *how* a command's slots get filled either:
+  `enqueue(command, is_filled_check: Callable)` takes an injected predicate the caller
+  owns and mutates externally, rather than `CommandQueue` tracking a slot count itself.
+  Keeps `CommandQueue` fully generic across whatever "filled" ends up meaning for a
+  given command type. Same plain-`RefCounted` reasoning as `SimulationClock`.
+  **One more deviation from the original wording below, found while implementing:**
+  `CommandQueue` does not self-subscribe to `SimEvents.tick_advanced` via
+  `.connect()`. A `RefCounted` object connected to a long-lived global signal (the
+  `SimEvents` autoload never goes away) has its reference held by that connection for
+  as long as the signal exists — nothing would ever free a `CommandQueue` instance
+  that self-subscribed this way, and a stale instance from an earlier test/scene would
+  keep reacting to every later tick. Instead, `CommandQueue` exposes a plain
+  `on_tick_advanced(tick_number)` method; whichever composition root owns both objects
+  connects `SimEvents.tick_advanced` to it explicitly (a later item, once a real scene
+  exists) and controls that connection's lifetime, rather than `CommandQueue` reaching
+  out to attach itself to something outside its own scope.
 - `SimEvents` (`core/sim_events.gd`, registered as a true Godot autoload) —
   `tick_advanced(tick_number)`, `command_committed(command)`. Deliberately placed
   outside `sim/`, in a new `core/` directory that sits at the seam between simulation
@@ -96,8 +111,9 @@ Scenario: A pending command can be cancelled before it commits
    `skip_to_next_marker()` — each as its own red test before the corresponding method
    exists.
 2. `SimEvents.tick_advanced` — assert emission and payload once `advance_tick()` exists.
-3. `CommandQueue`: enqueue, slot-fill query, commit-on-tick (subscribed to
-   `tick_advanced`), cancel — red before each behavior, green after.
+3. `CommandQueue`: enqueue (with an injected `is_filled_check` Callable), slot-fill
+   query, commit via an explicit `on_tick_advanced(tick_number)` call, cancel — red
+   before each behavior, green after.
 4. Integration test: enqueue an under-filled command, advance two ticks, fill the last
    slot between them, advance a third tick — assert commit happens on the third tick
    only.
@@ -134,7 +150,8 @@ Scenario: A pending command can be cancelled before it commits
 - `isp-fit`: `SimulationClock`'s public surface is `advance_tick`, `advance_time`,
   `pause`, `resume`, `skip_to_next_marker`, `is_paused`, `tick_number` — 7 methods, at
   (not over) the ISP threshold; revisit if this spec grows a further method.
-  `CommandQueue`'s is `enqueue`, `cancel`, `is_filled`, `pending_commands` — 4 methods.
+  `CommandQueue`'s is `enqueue`, `cancel`, `is_filled`, `pending_commands`,
+  `on_tick_advanced` — 5 methods, under threshold.
 - `dip-direction`: `SimulationClock` and `CommandQueue` are plain `sim/` classes with
   no dependency on presentation/rendering code and no engine `Node` base type.
   `SimEvents` lives in `core/` (not `sim/`), the one deliberate, documented exception
