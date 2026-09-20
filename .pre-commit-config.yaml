@@ -28,8 +28,8 @@ repos:
         exclude: ^addons/
 
       - id: check-dependency-direction
-        name: dip-direction (sim/ must not import presentation/)
-        entry: bash ci/godot/scripts/check_dependency_direction.sh
+        name: dip-direction (sim/ must not depend on presentation/ or engine Node types)
+        entry: python3 ci/godot/scripts/check_dependency_direction.py
         language: system
         pass_filenames: false
         files: \.gd$
@@ -38,6 +38,30 @@ repos:
       - id: check-generic-naming
         name: naming-grep-discoverable
         entry: python3 ci/godot/scripts/check_generic_naming.py
+        language: system
+        pass_filenames: false
+        files: \.gd$
+        exclude: ^addons/
+
+      - id: check-isp
+        name: isp-method-count / isp-stub-detection
+        entry: python3 ci/godot/scripts/check_isp.py
+        language: system
+        pass_filenames: false
+        files: \.gd$
+        exclude: ^addons/
+
+      - id: check-helper-promotion
+        name: no-cross-cutting-helper-violation
+        entry: python3 ci/godot/scripts/check_helper_promotion.py
+        language: system
+        pass_filenames: false
+        files: \.gd$
+        exclude: ^addons/
+
+      - id: check-ocp-shotgun-surgery
+        name: ocp-shotgun-surgery (needs a committed base ref; no-ops otherwise)
+        entry: python3 ci/godot/scripts/check_ocp_shotgun_surgery.py
         language: system
         pass_filenames: false
         files: \.gd$
