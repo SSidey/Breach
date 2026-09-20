@@ -11,10 +11,13 @@ Metrics computed (see progress-tracking.md's table):
 - test count (from the most recent gdUnit4 XML report, if any)
 - lint warning count (gdlint, across tracked *.gd files outside addons/)
 - srp-size violations (function-length + gdlint's own file-length check)
-- dip-direction / naming-grep-discoverable violations
+- naming-grep-discoverable / isp / helper-promotion / dip-direction violations
 Rubric pass count and coverage %% are recorded as text notes, not compared
 numerically, per the honest gaps documented in ci/godot/README.md (no coverage tool;
 rubric-row count is qualitative until every row has a mechanical check).
+`ocp-shotgun-surgery` is deliberately excluded here - it's a diff-scoped, CI-only
+check (see check_ocp_shotgun_surgery.py's own docstring), not meaningful against a
+bare working tree.
 """
 import re
 import subprocess
@@ -80,13 +83,19 @@ def main() -> int:
     lint_warnings = count_lint_warnings()
     function_length_violations = count_script_violations("check_function_length.py")
     naming_violations = count_script_violations("check_generic_naming.py")
+    isp_violations = count_script_violations("check_isp.py")
+    helper_violations = count_script_violations("check_helper_promotion.py")
+    dip_violations = count_script_violations("check_dependency_direction.py")
 
     previous_row = read_previous_row()
     regressed = False
     if previous_row:
+        # Columns, 0-indexed: date, branch, test_count, lint_warnings, ... - fixed a
+        # real off-by-one here (was reading branch as test_count and test_count as
+        # lint_warnings) caught while extending this table with new columns.
         cols = [c.strip() for c in previous_row.split("|")[1:-1]]
-        prev_test_count = cols[1]
-        prev_lint = int(cols[2]) if cols[2].isdigit() else 0
+        prev_test_count = cols[2]
+        prev_lint = int(cols[3]) if cols[3].isdigit() else 0
         if test_count is not None and prev_test_count.isdigit() and test_count < int(prev_test_count):
             print(f"REGRESSION: test count dropped ({prev_test_count} -> {test_count})")
             regressed = True
@@ -102,7 +111,8 @@ def main() -> int:
     status = "FAIL" if regressed else "PASS"
     row = (
         f"| {date} | {branch} | {test_count_display} | {lint_warnings} | "
-        f"{function_length_violations} | {naming_violations} | N/A (no tool, see ci/godot/README.md) | {status} |"
+        f"{function_length_violations} | {naming_violations} | {isp_violations} | "
+        f"{helper_violations} | {dip_violations} | N/A (no tool, see ci/godot/README.md) | {status} |"
     )
 
     if not LOG_FILE.exists():
@@ -112,8 +122,9 @@ def main() -> int:
             "the end of every implementation pass by `ci/godot/scripts/gate1_progress_log.py` "
             "- never edited in place.\n\n"
             "| Date | Branch | Test count | Lint warnings | srp-size (function) violations | "
-            "naming violations | Coverage | Result |\n"
-            "|---|---|---|---|---|---|---|---|\n"
+            "naming violations | isp violations | helper violations | dip violations | "
+            "Coverage | Result |\n"
+            "|---|---|---|---|---|---|---|---|---|---|---|\n"
         )
         LOG_FILE.write_text(header, encoding="utf-8")
 
