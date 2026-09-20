@@ -1,3 +1,8 @@
+---
+spec_type: policy
+status: active
+---
+
 # Breach — Reverse Tower Defense: Design Spec
 
 2026-09-19 · @Someone
@@ -154,3 +159,183 @@ This is presentation layered on the existing math, not a rewrite of the round re
 - **Fog-of-war as a data flag, not a rendering trick.** Each structure/unit has a `revealed: bool` (or `revealed_until: round`) that Scout presence sets; rendering just checks the flag. Keeps stealth and hero "see invisibility" trivial to add later as another reveal condition.
 - **Port the prototype's balance numbers as starting defaults** (unit costs, fort hp/dmg, alarm increment, hero stats) rather than re-deriving them — they've already had six rounds of tuning.
 - Treat the live HTML prototype as the reference implementation for exact current behavior when anything in this doc is ambiguous — it's the ground truth for what's been validated.
+
+## Decisions
+
+Scope and mechanics decided for the first vertical slice (`specs/00-scope-and-map.md`
+and its sibling specs implement these). Recorded here per
+`AI_First_Development_Kit/principles/decision-ledger.md` — append-only from this point
+forward; a change to any of these appends a new superseding Decision rather than editing
+the text below.
+
+### Decision 1 — Real-time presentation over discrete simulation ticks
+
+**Rationale:** The validated prototype resolves rounds invisibly and snaps to the new
+state. For the Godot build, the simulation stays a deterministic sequence of discrete
+ticks ("time markers" — this is the same thing the rest of this doc calls a "round"),
+but presentation between two ticks plays out in real time: units march, extract, and
+clash continuously rather than snapping. The player can watch this unfold, or press
+"skip to next marker" to force the next tick immediately regardless of elapsed real
+time. This gives the "real-time simulation feel" asked for without touching the
+simulation's determinism or testability.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep pure round-based, instant-snap resolution (ship the prototype's presentation as-is) | Doesn't deliver the real-time viewing/skip-ahead experience explicitly requested; the spec's own Presentation section already flags this as future work — pulling it into v1 instead of after. |
+| Fully real-time simulation (no discrete ticks at all) | Throws away the prototype's validated, deterministic, testable round resolution and the Command Latching model (Decision 3), which depends on a tick boundary to commit against. |
+
+**Consequences:** `SimulationClock` is the only source of truth for tick boundaries;
+`LaneView` (presentation) interpolates between the previous and current tick's state
+using elapsed real time ÷ configured tick duration, and must never mutate simulation
+state itself. Auto-advance cadence and the skip-to-marker control are configuration/UI,
+not new simulation state.
+
+### Decision 2 — Auto-extraction on capturing a worker-required resource node
+
+**Rationale:** Without this, capturing a resource node requires a second explicit
+command before it starts producing anything, adding a UI step to the most common
+action in the game. Units present when a resource node flips to "held" default to the
+Extraction job at that node (subject to the node's own Harvest/Ravage choice, spec's
+Structures section) instead of continuing to march down the lane.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Require an explicit "assign to extraction" command after every capture | Adds friction to the single most common early-game action with no corresponding decision for the player to make. |
+| Auto-extraction applies to *any* node type, not just worker-required resource nodes | Forts have no extraction job — there's nothing to default into; scoping this to resource nodes avoids inventing behavior the spec doesn't call for. |
+
+**Consequences:** Capturing a resource node is a one-step action for the default case;
+a later explicit command (a new wave) can still pull units back off extraction and into
+a marching wave.
+
+### Decision 3 — Command latching: slot-filled and next-tick only
+
+**Rationale:** Commands (e.g. "form a wave of N units from lane/roster") should read as
+a real logistics decision, not an instant click that resolves before the player can
+react. A command opens a pending slot-fill buffer; it has no effect on the simulation
+until (a) every slot is filled by an available unit, and (b) the next tick boundary is
+reached. An under-filled command stays pending — re-checked every tick — rather than
+partially executing or silently dropping.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Commands resolve instantly on issue, regardless of fill state | Contradicts the requested design ("only takes effect once all slots are filled... once we hit the next time marker"); also breaks the tick-boundary determinism Decision 1 relies on. |
+| Partially execute with whatever units are available at commit time | Silently changes the composition the player asked for; makes wave sizing unreliable as a tactical decision. |
+
+**Consequences:** `CommandQueue` must expose live slot-fill state to the HUD (so the
+player can see a wave command is still pending and why), and must re-validate on every
+tick rather than only at issue time.
+
+### Decision 4 — Vertical slice ships abstracted lane capture (spec's Option 1)
+
+**Rationale:** The Structures section already recommends shipping lane-based
+structures first and layering in free-form/spatial placement (Option 2) once the core
+loop is confirmed fun. The vertical slice's job is exactly that confirmation, so it
+takes the cheaper, already-validated option.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Build spatial tower placement (Option 2) directly for the vertical slice | Needs pathfinding, a siege-unit role, and a placement UI that don't exist yet — the bigger build the spec itself says to defer until the loop is proven. |
+
+**Consequences:** `NodeDef` still carries structure-slot metadata (per the spec's
+"every map predefines its full set of structure slots" note) so Option 2 can layer on
+later without a data migration, even though the vertical slice never exercises it.
+
+### Decision 5 — Suspicion: generalized engine, minimal content
+
+**Rationale:** The worked example this vertical slice implements only needs the
+messenger-detection-spike → Hero Party beat. Building the full four-tier state machine
+architecture (Calm/Wary/Alarmed/Mobilized/Full Alert, Task Force dispatch) but only
+authoring a Hero Party `ResponseUnitDef` keeps the generalized system the spec asks for
+(rather than a special-cased hardcoded trigger that would need rewriting later) without
+spending content-authoring time on tiers this map doesn't use.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Hardcode a single "fort attacked → messenger → Hero Party" scripted trigger, no state machine | Fastest, but contradicts the spec's implementing-agent note to build a real state machine matching the escalation diagram; would need a genuine rewrite to add Guard/Militia tiers later. |
+| Build and populate all four tiers now (Guard and Militia units included) | More content-authoring and balancing work than this scenario needs; not required by the worked example. |
+
+**Consequences:** `SuspicionSystem`'s thresholds and tier table are data-driven; Wary
+and Alarmed tiers raise the meter and no-op (no unit assigned) for this map. Adding
+Guard/Militia later is a data change (author their `ResponseUnitDef`s), not a code
+change.
+
+### Decision 6 — Lair/fusion meta-layer deferred for the vertical slice
+
+**Rationale:** The worked scenario's "army" and "horde" are Grem *counts* funded by
+Food/Wood, not new unit types — nothing in the scenario requires Brute/Scout/
+Infiltrator or the Lair screen. Matches the spec's own open question, recommending one
+overlord/unit now and data-driven fusion later.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Build the Lair screen and Grem→Brute fusion now | Not required by the worked scenario; the spec itself recommends deferring this design question rather than deciding it prematurely. |
+
+**Consequences:** Only one `UnitDef` (Grem) ships in this slice. The fusion-recipe data
+shape isn't built yet; a future spec introduces it without needing to change how
+`UnitDef` itself is consumed by the simulation.
+
+### Decision 7 — Scout/Infiltrator/fog-of-war deferred; `revealed` flag stubbed true
+
+**Rationale:** The worked scenario needs the messenger and Hero Party to be visible,
+interceptable entities — which the spec already requires regardless of Scout. Building
+the `revealed`/fog-of-war flag architecture now (always `true` for this slice) means
+Scout/Infiltrator and hero "see invisibility" can be added later purely as new reveal
+conditions, per the spec's own Notes for the implementing agent, without a rendering
+rewrite.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Skip the `revealed` flag entirely for v1, add it when Scout ships | Cheap to add now, expensive to retrofit onto rendering code once written without it — the spec explicitly calls this out as the reason to build it as a flag from the start. |
+
+**Consequences:** All structures/units render as fully revealed in this slice; the flag
+exists on the data model so no later migration is needed.
+
+### Decision 8 — Suspicion visibility without Scout: narrative log, not a number
+
+**Rationale:** The spec's presentation rule is "show real detail only where scouted."
+With no Scout in this slice (Decision 7), the exact suspicion value stays hidden; the
+player instead sees narrative log lines at tier-change events ("A messenger has fled
+toward the Core," "A Hero Party is marching") — enough signal to react to the beat
+without exposing a number nothing in-fiction would reveal yet.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Show the raw suspicion meter/number always, for v1 debug visibility | Contradicts the spec's own "only where scouted" rule and gives the player more information than the fiction supports pre-Scout. |
+| Show nothing at all until the Hero Party appears | Removes the "first taste of the suspicion system" and "warning: hero party incoming" beats the worked example explicitly calls for. |
+
+**Consequences:** `SimEvents.suspicion_tier_changed` drives HUD log lines, not a meter
+widget, for this slice.
+
+### Decision 9 — Core is a closing beat; no garrison/siege logic yet
+
+**Rationale:** The map is `P-f-F-c` and the scenario's real test is defeating the Hero
+Party horde — but leaving the Core unreachable would end the slice one beat short of
+what the map literally lays out. After the Hero Party is defeated, a surviving horde
+walking into the (undefended) Core triggers a simple Victory state, closing the loop
+without requiring Core garrison or siege mechanics this slice doesn't otherwise need.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| End the slice the moment the Hero Party is defeated; Core stays unreachable | Smaller scope, but leaves the `c` in `P-f-F-c` doing nothing, which reads as an incomplete loop for a "first playable" milestone. |
+| Give the Core a real garrison/defense to fight through | Not required by the stated scenario; would pull in Option 2-style structure work (Decision 4) ahead of schedule. |
+
+**Consequences:** `WinLossWatcher` treats "player force occupies the Core node" as a win
+trigger with no combat resolution required at the Core itself in this slice.
