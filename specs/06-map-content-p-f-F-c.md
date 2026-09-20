@@ -31,15 +31,14 @@ generic watcher component that fires this map's scripted beats and win/loss cond
 
 ## Tooling half — `ScriptedBeatWatcher` (TDD applies)
 
-A generic, data-driven component: watches `SimEvents` for a configured set of
-`(event, condition) → outcome` rules and fires the outcome once. This map's specific
-rules (not hardcoded into the component):
+This map's win/loss rules (see Notes below for why this ended up as a small explicit
+class rather than the generic data-driven rule-matcher originally sketched here):
 
 | Watching for | Outcome |
 |---|---|
-| `combat_resolved` where the loser is this map's Hero Party Task Force | fire `SimEvents.victory` is *not* correct here — see scenario below; the Hero Party's defeat alone doesn't win, reaching `c` afterward does. Record as an internal "hero_party_defeated" flag instead. |
-| `node_captured` for `c`, gated on the "hero_party_defeated" flag already being set | fire `SimEvents.victory` |
-| player's total unit count reaches 0 while "hero_party_defeated" is not yet set | fire `SimEvents.defeat` |
+| `on_hero_party_defeated()` called (a composition root correlates a `combat_resolved` event against `TaskForceDispatch`'s dispatched list first) | Not `SimEvents.victory` directly — the Hero Party's defeat alone doesn't win, reaching `c` afterward does. Records an internal `hero_party_defeated` flag instead. |
+| `on_node_captured(node_index)` for `c` (`CORE`), gated on `hero_party_defeated` already being set | fires `SimEvents.victory` |
+| `on_player_unit_count_changed(total_units)` reaches 0, regardless of `hero_party_defeated` | fires `SimEvents.defeat` |
 
 ### Scenarios (Given/When/Then)
 
@@ -79,10 +78,10 @@ Scenario: Losing the entire force after already defeating the Hero Party does no
 
 ### Test-first order
 
-1. `ScriptedBeatWatcher` construction from a plain rule list (no map-specific logic
-   baked into the component) — red before the component exists.
-2. Flag-setting on `combat_resolved` matching a configured Task Force id.
-3. Gated victory on `node_captured` + flag.
+1. `ScriptedBeatWatcher` construction (`core_node_index`) — red before the component
+   exists.
+2. Flag-setting via `on_hero_party_defeated()`.
+3. Gated victory on `on_node_captured(node_index)` + flag.
 4. Defeat on unit-count-zero, both gated and ungated cases per the scenarios above.
 5. Full integration replay of this slice's exact scripted path (shared with
    `specs/04-suspicion-and-response.md`'s integration test, extended through to the
@@ -90,10 +89,26 @@ Scenario: Losing the entire force after already defeating the Hero Party does no
 
 ## Notes / open questions
 
-- `ScriptedBeatWatcher`'s rule list is this map's own `MapDef` data, not a second
-  hardcoded copy of the logic in `specs/04-suspicion-and-response.md` — the two specs
-  compose (suspicion dispatches the Hero Party; this watcher reacts to its defeat) but
-  own disjoint state.
+- **Built simpler than originally framed, disclosed here rather than silently
+  narrowed:** the spec's "configured rules" language suggested a generic
+  data-driven rule-matcher (`configure(rules)`); what was actually built is a small
+  class with three explicit methods (`on_hero_party_defeated()`,
+  `on_node_captured(node_index)`, `on_player_unit_count_changed(total_units)`) fixed
+  to this map's specific win/loss shape. With exactly one map and three rules, a
+  generic engine would be built for a genericity nothing yet exercises — the same
+  "prove the abstraction against a real second case first" reasoning already applied
+  elsewhere (e.g. the helper-promotion threshold). Revisit if/when a second map's
+  ruleset needs to reuse this component with a genuinely different shape.
+- `ScriptedBeatWatcher` does not self-subscribe to `SimEvents` (same `RefCounted`/
+  long-lived-signal reasoning as every other `sim/` component this slice). A
+  composition root (Phase 3 item 11) calls `on_hero_party_defeated()` explicitly once
+  it's correlated a `combat_resolved` event against `TaskForceDispatch`'s own
+  dispatched-list bookkeeping — `ScriptedBeatWatcher` itself never needs to identify
+  *which* Task Force died, only that the (one, this map's) Hero Party did.
+- `ScriptedBeatWatcher`'s state (the `hero_party_defeated` flag) is disjoint from
+  `SuspicionSystem`/`TaskForceDispatch`'s own state — the systems compose (suspicion
+  dispatches the Hero Party; this watcher reacts to its defeat) without either owning
+  the other's data.
 - Exact Hero Party combat stats are a balance question that can only really be
   confirmed by playtesting Phase 3, item 11 of the execution plan — record the chosen
   values and the reasoning (e.g. "starting force of 5 Grem loses, a Ravage-funded
@@ -108,15 +123,17 @@ Scenario: Losing the entire force after already defeating the Hero Party does no
   `sim/scripted_beat_watcher.gd` respectively, kept in separate files despite sharing
   one spec because the spec-type split (policy vs. tooling) already forces the
   distinction at review time.
-- `ocp-extension-point`: a new map's beats are a new rule list passed into a new
-  `ScriptedBeatWatcher` instance — no edit to the component itself.
-- `lsp-contract-scope`: not applicable yet — one `ScriptedBeatWatcher` instance in this
-  slice. If a second map's watcher instance is added, both must already satisfy the
-  same rule-list contract by construction (it's data-driven, not subclassed), so no
-  separate contract test is needed unless a genuine second *implementation* (not
-  instance) appears.
-- `isp-fit`: `ScriptedBeatWatcher`'s public surface is `configure(rules)` and its
-  `SimEvents` subscriptions (not called by other code) — effectively 1 method.
+- `ocp-extension-point`: revised from this spec's original anticipation — with the
+  simpler, explicit-methods design actually built (see Notes), a new map's different
+  win/loss shape would currently mean a new/edited class, not a data-only change. This
+  is an honest trade against the "prove genericity against a real second case first"
+  reasoning: acceptable for one map, worth re-examining the moment a second map's
+  ruleset actually needs to compose with this component.
+- `lsp-contract-scope`: not applicable — one `ScriptedBeatWatcher`, no shared
+  base/interface, no second implementation.
+- `isp-fit`: `ScriptedBeatWatcher`'s public surface is `hero_party_defeated()` (query),
+  `on_hero_party_defeated()`, `on_node_captured(node_index)`,
+  `on_player_unit_count_changed(total_units)` — 4 methods, under threshold.
 - `dip-direction`: simulation-layer; reacts to `SimEvents`, emits `SimEvents.victory`/
   `defeat`; presentation (`specs/05-presentation-and-hud.md`) reacts to those in turn
   to show a win/loss screen, never the reverse.
