@@ -90,6 +90,23 @@ Scenario: An uncaptured/lost node reverts if left undefended
 - Auto-extraction (Decision 2) only fires for resource nodes; fort capture always goes
   to the awaiting-choice state — there's no "default job" to assign a unit to at a
   fort.
+- **Scope decisions made while implementing item 6 (`CaptureResolution`), both
+  disclosed here rather than silently built or silently dropped:**
+  - **Ground-must-be-held reversion (scenario 6) is deferred**, not implemented in
+    this item. Its actual trigger — an enemy Task Force passing through unopposed —
+    doesn't exist as a concept until `specs/04`'s `TaskForceDispatch` ships (Phase 3
+    item 7). Building the revert mechanism now, with no real trigger to drive or test
+    it against, would be exactly the kind of premature scope this project avoids
+    elsewhere. Revisit when Task Force movement exists.
+  - **Fortify's economic half ships (spend Wood/Stone per `NodeDef.fortify_wood_cost`/
+    `fortify_stone_cost`); its mechanical defensive effect does not.** The parent
+    spec's Fortify is "forward defense" — a new blocker at that node — but nothing in
+    this vertical slice's scripted scenario (`specs/00`) ever re-attacks a fortified
+    position, so there's no concrete case to build or test against yet. Doing so would
+    also need `LaneSimulation` to expose garrison mutation after the fact, which
+    nothing currently calls. `specs/00`'s own framing already treats Dismantle as "the
+    simplest path to close the slice," implying Fortify's full payoff was never
+    load-bearing for this pass.
 
 ## Rubric answers (qualitative, spec-baseline)
 
@@ -107,8 +124,11 @@ Scenario: An uncaptured/lost node reverts if left undefended
   two implementations of the same one, so no shared contract test is required yet. If a
   third node type introduces a third choice-pair, revisit whether a shared
   "CaptureChoice" contract should unify them.
-- `isp-fit`: `CaptureResolution`'s public surface is `on_node_captured(node)`,
-  `issue_choice(node, choice)`, `is_awaiting_choice(node)` — 3 methods.
+- `isp-fit`: `CaptureResolution`'s public surface is `on_node_captured(node_index,
+  node)`, `issue_choice(node_index, choice)`, `is_awaiting_choice(node_index)`, plus
+  (added in item 6, same reasoning as `CommandQueue`'s `on_tick_advanced` — see
+  `specs/01`) an explicit `on_tick_advanced(tick_number)` rather than self-subscribing
+  to `SimEvents` — 4 methods, under threshold.
 - `dip-direction`: simulation-layer only; HUD (later spec) reads `SimEvents` to know a
   node is awaiting choice and calls `issue_choice` via `CommandQueue`, never mutates
   `CaptureResolution` state directly.

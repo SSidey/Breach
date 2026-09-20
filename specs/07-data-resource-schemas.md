@@ -34,6 +34,18 @@ these shapes, so they need to exist and be validated first.
   `garrison` stays a presence/count check ("is this node defended at all");
   `garrison_hp`/`garrison_dmg` are the real combat numbers, kept separate since a
   count and a stat block answer different questions and nothing needs them conflated.
+  **Added in Phase 3 item 6** (`specs/03-resource-nodes-and-workers.md`,
+  `CaptureResolution`): `ravage_yield_food: int` (RESOURCE nodes — the one-time lump
+  sum `CaptureResolution` grants on Ravage, per the design spec's "recommend the
+  latter for simplicity" resolution to its own open question: a fixed lump regardless
+  of how long the node was harvested first, not a decayed/reduced one);
+  `dismantle_wood_yield: int`, `dismantle_stone_yield: int`, `fortify_wood_cost: int`,
+  `fortify_stone_cost: int` (FORT nodes — Dismantle's free salvage and Fortify's
+  resource cost, per the parent spec's Structures section). All Food/Wood/Stone-
+  specific rather than generic-resource-typed, matching the existing
+  `yield_food_per_tick` convention — this vertical slice's only resource node (the
+  Farm) produces Food and its only fort has no resource type at all, so a fully
+  generic multi-resource node schema isn't needed yet.
 - `ResponseUnitDef` (`content/definitions/response_unit_def.gd`) — its own independent
   fields, coincidentally similar in shape to `UnitDef` (`hp`, `dmg`, `speed`) plus
   `purpose: String` (e.g. `"respond"`, per the parent spec's Task Force model). Neither
@@ -73,6 +85,16 @@ Scenario: A garrisoned NodeDef without blocker stats is invalid
   Given a NodeDef with garrison = 3 and garrison_hp = 0
   When validate() is called
   Then it returns a non-empty array naming "garrison_hp"
+
+Scenario: A RESOURCE NodeDef without a ravage yield is invalid
+  Given a NodeDef with node_type = RESOURCE and ravage_yield_food = 0
+  When validate() is called
+  Then it returns a non-empty array naming "ravage_yield_food"
+
+Scenario: A FORT NodeDef missing dismantle/fortify figures is invalid
+  Given a NodeDef with node_type = FORT and dismantle_wood_yield = 0
+  When validate() is called
+  Then it returns a non-empty array naming "dismantle_wood_yield"
 
 Scenario: An ungarrisoned NodeDef does not require blocker stats
   Given a NodeDef with garrison = 0 and garrison_hp = 0

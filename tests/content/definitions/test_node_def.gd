@@ -59,3 +59,41 @@ func test_ungarrisoned_node_does_not_require_blocker_stats() -> void:
 	node.garrison_dmg = 0
 
 	assert_array(node.validate()).is_empty()
+
+
+func test_resource_node_without_ravage_yield_is_invalid() -> void:
+	var node := NodeDef.new()
+	node.node_type = NodeDef.NodeType.RESOURCE
+	node.yield_food_per_tick = 10
+	node.decay_interval_ticks = 5
+	node.ravage_yield_food = 0
+
+	var errors := node.validate()
+
+	assert_array(errors).is_not_empty()
+	(
+		assert_bool(Array(errors).any(func(message): return message.contains("ravage_yield_food")))
+		. is_true()
+	)
+
+
+func test_fort_node_missing_dismantle_and_fortify_figures_is_invalid() -> void:
+	var node := NodeDef.new()
+	node.node_type = NodeDef.NodeType.FORT
+	node.garrison = 1
+	node.garrison_hp = 10
+	node.garrison_dmg = 3
+	node.dismantle_wood_yield = 0
+	node.dismantle_stone_yield = 0
+	node.fortify_wood_cost = 0
+	node.fortify_stone_cost = 0
+
+	var errors := node.validate()
+
+	assert_array(errors).is_not_empty()
+	(
+		assert_bool(
+			Array(errors).any(func(message): return message.contains("dismantle_wood_yield"))
+		)
+		. is_true()
+	)
