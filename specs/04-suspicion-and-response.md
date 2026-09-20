@@ -99,6 +99,24 @@ Scenario: A Task Force destroyed before completing its task is consumed
   intercept any tier's Task Force — neither ships in this slice (Decision 7), so the
   Hero Party is interceptable in principle (it's a real lane entity) but nothing in
   this slice's roster can actually intercept it before it engages the player's force.
+- **Scope decisions made while implementing this item, disclosed rather than silently
+  built or dropped:**
+  - **Only the detection input is implemented** (`SuspicionSystem.add_suspicion()`,
+    generic over caller). The silence input (a per-node "no report for N ticks"
+    ticker) isn't exercised by this slice's scripted scenario (`specs/00`'s beat 3 is
+    a detection spike from combat, not silence) and needs per-node last-report-tick
+    bookkeeping that doesn't exist as a concept anywhere yet — deferred rather than
+    built against nothing.
+  - **No Core Roster (finite unit pool) system exists yet**, so
+    `TaskForceDispatch.mark_completed`/`mark_consumed` are distinct methods per the
+    spec's lifecycle language, but both currently just clear the active dispatch list
+    — there's no roster to return a completed Task Force to or permanently remove a
+    consumed one from. The distinction becomes observable once that system exists.
+  - **`SuspicionSystem`/`TaskForceDispatch` don't self-subscribe to `SimEvents`** —
+    same reasoning as `CommandQueue`/`CaptureResolution` (a `RefCounted` connected to
+    a long-lived global signal never gets freed). `on_tick_advanced(tick_number)` and
+    `on_tier_entered(tier)` are plain methods; a composition root (Phase 3 item 11)
+    connects them, as the integration test wires and then explicitly disconnects.
 
 ## Rubric answers (qualitative, spec-baseline)
 
@@ -109,13 +127,19 @@ Scenario: A Task Force destroyed before completing its task is consumed
 - `ocp-extension-point`: adding a new tier's content (Guard/Militia) is a data change
   to the tier→unit table, not a new `if`/`match` arm in `TaskForceDispatch` — this is
   the direct target of the shotgun-surgery check for this feature.
-- `lsp-contract-scope`: Messenger and Hero Party are two `ResponseUnitDef` instances of
-  the same Task Force contract (`composition`, `purpose`, `destination`, per the parent
-  spec). With 2 implementations reaching the roster/lifecycle path, a shared contract
-  test is required (`solid-mechanical.md` criterion L, threshold 2): both must pass
-  "returns to roster on completion, consumed on destruction" unmodified.
+- `lsp-contract-scope`: revised from this spec's original anticipation — Messenger and
+  Hero Party turned out to be two *data instances* of the same `ResponseUnitDef`
+  class and the same plain `{hp, dmg}` dictionary shape `TaskForceDispatch` consumes
+  (mirroring `CombatResolver`'s duck-typed data, per `specs/02`), not two distinct
+  *implementations* of a base type in the polymorphic sense LSP/contract-tests apply
+  to. There's no subclassing and no behavioral-substitutability question to test —
+  `TaskForceDispatch` already handles both uniformly by construction, parametrized by
+  data via the `tier_to_unit_stats` table. No shared contract test is warranted; this
+  row doesn't actually apply here despite the earlier anticipation.
 - `isp-fit`: `TaskForceDispatch`'s public surface is `on_tier_entered(tier)`,
-  `mark_completed(task_force)`, `mark_consumed(task_force)` — 3 methods.
+  `mark_completed(task_force)`, `mark_consumed(task_force)`, `dispatched()` (added for
+  observability, same reasoning as `LaneSimulation.waves()`/`moving_blockers()`) — 4
+  methods, under threshold.
 - `dip-direction`: simulation-layer only; HUD's narrative log (Decision 8) subscribes
   to `SimEvents.suspicion_tier_changed`, never reads `SuspicionSystem` state directly.
 

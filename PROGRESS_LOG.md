@@ -15,3 +15,4 @@ Schema note: rows from 2026-09-20 onward that predate the `isp violations` / `he
 | 2026-09-20 | feature/lane-movement-and-combat | 42 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-09-20 | feature/economy-system | 51 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-09-20 | feature/capture-resolution | 61 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
+| 2026-09-20 | feature/suspicion-system | 73 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
