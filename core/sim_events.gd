@@ -10,3 +10,5 @@ signal command_committed(command: Variant)
 signal node_captured(node_index: int)
 signal combat_resolved(node_index: int, outcome: Dictionary)
 signal suspicion_tier_changed(tier: int)
+signal victory
+signal defeat
