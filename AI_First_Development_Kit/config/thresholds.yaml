@@ -1,0 +1,30 @@
+# Configurable thresholds for the AI-first / SOLID-mechanical rubric set.
+# Any change to a value here must be accompanied by a Decision entry
+# (see principles/decision-ledger.md) explaining why.
+
+ai_first_organisation:
+  context_locality:
+    max_files: 2
+  naming:
+    max_grep_hits: 10
+  helpers:
+    promotion_threshold: 3
+
+solid_mechanical:
+  srp:
+    max_file_lines: 300
+    max_function_lines: 40
+  ocp:
+    max_touched_files_per_new_case: 3
+  lsp:
+    min_implementations_for_contract_test: 2
+  isp:
+    max_interface_methods: 7
+
+coverage:
+  overall_min_percent: 90
+  changed_lines_min_percent: 90
+
+context_budget:
+  soft_limit_lines: 300
+  hard_limit_lines: 400
