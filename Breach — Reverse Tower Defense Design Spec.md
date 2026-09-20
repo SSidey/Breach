@@ -339,3 +339,40 @@ without requiring Core garrison or siege mechanics this slice doesn't otherwise 
 
 **Consequences:** `WinLossWatcher` treats "player force occupies the Core node" as a win
 trigger with no combat resolution required at the Core itself in this slice.
+
+### Decision 10 — GDScript coverage automation dropped; procedural review is permanent
+
+**Rationale:** Two independent investigations — this project's own, and a check against
+[SSidey/Sweepminer](https://github.com/SSidey/Sweepminer) (a sibling project on the
+same kit, further along) — both concluded no working GDScript line-coverage tool
+exists for Godot 4.7 today. The most-viable candidate
+(`jamie-pate/godot-code-coverage`) fails with a real type-covariance error
+(`NullCoverage.get_coverage_collector()` returns `self`, but doesn't extend the base
+method's declared `ScriptCoverageCollector` return type — a genuine incompatibility
+with Godot 4.7's stricter analyzer, not a stale-docs mismatch), and its README's own
+"Currently supports Godot 3.5" line suggests this is unlikely to be the only such
+issue in an ~800-line file that hasn't had a real Godot-4-era pass. Sweepminer's
+README claims coverage is automated via GdUnit4; verified false (`-c` is `--continue`,
+not a coverage flag — no such flag exists in gdUnit4 v6.2.1's `CmdOptions`), and that
+project's own scripts admit coverage is still manual. This isn't a gap specific to how
+either project looked for a tool — it's the actual state of the ecosystem right now.
+Continuing to carry `coverage-overall`/`coverage-changed-lines` as "procedural for
+now, revisit later" understates how settled this finding is; recording it as a
+Decision makes the procedural substitute the permanent, intended answer rather than an
+open TODO nobody owns.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Patch `jamie-pate/godot-code-coverage`'s type error and keep trying | Time-boxed consideration, declined: the single confirmed bug is fixable in principle, but the addon's Godot-3.5-era vintage makes further, similar issues likely rather than a clean one-line fix — an open-ended debugging investment in someone else's abandoned-feeling tool, not proportional to this project's scope. |
+| Build a minimal line-coverage instrumentation tool from scratch | A genuinely bigger engineering investment (GDScript has no exposed coverage/tracing API comparable to e.g. Python's `sys.settrace`) than a vertical-slice tooling layer justifies. |
+| Leave the row as "procedural, revisit if a tool appears" indefinitely | What this Decision replaces — leaves the finding unrecorded and implies less certainty than two independent checks actually established. |
+
+**Consequences:** `coverage-overall` and `coverage-changed-lines` are permanently
+reviewed procedurally per `ci/godot/README.md`'s "Procedural, not scripted" section:
+every Given/When/Then scenario in a spec must have a corresponding automated test,
+checked by a human/agent at spec-baseline review time. This Decision can itself be
+superseded later (per `AI_First_Development_Kit/principles/decision-ledger.md`) if a
+maintained GDScript coverage tool becomes available — that would be new information,
+not a reason this Decision was wrong when made.

@@ -98,19 +98,22 @@ real, not an oversight.
 
 ## Procedural, not scripted
 
-- `coverage-overall` / `coverage-changed-lines` — **no working GDScript coverage tool
-  was found**, and this was verified empirically, not assumed from documentation. The
-  most-starred candidate (`jamie-pate/godot-code-coverage`) was vendored and run against
-  a trivial test on this project's actual Godot 4.7.2 install; it crashed with a real
-  compile error (`NullCoverage` failing its own declared return type,
-  `addons/coverage/coverage.gd:463`) — a genuine incompatibility with Godot 4.7's
+- `coverage-overall` / `coverage-changed-lines` — **permanently procedural, per
+  Decision 10** in `Breach — Reverse Tower Defense Design Spec.md`, not an open TODO.
+  **No working GDScript coverage tool was found**, verified empirically, not assumed
+  from documentation. The most-starred candidate (`jamie-pate/godot-code-coverage`) was
+  vendored and run against a trivial test on this project's actual Godot 4.7.2 install;
+  it crashed with a real compile error (`NullCoverage` failing its own declared return
+  type, `addons/coverage/coverage.gd:463`) — a genuine incompatibility with Godot 4.7's
   stricter static type checker, not a stale-docs mismatch. A sibling project
   (SSidey/Sweepminer) was checked too and confirmed to have the identical gap despite
   its README initially appearing to claim otherwise (see above) — this isn't a gap
-  specific to how this repo looked for a tool. Until a working tool is found, coverage
-  is reviewed procedurally: does every Given/When/Then scenario in the relevant
-  `specs/*.md` file have a corresponding automated test, checked by a human/agent at
-  spec-baseline review time rather than by a coverage percentage.
+  specific to how this repo looked for a tool. Coverage is reviewed procedurally
+  instead: does every Given/When/Then scenario in the relevant `specs/*.md` file have a
+  corresponding automated test, checked by a human/agent at spec-baseline review time
+  rather than by a coverage percentage. Decision 10 can be superseded if a maintained
+  tool later appears — that's new information, not a reason to keep this row open-ended
+  in the meantime.
 - `contract-tests-pass` — mechanically enforceable via gdUnit4 once a base
   contract/interface has 2+ implementations (per `solid-mechanical.md` criterion L,
   e.g. the Messenger/Hero Party Task Force contract in
