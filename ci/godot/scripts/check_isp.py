@@ -12,12 +12,20 @@ Honest limits (see ci/godot/README.md):
   has nothing to do with ISP (no other file is forced to depend on a test suite's
   methods) - scanning tests/ here was tried and produced exactly that false positive
   (a 9-test suite flagged as "too fat") before this exclusion was added.
-- Method-count is applied to every remaining .gd file (GDScript's one-class-per-file
-  convention makes each file a stand-in for "a class"), not only files that are
-  genuinely acting as an interface/contract for multiple implementers - GDScript has no
-  formal interface keyword to detect that distinction mechanically. A legitimately
-  large concrete class (not forcing anything on an implementer) can trip this; treat a
-  hit as a prompt to check which case it is, not an automatic violation.
+- Method-count only counts non-underscore-prefixed functions - GDScript convention for
+  "private/internal", which `_init` and engine virtuals (`_ready`, `_process`, ...)
+  also follow. ISP is about the public surface a file forces on its callers/
+  implementers; private helpers don't do that. Counting them was tried and flagged
+  `LaneSimulation` (7 real public methods, 1 private helper, 1 `_init`) as "8 methods,
+  too fat" before this filter was added - a real false positive, not a genuine ISP
+  smell.
+- Even restricted to public methods, this is applied to every remaining .gd file
+  (GDScript's one-class-per-file convention makes each file a stand-in for "a class"),
+  not only files that are genuinely acting as an interface/contract for multiple
+  implementers - GDScript has no formal interface keyword to detect that distinction
+  mechanically. A legitimately large concrete class (not forcing anything on an
+  implementer) can still trip this; treat a hit as a prompt to check which case it is,
+  not an automatic violation.
 - Stub-detection flags *any* function whose only statement is `pass`, a bare
   `push_error(...)`, or `assert(false, ...)` - not only true overrides of a base method
   with real behaviour, since no inheritance graph is built. A legitimate no-op virtual
@@ -105,9 +113,11 @@ def main() -> int:
         functions = extract_functions(lines)
         rel_path = path.relative_to(REPO_ROOT)
 
-        if len(functions) > max_methods:
+        public_functions = [name for name, _ in functions if not name.startswith("_")]
+        if len(public_functions) > max_methods:
             violations.append(
-                f"{rel_path}: {len(functions)} methods (max {max_methods}) [isp-method-count]"
+                f"{rel_path}: {len(public_functions)} public methods "
+                f"(max {max_methods}) [isp-method-count]"
             )
 
         for name, body in functions:

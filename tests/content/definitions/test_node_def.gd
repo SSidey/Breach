@@ -36,3 +36,26 @@ func test_negative_garrison_is_invalid() -> void:
 
 	assert_array(errors).is_not_empty()
 	assert_bool(Array(errors).any(func(message): return message.contains("garrison"))).is_true()
+
+
+func test_garrisoned_node_without_blocker_stats_is_invalid() -> void:
+	var node := NodeDef.new()
+	node.node_type = NodeDef.NodeType.FORT
+	node.garrison = 3
+	node.garrison_hp = 0
+	node.garrison_dmg = 0
+
+	var errors := node.validate()
+
+	assert_array(errors).is_not_empty()
+	assert_bool(Array(errors).any(func(message): return message.contains("garrison_hp"))).is_true()
+
+
+func test_ungarrisoned_node_does_not_require_blocker_stats() -> void:
+	var node := NodeDef.new()
+	node.node_type = NodeDef.NodeType.ORIGIN
+	node.garrison = 0
+	node.garrison_hp = 0
+	node.garrison_dmg = 0
+
+	assert_array(node.validate()).is_empty()

@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>BREACH v6 — reverse defense prototype</title>
+<style>
+  :root{
+    --paper:#EDEAE1; --panel:#FFFFFF; --ink:#20241F; --ink-dim:#5B6158; --line:#CFC9B8;
+    --accent-a:#C97A2B; --accent-a-dim:#E9B57C;
+    --accent-d:#3E6E8E; --accent-d-dim:#9AC0D6;
+    --wood-col:#7A9B57; --metal-col:#7E8B9E; --crystal-col:#8E5EA8; --stone-col:#8C8375; --food-col:#C97A2B;
+    --danger:#B34A3A; --hero:#7A3E5E; --track:#D8D2BF; --fort-a:#3E7A4F; --stealth-col:#3E3A4A; --alarm-col:#C9A23D;
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+  }
+  :root:not([data-theme="light"]){
+    @media (prefers-color-scheme: dark){
+      --paper:#14171A; --panel:#1D2124; --ink:#E7E4DA; --ink-dim:#9AA0A6; --line:#33383D; --track:#2A2E32;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14171A; --panel:#1D2124; --ink:#E7E4DA; --ink-dim:#9AA0A6; --line:#33383D; --track:#2A2E32;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--paper);color:var(--ink);}
+  body{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:14px 12px 26px;gap:10px;-webkit-tap-highlight-color:transparent;}
+  .wrap{width:100%;max-width:640px;display:flex;flex-direction:column;gap:10px;}
+  header{display:flex;flex-direction:column;gap:2px;}
+  h1{font-size:1.3rem;margin:0;letter-spacing:.02em;}
+  .sub{font-size:.8rem;color:var(--ink-dim);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+  .fam{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+
+  .statline{display:flex;gap:8px;}
+  .stat{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px;}
+  .stat .label{font-size:.63rem;color:var(--ink-dim);}
+  .stat .value{font-size:.98rem;font-weight:700;font-variant-numeric:tabular-nums;}
+  .stat.defender .value{color:var(--accent-d);}
+
+  .reschips{display:flex;gap:6px;flex-wrap:wrap;}
+  .chip{flex:1;min-width:58px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 6px;text-align:center;}
+  .chip .n{font-weight:700;font-size:.92rem;font-variant-numeric:tabular-nums;}
+  .chip .l{font-size:.6rem;color:var(--ink-dim);}
+  .chip.food .n{color:var(--food-col);} .chip.wood .n{color:var(--wood-col);}
+  .chip.stone .n{color:var(--stone-col);} .chip.metal .n{color:var(--metal-col);}
+  .chip.crystal .n{color:var(--crystal-col);}
+
+  .corebar-outer{width:100%;height:8px;background:var(--track);border-radius:5px;overflow:hidden;border:1px solid var(--line);}
+  .corebar-inner{height:100%;background:var(--accent-d);transition:width .3s ease;}
+  .warn{font-size:.75rem;color:var(--hero);min-height:1.1em;font-weight:600;}
+  .helptext{font-size:.72rem;color:var(--ink-dim);line-height:1.4;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
+
+  canvas{width:100%;display:block;border-radius:8px;border:1px solid var(--line);background:var(--panel);}
+
+  .lanes{display:flex;flex-direction:column;gap:8px;}
+  .lanecard{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;}
+  .lanecard .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .lanecard .name{font-weight:700;font-size:.9rem;}
+  .lanecard .status{font-size:.71rem;color:var(--ink-dim);text-align:right;}
+  .lanecard .horde{font-size:.76rem;color:var(--accent-a);}
+  .lanebtns{display:flex;gap:6px;flex-wrap:wrap;}
+  button.small{flex:1;min-width:88px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:7px 6px;font-size:.72rem;font-weight:600;cursor:pointer;}
+  button.small:disabled{opacity:.35;cursor:not-allowed;}
+  button.small.fort{border-color:var(--fort-a);color:var(--fort-a);}
+  button.small.stealth{border-color:var(--stealth-col);color:var(--stealth-col);}
+  button.small span{display:block;font-weight:400;color:var(--ink-dim);font-size:.63rem;}
+
+  .globalpanel{display:flex;gap:6px;}
+
+  .advance{padding:13px;border-radius:9px;border:none;background:var(--accent-a);color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;}
+  .advance:disabled{opacity:.4;}
+  .roundline{display:flex;justify-content:space-between;align-items:center;font-size:.8rem;color:var(--ink-dim);}
+
+  .log{font-size:.72rem;color:var(--ink-dim);max-height:110px;overflow-y:auto;display:flex;flex-direction:column-reverse;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
+
+  .overlay{position:fixed;inset:0;background:rgba(10,10,8,.72);display:flex;align-items:center;justify-content:center;z-index:10;padding:20px;}
+  .overlay.hidden{display:none;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:24px 22px;max-width:360px;text-align:center;display:flex;flex-direction:column;gap:12px;}
+  .card h2{margin:0;font-size:1.3rem;}
+  .card p{margin:0;font-size:.86rem;color:var(--ink-dim);line-height:1.5;}
+  .card button{margin-top:6px;padding:11px;border-radius:7px;border:none;background:var(--accent-a);color:#fff;font-weight:700;font-size:.9rem;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 class="fam">BREACH</h1>
+    <div class="sub">v6 — alarms, messengers, scouts &amp; infiltrators</div>
+  </header>
+
+  <div class="statline fam">
+    <div class="stat"><div class="label">round</div><div class="value" id="roundNum">1 / 16</div></div>
+    <div class="stat defender"><div class="label">enemy supplies</div><div class="value" id="goldD">0</div></div>
+  </div>
+  <div class="reschips fam">
+    <div class="chip food"><div class="n" id="rFood">0</div><div class="l">food</div></div>
+    <div class="chip wood"><div class="n" id="rWood">0</div><div class="l">wood</div></div>
+    <div class="chip stone"><div class="n" id="rStone">0</div><div class="l">stone</div></div>
+    <div class="chip metal"><div class="n" id="rMetal">0</div><div class="l">metal</div></div>
+    <div class="chip crystal"><div class="n" id="rCrystal">0</div><div class="l">crystal</div></div>
+  </div>
+
+  <div>
+    <div class="corebar-outer"><div class="corebar-inner" id="coreBar"></div></div>
+    <div class="sub fam" id="coreLabel">core: 100 / 100</div>
+  </div>
+  <div class="warn fam" id="heroWarn"></div>
+  <div class="helptext fam">Grinding on a garrison or fort risks a <b>messenger</b> slipping away to raise the alarm — the exact risk is hidden unless you have a <b>Scout</b> in that lane. An <b>Infiltrator</b> ignores forts entirely and can intercept a messenger if it's already ahead of it.</div>
+
+  <canvas id="board"></canvas>
+
+  <div class="lanes fam" id="lanes"></div>
+
+  <div class="lanecard fam">
+    <div class="top"><span class="name">Global upgrades</span></div>
+    <div class="globalpanel" id="globalPanel"></div>
+  </div>
+
+  <div class="roundline fam">
+    <span id="phaseLabel">plan your hordes</span>
+  </div>
+  <button class="advance" id="advanceBtn">Advance Round →</button>
+
+  <div class="log fam" id="log"></div>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="card">
+    <h2 id="overTitle"></h2>
+    <p id="overText"></p>
+    <button onclick="restart()">Run it back</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const ROUNDS_TOTAL = 16;
+const HERO_INTERVAL = 3;
+const HERO_COST = 45;
+const HERO_HP = 70, HERO_DMG = 18;
+
+const FOOD_TRICKLE = 2;
+const DEF_TRICKLE = 4;
+const DEF_NODE_INCOME = 5;
+
+const DEF_FORT_COST = 20, DEF_UPGRADE_COST = 18;
+const BUILD_ROUNDS = 2, UPGRADE_ROUNDS = 2, BUILD_HP = 10;
+const REPAIR_RATE = 6;
+const FORT_D_L1 = {hp:30, dmg:8}, FORT_D_L2 = {hp:55, dmg:15};
+const GARRISON_BASIC = {hp:26, dmg:6};
+const GARRISON_CRYSTAL = {hp:40, dmg:10};
+
+const FORTIFY_COST = {wood:10, stone:6};
+const DISMANTLE_YIELD = {wood:8, stone:5};
+const FORT_UPGRADE_COST = {metal:12};
+const FORT_A_L1 = {hp:20, dmg:5}, FORT_A_L2 = {hp:35, dmg:9};
+const HARVESTER_COST = {food:6, wood:4};
+const HARVESTER_STATS = {hp:8, dmg:2};
+const HARVEST_RATE = {food:6, wood:6, stone:6, metal:5, crystal:3};
+const RAVAGE_YIELD = {food:40, wood:35, stone:35, metal:25, crystal:18};
+const ELITE_COST = {crystal:20};
+
+const ALARM_INCREMENT = 22, ALARM_CAP = 88;
+
+let baseUnit = {
+  raider:      {hp:20, dmg:6,  cost:{food:8}, bounty:3},
+  bruiser:     {hp:46, dmg:11, cost:{food:14, wood:6}, bounty:6},
+  scout:       {hp:10, dmg:0,  cost:{food:5}, bounty:1},
+  infiltrator: {hp:8,  dmg:1,  cost:{food:6, wood:2}, bounty:2, stealth:true}
+};
+
+let lanes, res, dgold, coreHP, round, running, eliteBought;
+
+function N(type, resourceKind){
+  return { type, resourceKind:resourceKind||null, forwardBlocker:null, reverseBlocker:null,
+           captured:false, garrisonBroken:false, owner: type==='resource'?'defender':null,
+           exhausted:false, alarmMeter:0 };
+}
+
+function buildLanes(){
+  const north = { key:'north', label:'Grain & Timber Road', nodes:[
+    N('start'), N('plain'), N('slot'), N('resource','food'), N('plain'),
+    N('slot'), N('resource','wood'), N('plain'), N('plain'), N('end')
+  ], column:[], infiltrators:[], messenger:null, alertLevel:false, heroParty:null };
+
+  const south = { key:'south', label:'Quarry & Ore Road', nodes:[
+    N('start'), N('plain'), N('slot'), N('resource','stone'), N('plain'),
+    N('slot'), N('resource','metal'), N('plain'), N('plain'), N('end')
+  ], column:[], infiltrators:[], messenger:null, alertLevel:false, heroParty:null };
+
+  const central = { key:'central', label:'Central Approach', nodes:[
+    N('start'), N('plain'), N('slot'), N('resource','crystal'), N('plain'),
+    N('slot'), N('plain'), N('slot'), N('core')
+  ], column:[], infiltrators:[], messenger:null, alertLevel:false, heroParty:null };
+
+  for(const lane of [north, south, central]){
+    lane.nodes.forEach(node=>{
+      if(node.type==='resource'){
+        const g = node.resourceKind==='crystal' ? GARRISON_CRYSTAL : GARRISON_BASIC;
+        node.forwardBlocker = {kind:'garrison', hp:g.hp, dmg:g.dmg, maxHp:g.hp};
+      }
+    });
+  }
+  return [north, south, central];
+}
+
+function setup(){
+  lanes = buildLanes();
+  res = {food:34, wood:8, stone:6, metal:0, crystal:0};
+  dgold = 26;
+  coreHP = 100;
+  round = 1;
+  running = true;
+  eliteBought = false;
+  clearLog();
+  log('Round 1. The roads are long — send units early, they take rounds to arrive.');
+  document.getElementById('overlay').classList.add('hidden');
+  resizeCanvas();
+  renderAll();
+}
+
+function last(lane){ return lane.nodes.length-1; }
+function sumDmg(units){ return units.reduce((s,u)=>s+u.dmg,0); }
+function canAfford(cost){ return Object.entries(cost).every(([k,v])=>res[k]>=v); }
+function pay(cost){ Object.entries(cost).forEach(([k,v])=>res[k]-=v); }
+function costText(cost){ return Object.entries(cost).map(([k,v])=>`${v} ${k}`).join(' + '); }
+function laneHasScout(lane){ return lane.column.some(c=>c.units.some(u=>u.kind==='scout')); }
+
+function killUnitsWithDamage(units, dmgPool, awardBounty){
+  units.sort((a,b)=>a.hp-b.hp);
+  let i=0;
+  while(dmgPool>0 && i<units.length){
+    units[i].hp -= dmgPool;
+    if(units[i].hp<=0){
+      dmgPool = -units[i].hp;
+      if(awardBounty) dgold += baseUnit[units[i].kind].bounty;
+      units.splice(i,1);
+    } else {
+      dmgPool = 0;
+    }
+  }
+}
+
+function reinforce(lane, kind){
+  const u = baseUnit[kind];
+  if(!canAfford(u.cost)) return;
+  pay(u.cost);
+  if(u.stealth){
+    lane.infiltrators.push({hp:u.hp, position:0});
+    log(`An infiltrator slips out toward ${lane.label}.`);
+  } else {
+    let staging = lane.column.find(c=>c.position===0);
+    if(!staging){ staging = {position:0, units:[]}; lane.column.push(staging); }
+    staging.units.push({kind, hp:u.hp, dmg:u.dmg});
+    log(`A ${kind} departs home for ${lane.label}.`);
+  }
+  renderAll();
+}
+
+function fortify(lane, node){
+  if(!canAfford(FORTIFY_COST)) return;
+  pay(FORTIFY_COST);
+  node.reverseBlocker = {kind:'atkFort', level:1, hp:FORT_A_L1.hp, dmg:FORT_A_L1.dmg};
+  log(`You fortify captured ground on ${lane.label}.`);
+  renderAll();
+}
+function dismantle(lane, node){
+  Object.entries(DISMANTLE_YIELD).forEach(([k,v])=>res[k]+=v);
+  node.captured = false;
+  log(`You dismantle the fort on ${lane.label} for ${costText(DISMANTLE_YIELD)}.`);
+  renderAll();
+}
+function sendHarvester(lane, node){
+  if(!canAfford(HARVESTER_COST)) return;
+  pay(HARVESTER_COST);
+  node.reverseBlocker = {kind:'harvester', hp:HARVESTER_STATS.hp, dmg:HARVESTER_STATS.dmg};
+  node.owner='attacker';
+  log(`You install a harvester on the ${node.resourceKind} node, ${lane.label}.`);
+  renderAll();
+}
+function ravage(lane, node){
+  const yieldAmt = {[node.resourceKind]: RAVAGE_YIELD[node.resourceKind]};
+  Object.entries(yieldAmt).forEach(([k,v])=>res[k]+=v);
+  node.exhausted = true;
+  node.owner=null;
+  log(`You ravage the ${node.resourceKind} node on ${lane.label} for ${costText(yieldAmt)}. It's spent.`);
+  renderAll();
+}
+function upgradeFort(lane, node){
+  if(!canAfford(FORT_UPGRADE_COST)) return;
+  pay(FORT_UPGRADE_COST);
+  node.reverseBlocker.level=2; node.reverseBlocker.hp=FORT_A_L2.hp; node.reverseBlocker.dmg=FORT_A_L2.dmg;
+  log(`You reinforce your fort on ${lane.label} with metal fittings.`);
+  renderAll();
+}
+function buyElite(){
+  if(eliteBought || !canAfford(ELITE_COST)) return;
+  pay(ELITE_COST);
+  eliteBought = true;
+  baseUnit.raider.dmg+=3; baseUnit.raider.hp+=5;
+  baseUnit.bruiser.dmg+=3; baseUnit.bruiser.hp+=5;
+  log('Elite training complete — future units hit harder and hold more.');
+  renderAll();
+}
+
+// ---------- per-round phases ----------
+function tickConstruction(){
+  for(const lane of lanes){
+    for(const node of lane.nodes){
+      const b = node.forwardBlocker;
+      if(!b || b.kind!=='defFort') continue;
+      if(b.state==='building' || b.state==='upgrading'){
+        b.roundsLeft -= 1;
+        if(b.roundsLeft<=0){
+          if(b.state==='building'){ b.state='active'; b.level=1; b.hp=FORT_D_L1.hp; b.dmg=FORT_D_L1.dmg; log(`Defender's fort on ${lane.label} finishes construction.`); }
+          else { b.state='active'; b.level=2; b.hp=FORT_D_L2.hp; b.dmg=FORT_D_L2.dmg; log(`Defender's fort on ${lane.label} finishes upgrading.`); }
+          delete b.roundsLeft;
+        }
+      }
+    }
+  }
+}
+function passiveRepair(){
+  for(const lane of lanes){
+    lane.nodes.forEach((node,pos)=>{
+      const b = node.forwardBlocker;
+      if(!b || b.kind!=='defFort' || b.state!=='active') return;
+      const maxHp = b.level===2?FORT_D_L2.hp:FORT_D_L1.hp;
+      if(b.hp>=maxHp) return;
+      const front = lane.column[0];
+      const underThreat = front && front.position+1===pos;
+      if(!underThreat) b.hp = Math.min(maxHp, b.hp+REPAIR_RATE);
+    });
+  }
+}
+function threatScore(lane, pos){
+  const front = lane.column[0];
+  if(!front) return -1;
+  const gap = pos - front.position;
+  if(gap<0) return -1;
+  return 100 - gap*10;
+}
+function aiBuildOrUpgrade(){
+  let emptySlots=[];
+  for(const lane of lanes){
+    lane.nodes.forEach((node,pos)=>{
+      if(node.type==='slot' && !node.forwardBlocker && !node.captured) emptySlots.push({lane,pos,node});
+    });
+  }
+  if(emptySlots.length>0 && dgold>=DEF_FORT_COST){
+    emptySlots.sort((a,b)=>threatScore(b.lane,b.pos)-threatScore(a.lane,a.pos));
+    const pick = emptySlots[0];
+    pick.node.forwardBlocker = {kind:'defFort', state:'building', hp:BUILD_HP, dmg:0, roundsLeft:BUILD_ROUNDS};
+    dgold -= DEF_FORT_COST;
+    log(`Defender breaks ground on a fort at ${pick.lane.label}.`);
+    return;
+  }
+  let upgradable=[];
+  for(const lane of lanes){
+    lane.nodes.forEach((node,pos)=>{
+      const b = node.forwardBlocker;
+      if(b && b.kind==='defFort' && b.state==='active' && b.level===1) upgradable.push({lane,pos,node});
+    });
+  }
+  if(upgradable.length>0 && dgold>=DEF_UPGRADE_COST){
+    upgradable.sort((a,b)=>threatScore(b.lane,b.pos)-threatScore(a.lane,a.pos));
+    const pick = upgradable[0];
+    pick.node.forwardBlocker.state='upgrading';
+    pick.node.forwardBlocker.roundsLeft = UPGRADE_ROUNDS;
+    dgold -= DEF_UPGRADE_COST;
+    log(`Defender begins upgrading a fort at ${pick.lane.label}.`);
+  }
+}
+
+function resolveFrontCombat(lane, cluster){
+  const here = lane.nodes[cluster.position];
+  if(here.type==='core'){
+    const dmg = sumDmg(cluster.units);
+    coreHP -= dmg;
+    log(`${lane.label}: horde sieges the core for ${dmg}.`);
+    return;
+  }
+  if(cluster.position===last(lane)) return;
+  const nextPos = cluster.position+1;
+  const node = lane.nodes[nextPos];
+  const b = node.forwardBlocker;
+  if(b && b.hp>0){
+    const dmg = sumDmg(cluster.units);
+    b.hp -= dmg;
+    if(b.hp<=0){
+      node.forwardBlocker = null;
+      node.alarmMeter = 0;
+      cluster.position = nextPos;
+      if(b.kind==='defFort'){
+        node.captured = true;
+        log(`${lane.label}: fort destroyed. Ground taken — fortify it or dismantle it.`);
+      } else if(b.kind==='garrison'){
+        node.garrisonBroken = true;
+        log(`${lane.label}: ${node.resourceKind} garrison broken — send a harvester or ravage it.`);
+      }
+    } else {
+      killUnitsWithDamage(cluster.units, b.dmg, true);
+      const label = b.kind==='defFort' ? (b.state==='building'?'unfinished fort':'fort') : `${node.resourceKind} garrison`;
+      log(`${lane.label}: grinding down a ${label} (${Math.max(0,b.hp)} hp left).`);
+      node.alarmMeter = Math.min(ALARM_CAP, node.alarmMeter + ALARM_INCREMENT);
+      if(!lane.messenger && Math.random()*100 < node.alarmMeter){
+        lane.messenger = {position: nextPos};
+        node.alarmMeter = 0;
+        log(laneHasScout(lane)
+          ? `${lane.label}: a messenger breaks for the rear — your scout spots them fleeing!`
+          : `${lane.label}: something slips away from the fighting...`);
+      }
+    }
+  } else {
+    cluster.position = nextPos;
+    log(`${lane.label}: horde advances.`);
+  }
+}
+
+function advanceLaneColumn(lane){
+  if(lane.column.length===0) return;
+  lane.column.sort((a,b)=>b.position-a.position);
+  const front = lane.column[0];
+  resolveFrontCombat(lane, front);
+  if(front.units.length===0) lane.column.shift();
+  const cap = lane.column.length ? lane.column[0].position : 0;
+  for(let i=1;i<lane.column.length;i++){
+    lane.column[i].position = Math.min(lane.column[i].position+1, cap);
+  }
+  for(let i=lane.column.length-1;i>=1;i--){
+    if(lane.column[i].position>=lane.column[0].position){
+      lane.column[0].units.push(...lane.column[i].units);
+      lane.column.splice(i,1);
+    }
+  }
+}
+
+function advanceInfiltrators(lane){
+  for(const inf of lane.infiltrators){
+    inf.position = Math.min(inf.position+1, last(lane));
+  }
+}
+
+function resolveMessenger(lane){
+  if(!lane.messenger) return;
+  const intercepted = lane.infiltrators.some(inf=>inf.position>=lane.messenger.position);
+  if(intercepted){
+    log(`${lane.label}: your infiltrator intercepts the messenger before it can report.`);
+    lane.messenger = null;
+    return;
+  }
+  lane.messenger.position = Math.min(lane.messenger.position+1, last(lane));
+  if(lane.messenger.position>=last(lane)){
+    lane.alertLevel = true;
+    lane.messenger = null;
+    log(`⚠ ${lane.label}: the messenger reaches command — the alarm is raised!`);
+  }
+}
+
+function maybeSpawnHeroParty(){
+  if(lanes.some(l=>l.heroParty)) return;
+  const alerted = lanes.find(l=>l.alertLevel);
+  if(alerted){
+    if(dgold < HERO_COST){ log(`Alarm is raised on ${alerted.label}, but the defender lacks the supplies for a hero party yet.`); return; }
+    dgold -= HERO_COST;
+    alerted.heroParty = {hp:HERO_HP, dmg:HERO_DMG, position:last(alerted)};
+    alerted.alertLevel = false;
+    log(`⚠ The alarm on ${alerted.label} sends a hero party rushing to defend it!`);
+    return;
+  }
+  if(round % HERO_INTERVAL !== 0) return;
+  if(dgold < HERO_COST){ log('Defender lacks the supplies for a hero party this round.'); return; }
+  let best=null, bestFrac=-1;
+  for(const lane of lanes){
+    if(lane.column.length===0) continue;
+    const frac = lane.column[0].position/last(lane);
+    if(frac>bestFrac){ bestFrac=frac; best=lane; }
+  }
+  if(!best) return;
+  dgold -= HERO_COST;
+  best.heroParty = {hp:HERO_HP, dmg:HERO_DMG, position:last(best)};
+  log(`⚠ Defender fields a routine hero party on ${best.label}.`);
+}
+
+function resolveHeroParty(lane){
+  const hp = lane.heroParty;
+  if(!hp) return;
+  const front = lane.column[0];
+  const newPos = hp.position-1;
+
+  if(front && newPos<=front.position){
+    const dmgToHero = sumDmg(front.units);
+    hp.hp -= dmgToHero;
+    if(hp.hp<=0){ log(`${lane.label}: your horde cuts down the hero party!`); lane.heroParty=null; return; }
+    killUnitsWithDamage(front.units, hp.dmg, true);
+    if(front.units.length===0){
+      log(`${lane.label}: the hero party wipes your horde and pushes on.`);
+      lane.column.shift();
+    } else {
+      log(`${lane.label}: your horde holds against the hero party.`);
+      return;
+    }
+  }
+
+  const node = lane.nodes[newPos];
+  if(node && node.reverseBlocker && node.reverseBlocker.hp>0){
+    const rb = node.reverseBlocker;
+    rb.hp -= hp.dmg;
+    if(rb.hp<=0){
+      node.reverseBlocker = null;
+      if(node.type==='slot'){ node.captured=false; log(`${lane.label}: your undefended fort falls — ground reclaimed by the defender.`); }
+      else { node.owner='defender'; log(`${lane.label}: your harvester is destroyed — the defender regains the ${node.resourceKind} node.`); }
+      hp.position = newPos;
+    } else {
+      hp.hp -= rb.dmg;
+      log(`${lane.label}: your fortification holds the hero party at bay (${Math.max(0,rb.hp)} hp left).`);
+      if(hp.hp<=0){ log(`${lane.label}: the hero party is destroyed!`); lane.heroParty=null; }
+      return;
+    }
+  } else {
+    if(node && node.type==='slot' && node.captured){
+      node.captured=false;
+      log(`${lane.label}: the defender quietly reclaims undefended ground.`);
+    }
+    hp.position = newPos;
+  }
+
+  if(hp.position===0){
+    const raid = Math.round(res.food*0.3);
+    res.food -= raid;
+    log(`Hero party reaches your home and raids ${raid} food!`);
+    lane.heroParty = null;
+  }
+}
+
+function tickIncome(){
+  res.food += FOOD_TRICKLE;
+  dgold += DEF_TRICKLE;
+  for(const lane of lanes){
+    lane.nodes.forEach(node=>{
+      if(node.type!=='resource' || node.exhausted) return;
+      if(node.owner==='defender') dgold += DEF_NODE_INCOME;
+      else if(node.owner==='attacker' && node.reverseBlocker && node.reverseBlocker.kind==='harvester'){
+        res[node.resourceKind] += HARVEST_RATE[node.resourceKind];
+      }
+    });
+  }
+}
+
+function advanceRound(){
+  if(!running) return;
+  tickConstruction();
+  passiveRepair();
+  aiBuildOrUpgrade();
+  for(const lane of lanes) advanceLaneColumn(lane);
+  for(const lane of lanes) advanceInfiltrators(lane);
+  for(const lane of lanes) resolveMessenger(lane);
+  maybeSpawnHeroParty();
+  for(const lane of lanes) resolveHeroParty(lane);
+  tickIncome();
+  round += 1;
+  if(coreHP<=0){ endGame(true); }
+  else if(round>ROUNDS_TOTAL){ endGame(false); }
+  renderAll();
+}
+
+function endGame(attackerWins){
+  running=false;
+  const overlay=document.getElementById('overlay');
+  overlay.classList.remove('hidden');
+  document.getElementById('overTitle').textContent = attackerWins ? 'Core breached' : 'Line held';
+  document.getElementById('overText').textContent = attackerWins
+    ? 'The core has fallen. Your hordes broke through before time ran out.'
+    : `Round ${ROUNDS_TOTAL} came and went with the core still standing. The defense out-adapted your advance.`;
+}
+
+// ---------- rendering ----------
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+function resizeCanvas(){
+  const w = document.querySelector('.wrap').clientWidth;
+  const laneH = Math.max(64, Math.floor(w*0.16));
+  const h = laneH*3;
+  const dpr = window.devicePixelRatio||1;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  canvas.style.width=w+'px'; canvas.style.height=h+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  canvas._w=w; canvas._h=h; canvas._laneH=laneH;
+}
+window.addEventListener('resize', resizeCanvas);
+function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function resColor(kind){
+  return {food:cssVar('--food-col'), wood:cssVar('--wood-col'), stone:cssVar('--stone-col'),
+           metal:cssVar('--metal-col'), crystal:cssVar('--crystal-col')}[kind];
+}
+
+function drawBoard(){
+  const w=canvas._w, laneH=canvas._laneH;
+  ctx.clearRect(0,0,w,laneH*3);
+  const margin = 30;
+  const colA=cssVar('--accent-a'), colAd=cssVar('--accent-a-dim'), colD=cssVar('--accent-d'), colDd=cssVar('--accent-d-dim');
+  const colTrack=cssVar('--track'), colHero=cssVar('--hero'), colInk=cssVar('--ink'), colFortA=cssVar('--fort-a');
+  const colStealth=cssVar('--stealth-col'), colAlarm=cssVar('--alarm-col');
+
+  lanes.forEach((lane, li)=>{
+    const y = li*laneH + laneH/2;
+    const L = last(lane);
+    const xFor = p => margin + p*(w-2*margin)/L;
+    const frontPos = lane.column.length ? lane.column[0].position : 0;
+
+    ctx.strokeStyle = colTrack; ctx.lineWidth=6; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(xFor(0),y); ctx.lineTo(xFor(L),y); ctx.stroke();
+    ctx.strokeStyle = colA; ctx.lineWidth=6;
+    ctx.beginPath(); ctx.moveTo(xFor(0),y); ctx.lineTo(xFor(frontPos),y); ctx.stroke();
+
+    for(let p=0;p<=L;p++){
+      const x=xFor(p);
+      const node=lane.nodes[p];
+      if(node.type==='start'){
+        ctx.fillStyle=colA; ctx.beginPath(); ctx.arc(x,y,7,0,7); ctx.fill();
+      } else if(node.type==='end'){
+        ctx.fillStyle=colTrack; ctx.beginPath(); ctx.arc(x,y,6,0,7); ctx.fill();
+        ctx.strokeStyle=colD; ctx.lineWidth=1.5; ctx.stroke();
+      } else if(node.type==='core'){
+        ctx.save(); ctx.translate(x,y);
+        ctx.fillStyle = coreHP<=0?colA:colD;
+        ctx.beginPath();
+        for(let i=0;i<6;i++){ const a=Math.PI/3*i-Math.PI/6; const X=12*Math.cos(a), Y=12*Math.sin(a); i===0?ctx.moveTo(X,Y):ctx.lineTo(X,Y); }
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      } else if(node.type==='resource'){
+        ctx.save(); ctx.translate(x,y);
+        const baseCol = resColor(node.resourceKind);
+        ctx.fillStyle = node.exhausted ? colTrack : (node.owner==='attacker'?colA:baseCol);
+        ctx.beginPath();
+        ctx.moveTo(0,-11); ctx.lineTo(10,0); ctx.lineTo(0,11); ctx.lineTo(-10,0); ctx.closePath(); ctx.fill();
+        if(node.forwardBlocker){
+          const frac = Math.max(0,node.forwardBlocker.hp/node.forwardBlocker.maxHp);
+          ctx.fillStyle='#0006'; ctx.fillRect(-10,14,20,3);
+          ctx.fillStyle=colInk; ctx.fillRect(-10,14,20*frac,3);
+          if(node.alarmMeter>0 && laneHasScout(lane)){
+            ctx.fillStyle=colAlarm; ctx.font='bold 8px sans-serif'; ctx.textAlign='center';
+            ctx.fillText(Math.round(node.alarmMeter)+'%', 0, -16);
+          }
+        }
+        if(node.reverseBlocker){ ctx.strokeStyle=colFortA; ctx.lineWidth=2; ctx.strokeRect(-13,-14,26,28); }
+        ctx.restore();
+      } else if(node.type==='slot'){
+        const fb = node.forwardBlocker, rb = node.reverseBlocker;
+        ctx.strokeStyle = colD; ctx.lineWidth=2;
+        const s = (fb && fb.level===2) ? 12 : 9;
+        if(fb && (fb.state==='building'||fb.state==='upgrading')){
+          ctx.setLineDash([2,2]); ctx.strokeRect(x-s/2,y-s/2,s,s); ctx.setLineDash([]);
+        } else if(fb){
+          ctx.fillStyle=colD; ctx.fillRect(x-s/2,y-s/2,s,s); ctx.strokeRect(x-s/2,y-s/2,s,s);
+        } else if(rb){
+          ctx.fillStyle=colFortA; ctx.fillRect(x-s/2,y-s/2,s,s);
+        } else if(node.captured){
+          ctx.fillStyle = colTrack; ctx.beginPath(); ctx.arc(x,y,4,0,7); ctx.fill();
+        } else {
+          ctx.fillStyle=cssVar('--panel'); ctx.fillRect(x-s/2,y-s/2,s,s); ctx.strokeRect(x-s/2,y-s/2,s,s);
+        }
+        const activeB = (fb && fb.state==='active') ? {b:fb,max:fb.level===2?FORT_D_L2.hp:FORT_D_L1.hp,col:colDd} :
+                        (rb) ? {b:rb,max:rb.level===2?FORT_A_L2.hp:FORT_A_L1.hp,col:colAd} : null;
+        if(activeB){
+          const frac = Math.max(0,activeB.b.hp/activeB.max);
+          ctx.fillStyle='#0006'; ctx.fillRect(x-9,y+9,18,2.5);
+          ctx.fillStyle=activeB.col; ctx.fillRect(x-9,y+9,18*frac,2.5);
+        }
+        if(fb && fb.hp>0 && fb.state==='active' && node.alarmMeter>0 && laneHasScout(lane)){
+          ctx.fillStyle=colAlarm; ctx.font='bold 8px sans-serif'; ctx.textAlign='center';
+          ctx.fillText(Math.round(node.alarmMeter)+'%', x, y-9);
+        }
+      } else {
+        ctx.fillStyle=colTrack; ctx.beginPath(); ctx.arc(x,y,3,0,7); ctx.fill();
+      }
+    }
+
+    lane.column.forEach((cluster,ci)=>{
+      const x=xFor(cluster.position);
+      const r = ci===0?9:6;
+      ctx.beginPath(); ctx.arc(x,y-16,r,0,7);
+      ctx.fillStyle = ci===0?colA:colAd; ctx.fill();
+      if(ci===0){
+        ctx.fillStyle='#fff'; ctx.font='bold 10px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(cluster.units.length, x, y-16);
+      }
+    });
+    lane.infiltrators.forEach(inf=>{
+      const x=xFor(inf.position);
+      ctx.save(); ctx.translate(x,y+16); ctx.rotate(Math.PI/4);
+      ctx.fillStyle=colStealth; ctx.fillRect(-4,-4,8,8);
+      ctx.restore();
+    });
+    if(lane.messenger){
+      const x=xFor(lane.messenger.position);
+      ctx.beginPath(); ctx.arc(x,y,4,0,7); ctx.fillStyle=colAlarm; ctx.fill();
+    }
+    if(lane.heroParty){
+      const x=xFor(lane.heroParty.position);
+      ctx.save(); ctx.translate(x,y+16); ctx.rotate(Math.PI/4);
+      ctx.fillStyle=colHero; ctx.fillRect(-6,-6,12,12);
+      ctx.restore();
+    }
+
+    ctx.fillStyle=cssVar('--ink-dim'); ctx.font='11px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(lane.label, margin-24, y-laneH/2+14);
+  });
+}
+
+function laneStatusText(lane){
+  if(lane.messenger) return `⚠ messenger fleeing — node ${lane.messenger.position}/${last(lane)}`;
+  if(lane.alertLevel) return `⚠ alarm raised — hero party inbound`;
+  if(lane.heroParty) return `⚠ hero party ${lane.heroParty.position} nodes from your home`;
+  const front = lane.column[0];
+  const frontPos = front ? front.position : 0;
+  const here = lane.nodes[frontPos];
+  if(here.type==='core') return 'sieging the core';
+  if(frontPos===last(lane)) return 'reached the far end';
+  const nextPos = frontPos+1;
+  const node = lane.nodes[nextPos];
+  const b = node && node.forwardBlocker;
+  if(b){
+    const scoutHere = laneHasScout(lane);
+    const alarmText = scoutHere && node.alarmMeter>0 ? ` · alarm risk ${Math.round(node.alarmMeter)}%` : '';
+    if(b.kind==='defFort'){
+      if(b.state==='building') return `fort building — ${b.roundsLeft} rd, ${b.hp} hp`;
+      if(b.state==='upgrading') return `fort upgrading — ${b.roundsLeft} rd${alarmText}`;
+      return `fort L${b.level} ahead — ${Math.max(0,b.hp)} hp${alarmText}`;
+    }
+    return `${node.resourceKind} garrison ahead — ${Math.max(0,b.hp)} hp${alarmText}`;
+  }
+  return front ? 'open road ahead' : 'no horde committed';
+}
+
+function renderLaneCards(){
+  const el = document.getElementById('lanes');
+  el.innerHTML='';
+  for(const lane of lanes){
+    const card = document.createElement('div');
+    card.className='lanecard';
+    const total = lane.column.reduce((s,c)=>s+c.units.length,0);
+    const hpTotal = lane.column.reduce((s,c)=>s+c.units.reduce((s2,u)=>s2+u.hp,0),0);
+    const infCount = lane.infiltrators.length;
+    card.innerHTML = `
+      <div class="top">
+        <span class="name">${lane.label}</span>
+        <span class="status">${laneStatusText(lane)}</span>
+      </div>
+      <div class="horde">${total ? `${total} units (${lane.column.length} group${lane.column.length>1?'s':''}) · ${hpTotal} hp` : 'empty'}${infCount ? ` · ${infCount} infiltrator${infCount>1?'s':''} deployed` : ''}</div>
+      <div class="lanebtns"></div>
+    `;
+    const btnRow = card.querySelector('.lanebtns');
+
+    const rBtn = document.createElement('button');
+    rBtn.className='small';
+    rBtn.disabled = !canAfford(baseUnit.raider.cost) || !running;
+    rBtn.innerHTML = `+ Raider<span>${costText(baseUnit.raider.cost)}</span>`;
+    rBtn.onclick = ()=>reinforce(lane,'raider');
+    const bBtn = document.createElement('button');
+    bBtn.className='small';
+    bBtn.disabled = !canAfford(baseUnit.bruiser.cost) || !running;
+    bBtn.innerHTML = `+ Bruiser<span>${costText(baseUnit.bruiser.cost)}</span>`;
+    bBtn.onclick = ()=>reinforce(lane,'bruiser');
+    const sBtn = document.createElement('button');
+    sBtn.className='small';
+    sBtn.disabled = !canAfford(baseUnit.scout.cost) || !running;
+    sBtn.innerHTML = `+ Scout<span>${costText(baseUnit.scout.cost)} · reveals alarm risk</span>`;
+    sBtn.onclick = ()=>reinforce(lane,'scout');
+    const iBtn = document.createElement('button');
+    iBtn.className='small stealth';
+    iBtn.disabled = !canAfford(baseUnit.infiltrator.cost) || !running;
+    iBtn.innerHTML = `+ Infiltrator<span>${costText(baseUnit.infiltrator.cost)} · bypasses forts</span>`;
+    iBtn.onclick = ()=>reinforce(lane,'infiltrator');
+    btnRow.appendChild(rBtn); btnRow.appendChild(bBtn); btnRow.appendChild(sBtn); btnRow.appendChild(iBtn);
+
+    lane.nodes.forEach(node=>{
+      if(node.type==='slot' && node.captured && !node.forwardBlocker && !node.reverseBlocker){
+        const fBtn = document.createElement('button');
+        fBtn.className='small fort';
+        fBtn.disabled = !canAfford(FORTIFY_COST) || !running;
+        fBtn.innerHTML = `Fortify<span>${costText(FORTIFY_COST)}</span>`;
+        fBtn.onclick = ()=>fortify(lane,node);
+        const dBtn = document.createElement('button');
+        dBtn.className='small';
+        dBtn.disabled = !running;
+        dBtn.innerHTML = `Dismantle<span>+${costText(DISMANTLE_YIELD)}</span>`;
+        dBtn.onclick = ()=>dismantle(lane,node);
+        btnRow.appendChild(fBtn); btnRow.appendChild(dBtn);
+      }
+      if(node.type==='slot' && node.reverseBlocker && node.reverseBlocker.kind==='atkFort' && node.reverseBlocker.level===1){
+        const uBtn = document.createElement('button');
+        uBtn.className='small fort';
+        uBtn.disabled = !canAfford(FORT_UPGRADE_COST) || !running;
+        uBtn.innerHTML = `Upgrade fort<span>${costText(FORT_UPGRADE_COST)}</span>`;
+        uBtn.onclick = ()=>upgradeFort(lane,node);
+        btnRow.appendChild(uBtn);
+      }
+      if(node.type==='resource' && node.garrisonBroken && !node.exhausted && !node.reverseBlocker && node.owner!=='attacker'){
+        const hBtn = document.createElement('button');
+        hBtn.className='small fort';
+        hBtn.disabled = !canAfford(HARVESTER_COST) || !running;
+        hBtn.innerHTML = `Harvester<span>${costText(HARVESTER_COST)} · +${HARVEST_RATE[node.resourceKind]} ${node.resourceKind}/rd</span>`;
+        hBtn.onclick = ()=>sendHarvester(lane,node);
+        const vBtn = document.createElement('button');
+        vBtn.className='small';
+        vBtn.disabled = !running;
+        vBtn.innerHTML = `Ravage<span>+${RAVAGE_YIELD[node.resourceKind]} ${node.resourceKind}, one-time</span>`;
+        vBtn.onclick = ()=>ravage(lane,node);
+        btnRow.appendChild(hBtn); btnRow.appendChild(vBtn);
+      }
+    });
+    el.appendChild(card);
+  }
+}
+
+function renderGlobalPanel(){
+  const el = document.getElementById('globalPanel');
+  el.innerHTML='';
+  const eBtn = document.createElement('button');
+  eBtn.className='small fort';
+  eBtn.disabled = eliteBought || !canAfford(ELITE_COST) || !running;
+  eBtn.innerHTML = eliteBought ? `Elites trained ✓` : `Train elites<span>${costText(ELITE_COST)} · +3 dmg/+5 hp, future units</span>`;
+  eBtn.onclick = buyElite;
+  el.appendChild(eBtn);
+}
+
+function renderHUD(){
+  document.getElementById('goldD').textContent = Math.floor(dgold);
+  document.getElementById('roundNum').textContent = `${Math.min(round,ROUNDS_TOTAL)} / ${ROUNDS_TOTAL}`;
+  document.getElementById('rFood').textContent = Math.floor(res.food);
+  document.getElementById('rWood').textContent = Math.floor(res.wood);
+  document.getElementById('rStone').textContent = Math.floor(res.stone);
+  document.getElementById('rMetal').textContent = Math.floor(res.metal);
+  document.getElementById('rCrystal').textContent = Math.floor(res.crystal);
+  const frac = Math.max(0,coreHP)/100;
+  document.getElementById('coreBar').style.width=(frac*100)+'%';
+  document.getElementById('coreLabel').textContent = `core: ${Math.max(0,Math.ceil(coreHP))} / 100`;
+  const roundsLeft = HERO_INTERVAL - (round % HERO_INTERVAL);
+  const activeHero = lanes.find(l=>l.heroParty);
+  const alerted = lanes.find(l=>l.alertLevel);
+  document.getElementById('heroWarn').textContent = activeHero
+    ? `⚠ a hero party is loose on ${activeHero.label}`
+    : alerted ? `⚠ alarm raised on ${alerted.label} — a hero party is being readied`
+    : `next routine hero party in ${roundsLeft===HERO_INTERVAL?0:roundsLeft} round${roundsLeft===1?'':'s'}`;
+  document.getElementById('advanceBtn').disabled = !running;
+}
+
+function clearLog(){ document.getElementById('log').innerHTML=''; }
+function log(msg){
+  const el=document.getElementById('log');
+  const line=document.createElement('div'); line.textContent=msg;
+  el.appendChild(line);
+  while(el.children.length>60) el.removeChild(el.firstChild);
+}
+
+function renderAll(){ drawBoard(); renderLaneCards(); renderGlobalPanel(); renderHUD(); }
+
+document.getElementById('advanceBtn').addEventListener('click', advanceRound);
+window.restart = function(){ setup(); };
+
+setup();
+})();
+</script>
+</body>
+</html>

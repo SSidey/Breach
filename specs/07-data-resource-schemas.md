@@ -28,6 +28,12 @@ these shapes, so they need to exist and be validated first.
   (`yield_food_per_tick: int`, `decay_interval_ticks: int`, `decay_floor_food: int`) that
   are only required when `node_type == RESOURCE`. Also carries a `structure_slots: int`
   field per Decision 4 (unused this slice, kept for the future Option 2 pass).
+  **Added in Phase 3 item 4** (`specs/02-lane-movement-and-combat.md`, Decision 11):
+  `garrison_hp: int`, `garrison_dmg: int` — the pooled blocker stats
+  `CombatResolver` actually fights against, required whenever `garrison > 0`.
+  `garrison` stays a presence/count check ("is this node defended at all");
+  `garrison_hp`/`garrison_dmg` are the real combat numbers, kept separate since a
+  count and a stat block answer different questions and nothing needs them conflated.
 - `ResponseUnitDef` (`content/definitions/response_unit_def.gd`) — its own independent
   fields, coincidentally similar in shape to `UnitDef` (`hp`, `dmg`, `speed`) plus
   `purpose: String` (e.g. `"respond"`, per the parent spec's Task Force model). Neither
@@ -63,6 +69,16 @@ Scenario: A RESOURCE NodeDef without yield data is invalid
   When validate() is called
   Then it returns a non-empty array naming "yield_food_per_tick"
 
+Scenario: A garrisoned NodeDef without blocker stats is invalid
+  Given a NodeDef with garrison = 3 and garrison_hp = 0
+  When validate() is called
+  Then it returns a non-empty array naming "garrison_hp"
+
+Scenario: An ungarrisoned NodeDef does not require blocker stats
+  Given a NodeDef with garrison = 0 and garrison_hp = 0
+  When validate() is called
+  Then it returns an empty array (blocker stats are not applicable with no garrison)
+
 Scenario: An ORIGIN NodeDef does not require resource fields
   Given a NodeDef with node_type = ORIGIN and yield_food_per_tick = 0
   When validate() is called
@@ -87,7 +103,8 @@ Scenario: A MapDef aggregates its nodes' own validation errors
 ## Test-first order
 
 1. `UnitDef.validate()` — non-negative field checks, red before the class exists.
-2. `NodeDef.validate()` — type-conditional resource-field checks.
+2. `NodeDef.validate()` — type-conditional resource-field checks, plus (added item 4)
+   garrison-conditional blocker-stat checks.
 3. `ResponseUnitDef.validate()` — reuses the same non-negative checks via its embedded
    `UnitDef`-shaped fields (composition, not a shared contract — see `lsp-contract-scope`
    below for why this isn't a contract-test situation).
