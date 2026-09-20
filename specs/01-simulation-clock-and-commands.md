@@ -13,18 +13,36 @@ commands. Implements Decisions 1 and 3 of the parent spec.
 
 ## Components introduced
 
-- `SimulationClock` (autoload) — owns the tick counter and real-time auto-advance
-  timer. One concern: *when* a tick happens. It has no knowledge of what a tick does.
-- `CommandQueue` (autoload) — owns pending command slot-fill state and commits
-  commands on the tick boundary `SimulationClock` announces. One concern: *whether and
-  when* a queued command takes effect. It has no knowledge of what a command does once
-  committed (that's the consuming system's job — `LaneSimulation`, `EconomySystem`,
-  etc. — each owns applying its own committed commands).
-- `SimEvents` (autoload, signal hub) — `tick_advanced(tick_number)`,
-  `command_committed(command)`. Introduced here since this is the first spec that needs
-  it; later specs add their own event names to the same hub rather than each owning a
-  separate one (avoids a cross-cutting "helpers" file by giving every event a single,
-  precisely-named signal rather than a generic `event_fired` payload).
+- `SimulationClock` (`sim/simulation_clock.gd`) — owns the tick counter and real-time
+  auto-advance accounting. One concern: *when* a tick happens. It has no knowledge of
+  what a tick does. **Not** a Godot-project autoload: it's a plain `RefCounted` class
+  with no scene-tree dependency, so it stays headlessly testable and never needs to
+  extend a Node type (which `dip-direction`'s check explicitly forbids for anything
+  under `sim/`). It's driven by real elapsed time via `advance_time(delta)`, called
+  once per frame by whichever presentation-layer node owns the game loop (wired up in
+  a later item, once a running scene exists) — the clock never reads engine time
+  itself, it's just told how much has passed.
+- `CommandQueue` (`sim/command_queue.gd`) — owns pending command slot-fill state and
+  commits commands on the tick boundary `SimulationClock` announces. One concern:
+  *whether and when* a queued command takes effect. It has no knowledge of what a
+  command does once committed (that's the consuming system's job — `LaneSimulation`,
+  `EconomySystem`, etc. — each owns applying its own committed commands). Same
+  plain-`RefCounted` reasoning as `SimulationClock`.
+- `SimEvents` (`core/sim_events.gd`, registered as a true Godot autoload) —
+  `tick_advanced(tick_number)`, `command_committed(command)`. Deliberately placed
+  outside `sim/`, in a new `core/` directory that sits at the seam between simulation
+  and presentation: it's the one component *both* layers need to reference by a bare
+  global name, and a Godot autoload must be Node-derived to be addressable that way
+  (confirmed empirically — a `RefCounted`-based script cannot be registered in
+  `project.godot`'s `[autoload]` section, since autoloads are added as real scene-tree
+  children). A signal bus carries no domain logic or business rules of its own, so
+  Node-coupling here doesn't leak engine dependency into gameplay decisions the way it
+  would if `SimulationClock` or `CommandQueue` did the same — that's why `core/` is
+  exempt from `dip-direction`'s sim/-extends-Node check rather than `sim/` being
+  weakened to allow it generally. Introduced here since this is the first spec that
+  needs it; later specs add their own event names to the same hub rather than each
+  owning a separate one (avoids a cross-cutting "helpers" file by giving every event a
+  single, precisely-named signal rather than a generic `event_fired` payload).
 
 ## Scenarios (Given/When/Then)
 
@@ -91,6 +109,13 @@ Scenario: A pending command can be cancelled before it commits
 - `CommandQueue` re-validates fill state every tick rather than caching a "ready" flag,
   so a slot that becomes unfilled again (e.g. a unit died before commit) correctly
   un-commits the command instead of committing with a stale count.
+- **gdUnit4 gotcha, hit while writing the first `SimEvents` test:** `monitor_signals()`
+  defaults to `auto_free = true`, which schedules whatever's passed to it for
+  destruction at the end of that test case. Passing the shared `SimEvents` autoload
+  with the default froze every later test in the suite that touched it
+  ("previously freed" runtime error) — any test that calls
+  `monitor_signals(SimEvents)` must pass `monitor_signals(SimEvents, false)` instead,
+  since the suite doesn't own that object's lifecycle.
 
 ## Rubric answers (qualitative, spec-baseline)
 
@@ -106,11 +131,17 @@ Scenario: A pending command can be cancelled before it commits
 - `lsp-contract-scope`: not yet applicable — no second implementation of a shared
   contract exists at this point (only one `SimulationClock`, one `CommandQueue`).
   Revisit if a test/headless clock implementation is added for CI.
-- `isp-fit`: `SimulationClock`'s public surface is `advance_tick`, `pause`, `resume`,
-  `skip_to_next_marker`, `is_paused` — 5 methods, under the 7-method ISP threshold.
+- `isp-fit`: `SimulationClock`'s public surface is `advance_tick`, `advance_time`,
+  `pause`, `resume`, `skip_to_next_marker`, `is_paused`, `tick_number` — 7 methods, at
+  (not over) the ISP threshold; revisit if this spec grows a further method.
   `CommandQueue`'s is `enqueue`, `cancel`, `is_filled`, `pending_commands` — 4 methods.
-- `dip-direction`: both are simulation-layer autoloads with no dependency on
-  presentation/rendering code — presentation depends on `SimEvents`, never the reverse.
+- `dip-direction`: `SimulationClock` and `CommandQueue` are plain `sim/` classes with
+  no dependency on presentation/rendering code and no engine `Node` base type.
+  `SimEvents` lives in `core/` (not `sim/`), the one deliberate, documented exception
+  to "no Node-derived types in the simulation layer" — see Components introduced above
+  for why. Presentation depends on `SimEvents` and reads `CommandQueue` state, but
+  never calls into `SimulationClock`/`CommandQueue` internals directly except through
+  their public methods.
 
 ## Structured rubric notes
 

@@ -7,12 +7,17 @@ Ported from https://github.com/SSidey/Sweepminer's dev_kit/ci/godot/scripts/chec
 (same kit, same gap) and adapted to this repo's directory layout.
 
 Honest limits (see ci/godot/README.md):
-- Method-count is applied to every .gd file (GDScript's one-class-per-file convention
-  makes each file a stand-in for "a class"), not only files that are genuinely acting as
-  an interface/contract for multiple implementers - GDScript has no formal interface
-  keyword to detect that distinction mechanically. A legitimately large concrete class
-  (not forcing anything on an implementer) can trip this; treat a hit as a prompt to
-  check which case it is, not an automatic violation.
+- Scans production code only (excludes tests/, matching the upstream Sweepminer script
+  this was ported from): a test suite legitimately has many `test_*` methods, and that
+  has nothing to do with ISP (no other file is forced to depend on a test suite's
+  methods) - scanning tests/ here was tried and produced exactly that false positive
+  (a 9-test suite flagged as "too fat") before this exclusion was added.
+- Method-count is applied to every remaining .gd file (GDScript's one-class-per-file
+  convention makes each file a stand-in for "a class"), not only files that are
+  genuinely acting as an interface/contract for multiple implementers - GDScript has no
+  formal interface keyword to detect that distinction mechanically. A legitimately
+  large concrete class (not forcing anything on an implementer) can trip this; treat a
+  hit as a prompt to check which case it is, not an automatic violation.
 - Stub-detection flags *any* function whose only statement is `pass`, a bare
   `push_error(...)`, or `assert(false, ...)` - not only true overrides of a base method
   with real behaviour, since no inheritance graph is built. A legitimate no-op virtual
@@ -27,7 +32,7 @@ REPO_ROOT = Path(
     subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
 )
 THRESHOLDS_FILE = REPO_ROOT / "AI_First_Development_Kit" / "config" / "thresholds.yaml"
-EXCLUDED_DIRS = {"addons", "AI_First_Development_Kit"}
+EXCLUDED_DIRS = {"addons", "AI_First_Development_Kit", "tests"}
 
 FUNC_RE = re.compile(r"^(\s*)(?:static\s+)?func\s+(\w+)\s*\([^)]*\)\s*(?:->\s*\S+)?\s*:\s*(.*)$")
 STUB_BODY_RE = re.compile(r"^\s*(pass|push_error\(.*\)|assert\(\s*false\b.*\))\s*$")

@@ -9,3 +9,4 @@ Schema note: rows from 2026-09-20 onward that predate the `isp violations` / `he
 | 2026-09-20 | chore/godot-ci-tooling | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-09-20 | feature/data-resources | 12 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-09-20 | chore/port-sweepminer-ci-checks | 12 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
+| 2026-09-20 | feature/simulation-clock | 21 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
