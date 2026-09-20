@@ -51,7 +51,11 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           git fetch origin "${{ github.event.pull_request.base.ref }}"
-          for sha in $(git rev-list "origin/${{ github.event.pull_request.base.ref }}..HEAD"); do
+          # --no-merges: exclude GitHub's synthetic pull_request "merge preview" commit
+          # (auto-generated subject, not one of the PR's real authored commits) -
+          # verified as the cause of a real false-positive failure on this PR's first
+          # CI run before this flag was added.
+          for sha in $(git rev-list --no-merges "origin/${{ github.event.pull_request.base.ref }}..HEAD"); do
             git log -1 --format=%B "$sha" > /tmp/commit-msg.txt
             echo "Checking $sha:"
             bash ci/godot/scripts/check_commit_message.sh /tmp/commit-msg.txt
