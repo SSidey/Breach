@@ -20,4 +20,12 @@ if [ ! -d tests ]; then
 	exit 0
 fi
 
-bash addons/gdUnit4/runtest.sh --godot_binary "$GODOT_BIN" -a res://tests -c
+# Not using addons/gdUnit4/runtest.sh: it runs in `-d --remote-debug` mode, which
+# needs a real display server (X11/Wayland) - fine on a dev machine with a GPU, but it
+# hard-failed on GitHub Actions' ubuntu-latest runner (no display at all), caught by
+# this PR's own first real CI run. `--headless --ignoreHeadlessMode` runs the same
+# GdUnitCmdTool.gd CLI tool without needing a display - verified locally and in CI.
+# ignoreHeadlessMode is safe here: this project has no UI-interaction tests yet (see
+# specs/*.md's test-first orders), which is the one thing gdUnit4's headless warning
+# is about.
+"$GODOT_BIN" --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests -c --ignoreHeadlessMode
