@@ -1,0 +1,7 @@
+# Gate 1 Mechanical Progress Log
+
+Per AI_First_Development_Kit/principles/progress-tracking.md. Appended to at the end of every implementation pass by `ci/godot/scripts/gate1_progress_log.py` - never edited in place.
+
+| Date | Branch | Test count | Lint warnings | srp-size (function) violations | naming violations | Coverage | Result |
+|---|---|---|---|---|---|---|---|
+| 2026-09-20 | chore/godot-ci-tooling | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |

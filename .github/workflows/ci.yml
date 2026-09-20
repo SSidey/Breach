@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  GODOT_VERSION: "4.7.2-stable"
+
+jobs:
+  run-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python tooling
+        run: pip install "gdtoolkit==4.*" pre-commit
+
+      - name: Cache Godot binary
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: /opt/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Download Godot
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -sL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip" -o godot.zip
+          mkdir -p /opt/godot
+          unzip -q godot.zip -d /opt/godot
+          mv /opt/godot/Godot_v${GODOT_VERSION}_linux.x86_64 /opt/godot/godot
+          chmod +x /opt/godot/godot
+
+      - name: Import project (required once before gdUnit4's class_names resolve)
+        run: /opt/godot/godot --headless --path . --import
+
+      - name: Run baseline checks (gdlint, gdformat, custom scripts, tests)
+        env:
+          GODOT_BIN: /opt/godot/godot
+        run: pre-commit run --all-files --show-diff-on-failure
+
+      - name: Check commit messages (commit-message-conforms)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin "${{ github.event.pull_request.base.ref }}"
+          # --no-merges: exclude GitHub's synthetic pull_request "merge preview" commit
+          # (auto-generated subject, not one of the PR's real authored commits) -
+          # verified as the cause of a real false-positive failure on this PR's first
+          # CI run before this flag was added.
+          for sha in $(git rev-list --no-merges "origin/${{ github.event.pull_request.base.ref }}..HEAD"); do
+            git log -1 --format=%B "$sha" > /tmp/commit-msg.txt
+            echo "Checking $sha:"
+            bash ci/godot/scripts/check_commit_message.sh /tmp/commit-msg.txt
+          done
+
+      - name: Upload gdUnit4 reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdunit4-reports
+          path: reports/
+          if-no-files-found: ignore

@@ -1,3 +1,11 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# gdUnit4 CI test-run output (HTML/XML reports, run history) - regenerated every run
+/reports/
+/addons/gdUnit4/*.tmp
+
+# Python-based pre-commit tooling (gdtoolkit, pre-commit itself)
+__pycache__/
+*.pyc
