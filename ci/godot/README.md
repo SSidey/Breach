@@ -83,6 +83,19 @@ real, not an oversight.
   new public API added without a new top-level declaration, e.g. a new exported
   property) are possible. It's a warning, not a hard block, for exactly this reason.
 
+## Known environment gotchas
+
+- **`gdtoolkit`'s grammar cache race (CI only).** Confirmed upstream bug —
+  [Scony/godot-gdscript-toolkit#428](https://github.com/Scony/godot-gdscript-toolkit/issues/428).
+  On a cold cache (every fresh CI runner), `gdlint`/`gdformat` can race to create the
+  same grammar-cache directory via an unguarded `os.makedirs` — the loser raises
+  `FileExistsError`, which gets misreported as `Cannot open file '<unrelated .gd
+  file>': File exists`, naming whatever file happened to be mid-parse rather than the
+  real cause. Hit this for real on this repo's own CI. `.github/workflows/ci.yml`
+  pre-creates the cache directory before either tool runs, per the issue's documented
+  workaround — a developer machine only ever races once (the directory persists after
+  that), so this isn't needed locally.
+
 ## Procedural, not scripted
 
 - `coverage-overall` / `coverage-changed-lines` — **no working GDScript coverage tool

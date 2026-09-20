@@ -23,6 +23,19 @@ jobs:
       - name: Install Python tooling
         run: pip install "gdtoolkit==4.*" pre-commit
 
+      - name: Pre-create gdtoolkit's grammar cache directory
+        # Works around a confirmed upstream race condition
+        # (github.com/Scony/godot-gdscript-toolkit#428): gdtoolkit's parser creates its
+        # grammar cache dir with an unguarded `os.makedirs` (no exist_ok), so two
+        # gdtoolkit processes starting close together on a cold CI cache can both see
+        # it missing and race to create it - the loser gets a FileExistsError that
+        # gets misreported as "Cannot open file '<unrelated .gd file>': File exists".
+        # Hit this for real on this repo's own CI before adding this step. A developer
+        # machine only ever races once (the cache then persists), which is why this is
+        # CI-only in practice.
+        run: |
+          python -c "import os; from importlib.metadata import version; from gdtoolkit.parser.parser import get_cache_directory; os.makedirs(os.path.join(get_cache_directory(), 'gdtoolkit', version('gdtoolkit')), exist_ok=True)"
+
       - name: Cache Godot binary
         id: godot-cache
         uses: actions/cache@v4
