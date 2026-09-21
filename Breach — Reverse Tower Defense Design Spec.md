@@ -510,6 +510,8 @@ needs its own justification (a fresh Decision or a genuine reduction), same as b
 
 ### Decision 14 — Raised `ocp.max_touched_files_per_new_case` from 4 to 5
 
+> Superseded by Decision 15 on 2026-09-21.
+
 **Rationale:** Hit again, for a genuinely different reason than Decision 13's rename
 ripple — while adding the speed-multiplier/auto-pause-each-tick capability (a direct
 follow-up to the user's own manual playtest of PR #18). This feature is a single
@@ -542,3 +544,50 @@ layers, each with its own test," which is now the second distinct pattern (along
 Decision 13's rename ripple) confirmed to legitimately reach this size. A future diff
 touching 5 pre-existing files for an unrelated or scattered reason still fails the
 gate and still needs its own justification.
+
+### Decision 15 — Fixed `check_ocp_shotgun_surgery.py`'s off-by-one; threshold stays 5
+
+**Supersedes:** Decision 14
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-21
+
+**Rationale:** PR #21 hit the gate on exactly the 5 files Decision 14 already judged
+legitimate (`sim/simulation_clock.gd`, `presentation/time_controls.gd`, `main.gd`, and
+each of the first two's test) — yet still failed, because
+`check_ocp_shotgun_surgery.py` has compared `touched >= max_touched` since the check
+was first ported in `c8c655e`, never `>`. A threshold *named*
+`max_touched_files_per_new_case` should mean that many files is the allowed cap, but
+`>=` makes it the failure point instead — silently enforcing one file fewer than the
+configured number since before Decision 13 ever existed. Decision 13's 3→4 raise
+happened to work only because its trigger case touched exactly the old threshold (3),
+so `+1` was coincidentally the right fix; Decision 14's 4→5 raise made the same
+`+1`-from-the-old-threshold move, but its trigger case (5 files) was already one above
+the old threshold (4), so the same arithmetic reproduced the identical bug one number
+higher instead of correcting it. Two straight reactive bumps chasing whatever a given
+PR happened to touch is itself worth stopping to question — a config value should
+express a considered ceiling, not the previous PR's file count. Checked against this
+project's own architecture rather than against this PR: a single cohesive capability
+can, at most, touch one file in each of the three layers a composition-level feature
+spans (`sim/`, `presentation/`, `main.gd`) plus one test file for each of the two that
+get dedicated unit tests (`sim/` and `presentation/` — `main.gd` is exercised by manual
+playtest per Decision 10, not unit-tested, so it contributes no test file of its own).
+That ceiling is 5 — the same number Decision 14 already landed on, but as a derived
+architectural maximum rather than a number chosen to let one PR pass. Fixing the
+comparison operator is therefore the actual root-cause correction: it makes 5 mean
+what it already says, with no further bump needed.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Raise the threshold to 6 (matching Decision 13's `+1` pattern) | Would pass this PR but repeats the exact mistake this Decision exists to stop — chasing the triggering PR's file count instead of fixing the comparison that made every prior raise necessary. The next feature that legitimately needs 5 files would hit the same bug again at 6. |
+| Exclude `tests/` from the count, matching `check_isp.py`'s precedent (the option Decision 14 left open) | Still a live, larger option for a future Decision, but orthogonal to this bug — it changes what the check measures, not whether the configured number means what it says. Fixing the operator first is smaller and strictly necessary regardless of whether that broader change happens later. |
+
+**Consequences:** [check_ocp_shotgun_surgery.py](ci/godot/scripts/check_ocp_shotgun_surgery.py)'s
+comparison changes from `touched >= max_touched` to `touched > max_touched`.
+`solid_mechanical.ocp.max_touched_files_per_new_case` stays at 5 — not raised again —
+since 5 already is the derived ceiling this Decision arrives at independently. A
+future diff touching 6 or more pre-existing files still fails the gate and still needs
+its own justification; a diff touching exactly 5, following the same three-layer,
+two-test shape as Decision 14's and this PR's, now correctly passes without needing a
+fresh Decision each time it recurs.
