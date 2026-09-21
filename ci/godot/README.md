@@ -97,6 +97,15 @@ real, not an oversight.
   Both false positives (a `feat` adding only a private helper) and false negatives (a
   new public API added without a new top-level declaration, e.g. a new exported
   property) are possible. It's a warning, not a hard block, for exactly this reason.
+- `check_commit_message.sh`'s merge-commit exemption — matches any subject starting
+  `Merge ` (git's own default for `git merge`, and GitHub's default for a PR's
+  "Create a merge commit" button) and skips Conventional Commits validation entirely
+  for it, since these are mechanically generated, never freeform-authored. Hit for
+  real: resolving a conflict on an open PR needs a local `git merge main`, which runs
+  this hook via `commit-msg` and rejected git's own default message before the
+  exemption existed. Narrow enough not to exempt a human-authored subject that merely
+  starts with the word "Merged" (past tense) or similar — only the exact git/GitHub
+  prefix.
 
 ## Known environment gotchas
 

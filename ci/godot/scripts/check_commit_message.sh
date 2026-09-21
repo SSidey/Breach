@@ -19,6 +19,17 @@ set -euo pipefail
 msg_file="$1"
 subject="$(head -n1 "$msg_file")"
 
+# Exempt git/GitHub's own mechanically-generated merge-commit messages ("Merge branch
+# 'main' into feature/x", "Merge pull request #16 from owner/branch", "Merge remote-
+# tracking branch 'origin/main'") - these are never freeform-authored, so Conventional
+# Commits format doesn't apply to them. Hit for real: resolving a conflict on an open
+# PR needs `git merge main` locally, which runs this hook via commit-msg and rejected
+# git's own default message before this exemption existed.
+if [[ "$subject" =~ ^Merge\  ]]; then
+	echo "check_commit_message: OK (merge commit, exempt) - '$subject'"
+	exit 0
+fi
+
 pattern='^(feat|fix|refactor|test|docs|chore|perf)(\([a-z0-9_-]+\))?!?: .+'
 
 if ! [[ "$subject" =~ $pattern ]]; then
