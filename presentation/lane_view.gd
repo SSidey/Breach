@@ -21,11 +21,19 @@ extends Node2D
 ## This class's actual rendering has no automated coverage - it needs a real render
 ## context, which only exists once a running scene is assembled (Phase 3 item 11).
 ## Manual playtest verifies it there.
+##
+## speed_multiplier (found necessary via manual playtest) scales
+## _elapsed_since_last_tick's own accumulation the same way SimulationClock scales
+## its internal elapsed counter - without this, the unit's on-screen animation filled
+## at the old 1x pace while the real tick fired early at 2x/4x, cutting the animation
+## short (visibly stopping halfway at 2x, a quarter of the way at 4x) instead of
+## finishing right as the tick advanced.
 
 const TickInterpolation = preload("res://presentation/tick_interpolation.gd")
 
 var lane: LaneSimulation
 var tick_duration_seconds: float = 1.0
+var speed_multiplier: float = 1.0
 var node_spacing: float = 96.0
 
 var _elapsed_since_last_tick: float = 0.0
@@ -40,7 +48,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_elapsed_since_last_tick += delta
+	_elapsed_since_last_tick += delta * speed_multiplier
 	queue_redraw()
 
 
