@@ -55,6 +55,8 @@ var _fortify_button: Button
 var _dismantle_button: Button
 var _time_controls: TimeControls
 var _auto_pause_button: Button
+var _tick_indicator: TickProgressIndicator
+var _pending_units_label: Label
 
 
 func _ready() -> void:
@@ -111,10 +113,10 @@ func _build_presentation() -> void:
 
 
 func _build_tick_indicator() -> void:
-	var indicator := TickProgressIndicator.new()
-	indicator.tick_duration_seconds = MAP.tick_duration_seconds
-	indicator.position = Vector2(20, 100)
-	add_child(indicator)
+	_tick_indicator = TickProgressIndicator.new()
+	_tick_indicator.tick_duration_seconds = MAP.tick_duration_seconds
+	_tick_indicator.position = Vector2(20, 100)
+	add_child(_tick_indicator)
 
 
 func _build_lane_view() -> void:
@@ -145,9 +147,9 @@ func _build_time_controls() -> void:
 	add_child(_time_controls)
 	_add_button("Pause/Resume", Vector2(20, 180), _time_controls.on_pause_pressed)
 	_add_button("Skip to next tick", Vector2(180, 180), _time_controls.on_skip_pressed)
-	_add_button("1x", Vector2(340, 180), func(): _time_controls.on_speed_selected(1.0))
-	_add_button("2x", Vector2(390, 180), func(): _time_controls.on_speed_selected(2.0))
-	_add_button("4x", Vector2(440, 180), func(): _time_controls.on_speed_selected(4.0))
+	_add_button("1x", Vector2(340, 180), func(): _on_speed_button_pressed(1.0))
+	_add_button("2x", Vector2(390, 180), func(): _on_speed_button_pressed(2.0))
+	_add_button("4x", Vector2(440, 180), func(): _on_speed_button_pressed(4.0))
 	_auto_pause_button = _add_button(
 		"Auto-pause: ON", Vector2(500, 180), _on_auto_pause_button_pressed
 	)
@@ -158,10 +160,12 @@ func _build_wave_form_input() -> void:
 	_wave_form.economy = _economy
 	_wave_form.command_queue = _queue
 	add_child(_wave_form)
-	_add_button(
-		"Queue Grem (8 food)", Vector2(20, 220), func(): _wave_form.on_queue_grem_pressed(GREM)
-	)
+	_add_button("Queue Grem (8 food)", Vector2(20, 220), _on_queue_grem_button_pressed)
 	_add_button("March wave", Vector2(220, 220), _on_march_pressed)
+	_pending_units_label = Label.new()
+	_pending_units_label.position = Vector2(420, 225)
+	_pending_units_label.text = "Pending: 0"
+	add_child(_pending_units_label)
 
 
 func _build_capture_choice_input() -> void:
@@ -188,10 +192,21 @@ func _add_button(text: String, at: Vector2, callback: Callable) -> Button:
 	return button
 
 
+func _on_speed_button_pressed(multiplier: float) -> void:
+	_time_controls.on_speed_selected(multiplier)
+	_time_controls_lane_view.speed_multiplier = multiplier
+	_tick_indicator.speed_multiplier = multiplier
+
+
 func _on_auto_pause_button_pressed() -> void:
 	var new_state := not _clock.auto_pause_each_tick
 	_time_controls.on_auto_pause_toggled(new_state)
 	_auto_pause_button.text = "Auto-pause: %s" % ("ON" if new_state else "OFF")
+
+
+func _on_queue_grem_button_pressed() -> void:
+	_wave_form.on_queue_grem_pressed(GREM)
+	_pending_units_label.text = "Pending: %d" % _wave_form.pending_count()
 
 
 func _on_march_pressed() -> void:
@@ -199,6 +214,7 @@ func _on_march_pressed() -> void:
 	var pending := _queue.pending_commands()
 	if pending.size() > 0:
 		_wave_command_panel.command_id = pending[-1]
+	_pending_units_label.text = "Pending: %d" % _wave_form.pending_count()
 
 
 func _connect_events() -> void:
@@ -276,7 +292,9 @@ func _on_suspicion_tier_changed(tier: int) -> void:
 
 func _on_victory() -> void:
 	_narrative_label.append_text("VICTORY! The horde has reached the Core.\n")
+	_clock.pause()
 
 
 func _on_defeat() -> void:
 	_narrative_label.append_text("DEFEAT. The standing force has been wiped out.\n")
+	_clock.pause()
