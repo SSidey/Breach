@@ -115,7 +115,10 @@ hard, and not skippable:
    found nothing, not that the underlying SOLID property is proven.
 5. Coverage isn't automated (see `ci/godot/README.md`'s "Procedural, not scripted") —
    confirm every Given/When/Then scenario in the item's spec has a corresponding test
-   instead, and note that check in the PR description rather than a coverage number.
+   instead. **Don't add a coverage line to the PR description for this** — Decision 10
+   in the design spec settled coverage as permanently procedural; it's not an
+   open item to re-flag on every PR. This check is for your own confirmation before
+   opening the PR, not something the reviewer needs restated each time.
 
 ## 6. Open the PR — do not merge it
 
@@ -129,14 +132,24 @@ item, the rubric checklist from step 5, and for the two Gate sections:
   yourself — `progress-tracking.md`: "an agent judging whether its own change was an
   improvement has an obvious conflict of interest."
 
-**After opening the PR, check that CI actually passes** (`gh run watch <run-id>
---exit-status`) rather than assuming a locally-green gate means the same thing on the
-real runner — this project has already hit two real environment-specific failures
-(a display-server requirement gdUnit4's own runner has that the CI runner doesn't
-satisfy; a GitHub-generated synthetic merge commit tripping the commit-message check)
-that only showed up on an actual CI run, not locally. Fix and push a follow-up commit
-on the same branch if CI fails; don't leave a red PR open assuming it's someone else's
-problem.
+**Do not poll or watch CI to completion after opening the PR.** Notify the user that
+the PR is open (a link and a short summary of what landed) and stop there — the user
+reviews, watches CI if they want to, and decides when to kick off the next phase/item.
+This was said directly after an agent spent several tool calls polling `gh run list`/
+`gh api .../actions/runs` for a run that hadn't triggered yet, while the user had
+already merged the PR in the meantime: notifying promptly and letting the human drive
+the pace is the actual preference, not a one-off.
 
-Per this project's decision, **stop here.** Report the PR URL and a short summary of
-what landed; the user reviews and merges. Do not merge, even if CI is green.
+This doesn't mean CI reliability stopped mattering — it's the opposite: this project
+has hit multiple real environment-specific failures that only showed up on an actual
+CI run, never locally (a display-server requirement gdUnit4's own runner has that the
+CI runner doesn't satisfy; a GitHub-generated synthetic merge commit tripping the
+commit-message check; a `gdtoolkit` grammar-cache race condition — all catalogued in
+`ci/godot/README.md`'s "Known environment gotchas"). If the user reports CI failed on
+a PR, or asks you to check, investigate then and push a follow-up commit on the same
+branch — don't leave a red PR open assuming it's someone else's problem. The change
+here is *when* CI gets checked (on request, not as a blocking step every single time),
+not whether it matters.
+
+Per this project's decision, **stop here** either way. Do not merge, even if CI is
+green — the user reviews and merges, and decides when the next phase/item starts.
