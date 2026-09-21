@@ -24,6 +24,13 @@ consumes those events to animate").
   lines per Decision 8), time controls (play/pause/speed/skip-to-marker, calling
   `SimulationClock` directly — these are timing controls, not simulation commands, so
   they bypass `CommandQueue` deliberately).
+- `TickProgressIndicator` (added Phase 4, item 1) — shows progress toward the next
+  tick, reusing `TickInterpolation.elapsed_fraction` exactly as `LaneView` already
+  does for unit position. A read-only presentation widget, not a new HUD file per the
+  original four-file split (Decision-tier reasoning: it consumes the same
+  `SimEvents.tick_advanced`/`TickInterpolation` pair `LaneView` already does, not a
+  new concern category), but its own file per `ai-first-organisation.md`'s
+  one-concern-per-file rule.
 
 ## Scenarios (Given/When/Then)
 
@@ -58,6 +65,14 @@ Scenario: Time controls affect timing only, never simulation content
   Given the player presses pause
   When SimulationClock.pause() is called
   Then no CommandQueue or EconomySystem state changes as a result of that call alone
+
+Scenario: Tick progress indicator reflects elapsed time toward the next tick
+  Given 50% of the tick duration has elapsed in real time since the last tick
+  When TickProgressIndicator renders the current frame
+  Then it shows the same 0.5 fraction TickInterpolation.elapsed_fraction computes for
+    that elapsed time and tick duration
+  When SimEvents.tick_advanced fires
+  Then the indicator resets to reflect zero elapsed time for the new tick
 ```
 
 ## Test-first order
@@ -71,6 +86,10 @@ Scenario: Time controls affect timing only, never simulation content
    tested independent of the actual `RichTextLabel`/UI node.
 4. Time control button wiring — assert each button calls the correct `SimulationClock`
    method and nothing else (guards the "timing only" scenario above).
+5. `TickProgressIndicator` construction (Phase 4, item 1) — a smoke test only, same
+   honesty as `LaneView`/`ResourceBar`: its `_ready`/`_process`/`_draw` engine
+   callbacks are deferred to manual playtest, since `TickInterpolation`'s math (the
+   only pure logic involved) is already covered.
 
 ## Notes / open questions
 
@@ -115,6 +134,13 @@ Scenario: Time controls affect timing only, never simulation content
   numeric progress now would mean extending `CommandQueue`'s already-shipped contract
   speculatively, with no real wave-forming content yet to drive it. Revisit once such
   content exists (likely alongside real wave-command authoring, a later item).
+- **`TickProgressIndicator` (Phase 4, item 1) has no automated coverage beyond a
+  construction smoke test** — same disclosed limitation as `LaneView`: its `_draw()`
+  needs a real render context to verify visually, deferred to manual playtest. It
+  does not add a public elapsed-time getter to `SimulationClock` (already at the
+  7-method ISP ceiling, `AI_First_Development_Kit/config/thresholds.yaml`) — instead
+  it tracks its own `_elapsed_since_last_tick`, mirroring `LaneView`'s own
+  self-subscribe-and-track pattern exactly rather than reading clock internals.
 
 ## Rubric answers (qualitative, spec-baseline)
 
@@ -122,12 +148,13 @@ Scenario: Time controls affect timing only, never simulation content
   ("lane rendering"), `presentation/tick_interpolation.gd` ("tick-boundary
   interpolation math"), `presentation/resource_bar.gd` ("resource pool readout"),
   `presentation/wave_command_panel.gd` ("wave-command status readout"),
-  `presentation/narrative_log.gd` ("tier-to-message mapping"), and
-  `presentation/time_controls.gd` ("play/pause and skip controls") — six files, each
-  one noun phrase, no conjunction. Grouped in this one spec because they all consume
-  the same event set and share the "read-only, never mutates sim state" constraint
-  being specified, not because they're one file-level concern (see Notes above for
-  why "HUD" as originally framed would have failed this same test).
+  `presentation/narrative_log.gd` ("tier-to-message mapping"),
+  `presentation/time_controls.gd` ("play/pause and skip controls"), and (Phase 4, item
+  1) `presentation/tick_progress_indicator.gd` ("tick progress readout") — seven
+  files, each one noun phrase, no conjunction. Grouped in this one spec because they
+  all consume the same event set and share the "read-only, never mutates sim state"
+  constraint being specified, not because they're one file-level concern (see Notes
+  above for why "HUD" as originally framed would have failed this same test).
 - `ocp-extension-point`: a new `SimEvents` signal (e.g. a future Scout reveal event)
   plugs into `HUD` as a new subscriber method, not an edit to existing subscriber
   logic; a new narrative log line is a new entry in the tier→string mapping table, not
@@ -142,7 +169,9 @@ Scenario: Time controls affect timing only, never simulation content
   just not literally zero. Of item 10's four files: `NarrativeLog` is one static
   method; `WaveCommandPanel` has `status_text()` plus its fields; `TimeControls` has
   `on_pause_pressed()`/`on_skip_pressed()` plus its fields; `ResourceBar` has no
-  methods beyond its engine callbacks. All well under threshold.
+  methods beyond its engine callbacks. `TickProgressIndicator` (Phase 4, item 1)
+  likewise has no methods beyond its engine callbacks, just an exported
+  `tick_duration_seconds` field. All well under threshold.
 - `dip-direction`: this spec *is* the DIP boundary — every dependency here points from
   presentation into simulation (`SimEvents`, `CommandQueue`, read-only queries), never
   the reverse. The dependency-direction check (`ci/godot/`) should treat any import
