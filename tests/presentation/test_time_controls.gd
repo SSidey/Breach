@@ -48,3 +48,36 @@ func test_skip_button_works_even_while_paused() -> void:
 	controls.on_skip_pressed()
 
 	assert_int(clock.tick_number()).is_equal(1)
+
+
+func test_speed_selected_sets_the_multiplier_and_nothing_else() -> void:
+	var clock := SimulationClock.new()
+	var controls: TimeControls = auto_free(TimeControls.new())
+	controls.simulation_clock = clock
+
+	controls.on_speed_selected(4.0)
+
+	assert_float(clock.speed_multiplier).is_equal_approx(4.0, 0.001)
+	assert_int(clock.tick_number()).is_equal(0)
+	assert_bool(clock.is_paused()).is_false()
+
+
+func test_auto_pause_toggled_on_sets_the_flag() -> void:
+	var clock := SimulationClock.new()
+	var controls: TimeControls = auto_free(TimeControls.new())
+	controls.simulation_clock = clock
+
+	controls.on_auto_pause_toggled(true)
+
+	assert_bool(clock.auto_pause_each_tick).is_true()
+
+
+func test_auto_pause_toggled_off_sets_the_flag() -> void:
+	var clock := SimulationClock.new()
+	clock.auto_pause_each_tick = true
+	var controls: TimeControls = auto_free(TimeControls.new())
+	controls.simulation_clock = clock
+
+	controls.on_auto_pause_toggled(false)
+
+	assert_bool(clock.auto_pause_each_tick).is_false()
