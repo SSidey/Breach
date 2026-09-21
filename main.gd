@@ -53,6 +53,8 @@ var _time_controls_lane_view: LaneView
 var _ravage_button: Button
 var _fortify_button: Button
 var _dismantle_button: Button
+var _time_controls: TimeControls
+var _auto_pause_button: Button
 
 
 func _ready() -> void:
@@ -90,6 +92,7 @@ func _build_simulation() -> void:
 	_watcher = ScriptedBeatWatcher.new(CORE)
 	_clock = SimulationClock.new()
 	_clock.tick_duration_seconds = MAP.tick_duration_seconds
+	_clock.auto_pause_each_tick = true
 	_queue = CommandQueue.new()
 	_roster = PlayerRoster.new()
 
@@ -136,12 +139,18 @@ func _build_readouts() -> void:
 
 
 func _build_time_controls() -> void:
-	var time_controls := TimeControls.new()
-	time_controls.simulation_clock = _clock
-	time_controls.lane_view = _time_controls_lane_view
-	add_child(time_controls)
-	_add_button("Pause/Resume", Vector2(20, 180), time_controls.on_pause_pressed)
-	_add_button("Skip to next tick", Vector2(180, 180), time_controls.on_skip_pressed)
+	_time_controls = TimeControls.new()
+	_time_controls.simulation_clock = _clock
+	_time_controls.lane_view = _time_controls_lane_view
+	add_child(_time_controls)
+	_add_button("Pause/Resume", Vector2(20, 180), _time_controls.on_pause_pressed)
+	_add_button("Skip to next tick", Vector2(180, 180), _time_controls.on_skip_pressed)
+	_add_button("1x", Vector2(340, 180), func(): _time_controls.on_speed_selected(1.0))
+	_add_button("2x", Vector2(390, 180), func(): _time_controls.on_speed_selected(2.0))
+	_add_button("4x", Vector2(440, 180), func(): _time_controls.on_speed_selected(4.0))
+	_auto_pause_button = _add_button(
+		"Auto-pause: ON", Vector2(500, 180), _on_auto_pause_button_pressed
+	)
 
 
 func _build_wave_form_input() -> void:
@@ -177,6 +186,12 @@ func _add_button(text: String, at: Vector2, callback: Callable) -> Button:
 	button.pressed.connect(callback)
 	add_child(button)
 	return button
+
+
+func _on_auto_pause_button_pressed() -> void:
+	var new_state := not _clock.auto_pause_each_tick
+	_time_controls.on_auto_pause_toggled(new_state)
+	_auto_pause_button.text = "Auto-pause: %s" % ("ON" if new_state else "OFF")
 
 
 func _on_march_pressed() -> void:

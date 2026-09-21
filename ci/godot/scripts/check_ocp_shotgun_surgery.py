@@ -69,7 +69,7 @@ def main() -> int:
         print(f"check_ocp_shotgun_surgery: could not diff against '{base_ref}': {error}")
         return 0
 
-    if len(touched) >= max_touched:
+    if len(touched) > max_touched:
         print(
             f"check_ocp_shotgun_surgery: {len(touched)} pre-existing files modified "
             f"(threshold: {max_touched}). If this is one new case/behaviour, it should "

@@ -6,8 +6,15 @@ extends RefCounted
 ## Deliberately a plain RefCounted, not a Godot autoload/Node - driven by real elapsed
 ## time via advance_time(delta), called once per frame by whichever presentation-layer
 ## node owns the game loop, so this class never needs a scene-tree dependency.
+##
+## speed_multiplier/auto_pause_each_tick (Phase 4 follow-up) are plain fields, not
+## methods - ISP was already at the 7-method ceiling. Both default to their neutral/
+## off value (1.0, false); a game that wants auto-pause on by default sets the field
+## explicitly at the composition root, per specs/05's Notes.
 
 @export var tick_duration_seconds: float = 1.0
+@export var speed_multiplier: float = 1.0
+@export var auto_pause_each_tick: bool = false
 
 var _tick_number: int = 0
 var _elapsed_since_last_tick: float = 0.0
@@ -33,7 +40,7 @@ func resume() -> void:
 func advance_time(delta: float) -> void:
 	if _paused:
 		return
-	_elapsed_since_last_tick += delta
+	_elapsed_since_last_tick += delta * speed_multiplier
 	if _elapsed_since_last_tick >= tick_duration_seconds:
 		_elapsed_since_last_tick = 0.0
 		advance_tick()
@@ -47,3 +54,5 @@ func skip_to_next_marker() -> void:
 func advance_tick() -> void:
 	_tick_number += 1
 	SimEvents.tick_advanced.emit(_tick_number)
+	if auto_pause_each_tick:
+		pause()
