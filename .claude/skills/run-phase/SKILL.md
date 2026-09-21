@@ -99,7 +99,10 @@ hard, and not skippable:
 2. Run the static checks directly (they also run in `pre-commit`/CI, but run them here
    first to catch anything before pushing): `check_function_length.py`,
    `check_generic_naming.py`, `check_isp.py`, `check_dependency_direction.py`,
-   `check_helper_promotion.py`, `check_ocp_shotgun_surgery.py origin/main`, plus
+   `check_helper_promotion.py`, `check_ocp_shotgun_surgery.py origin/main`,
+   `check_context_locality.py origin/main` (informational — read its output, it won't
+   fail the gate, but a large touched-file count that *isn't* the schema-plus-consumer
+   pattern Decision 12 covers is worth a second look before opening the PR), plus
    `gdlint`/`gdformat --check` (all under `ci/godot/scripts/`, or `gdlint`/`gdformat`
    directly).
 3. Run `python3 ci/godot/scripts/gate1_progress_log.py` — computes the current

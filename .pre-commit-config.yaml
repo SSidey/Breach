@@ -67,6 +67,14 @@ repos:
         files: \.gd$
         exclude: ^addons/
 
+      - id: check-context-locality
+        name: context-locality (informational; needs a committed base ref)
+        entry: python3 ci/godot/scripts/check_context_locality.py
+        language: system
+        pass_filenames: false
+        files: \.gd$
+        exclude: ^addons/
+
       - id: check-branch-name
         name: branch-name-conforms
         entry: bash ci/godot/scripts/check_branch_name.sh
