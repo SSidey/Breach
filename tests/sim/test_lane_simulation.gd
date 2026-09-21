@@ -102,6 +102,41 @@ func test_a_surviving_moving_blocker_keeps_its_reduced_hp_for_the_next_clash() -
 	assert_int(mover["blocker"]["hp"]).is_equal(44)
 
 
+func test_a_stalemated_wave_does_not_advance_past_an_undefeated_node() -> void:
+	var sim := LaneSimulation.new(_map([_origin_node(), _fort_node(50, 1), _origin_node()]))
+	sim.spawn_wave("player", [{"hp": 10, "dmg": 1}], 0, 1)
+	sim.advance_positions()
+
+	sim.advance_positions()
+
+	assert_int(sim.waves()[0]["position"]).is_equal(1)
+	assert_str(sim.node_state(1)["owner"]).is_equal("")
+
+
+func test_a_stalemated_wave_resumes_marching_once_it_captures_the_node() -> void:
+	var sim := LaneSimulation.new(_map([_origin_node(), _fort_node(2, 1), _origin_node()]))
+	sim.spawn_wave("player", [{"hp": 10, "dmg": 1}], 0, 1)
+	sim.advance_positions()
+	sim.advance_positions()
+	assert_str(sim.node_state(1)["owner"]).is_equal("player")
+
+	sim.advance_positions()
+
+	assert_int(sim.waves()[0]["position"]).is_equal(2)
+
+
+func test_a_stalemated_mid_lane_clash_holds_both_sides_in_place() -> void:
+	var sim := LaneSimulation.new(_map([_origin_node(), _origin_node(), _origin_node()]))
+	sim.spawn_wave("player", [{"hp": 10, "dmg": 1}], 0, 1)
+	var mover := sim.spawn_moving_blocker("defender", {"hp": 50, "dmg": 1}, 2, -1)
+	sim.advance_positions()
+
+	sim.advance_positions()
+
+	assert_int(sim.waves()[0]["position"]).is_equal(1)
+	assert_int(mover["position"]).is_equal(1)
+
+
 func test_advancing_after_a_wave_is_wiped_does_not_error() -> void:
 	var sim := LaneSimulation.new(_map([_origin_node(), _fort_node(50, 20)]))
 	sim.spawn_wave("player", [{"hp": 4, "dmg": 1}], 0, 1)

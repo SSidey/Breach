@@ -4,11 +4,21 @@ extends RefCounted
 ## spatial). See specs/02-lane-movement-and-combat.md.
 ##
 ## A wave is a Dictionary {"owner", "units" (Array of {"hp","dmg"}), "position",
-## "direction"} - the player's horde. A moving blocker is a Dictionary {"owner",
-## "blocker" ({"hp","dmg"}), "position", "direction"} - a defender-side single-entity
-## mover (Hero Party, Messenger; dispatched by specs/04, spawned here directly via
-## spawn_moving_blocker() as a test-only entry point until that item exists).
-## Plain Dictionaries throughout, matching CombatResolver's plain-data contract.
+## "direction", "engaged"} - the player's horde. A moving blocker is a Dictionary
+## {"owner", "blocker" ({"hp","dmg"}), "position", "direction", "engaged"} - a
+## defender-side single-entity mover (Hero Party, Messenger; dispatched by specs/04,
+## spawned here directly via spawn_moving_blocker() as a test-only entry point until
+## that item exists). Plain Dictionaries throughout, matching CombatResolver's
+## plain-data contract.
+##
+## "engaged" (Phase 3 item 11, specs/08) holds a wave/mover in place across ticks
+## while a clash is unresolved (both sides survive) - without it, advance_positions()
+## unconditionally incremented position every tick regardless of combat outcome, so a
+## horde that failed to destroy a blocker would silently walk past it (or a Hero Party
+## past an undefeated horde) on the very next tick instead of the multi-tick siege
+## specs/02's own Notes describe ("the same clash resolves again next tick"). Cleared
+## the moment that side's clash actually resolves (capture, blocker destroyed, or the
+## wave/mover is removed).
 ##
 ## node_owner()/node_garrison_hp() were merged into node_state() (Phase 3 item 11,
 ## specs/08) to keep this file's public surface within the ISP method-count threshold
@@ -45,7 +55,13 @@ func moving_blockers() -> Array:
 
 
 func spawn_wave(owner: String, units: Array, start_index: int, direction: int) -> Dictionary:
-	var wave := {"owner": owner, "units": units, "position": start_index, "direction": direction}
+	var wave := {
+		"owner": owner,
+		"units": units,
+		"position": start_index,
+		"direction": direction,
+		"engaged": false,
+	}
 	_waves.append(wave)
 	return wave
 
@@ -58,7 +74,11 @@ func spawn_moving_blocker(
 	owner: String, blocker: Dictionary, start_index: int, direction: int
 ) -> Dictionary:
 	var mover := {
-		"owner": owner, "blocker": blocker, "position": start_index, "direction": direction
+		"owner": owner,
+		"blocker": blocker,
+		"position": start_index,
+		"direction": direction,
+		"engaged": false,
 	}
 	_moving_blockers.append(mover)
 	return mover
@@ -66,9 +86,11 @@ func spawn_moving_blocker(
 
 func advance_positions() -> void:
 	for wave in _waves:
-		wave["position"] += wave["direction"]
+		if not wave["engaged"]:
+			wave["position"] += wave["direction"]
 	for mover in _moving_blockers:
-		mover["position"] += mover["direction"]
+		if not mover["engaged"]:
+			mover["position"] += mover["direction"]
 	for wave in _waves.duplicate():
 		_resolve_wave_arrival(wave)
 
@@ -79,14 +101,7 @@ func _resolve_wave_arrival(wave: Dictionary) -> void:
 	for mover in _moving_blockers.duplicate():
 		if mover["owner"] == wave["owner"] or mover["position"] != index:
 			continue
-		var outcome := CombatResolver.resolve(wave["units"], mover["blocker"])
-		SimEvents.combat_resolved.emit(index, outcome)
-		wave["units"] = outcome["surviving_horde"]
-		mover["blocker"]["hp"] = outcome["remaining_blocker_hp"]
-		if outcome["blocker_destroyed"]:
-			_moving_blockers.erase(mover)
-		if wave["units"].is_empty():
-			_waves.erase(wave)
+		_resolve_mid_lane_clash(wave, mover, index)
 		return
 
 	if index < 0 or index >= _node_owners.size():
@@ -94,6 +109,25 @@ func _resolve_wave_arrival(wave: Dictionary) -> void:
 	if _node_owners[index] == wave["owner"]:
 		return
 
+	_resolve_node_arrival(wave, index)
+
+
+func _resolve_mid_lane_clash(wave: Dictionary, mover: Dictionary, index: int) -> void:
+	var outcome := CombatResolver.resolve(wave["units"], mover["blocker"])
+	SimEvents.combat_resolved.emit(index, outcome)
+	wave["units"] = outcome["surviving_horde"]
+	mover["blocker"]["hp"] = outcome["remaining_blocker_hp"]
+	if outcome["blocker_destroyed"]:
+		_moving_blockers.erase(mover)
+		wave["engaged"] = false
+	else:
+		mover["engaged"] = true
+		wave["engaged"] = true
+	if wave["units"].is_empty():
+		_waves.erase(wave)
+
+
+func _resolve_node_arrival(wave: Dictionary, index: int) -> void:
 	var node: NodeDef = _map.nodes[index]
 	if node.garrison <= 0 or _node_garrison_hp[index] <= 0:
 		_node_owners[index] = wave["owner"]
@@ -108,5 +142,8 @@ func _resolve_wave_arrival(wave: Dictionary) -> void:
 	if outcome["blocker_destroyed"]:
 		_node_owners[index] = wave["owner"]
 		SimEvents.node_captured.emit(index)
+		wave["engaged"] = false
+	else:
+		wave["engaged"] = true
 	if wave["units"].is_empty():
 		_waves.erase(wave)

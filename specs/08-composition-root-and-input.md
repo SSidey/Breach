@@ -169,6 +169,31 @@ Scenario: Each capture-choice button calls exactly one CaptureResolution method
   down over several ticks now genuinely works, the numbers below don't have to
   guarantee a one-hit kill, matching `specs/00` beat 5's actual intent (a Ravage-funded
   horde that can plausibly finish the fight, not necessarily in one exchange).
+- **A third, more serious gap found the same way: a stalemate never actually held
+  anyone in place.** `advance_positions()` incremented every wave's and mover's
+  position unconditionally every tick, with no way to keep a wave that failed to
+  destroy a blocker sitting at that blocker's node — on the very next tick it would
+  silently walk *past* an undefeated Fort (or a Hero Party past an undefeated horde),
+  directly contradicting `specs/02`'s own stated rule ("the horde doesn't advance,
+  and the same clash resolves again next tick"). No existing test advanced twice past
+  a stalemate to catch this. Fixed by adding an `"engaged"` flag to the wave/mover
+  Dictionary shape, set when a clash leaves both sides standing and cleared the moment
+  it actually resolves (capture, destruction, or removal); `advance_positions()` skips
+  the position increment for anything still `engaged`. `_resolve_wave_arrival()` was
+  split into `_resolve_mid_lane_clash()`/`_resolve_node_arrival()` in the same change,
+  since the flag's bookkeeping pushed the combined function over the `srp-size`
+  function-length threshold.
+- **Also found this way: the map's own topology made beat 5 physically impossible.**
+  `specs/00`'s four named nodes (`P`, `f`, `F`, `c`) place the Fort and the Core
+  directly adjacent. A wave leaving a just-captured Fort and a Hero Party leaving the
+  Core, moving toward each other one node per tick, swap positions without ever
+  sharing an index in the same tick — `specs/02`'s "Opposing forces meeting mid-lane"
+  scenario literally cannot fire on a 4-node lane. `content/maps/p_f_F_c.tres` adds a
+  fifth, unnamed lane position between `F` and `c` purely so the two can occupy the
+  same node on the same tick — narratively inert (an `ORIGIN` node nothing ever
+  references by name), mechanically necessary. `test_vertical_slice_win_condition.gd`
+  already modeled exactly this shape (its own `MIDPOINT` node) without commenting on
+  why; this makes that same need explicit for the real map.
 - **The "Messenger flees" beat (`specs/00`, beat 3) has no mechanically interceptable
   entity in this slice**, consistent with Decision 7 already deferring Scout/
   Infiltrator (nothing in this slice's roster could intercept a Messenger anyway).
