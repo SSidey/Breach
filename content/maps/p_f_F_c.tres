@@ -1,15 +1,20 @@
-[gd_resource type="Resource" script_class="MapDef" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="MapDef" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://content/definitions/map_def.gd" id="1_map"]
 [ext_resource type="Script" path="res://content/definitions/node_def.gd" id="2_node"]
+[ext_resource type="Script" path="res://content/definitions/lane_def.gd" id="3_lane"]
 
 [sub_resource type="Resource" id="Resource_node_p"]
 script = ExtResource("2_node")
+id = "p"
+position = Vector2(0, 0)
 node_type = 0
 garrison = 0
 
 [sub_resource type="Resource" id="Resource_node_f"]
 script = ExtResource("2_node")
+id = "f"
+position = Vector2(160, 0)
 node_type = 1
 garrison = 0
 yield_food_per_tick = 6
@@ -19,6 +24,8 @@ ravage_yield_food = 40
 
 [sub_resource type="Resource" id="Resource_node_F"]
 script = ExtResource("2_node")
+id = "F"
+position = Vector2(320, 0)
 node_type = 2
 garrison = 1
 garrison_hp = 26
@@ -30,17 +37,27 @@ fortify_stone_cost = 6
 
 [sub_resource type="Resource" id="Resource_node_midpoint"]
 script = ExtResource("2_node")
+id = "midpoint"
+position = Vector2(480, 0)
 node_type = 0
 garrison = 0
 
 [sub_resource type="Resource" id="Resource_node_c"]
 script = ExtResource("2_node")
+id = "c"
+position = Vector2(640, 0)
 node_type = 0
 garrison = 0
 
+[sub_resource type="Resource" id="Resource_lane_main"]
+script = ExtResource("3_lane")
+id = "main"
+nodes = Array[Resource("res://content/definitions/node_def.gd")]([SubResource("Resource_node_p"), SubResource("Resource_node_f"), SubResource("Resource_node_F"), SubResource("Resource_node_midpoint"), SubResource("Resource_node_c")])
+player_home_index = 0
+
 [resource]
 script = ExtResource("1_map")
-nodes = Array[Resource("res://content/definitions/node_def.gd")]([SubResource("Resource_node_p"), SubResource("Resource_node_f"), SubResource("Resource_node_F"), SubResource("Resource_node_midpoint"), SubResource("Resource_node_c")])
+lanes = Array[Resource("res://content/definitions/lane_def.gd")]([SubResource("Resource_lane_main")])
 tick_duration_seconds = 1.5
 suspicion_tier_thresholds = Array[int]([20, 45, 70, 90])
 suspicion_decay_per_tick = 2

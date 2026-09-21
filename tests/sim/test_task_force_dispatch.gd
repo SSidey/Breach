@@ -3,17 +3,14 @@ extends GdUnitTestSuite
 const TaskForceDispatch = preload("res://sim/task_force_dispatch.gd")
 const LaneSimulation = preload("res://sim/lane_simulation.gd")
 const NodeDef = preload("res://content/definitions/node_def.gd")
-const MapDef = preload("res://content/definitions/map_def.gd")
 const SuspicionSystem = preload("res://sim/suspicion_system.gd")
 
 
-func _map() -> MapDef:
-	var map := MapDef.new()
+func _nodes() -> Array[NodeDef]:
 	var node := NodeDef.new()
 	node.node_type = NodeDef.NodeType.ORIGIN
 	var nodes: Array[NodeDef] = [node, node, node, node]
-	map.nodes = nodes
-	return map
+	return nodes
 
 
 func _hero_party_stats() -> Dictionary:
@@ -21,7 +18,7 @@ func _hero_party_stats() -> Dictionary:
 
 
 func test_a_tier_with_no_assigned_unit_no_ops_safely() -> void:
-	var lane := LaneSimulation.new(_map())
+	var lane := LaneSimulation.new(_nodes())
 	var dispatch := TaskForceDispatch.new(lane, 3, -1, {})  # no tier -> unit mapping at all
 
 	dispatch.on_tier_entered(SuspicionSystem.Tier.WARY)
@@ -30,7 +27,7 @@ func test_a_tier_with_no_assigned_unit_no_ops_safely() -> void:
 
 
 func test_a_tier_with_an_assigned_unit_spawns_a_moving_blocker_on_the_lane() -> void:
-	var lane := LaneSimulation.new(_map())
+	var lane := LaneSimulation.new(_nodes())
 	var dispatch := TaskForceDispatch.new(
 		lane, 3, -1, {SuspicionSystem.Tier.MOBILIZED: _hero_party_stats()}
 	)
@@ -46,7 +43,7 @@ func test_a_tier_with_an_assigned_unit_spawns_a_moving_blocker_on_the_lane() -> 
 
 
 func test_mark_completed_returns_a_task_force_to_the_roster() -> void:
-	var lane := LaneSimulation.new(_map())
+	var lane := LaneSimulation.new(_nodes())
 	var dispatch := TaskForceDispatch.new(
 		lane, 3, -1, {SuspicionSystem.Tier.MOBILIZED: _hero_party_stats()}
 	)
@@ -59,7 +56,7 @@ func test_mark_completed_returns_a_task_force_to_the_roster() -> void:
 
 
 func test_mark_consumed_removes_a_destroyed_task_force() -> void:
-	var lane := LaneSimulation.new(_map())
+	var lane := LaneSimulation.new(_nodes())
 	var dispatch := TaskForceDispatch.new(
 		lane, 3, -1, {SuspicionSystem.Tier.MOBILIZED: _hero_party_stats()}
 	)

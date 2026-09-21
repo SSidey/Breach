@@ -9,7 +9,6 @@ const LaneView = preload("res://presentation/lane_view.gd")
 const TickInterpolation = preload("res://presentation/tick_interpolation.gd")
 const LaneSimulation = preload("res://sim/lane_simulation.gd")
 const NodeDef = preload("res://content/definitions/node_def.gd")
-const MapDef = preload("res://content/definitions/map_def.gd")
 
 
 func test_constructs_without_error() -> void:
@@ -22,9 +21,7 @@ func test_snapshot_positions_reflects_the_lane_state() -> void:
 	var node := NodeDef.new()
 	node.node_type = NodeDef.NodeType.ORIGIN
 	var nodes: Array[NodeDef] = [node, node]
-	var map := MapDef.new()
-	map.nodes = nodes
-	var lane := LaneSimulation.new(map)
+	var lane := LaneSimulation.new(nodes)
 	lane.spawn_wave("player", [{"hp": 10, "dmg": 2}], 0, 1)
 
 	var view: LaneView = auto_free(LaneView.new())

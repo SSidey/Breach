@@ -14,7 +14,6 @@ const SuspicionSystem = preload("res://sim/suspicion_system.gd")
 const TaskForceDispatch = preload("res://sim/task_force_dispatch.gd")
 const ScriptedBeatWatcher = preload("res://sim/scripted_beat_watcher.gd")
 const NodeDef = preload("res://content/definitions/node_def.gd")
-const MapDef = preload("res://content/definitions/map_def.gd")
 
 const P := 0
 const FORT := 1
@@ -22,7 +21,7 @@ const MIDPOINT := 2
 const CORE := 3
 
 
-func _map() -> MapDef:
+func _nodes() -> Array[NodeDef]:
 	var node_p := NodeDef.new()
 	node_p.node_type = NodeDef.NodeType.ORIGIN
 
@@ -38,14 +37,12 @@ func _map() -> MapDef:
 	var node_core := NodeDef.new()
 	node_core.node_type = NodeDef.NodeType.ORIGIN
 
-	var map := MapDef.new()
 	var nodes: Array[NodeDef] = [node_p, node_fort, node_mid, node_core]
-	map.nodes = nodes
-	return map
+	return nodes
 
 
 func test_defeating_the_fort_then_the_hero_party_then_reaching_the_core_wins() -> void:
-	var lane := LaneSimulation.new(_map())
+	var lane := LaneSimulation.new(_nodes())
 	var suspicion := SuspicionSystem.new([25, 50, 75, 90], 0)
 	var dispatch := TaskForceDispatch.new(
 		lane, CORE, -1, {SuspicionSystem.Tier.MOBILIZED: {"hp": 20, "dmg": 5}}

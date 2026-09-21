@@ -25,19 +25,25 @@ extends RefCounted
 ## once despawn_wave() was added for auto-extraction - both queries were only ever
 ## used together by callers wanting a node's current state, and neither had a real
 ## consumer outside this file's own tests yet.
+##
+## _init(nodes: Array[NodeDef]) instead of _init(map: MapDef) (Phase 4 item 2,
+## specs/09) - this class already only ever read map.nodes, so taking the raw array
+## directly drops its dependency on MapDef's authoring-format shape entirely. Genuinely
+## "one lane's simulation" now, per this file's own purpose - it never has to change
+## again when MapDef's shape changes further (e.g. MapDef.lanes: Array[LaneDef]).
 
 const CombatResolver = preload("res://sim/combat_resolver.gd")
 
-var _map: MapDef
+var _nodes: Array[NodeDef]
 var _node_owners: Array = []
 var _node_garrison_hp: Array = []
 var _waves: Array = []
 var _moving_blockers: Array = []
 
 
-func _init(map: MapDef) -> void:
-	_map = map
-	for node in map.nodes:
+func _init(nodes: Array[NodeDef]) -> void:
+	_nodes = nodes
+	for node in nodes:
 		_node_owners.append("")
 		_node_garrison_hp.append(node.garrison_hp)
 
@@ -128,7 +134,7 @@ func _resolve_mid_lane_clash(wave: Dictionary, mover: Dictionary, index: int) ->
 
 
 func _resolve_node_arrival(wave: Dictionary, index: int) -> void:
-	var node: NodeDef = _map.nodes[index]
+	var node: NodeDef = _nodes[index]
 	if node.garrison <= 0 or _node_garrison_hp[index] <= 0:
 		_node_owners[index] = wave["owner"]
 		SimEvents.node_captured.emit(index)
