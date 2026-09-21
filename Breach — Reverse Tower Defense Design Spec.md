@@ -698,3 +698,53 @@ branch's actual accumulated total, not a round or padded number. Unlike Decision
 *multi-fix branch accumulating disclosed changes across a playtest feedback loop*,
 which may recur the same way on a future long-lived branch; a diff touching 9 or more
 pre-existing files still fails the gate and still needs its own justification.
+
+### Decision 19 — `NodeDef.position` is rendering-only, never authoritative for movement/combat
+
+**Rationale:** Phase 4 item 2 (`specs/09-node-graph-and-lanes.md`) gives `NodeDef` a
+real `position: Vector2` for the first time, ahead of item 3 actually rendering it.
+Making this explicit now, before any renderer consumes it, preempts a future
+temptation to let a node's visual position double as a gameplay input (distance
+between nodes, movement speed, adjacency-by-proximity) — mechanics stay purely
+index-based, unchanged from Decision 4's abstracted-lane model. `sim/` code must
+never read `position`; only `presentation/` does, starting with item 3.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Say nothing, revisit if it becomes a problem | `position` existing as real, non-zero data is an active invitation to reach for it from `sim/` code the moment a future item wants e.g. "nodes further apart take longer to march between" — cheaper to foreclose that now than to unwind it once something depends on it. |
+
+**Consequences:** `sim/lane_simulation.gd` and every other `sim/` file continue
+reading only node array index for occupancy/adjacency; `position` is read
+exclusively by `presentation/` code (item 3 onward). A future spatial-placement pass
+(Option 2, still deferred by Decision 4) would need its own explicit decision to
+change this, not an implicit drift.
+
+### Decision 20 — Raised `ocp.max_touched_files_per_new_case` from 8 to 11
+
+**Rationale:** Phase 4 item 2's data-model migration (`MapDef.nodes` →
+`MapDef.lanes`, `LaneSimulation._init(map: MapDef)` → `_init(nodes: Array[NodeDef])`)
+is a foundational schema change consumed by every layer: `sim/lane_simulation.gd`
+itself, `main.gd`'s composition wiring, and five separate test files that each
+constructed a `LaneSimulation` against a hand-built `MapDef`
+(`test_lane_simulation.gd`, `test_vertical_slice_win_condition.gd`,
+`test_lane_view.gd`, `test_suspicion_task_force_integration.gd`,
+`test_task_force_dispatch.gd`) — three more than `specs/09` itself anticipated
+("plus 4–5 test files"), found only once the full suite was run against the changed
+signature. This is a third distinct pattern from Decisions 13/14/18: not a rename
+ripple, not one feature's per-layer footprint, not a multi-fix branch — a foundational
+schema change is *expected* to touch every one of its consumers by nature, which is
+exactly why the migration is disclosed here rather than narrowed to "just the ones the
+spec guessed."
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Split the 3 under-anticipated test files into a follow-up PR | Would leave the first PR's test suite red (those files fail to compile against the new `LaneSimulation` signature) — not an option under `tests-red-then-green`; the migration is only coherent landed as one whole. |
+
+**Consequences:** `AI_First_Development_Kit/config/thresholds.yaml`'s
+`solid_mechanical.ocp.max_touched_files_per_new_case` is raised from 8 to 11 — this
+migration's actual, complete touched-file count. A future diff touching 12 or more
+pre-existing files still fails the gate and still needs its own justification.

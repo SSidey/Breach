@@ -15,7 +15,7 @@ solid_mechanical:
     max_file_lines: 300
     max_function_lines: 40
   ocp:
-    max_touched_files_per_new_case: 8
+    max_touched_files_per_new_case: 11
   lsp:
     min_implementations_for_contract_test: 2
   isp:
