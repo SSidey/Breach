@@ -21,6 +21,7 @@ const WaveFormPanel = preload("res://presentation/wave_form_panel.gd")
 const CaptureChoicePanel = preload("res://presentation/capture_choice_panel.gd")
 const NarrativeLog = preload("res://presentation/narrative_log.gd")
 const TickProgressIndicator = preload("res://presentation/tick_progress_indicator.gd")
+const PlayerRoster = preload("res://sim/player_roster.gd")
 
 const MAP: MapDef = preload("res://content/maps/p_f_F_c.tres")
 const GREM: UnitDef = preload("res://content/units/grem.tres")
@@ -42,12 +43,16 @@ var _dispatch: TaskForceDispatch
 var _watcher: ScriptedBeatWatcher
 var _clock: SimulationClock
 var _queue: CommandQueue
+var _roster: PlayerRoster
 
 var _wave_form: WaveFormPanel
 var _capture_choice: CaptureChoicePanel
 var _wave_command_panel: WaveCommandPanel
 var _narrative_label: RichTextLabel
 var _time_controls_lane_view: LaneView
+var _ravage_button: Button
+var _fortify_button: Button
+var _dismantle_button: Button
 
 
 func _ready() -> void:
@@ -64,6 +69,7 @@ func _ready() -> void:
 		P,
 		1
 	)
+	_update_choice_button_visibility()
 
 
 func _process(delta: float) -> void:
@@ -85,6 +91,7 @@ func _build_simulation() -> void:
 	_clock = SimulationClock.new()
 	_clock.tick_duration_seconds = MAP.tick_duration_seconds
 	_queue = CommandQueue.new()
+	_roster = PlayerRoster.new()
 
 
 func _build_presentation() -> void:
@@ -152,19 +159,24 @@ func _build_capture_choice_input() -> void:
 	_capture_choice = CaptureChoicePanel.new()
 	_capture_choice.capture_resolution = _capture
 	add_child(_capture_choice)
-	_add_button("Ravage Farm", Vector2(20, 260), func(): _capture_choice.on_ravage_pressed(FARM))
-	_add_button("Fortify Fort", Vector2(220, 260), func(): _capture_choice.on_fortify_pressed(FORT))
-	_add_button(
+	_ravage_button = _add_button(
+		"Ravage Farm", Vector2(20, 260), func(): _capture_choice.on_ravage_pressed(FARM)
+	)
+	_fortify_button = _add_button(
+		"Fortify Fort", Vector2(220, 260), func(): _capture_choice.on_fortify_pressed(FORT)
+	)
+	_dismantle_button = _add_button(
 		"Dismantle Fort", Vector2(420, 260), func(): _capture_choice.on_dismantle_pressed(FORT)
 	)
 
 
-func _add_button(text: String, at: Vector2, callback: Callable) -> void:
+func _add_button(text: String, at: Vector2, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.position = at
 	button.pressed.connect(callback)
 	add_child(button)
+	return button
 
 
 func _on_march_pressed() -> void:
@@ -194,14 +206,21 @@ func _on_tick_advanced(tick_number: int) -> void:
 		_dispatch.mark_consumed(_dispatch.dispatched()[0])
 		_watcher.on_hero_party_defeated()
 	_watcher.on_player_unit_count_changed(_player_unit_count())
+	_update_choice_button_visibility()
 
 
 func _player_unit_count() -> int:
-	var total := 0
+	var marching := 0
 	for wave in _lane.waves():
 		if wave["owner"] == "player":
-			total += wave["units"].size()
-	return total
+			marching += wave["units"].size()
+	return _roster.total(marching)
+
+
+func _update_choice_button_visibility() -> void:
+	_ravage_button.visible = _lane.node_state(FARM)["owner"] == "player"
+	_fortify_button.visible = _capture.is_awaiting_choice(FORT)
+	_dismantle_button.visible = _capture.is_awaiting_choice(FORT)
 
 
 func _on_node_captured(node_index: int) -> void:
@@ -216,6 +235,7 @@ func _on_node_captured(node_index: int) -> void:
 func _despawn_player_wave_at(index: int) -> void:
 	for wave in _lane.waves().duplicate():
 		if wave["position"] == index and wave["owner"] == "player":
+			_roster.mark_harvesting(wave["units"].size())
 			_lane.despawn_wave(wave)
 
 

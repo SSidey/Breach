@@ -70,3 +70,17 @@ func test_a_positive_unit_count_does_not_trigger_defeat() -> void:
 	watcher.on_player_unit_count_changed(3)
 
 	await assert_signal(SimEvents).is_not_emitted("defeat")
+
+
+func test_defeat_only_fires_once_even_if_reported_zero_repeatedly() -> void:
+	## Regression: found via manual playtest - a composition root re-checking unit
+	## count every tick (rather than only on a real change) was spamming "defeat"
+	## once the count first hit zero, since nothing gated repeat reports.
+	var watcher := ScriptedBeatWatcher.new(CORE_INDEX)
+	watcher.on_player_unit_count_changed(0)
+	monitor_signals(SimEvents, false)
+
+	watcher.on_player_unit_count_changed(0)
+	watcher.on_player_unit_count_changed(0)
+
+	await assert_signal(SimEvents).is_not_emitted("defeat")
