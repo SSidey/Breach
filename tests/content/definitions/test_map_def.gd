@@ -7,6 +7,7 @@ const MapDef = preload("res://content/definitions/map_def.gd")
 func _make_origin_node() -> NodeDef:
 	var node := NodeDef.new()
 	node.node_type = NodeDef.NodeType.ORIGIN
+	node.id = "node"
 	return node
 
 

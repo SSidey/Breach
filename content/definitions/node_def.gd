@@ -1,9 +1,21 @@
 class_name NodeDef
 extends Resource
 ## Map node definition (Farm/Fort/Core/PlayerHome shapes). See
-## specs/07-data-resource-schemas.md and specs/03-resource-nodes-and-workers.md.
+## specs/07-data-resource-schemas.md, specs/03-resource-nodes-and-workers.md, and
+## specs/09-node-graph-and-lanes.md.
 
-enum NodeType { ORIGIN, RESOURCE, FORT }
+## NEUTRAL appended (Phase 4 item 2), never inserted - .tres files store the raw
+## ordinal, and inserting would silently reinterpret already-authored content.
+enum NodeType { ORIGIN, RESOURCE, FORT, NEUTRAL }
+
+## Stable authoring identifier (Phase 4 item 2) - rendering/authoring metadata only,
+## sim/ never reads it. Needed once array index is no longer globally unique across
+## lanes.
+@export var id: String = ""
+
+## Rendering position (Phase 4 item 2) - authoring/rendering metadata only, per
+## Decision 19: sim/ mechanics stay purely index-based and never read this field.
+@export var position: Vector2 = Vector2.ZERO
 
 @export var node_type: NodeType = NodeType.ORIGIN
 @export var garrison: int = 0
@@ -36,6 +48,8 @@ enum NodeType { ORIGIN, RESOURCE, FORT }
 
 func validate() -> PackedStringArray:
 	var errors := PackedStringArray()
+	if id.is_empty():
+		errors.append("id must not be empty")
 	if garrison < 0:
 		errors.append("garrison must be >= 0, got %d" % garrison)
 	if node_type == NodeType.RESOURCE:
