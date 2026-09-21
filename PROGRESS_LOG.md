@@ -28,3 +28,4 @@ Schema note: rows from 2026-09-20 onward that predate the `isp violations` / `he
 | 2026-09-21 | feature/tick-speed-and-auto-pause | 133 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-09-21 | fix/speed-sync-pending-count-cap-and-end-of-game | 136 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-09-21 | fix/speed-sync-pending-count-cap-and-end-of-game | 134 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
+| 2026-09-21 | feature/node-graph-data-model | 142 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
