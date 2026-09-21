@@ -103,8 +103,14 @@ def disclosed_decrease_reason():
         capture_output=True,
         text=True,
     ).stdout
-    match = re.search(r"^Test-count-decrease-reason:\s*(.+)$", log, re.MULTILINE)
-    return match.group(1).strip() if match else None
+    # findall + last match, not search + first: a trailer is conventionally the last
+    # occurrence in a commit's history, and taking the first match broke for real -
+    # this file's own commit message describes the trailer in prose ("A
+    # Test-count-decrease-reason: trailer on any commit...") which line-wrapped such
+    # that the prose itself started a line with the trailer's own key, matching
+    # before the real trailer at the message's end.
+    matches = re.findall(r"^Test-count-decrease-reason:\s*(.+)$", log, re.MULTILINE)
+    return matches[-1].strip() if matches else None
 
 
 def main() -> int:
