@@ -106,6 +106,14 @@ real, not an oversight.
   exemption existed. Narrow enough not to exempt a human-authored subject that merely
   starts with the word "Merged" (past tense) or similar — only the exact git/GitHub
   prefix.
+- `gate1_progress_log.py`'s test-count regression check — a raw count comparison,
+  which can't tell "lost coverage" from "obsolete tests deleted alongside
+  intentionally deleted behaviour." A `Test-count-decrease-reason: <text>` trailer on
+  any commit in the branch (Decision 17) reports the drop as disclosed rather than
+  failing the gate — the lower count still shows in the log row either way, only the
+  automatic FAIL is skipped, on the strength of a reason recorded in the commit
+  itself. No such mechanism exists for the *lint warnings increased* half of this
+  same check; that one has no known legitimate-decrease-shaped exception yet.
 
 ## Known environment gotchas
 

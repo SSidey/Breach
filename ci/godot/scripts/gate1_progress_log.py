@@ -18,6 +18,18 @@ rubric-row count is qualitative until every row has a mechanical check).
 `ocp-shotgun-surgery` is deliberately excluded here - it's a diff-scoped, CI-only
 check (see check_ocp_shotgun_surgery.py's own docstring), not meaningful against a
 bare working tree.
+
+Test-count regression check (Decision 17): a raw count comparison can't distinguish
+"lost coverage" from "obsolete tests deleted alongside intentionally deleted
+behaviour" (e.g. a Decision that removes a feature/gate outright). A commit anywhere
+in the current branch's history (since it diverged from origin/main) may carry a
+`Test-count-decrease-reason: <text>` trailer explaining a drop; when present, the
+drop is reported as a disclosed decrease, not a regression, and the gate still
+passes. This does not suppress the signal - the row's test-count column still shows
+the real, lower number, so the decrease stays visible to anyone reading the log; only
+the automatic FAIL is what's skipped, on the strength of an explanation recorded in
+the commit itself, not silently. Absent that trailer, any decrease still fails the
+gate exactly as before.
 """
 import re
 import subprocess
@@ -78,6 +90,29 @@ def read_previous_row():
     return data_rows[-1] if data_rows else None
 
 
+def disclosed_decrease_reason():
+    try:
+        base = subprocess.check_output(
+            ["git", "merge-base", "origin/main", "HEAD"], cwd=REPO_ROOT, text=True
+        ).strip()
+    except subprocess.CalledProcessError:
+        return None
+    log = subprocess.run(
+        ["git", "log", f"{base}..HEAD", "--format=%B"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    ).stdout
+    # findall + last match, not search + first: a trailer is conventionally the last
+    # occurrence in a commit's history, and taking the first match broke for real -
+    # this file's own commit message describes the trailer in prose ("A
+    # Test-count-decrease-reason: trailer on any commit...") which line-wrapped such
+    # that the prose itself started a line with the trailer's own key, matching
+    # before the real trailer at the message's end.
+    matches = re.findall(r"^Test-count-decrease-reason:\s*(.+)$", log, re.MULTILINE)
+    return matches[-1].strip() if matches else None
+
+
 def main() -> int:
     test_count = latest_test_count()
     lint_warnings = count_lint_warnings()
@@ -97,8 +132,15 @@ def main() -> int:
         prev_test_count = cols[2]
         prev_lint = int(cols[3]) if cols[3].isdigit() else 0
         if test_count is not None and prev_test_count.isdigit() and test_count < int(prev_test_count):
-            print(f"REGRESSION: test count dropped ({prev_test_count} -> {test_count})")
-            regressed = True
+            reason = disclosed_decrease_reason()
+            if reason:
+                print(
+                    f"DISCLOSED DECREASE: test count dropped ({prev_test_count} -> "
+                    f"{test_count}) - {reason}"
+                )
+            else:
+                print(f"REGRESSION: test count dropped ({prev_test_count} -> {test_count})")
+                regressed = True
         if lint_warnings > prev_lint:
             print(f"REGRESSION: lint warnings increased ({prev_lint} -> {lint_warnings})")
             regressed = True

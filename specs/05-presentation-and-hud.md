@@ -148,6 +148,20 @@ Scenario: Auto-pause-each-tick does nothing when disabled
   exits the tree, so the reference-lifetime leak that ruled out self-subscription for
   `RefCounted` classes doesn't apply to Nodes. Self-subscription here is the
   idiomatic Godot pattern, not an inconsistency with the `sim/` convention.
+- **`LaneView`/`TickProgressIndicator` gained a `speed_multiplier` field each, found
+  necessary via the user's own manual playtest of PR #21 rather than anticipated
+  ahead of time.** `SimulationClock.speed_multiplier` scales its *internal* elapsed
+  counter, so a tick genuinely fires earlier at 2x/4x — but these two widgets each
+  track their own separate `_elapsed_since_last_tick` (per their own self-subscribe
+  pattern, see above), unscaled. The visible symptom: at 2x the animation/progress
+  bar visibly stopped halfway through its fill, at 4x a quarter of the way, right as
+  the real tick fired early and reset the widget's counter to zero again. Both
+  widgets now scale their own `_process(delta)` accumulation by the same
+  `speed_multiplier` the clock uses, keeping every clock in lockstep. The composition
+  root sets all three (`SimulationClock`, `LaneView`, `TickProgressIndicator`)
+  together whenever a speed button is pressed — there is no single shared source of
+  truth for "current speed," a disclosed duplication rather than adding a getter
+  method to `SimulationClock` (already at the ISP ceiling).
 - **Scoped to this slice's actual content shape**: `LaneView` tracks at most one
   player wave and one moving blocker (Hero Party) as two named positions, not a
   generic multi-entity id scheme, since `specs/00`'s scripted scenario never has

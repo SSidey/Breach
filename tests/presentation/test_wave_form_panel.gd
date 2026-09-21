@@ -82,3 +82,45 @@ func test_marching_clears_the_buffer_for_the_next_wave() -> void:
 	panel.on_march_pressed(0, 1)
 
 	assert_array(queue.pending_commands()).has_size(1)
+
+
+func test_pending_count_reflects_queued_units() -> void:
+	var economy := EconomySystem.new()
+	economy.add("food", 16)
+	var panel: WaveFormPanel = auto_free(WaveFormPanel.new())
+	panel.economy = economy
+	panel.command_queue = CommandQueue.new()
+
+	panel.on_queue_grem_pressed(_grem(8))
+	panel.on_queue_grem_pressed(_grem(8))
+
+	assert_int(panel.pending_count()).is_equal(2)
+
+
+func test_marching_resets_pending_count_to_zero() -> void:
+	var economy := EconomySystem.new()
+	economy.add("food", 8)
+	var panel: WaveFormPanel = auto_free(WaveFormPanel.new())
+	panel.economy = economy
+	panel.command_queue = CommandQueue.new()
+	panel.on_queue_grem_pressed(_grem(8))
+
+	panel.on_march_pressed(0, 1)
+
+	assert_int(panel.pending_count()).is_equal(0)
+
+
+func test_queueing_beyond_the_cap_does_nothing_and_returns_false() -> void:
+	var economy := EconomySystem.new()
+	economy.add("food", 100)
+	var panel: WaveFormPanel = auto_free(WaveFormPanel.new())
+	panel.economy = economy
+	panel.command_queue = CommandQueue.new()
+	for i in range(panel.max_pending_units):
+		panel.on_queue_grem_pressed(_grem(8))
+
+	var result := panel.on_queue_grem_pressed(_grem(8))
+
+	assert_bool(result).is_false()
+	assert_int(panel.pending_count()).is_equal(panel.max_pending_units)
+	assert_int(economy.balance("food")).is_equal(100 - panel.max_pending_units * 8)

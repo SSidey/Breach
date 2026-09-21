@@ -249,6 +249,21 @@ Scenario: Each capture-choice button calls exactly one CaptureResolution method
   already ravaged (no query exists yet for "already ravaged" specifically, and
   `issue_choice` already no-ops safely if pressed again) — a future item can add a
   proper query if that proves confusing in practice.
+- **`WaveFormPanel` gained a `max_pending_units` cap (default 3) and a
+  `pending_count()` query, both found necessary via manual playtest**: queueing was
+  previously unbounded (no visible or enforced limit), and nothing showed how many
+  units were actually queued before marching. The cap is a deliberate temporary
+  stopgap for the formation-grid system (a later map/campaign-expansion item, itself
+  flagged as needing its own design pass before its full rules are committed to) —
+  it reuses the same "3 slots" starting shape that system's own scope already
+  commits to, rather than inventing an unrelated number here. The composition root
+  shows the live count next to the Queue/March buttons, updated on both actions.
+- **`main.gd` pauses `SimulationClock` on both `victory` and `defeat`**, found
+  necessary via manual playtest: without it, the player's surviving units kept
+  marching past the Core after winning, which reads as the game not actually having
+  ended. Deliberately minimal scope — input remains clickable (harmless: a paused
+  clock never commits a queued command), and no "game over" screen or disabled-input
+  treatment is built here; revisit if that proves insufficient in practice.
 - Manual playtest itself (does it *feel* right, is the pacing good) is deferred to the
   user, per this project's standing rule that an agent judging its own change's
   play-feel has a conflict of interest (`progress-tracking.md`, already the basis for

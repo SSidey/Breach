@@ -8,10 +8,17 @@ extends Node2D
 ## Self-subscribes to SimEvents.tick_advanced in _ready(), same reasoning as LaneView
 ## (specs/05): a Node's scene-tree lifecycle handles disconnection automatically, so
 ## the sim/ RefCounted self-subscription concern doesn't apply here.
+##
+## speed_multiplier (found necessary via manual playtest) scales _elapsed_since_
+## last_tick's own accumulation the same way SimulationClock scales its internal
+## elapsed counter - without this, the visual bar filled at the old 1x pace while the
+## real tick fired early at 2x/4x, so the bar was always cut short mid-fill instead of
+## reaching full right as the tick advanced.
 
 const TickInterpolation = preload("res://presentation/tick_interpolation.gd")
 
 var tick_duration_seconds: float = 1.0
+var speed_multiplier: float = 1.0
 var bar_width: float = 100.0
 var bar_height: float = 10.0
 
@@ -23,7 +30,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_elapsed_since_last_tick += delta
+	_elapsed_since_last_tick += delta * speed_multiplier
 	queue_redraw()
 
 

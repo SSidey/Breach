@@ -1,10 +1,12 @@
 extends GdUnitTestSuite
 ## Full integration replay of this slice's exact scripted path (specs/00), extended
 ## through to the victory event (test-first-order item 5 in
-## specs/06-map-content-p-f-F-c.md). Composition wiring (connecting signals, calling
-## on_hero_party_defeated() when a combat_resolved event pertains to the Hero Party
-## specifically) mirrors what a future composition root (Phase 3 item 11) will do -
-## none of these components self-subscribe to each other.
+## specs/06-map-content-p-f-F-c.md). Composition wiring (connecting signals, marking
+## a Task Force consumed when a combat_resolved event pertains to it specifically)
+## mirrors what a future composition root (Phase 3 item 11) will do - none of these
+## components self-subscribe to each other. Per Decision 16, reaching the Core wins
+## unconditionally - defeating the Hero Party first is no longer a win prerequisite,
+## just the realistic path a wave takes to get there without being wiped out first.
 
 const LaneSimulation = preload("res://sim/lane_simulation.gd")
 const CombatResolver = preload("res://sim/combat_resolver.gd")
@@ -71,7 +73,6 @@ func test_defeating_the_fort_then_the_hero_party_then_reaching_the_core_wins() -
 	lane.advance_positions()
 	var hero_party: Dictionary = dispatch.dispatched()[0]
 	dispatch.mark_consumed(hero_party)
-	watcher.on_hero_party_defeated()
 	assert_array(lane.moving_blockers()).is_empty()
 	assert_array(lane.waves()[0]["units"]).is_not_empty()
 
