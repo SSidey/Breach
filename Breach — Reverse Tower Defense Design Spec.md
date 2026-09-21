@@ -425,3 +425,43 @@ per Decision 6 — this Decision fixes the mechanism, not the balance figures, t
 `reference/breach-prototype.html` now also has real starting-point numbers for that
 later work (`raider`/`bruiser`/fort/garrison constants) instead of needing to be
 re-derived from scratch then either.
+
+### Decision 12 — Context-locality is a per-feature judgement call, not a raw file count
+
+**Rationale:** Caught during a direct self-audit (the user asked "is the dev kit
+actually being used for reference?"): `AI_First_Development_Kit/principles/
+ai-first-organisation.md`'s Principle 2 (`context_locality.max_files: 2`) was never
+being checked against any Phase 3 item's diff, and no Decision was recorded for
+routinely exceeding it. Items 4 and 6 (for example) each touched 4+ source files
+(`content/definitions/node_def.gd` plus a new `sim/` consumer, each with its own
+test, plus the specs describing them) — comfortably over the configured threshold.
+
+This is a real gap in *checking* the threshold, but not, on inspection, a real
+violation of what the principle is actually for. The principle's own text already
+frames it as "necessarily a judgement call" about "co-location of a feature's
+definition, its usage, and its immediate supporting logic — not about file count in
+general." This project's recurring pattern — a data schema field (`content/`), the
+`sim/` logic that consumes it, and both their tests — is exactly one feature's
+definition, usage, and supporting logic, co-located by directory and delivered in one
+PR. It is not the scattered-across-unrelated-parts-of-the-codebase failure mode the
+threshold exists to catch; it is what deliberately separating data from logic (this
+project's own architecture, per the parent spec's "data-driven units and recipes"
+note) necessarily looks like once "one concern per file" (Principle 1) is also
+honoured. The two principles pull in opposite directions for exactly this shape of
+change, and the kit's own text already resolves that tension in Principle 2's favor
+of judgement over raw count.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Raise `context_locality.max_files` in `config/thresholds.yaml` | Would weaken the check's ability to catch a *genuine* scatter violation elsewhere (unrelated files touched for no cohesive reason) — the actual risk this project hasn't had a problem with is not "the number 2 is wrong," it's "was this specific diff scattered or cohesive," which a raised ceiling can't distinguish either. |
+| Build a hard mechanical gate failing above 2 touched files | Rejected: `rubrics/spec-baseline.rubrics.md` already classifies `ai-first-thresholds-respected` as manual/spec-agent judgement, not a blanket mechanical ceiling — a hard file-count gate would produce false positives against exactly the well-factored, one-concern-per-file codebase this project has been building, and would mechanize past a check the kit itself deliberately left as judgement. |
+
+**Consequences:** This Decision covers the *pattern* (schema addition + its consumer +
+their tests, delivered together) going forward — a future Phase 3 item following the
+same shape doesn't need its own fresh Decision. `ci/godot/scripts/
+check_context_locality.py` (added alongside this Decision) surfaces the touched-file
+count on a diff as an informational note, not a hard failure, so a reviewer has the
+number in front of them to judge "is this the accepted pattern, or genuine scatter"
+rather than the count going unchecked entirely, as it had been until now.

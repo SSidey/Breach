@@ -15,11 +15,12 @@ yet. Every script here was run against a deliberately broken case before being t
 | formatting (not a named rubric row, but `commit-message-conforms`/PR review expects it) | `gdformat --check` | pre-commit |
 | `srp-size` (file-length half) | gdlint's `max-file-lines` (`.gdlintrc`, set to 300 to match `config/thresholds.yaml`) | pre-commit |
 | `srp-size` (function-length half) | `ci/godot/scripts/check_function_length.py` | pre-commit |
-| `dip-direction` | `ci/godot/scripts/check_dependency_direction.sh` | pre-commit |
+| `dip-direction` | `ci/godot/scripts/check_dependency_direction.py` | pre-commit |
 | `naming-grep-discoverable` | `ci/godot/scripts/check_generic_naming.py` | pre-commit |
 | `isp-method-count` / `isp-stub-detection` | `ci/godot/scripts/check_isp.py` | pre-commit and CI |
 | `no-cross-cutting-helper-violation` | `ci/godot/scripts/check_helper_promotion.py` | pre-commit and CI |
 | `ocp-shotgun-surgery` | `ci/godot/scripts/check_ocp_shotgun_surgery.py <base-ref>` | CI only — needs a diff against a real base ref, not meaningful on a bare working tree |
+| `ai-first-thresholds-respected` (context-locality half) | `ci/godot/scripts/check_context_locality.py <base-ref>` | CI only, informational (never fails) — see Decision 12 and Heuristic limits below |
 | `branch-name-conforms` | `ci/godot/scripts/check_branch_name.sh` | pre-commit stage |
 | `commit-message-conforms` (format half) | `ci/godot/scripts/check_commit_message.sh` | commit-msg stage |
 | `commit-message-conforms` (type-vs-diff half) | same script, heuristic warning only — see Heuristic limits | commit-msg stage |
@@ -78,6 +79,15 @@ real, not an oversight.
   changed together (e.g. a deliberate, justified refactor). Only meaningful with a real
   base ref (a PR's merge-base), so it only runs in CI, not the working-tree-only
   pre-commit gate.
+- `check_context_locality.py` — deliberately never fails (see Decision 12 in the
+  design spec): the underlying principle is explicitly a judgement call about
+  co-location of a feature's definition/usage/support, not a raw file-count ceiling,
+  and this project's own architecture (data schema in `content/`, its `sim/` consumer,
+  both their tests) routinely and legitimately exceeds the configured default of 2
+  files. The script surfaces the count so a reviewer can judge "accepted pattern or
+  genuine scatter," rather than the threshold going unchecked entirely — which is what
+  was actually happening before a direct self-audit caught the gap. Same base-ref
+  requirement as `check_ocp_shotgun_surgery.py`, CI only.
 - `check_helper_promotion.py` — only catches the catch-all-filename shape of the
   violation (`utils.gd`, `helpers.gd`, `common.gd`, `base.gd`, `manager.gd`, `data.gd`);
   it can't detect a helper duplicated past the promotion threshold without call-graph
@@ -150,6 +160,9 @@ bash ci/godot/scripts/run_tests.sh
 
 # OCP shotgun-surgery (diff-scoped; CI-only, but runnable locally against a real ref)
 python3 ci/godot/scripts/check_ocp_shotgun_surgery.py origin/main
+
+# Context-locality (diff-scoped, informational; CI-only, but runnable locally too)
+python3 ci/godot/scripts/check_context_locality.py origin/main
 
 # Gate 1 mechanical progress log (end of an implementation pass)
 python3 ci/godot/scripts/gate1_progress_log.py
