@@ -25,3 +25,4 @@ Schema note: rows from 2026-09-20 onward that predate the `isp violations` / `he
 | 2026-09-21 | feature/map-assembly-playtest | 118 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-09-21 | feature/tick-progress-indicator | 121 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-09-21 | fix/loss-condition-and-choice-button-visibility | 122 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
+| 2026-09-21 | feature/tick-speed-and-auto-pause | 133 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
