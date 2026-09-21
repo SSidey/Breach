@@ -22,6 +22,7 @@ extends RefCounted
 
 var _core_node_index: int
 var _defeated: bool = false
+var _won: bool = false
 
 
 func _init(core_node_index: int) -> void:
@@ -29,7 +30,8 @@ func _init(core_node_index: int) -> void:
 
 
 func on_node_captured(node_index: int) -> void:
-	if node_index == _core_node_index:
+	if node_index == _core_node_index and not _won:
+		_won = true
 		SimEvents.victory.emit()
 
 

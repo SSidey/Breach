@@ -17,6 +17,16 @@ func test_reaching_the_core_wins_immediately() -> void:
 	await assert_signal(SimEvents).is_emitted("victory")
 
 
+func test_victory_only_fires_once_even_if_the_core_is_reported_captured_again() -> void:
+	var watcher := ScriptedBeatWatcher.new(CORE_INDEX)
+	watcher.on_node_captured(CORE_INDEX)
+	monitor_signals(SimEvents, false)
+
+	watcher.on_node_captured(CORE_INDEX)
+
+	await assert_signal(SimEvents).is_not_emitted("victory")
+
+
 func test_capturing_a_different_node_does_not_win() -> void:
 	var watcher := ScriptedBeatWatcher.new(CORE_INDEX)
 	monitor_signals(SimEvents, false)
