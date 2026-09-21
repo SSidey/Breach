@@ -31,6 +31,20 @@ consumes those events to animate").
   `SimEvents.tick_advanced`/`TickInterpolation` pair `LaneView` already does, not a
   new concern category), but its own file per `ai-first-organisation.md`'s
   one-concern-per-file rule.
+- `TimeControls` speed/auto-pause (added Phase 4 follow-up, prompted directly by the
+  user's own manual playtest) — `SimulationClock` gains two plain fields,
+  `speed_multiplier: float` (scales real elapsed time before it's compared against
+  `tick_duration_seconds`, so 2x/4x just means time passes faster, ticks still
+  resolve one at a time — no simulation-logic change) and `auto_pause_each_tick: bool`
+  (when true, `advance_tick()` calls `pause()` right after emitting
+  `tick_advanced` — the "pause at each turn start" the user asked for, so the player
+  can queue actions before manually resuming). Both are plain `@export` fields, not
+  new public methods — `SimulationClock` was already at the 7-method ISP ceiling
+  (see the `TickProgressIndicator` Notes above), and `tick_duration_seconds` already
+  established the "policy-relevant field, not a method" pattern this follows.
+  `TimeControls` gains two thin pass-through methods, `on_speed_selected(multiplier)`
+  and `on_auto_pause_toggled(enabled)`, matching the existing "each button call touches
+  exactly one `SimulationClock` field/method" scenario.
 
 ## Scenarios (Given/When/Then)
 
@@ -73,6 +87,24 @@ Scenario: Tick progress indicator reflects elapsed time toward the next tick
     that elapsed time and tick duration
   When SimEvents.tick_advanced fires
   Then the indicator resets to reflect zero elapsed time for the new tick
+
+Scenario: Speed multiplier scales how fast real time counts toward a tick
+  Given tick_duration_seconds = 2.0 and speed_multiplier = 2.0
+  When advance_time(1.0) is called (1 real second elapsed)
+  Then a full tick advances, as if 2.0 seconds had elapsed at 1x speed
+
+Scenario: Auto-pause-each-tick pauses right after a tick fires
+  Given auto_pause_each_tick is true
+  When a tick advances, by either advance_time reaching the duration or
+    skip_to_next_marker
+  Then SimulationClock is paused immediately after tick_advanced is emitted
+  And the player must press Resume before real time (or a further skip) advances
+    another tick
+
+Scenario: Auto-pause-each-tick does nothing when disabled
+  Given auto_pause_each_tick is false (the class default)
+  When a tick advances
+  Then SimulationClock's paused state is unchanged by the tick itself
 ```
 
 ## Test-first order
@@ -90,6 +122,11 @@ Scenario: Tick progress indicator reflects elapsed time toward the next tick
    honesty as `LaneView`/`ResourceBar`: its `_ready`/`_process`/`_draw` engine
    callbacks are deferred to manual playtest, since `TickInterpolation`'s math (the
    only pure logic involved) is already covered.
+6. `SimulationClock.speed_multiplier`/`auto_pause_each_tick` (Phase 4 follow-up) — red
+   before each field has any effect, mirroring the existing `tick_duration_seconds`/
+   `pause`/`resume` test shape exactly.
+7. `TimeControls.on_speed_selected`/`on_auto_pause_toggled` — same "exactly one field/
+   method touched" assertion pattern as the existing pause/skip button tests.
 
 ## Notes / open questions
 
@@ -141,6 +178,16 @@ Scenario: Tick progress indicator reflects elapsed time toward the next tick
   7-method ISP ceiling, `AI_First_Development_Kit/config/thresholds.yaml`) — instead
   it tracks its own `_elapsed_since_last_tick`, mirroring `LaneView`'s own
   self-subscribe-and-track pattern exactly rather than reading clock internals.
+- **`auto_pause_each_tick` defaults to `false` on `SimulationClock` itself, not
+  `true`** — despite the user asking for auto-pause to be the game's default
+  behavior. This is a composition-root policy choice, not a class-level one: the
+  class stays neutral (same reasoning `tick_duration_seconds` already established —
+  it defaults to `1.0` but every real map overrides it from `MapDef`), and `main.gd`
+  explicitly sets `auto_pause_each_tick = true` after constructing the clock. Flipping
+  the class default instead would have silently changed several already-passing
+  `SimulationClock` tests' assumptions (e.g. `test_resume_allows_auto_advance_again`
+  asserts `is_paused()` is `false` after a tick advances) for a policy question that
+  belongs to the game, not the timing primitive.
 
 ## Rubric answers (qualitative, spec-baseline)
 
@@ -168,10 +215,13 @@ Scenario: Tick progress indicator reflects elapsed time toward the next tick
   `node_spacing` fields the composition root sets — still a small, focused surface,
   just not literally zero. Of item 10's four files: `NarrativeLog` is one static
   method; `WaveCommandPanel` has `status_text()` plus its fields; `TimeControls` has
-  `on_pause_pressed()`/`on_skip_pressed()` plus its fields; `ResourceBar` has no
+  `on_pause_pressed()`/`on_skip_pressed()` (now also `on_speed_selected()`/
+  `on_auto_pause_toggled()`, 4 methods total) plus its fields; `ResourceBar` has no
   methods beyond its engine callbacks. `TickProgressIndicator` (Phase 4, item 1)
   likewise has no methods beyond its engine callbacks, just an exported
-  `tick_duration_seconds` field. All well under threshold.
+  `tick_duration_seconds` field. `SimulationClock` (`sim/`) gains
+  `speed_multiplier`/`auto_pause_each_tick` as plain fields, not methods — still 7
+  public methods, unchanged. All well under threshold.
 - `dip-direction`: this spec *is* the DIP boundary — every dependency here points from
   presentation into simulation (`SimEvents`, `CommandQueue`, read-only queries), never
   the reverse. The dependency-direction check (`ci/godot/`) should treat any import
