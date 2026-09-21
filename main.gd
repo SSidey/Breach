@@ -235,7 +235,6 @@ func _on_tick_advanced(tick_number: int) -> void:
 	_lane.advance_positions()
 	if _dispatch.dispatched().size() > 0 and _lane.moving_blockers().size() < pre_movers:
 		_dispatch.mark_consumed(_dispatch.dispatched()[0])
-		_watcher.on_hero_party_defeated()
 	_watcher.on_player_unit_count_changed(_player_unit_count())
 	_update_choice_button_visibility()
 
