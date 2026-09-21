@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="MapDef" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://content/definitions/map_def.gd" id="1_map"]
+[ext_resource type="Script" path="res://content/definitions/node_def.gd" id="2_node"]
+
+[sub_resource type="Resource" id="Resource_node_p"]
+script = ExtResource("2_node")
+node_type = 0
+garrison = 0
+
+[sub_resource type="Resource" id="Resource_node_f"]
+script = ExtResource("2_node")
+node_type = 1
+garrison = 0
+yield_food_per_tick = 6
+decay_interval_ticks = 5
+decay_floor_food = 2
+ravage_yield_food = 40
+
+[sub_resource type="Resource" id="Resource_node_F"]
+script = ExtResource("2_node")
+node_type = 2
+garrison = 1
+garrison_hp = 26
+garrison_dmg = 6
+dismantle_wood_yield = 8
+dismantle_stone_yield = 5
+fortify_wood_cost = 10
+fortify_stone_cost = 6
+
+[sub_resource type="Resource" id="Resource_node_midpoint"]
+script = ExtResource("2_node")
+node_type = 0
+garrison = 0
+
+[sub_resource type="Resource" id="Resource_node_c"]
+script = ExtResource("2_node")
+node_type = 0
+garrison = 0
+
+[resource]
+script = ExtResource("1_map")
+nodes = Array[Resource("res://content/definitions/node_def.gd")]([SubResource("Resource_node_p"), SubResource("Resource_node_f"), SubResource("Resource_node_F"), SubResource("Resource_node_midpoint"), SubResource("Resource_node_c")])
+tick_duration_seconds = 1.5
+suspicion_tier_thresholds = Array[int]([20, 45, 70, 90])
+suspicion_decay_per_tick = 2

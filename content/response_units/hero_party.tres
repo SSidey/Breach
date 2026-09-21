@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ResponseUnitDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://content/definitions/response_unit_def.gd" id="1_hero_party"]
+
+[resource]
+script = ExtResource("1_hero_party")
+purpose = "respond"
+hp = 70
+dmg = 18
+speed = 1.0

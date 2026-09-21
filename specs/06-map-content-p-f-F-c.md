@@ -115,6 +115,55 @@ Scenario: Losing the entire force after already defeating the Hero Party does no
   horde of 12 wins") once tuned, rather than guessing a number here and leaving it
   unverified.
 
+- **Final authored values (Phase 3, item 11), with the reasoning per field:**
+  - `Grem` (`content/units/grem.tres`): `cost_food=8, hp=20, dmg=6, speed=1.0` — ported
+    directly from the prototype's `raider` unit (the closest basic-attacker analog;
+    `speed` is unused by any current sim code, a placeholder for a future spatial
+    pass per Decision 4).
+  - `f` (Farm, `content/maps/p_f_F_c.tres`): `yield_food_per_tick=6` (prototype
+    `HARVEST_RATE.food`), `decay_interval_ticks=5, decay_floor_food=2`,
+    `ravage_yield_food=40` (prototype `RAVAGE_YIELD.food`).
+  - `F` (Fort): `garrison_hp=26, garrison_dmg=6` (prototype `GARRISON_BASIC` — the
+    closest analog to a "lightly defended" structure; the prototype's own
+    `defFort`/`GARRISON_CRYSTAL` shapes don't apply to this slice's undecorated Fort),
+    `dismantle_wood_yield=8, dismantle_stone_yield=5` (`DISMANTLE_YIELD`),
+    `fortify_wood_cost=10, fortify_stone_cost=6` (`FORTIFY_COST`).
+  - `Hero Party` (`content/response_units/hero_party.tres`): `hp=70, dmg=18` — the
+    prototype's own `HERO_HP`/`HERO_DMG` constants, unchanged (Decision 11: port real
+    values, don't invent tuned-to-taste ones).
+  - `Messenger` (`content/response_units/messenger.tres`): `hp=0, dmg=0, speed=2.0` —
+    authored as map data per this spec's policy half, but **not assigned to any
+    `TaskForceDispatch` tier in this map** (see `specs/08`'s Notes for why: the
+    "Messenger flees" narrative beat is realized as a two-step suspicion spike
+    instead, since no Scout/Infiltrator exists yet to make a real interceptable
+    Messenger meaningful — Decision 7). Exists in code/data as content, currently
+    no-op, same treatment Decision 5 already gives Wary/Alarmed.
+  - `MapDef`: `tick_duration_seconds=1.5`, `suspicion_tier_thresholds=[20, 45, 70, 90]`
+    (Wary/Alarmed/Mobilized/Full Alert), `suspicion_decay_per_tick=2`.
+  - **Map topology has five lane positions, not four**: `P, f, F,` an unnamed
+    midpoint, `c`. See `specs/08`'s Notes — `F` and `c` being directly adjacent made
+    `specs/02`'s "meet mid-lane" scenario physically impossible (a wave leaving `F`
+    and a Hero Party leaving `c` would swap past each other in one tick without ever
+    sharing a node). The midpoint is narratively inert, mechanically required.
+  - **Verified end-to-end via a scripted (non-interactive) headless run** of the exact
+    beat sequence against these real authored values: farm captured (3 starting
+    Grem) → harvested to 44 food over 8 ticks → 5 Grem bought (40 food) → Fort
+    destroyed outright (30 dmg ≥ 26 hp, zero casualties) → two suspicion spikes
+    (Alarmed then Mobilized) → Hero Party dispatched → the two sides meet and hold at
+    the midpoint (per the stalemate fix in `specs/08`) → **the base 5-Grem force
+    alone wins the siege over three exchanges (70 hp ÷ 30 dmg/tick), losing one unit
+    to retaliation** → the survivors reach the Core → victory. **Honest disclosure,
+    not silently tuned away:** with these numbers the Ravage beat is a strong,
+    lower-risk accelerant (a bigger horde finishes the Hero Party in fewer exchanges
+    with fewer losses) rather than a strictly mandatory precondition for winning —
+    the spec's framing ("not assumed large enough to beat outright") holds (no
+    single exchange kills the Hero Party), but a patient player can grind it out
+    unreinforced. This is a genuine playtest-only finding, left for the user's own
+    manual pass to confirm whether it needs retuning (e.g. raising Hero Party `dmg`
+    so a full-hp Grem dies per exchange instead of surviving partially, forcing
+    faster losses) rather than the agent unilaterally re-tuning numbers to force a
+    specific outcome without a human playtest to confirm it's the right one.
+
 ## Rubric answers (qualitative, spec-baseline)
 
 - `single-noun-phrase`: the policy half's purpose is "map content data" (one noun
