@@ -20,6 +20,7 @@ const TimeControls = preload("res://presentation/time_controls.gd")
 const WaveFormPanel = preload("res://presentation/wave_form_panel.gd")
 const CaptureChoicePanel = preload("res://presentation/capture_choice_panel.gd")
 const NarrativeLog = preload("res://presentation/narrative_log.gd")
+const TickProgressIndicator = preload("res://presentation/tick_progress_indicator.gd")
 const PlayerRoster = preload("res://sim/player_roster.gd")
 
 const MAP: MapDef = preload("res://content/maps/p_f_F_c.tres")
@@ -95,6 +96,7 @@ func _build_simulation() -> void:
 
 func _build_presentation() -> void:
 	_build_lane_view()
+	_build_tick_indicator()
 	_build_readouts()
 	_build_time_controls()
 	_build_wave_form_input()
@@ -103,6 +105,13 @@ func _build_presentation() -> void:
 	_narrative_label.position = Vector2(20, 320)
 	_narrative_label.custom_minimum_size = Vector2(700, 220)
 	add_child(_narrative_label)
+
+
+func _build_tick_indicator() -> void:
+	var indicator := TickProgressIndicator.new()
+	indicator.tick_duration_seconds = MAP.tick_duration_seconds
+	indicator.position = Vector2(20, 100)
+	add_child(indicator)
 
 
 func _build_lane_view() -> void:
