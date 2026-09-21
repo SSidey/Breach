@@ -9,6 +9,12 @@ extends RefCounted
 ## mover (Hero Party, Messenger; dispatched by specs/04, spawned here directly via
 ## spawn_moving_blocker() as a test-only entry point until that item exists).
 ## Plain Dictionaries throughout, matching CombatResolver's plain-data contract.
+##
+## node_owner()/node_garrison_hp() were merged into node_state() (Phase 3 item 11,
+## specs/08) to keep this file's public surface within the ISP method-count threshold
+## once despawn_wave() was added for auto-extraction - both queries were only ever
+## used together by callers wanting a node's current state, and neither had a real
+## consumer outside this file's own tests yet.
 
 const CombatResolver = preload("res://sim/combat_resolver.gd")
 
@@ -26,12 +32,8 @@ func _init(map: MapDef) -> void:
 		_node_garrison_hp.append(node.garrison_hp)
 
 
-func node_owner(index: int) -> String:
-	return _node_owners[index]
-
-
-func node_garrison_hp(index: int) -> int:
-	return _node_garrison_hp[index]
+func node_state(index: int) -> Dictionary:
+	return {"owner": _node_owners[index], "garrison_hp": _node_garrison_hp[index]}
 
 
 func waves() -> Array:
@@ -46,6 +48,10 @@ func spawn_wave(owner: String, units: Array, start_index: int, direction: int) -
 	var wave := {"owner": owner, "units": units, "position": start_index, "direction": direction}
 	_waves.append(wave)
 	return wave
+
+
+func despawn_wave(wave: Dictionary) -> void:
+	_waves.erase(wave)
 
 
 func spawn_moving_blocker(
