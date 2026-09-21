@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ResponseUnitDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://content/definitions/response_unit_def.gd" id="1_messenger"]
+
+[resource]
+script = ExtResource("1_messenger")
+purpose = "report"
+hp = 0
+dmg = 0
+speed = 2.0

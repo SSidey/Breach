@@ -57,7 +57,7 @@ func test_defeating_the_fort_then_the_hero_party_then_reaching_the_core_wins() -
 	# captures it with no casualties.
 	lane.spawn_wave("player", [{"hp": 30, "dmg": 20}], P, 1)
 	lane.advance_positions()
-	assert_str(lane.node_owner(FORT)).is_equal("player")
+	assert_str(lane.node_state(FORT)["owner"]).is_equal("player")
 
 	# Beat 3: attacking the fort raises suspicion via a detection spike, crossing
 	# into Mobilized and dispatching the Hero Party from the Core.

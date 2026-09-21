@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="UnitDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://content/definitions/unit_def.gd" id="1_grem"]
+
+[resource]
+script = ExtResource("1_grem")
+cost_food = 8
+hp = 20
+dmg = 6
+speed = 1.0
