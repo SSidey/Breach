@@ -223,8 +223,32 @@ Scenario: Each capture-choice button calls exactly one CaptureResolution method
   `LaneView`/`ScriptedBeatWatcher`).
 - **Player unit count for the loss condition** (`ScriptedBeatWatcher.
   on_player_unit_count_changed`) is recomputed by the composition root after every
-  `advance_positions()` call by summing surviving units across all player-owned
-  entries in `lane.waves()` — the only place casualties can occur.
+  `advance_positions()` call. **Revised after a real bug found via the user's own
+  manual playtest, not caught by this item's scripted verification:** the original
+  version summed only `lane.waves()`, which undercounts the moment a wave
+  auto-extracts (Decision 2) — its units are still alive (now harvesting) but
+  `LaneSimulation` no longer tracks them in any wave. The count read 0 right after the
+  farm was captured, `ScriptedBeatWatcher` fired `defeat`, and — since nothing gated
+  repeat reports either — kept firing it every subsequent tick, flooding the
+  narrative log. Fixed with a new `sim/player_roster.gd` (`PlayerRoster`): the
+  composition root calls `mark_harvesting(unit_count)` at the same point it despawns
+  an auto-extracting wave, and `_player_unit_count()` becomes
+  `_roster.total(marching_count)`. `ScriptedBeatWatcher.on_player_unit_count_changed`
+  also gained a `_defeated` guard so a real, legitimate wipe only fires `defeat` once
+  too, independent of this specific bug. This is exactly the kind of gap the project's
+  standing "an agent judging its own change's play-feel has a conflict of interest"
+  reasoning (`progress-tracking.md`) protects against — the scripted headless
+  verification this item's PR relied on never exercised the per-tick unit-count path
+  at all, only the human's own play did.
+- **Ravage/Fortify/Dismantle buttons were unconditionally visible** regardless of
+  whether the relevant node was owned or awaiting a choice — also found via manual
+  playtest. The composition root now toggles `visible` each tick:
+  `_ravage_button` on `lane.node_state(FARM)["owner"] == "player"`,
+  `_fortify_button`/`_dismantle_button` on `CaptureResolution.is_awaiting_choice
+  (FORT)`. Disclosed simplification: Ravage stays visible even after the farm is
+  already ravaged (no query exists yet for "already ravaged" specifically, and
+  `issue_choice` already no-ops safely if pressed again) — a future item can add a
+  proper query if that proves confusing in practice.
 - Manual playtest itself (does it *feel* right, is the pacing good) is deferred to the
   user, per this project's standing rule that an agent judging its own change's
   play-feel has a conflict of interest (`progress-tracking.md`, already the basis for
