@@ -324,6 +324,8 @@ widget, for this slice.
 
 ### Decision 9 — Core is a closing beat; no garrison/siege logic yet
 
+> Superseded by Decision 16 on 2026-09-21.
+
 **Rationale:** The map is `P-f-F-c` and the scenario's real test is defeating the Hero
 Party horde — but leaving the Core unreachable would end the slice one beat short of
 what the map literally lays out. After the Hero Party is defeated, a surviving horde
@@ -591,3 +593,45 @@ future diff touching 6 or more pre-existing files still fails the gate and still
 its own justification; a diff touching exactly 5, following the same three-layer,
 two-test shape as Decision 14's and this PR's, now correctly passes without needing a
 fresh Decision each time it recurs.
+
+### Decision 16 — Reaching the Core is an unconditional win; units stop there
+
+**Supersedes:** Decision 9
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-21
+
+**Rationale:** Found via manual playtest of PR #22: a player wave reached the Core
+before the Hero Party had even arrived, and — since Decision 9's win trigger required
+`ScriptedBeatWatcher`'s `hero_party_defeated` flag to already be set — capturing the
+Core did nothing. `LaneSimulation` has no notion of "stop here," so the wave's
+position kept incrementing every subsequent tick, visibly marching off past the far
+end of the lane with no feedback that anything had gone wrong. The user's own
+instruction: capturing the Core should be the win condition, full stop, independent of
+whether the Hero Party has been fought at all.
+
+This also fixes the "beyond the Core" movement bug without needing a separate
+"stop at this node" mechanic: since `victory` now already pauses `SimulationClock`
+(a prior fix on this same PR), making Core capture fire `victory` unconditionally
+means no further tick ever advances once it happens — the wave visibly stays parked
+exactly at the Core, for free, rather than needing new movement-halting logic.
+
+`ScriptedBeatWatcher`'s `hero_party_defeated`/`on_hero_party_defeated()` are removed
+outright as dead code, not left unused — nothing reads them once the win condition no
+longer depends on that flag. The Hero Party remains a real, defeatable obstacle a
+wave can still collide with en route (ordinary `LaneSimulation` combat, unchanged);
+its defeat simply stops being a prerequisite for winning via the Core specifically.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep the Hero-Party-defeated gate; instead stop the wave at the Core and leave it "parked" awaiting the gate | Directly contradicts the explicit instruction ("once it is captured, that is player win condition") — the gate itself is what's being removed, not just the movement bug around it. |
+| Add a dedicated "stop marching at this node" flag/mechanic to `LaneSimulation` | Unneeded once Core capture unconditionally triggers `victory`, which already halts the clock — building a parallel halting mechanism for one map-specific node would be speculative scope this project's own conventions avoid. |
+
+**Consequences:** `ScriptedBeatWatcher.on_node_captured(node_index)` fires `victory`
+whenever `node_index == _core_node_index`, with no other condition. Its
+`hero_party_defeated()`/`on_hero_party_defeated()` API is removed; `main.gd` no longer
+calls it (the `TaskForceDispatch.mark_consumed()` bookkeeping on Hero Party defeat is
+unaffected and stays). A future map with a genuinely defended/siege-able Core (Option
+2-style structure work, still deferred per Decision 4) would need its own, separate
+mechanic — this Decision only covers this slice's undefended Core.
