@@ -19,6 +19,7 @@ extends RefCounted
 
 var _core_node_index: int
 var _hero_party_defeated: bool = false
+var _defeated: bool = false
 
 
 func _init(core_node_index: int) -> void:
@@ -39,5 +40,6 @@ func on_node_captured(node_index: int) -> void:
 
 
 func on_player_unit_count_changed(total_units: int) -> void:
-	if total_units <= 0:
+	if total_units <= 0 and not _defeated:
+		_defeated = true
 		SimEvents.defeat.emit()
