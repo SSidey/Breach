@@ -82,6 +82,7 @@ func _resolve_wave_arrival(wave: Dictionary) -> void:
 		var outcome := CombatResolver.resolve(wave["units"], mover["blocker"])
 		SimEvents.combat_resolved.emit(index, outcome)
 		wave["units"] = outcome["surviving_horde"]
+		mover["blocker"]["hp"] = outcome["remaining_blocker_hp"]
 		if outcome["blocker_destroyed"]:
 			_moving_blockers.erase(mover)
 		if wave["units"].is_empty():

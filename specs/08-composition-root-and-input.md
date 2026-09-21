@@ -153,6 +153,22 @@ Scenario: Each capture-choice button calls exactly one CaptureResolution method
 
 ## Notes / open questions
 
+- **A second real gap found while verifying this item's balance numbers, disclosed
+  here rather than silently patched:** `LaneSimulation._resolve_wave_arrival()`'s
+  mid-lane-clash branch (a wave meeting a moving blocker, e.g. the Hero Party) never
+  wrote a surviving blocker's reduced hp back onto it — only the stationary-garrison
+  branch did (`_node_garrison_hp[index] = outcome["remaining_blocker_hp"]`). A Hero
+  Party that survived a clash would fight at full hp again on every later tick,
+  silently breaking `specs/02`'s own stated stalemate rule ("this is what makes
+  grinding down a fort over several rounds a real multi-tick siege") for the moving-
+  blocker case specifically. Fixed by mirroring the garrison branch's persistence
+  (`mover["blocker"]["hp"] = outcome["remaining_blocker_hp"]`), with a regression test
+  (`test_a_surviving_moving_blocker_keeps_its_reduced_hp_for_the_next_clash`) — no
+  existing test exercised a moving blocker surviving a hit, only the destroyed case.
+  This directly shaped this map's Hero Party balance: since grinding a mid-lane clash
+  down over several ticks now genuinely works, the numbers below don't have to
+  guarantee a one-hit kill, matching `specs/00` beat 5's actual intent (a Ravage-funded
+  horde that can plausibly finish the fight, not necessarily in one exchange).
 - **The "Messenger flees" beat (`specs/00`, beat 3) has no mechanically interceptable
   entity in this slice**, consistent with Decision 7 already deferring Scout/
   Infiltrator (nothing in this slice's roster could intercept a Messenger anyway).

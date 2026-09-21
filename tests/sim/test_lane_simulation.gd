@@ -92,6 +92,16 @@ func test_mid_lane_clash_with_a_moving_blocker_resolves_the_same_way() -> void:
 	assert_int(sim.waves()[0]["units"].size()).is_equal(2)
 
 
+func test_a_surviving_moving_blocker_keeps_its_reduced_hp_for_the_next_clash() -> void:
+	var sim := LaneSimulation.new(_map([_origin_node(), _origin_node(), _origin_node()]))
+	sim.spawn_wave("player", [{"hp": 10, "dmg": 6}], 0, 1)
+	var mover := sim.spawn_moving_blocker("defender", {"hp": 50, "dmg": 3}, 1, 0)
+
+	sim.advance_positions()
+
+	assert_int(mover["blocker"]["hp"]).is_equal(44)
+
+
 func test_advancing_after_a_wave_is_wiped_does_not_error() -> void:
 	var sim := LaneSimulation.new(_map([_origin_node(), _fort_node(50, 20)]))
 	sim.spawn_wave("player", [{"hp": 4, "dmg": 1}], 0, 1)
