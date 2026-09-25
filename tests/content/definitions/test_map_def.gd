@@ -4,6 +4,7 @@ const NodeDef = preload("res://content/definitions/node_def.gd")
 const LaneDef = preload("res://content/definitions/lane_def.gd")
 const MapDef = preload("res://content/definitions/map_def.gd")
 const MapEdgeDef = preload("res://content/definitions/map_edge_def.gd")
+const FactionRelationDef = preload("res://content/definitions/faction_relation_def.gd")
 
 
 func _make_origin_node(id: String) -> NodeDef:
@@ -131,3 +132,82 @@ func test_valid_edge_across_two_lanes_has_no_errors() -> void:
 	map.edges = edges
 
 	assert_array(map.validate()).is_empty()
+
+
+func _garrisoned_fort_node(id: String) -> NodeDef:
+	var node := NodeDef.new()
+	node.node_type = NodeDef.NodeType.FORT
+	node.id = id
+	node.garrison = 2
+	node.garrison_hp = 10
+	node.garrison_dmg = 3
+	node.dismantle_wood_yield = 8
+	node.dismantle_stone_yield = 5
+	node.fortify_wood_cost = 10
+	node.fortify_stone_cost = 6
+	return node
+
+
+func test_patrol_route_referencing_nonexistent_node_id_is_invalid() -> void:
+	var fort := _garrisoned_fort_node("F")
+	fort.patrol_route = ["p", "ghost"]
+	var lane := LaneDef.new()
+	lane.id = "main"
+	var nodes: Array[NodeDef] = [_make_origin_node("p"), fort]
+	lane.nodes = nodes
+	lane.player_home_index = 0
+
+	var map := MapDef.new()
+	var lanes: Array[LaneDef] = [lane]
+	map.lanes = lanes
+	map.tick_duration_seconds = 2.0
+	map.suspicion_tier_thresholds = [25, 50, 75, 90]
+
+	var errors := map.validate()
+
+	assert_array(errors).is_not_empty()
+	assert_bool(Array(errors).any(func(m): return m.contains("ghost"))).is_true()
+
+
+func test_delivery_target_id_referencing_nonexistent_node_is_invalid() -> void:
+	var resource_node := NodeDef.new()
+	resource_node.node_type = NodeDef.NodeType.RESOURCE
+	resource_node.id = "f"
+	resource_node.yield_food_per_tick = 6
+	resource_node.decay_interval_ticks = 5
+	resource_node.ravage_yield_food = 40
+	resource_node.delivery_target_id = "ghost"
+	var lane := LaneDef.new()
+	lane.id = "main"
+	var nodes: Array[NodeDef] = [_make_origin_node("p"), resource_node]
+	lane.nodes = nodes
+	lane.player_home_index = 0
+
+	var map := MapDef.new()
+	var lanes: Array[LaneDef] = [lane]
+	map.lanes = lanes
+	map.tick_duration_seconds = 2.0
+	map.suspicion_tier_thresholds = [25, 50, 75, 90]
+
+	var errors := map.validate()
+
+	assert_array(errors).is_not_empty()
+	assert_bool(Array(errors).any(func(m): return m.contains("ghost"))).is_true()
+
+
+func test_faction_relations_error_is_aggregated() -> void:
+	var relation := FactionRelationDef.new()
+	relation.faction_a = FactionRelationDef.FactionId.PLAYER
+	relation.faction_b = FactionRelationDef.FactionId.PLAYER
+
+	var map := MapDef.new()
+	var lanes: Array[LaneDef] = [_valid_lane()]
+	map.lanes = lanes
+	map.tick_duration_seconds = 2.0
+	map.suspicion_tier_thresholds = [25, 50, 75, 90]
+	var relations: Array[FactionRelationDef] = [relation]
+	map.faction_relations = relations
+
+	var errors := map.validate()
+
+	assert_array(errors).is_not_empty()
