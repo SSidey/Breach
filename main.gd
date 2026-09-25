@@ -81,7 +81,7 @@ func _process(delta: float) -> void:
 
 
 func _build_simulation() -> void:
-	_lane = LaneSimulation.new(MAP)
+	_lane = LaneSimulation.new(MAP.lanes[0].nodes)
 	_economy = EconomySystem.new()
 	_capture = CaptureResolution.new(_economy)
 	_suspicion = SuspicionSystem.new(MAP.suspicion_tier_thresholds, MAP.suspicion_decay_per_tick)
@@ -254,7 +254,7 @@ func _update_choice_button_visibility() -> void:
 
 
 func _on_node_captured(node_index: int) -> void:
-	_capture.on_node_captured(node_index, MAP.nodes[node_index])
+	_capture.on_node_captured(node_index, MAP.lanes[0].nodes[node_index])
 	if node_index == FARM:
 		_despawn_player_wave_at(FARM)
 	if node_index == FORT:

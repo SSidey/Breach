@@ -1,9 +1,13 @@
 class_name MapDef
 extends Resource
-## Map topology and tuning definition (lane graph, tick timing, suspicion ladder). See
-## specs/07-data-resource-schemas.md and specs/00-scope-and-map.md.
+## Map topology and tuning definition (lanes, tick timing, suspicion ladder). See
+## specs/07-data-resource-schemas.md, specs/00-scope-and-map.md, and
+## specs/09-node-graph-and-lanes.md.
 
-@export var nodes: Array[NodeDef] = []
+## Phase 4 item 2: nodes: Array[NodeDef] (one implicit global lane) replaced by
+## lanes: Array[LaneDef] (each an explicitly ordered node sequence) - see
+## specs/09-node-graph-and-lanes.md for why.
+@export var lanes: Array[LaneDef] = []
 @export var tick_duration_seconds: float = 0.0
 
 ## Ascending thresholds for Wary/Alarmed/Mobilized/Full Alert (Decision 5).
@@ -14,8 +18,8 @@ extends Resource
 func validate() -> PackedStringArray:
 	var errors := PackedStringArray()
 
-	if nodes.size() < 2:
-		errors.append("nodes must contain at least 2 entries, got %d" % nodes.size())
+	if lanes.is_empty():
+		errors.append("lanes must contain at least 1 entry, got %d" % lanes.size())
 
 	if tick_duration_seconds <= 0.0:
 		errors.append("tick_duration_seconds must be > 0, got %f" % tick_duration_seconds)
@@ -30,8 +34,8 @@ func validate() -> PackedStringArray:
 			)
 			break
 
-	for node in nodes:
-		for node_error in node.validate():
-			errors.append(node_error)
+	for lane in lanes:
+		for lane_error in lane.validate():
+			errors.append(lane_error)
 
 	return errors
