@@ -8,6 +8,13 @@ extends Resource
 ## lanes: Array[LaneDef] (each an explicitly ordered node sequence) - see
 ## specs/09-node-graph-and-lanes.md for why.
 @export var lanes: Array[LaneDef] = []
+
+## Explicit extra connections beyond each lane's own implied path, per
+## specs/11-graph-topology-edges.md. The map's full adjacency graph is the union of
+## each LaneDef's own consecutive-node edges and these. Defaults empty - zero
+## behavior change for any map that doesn't use branching.
+@export var edges: Array[MapEdgeDef] = []
+
 @export var tick_duration_seconds: float = 0.0
 
 ## Ascending thresholds for Wary/Alarmed/Mobilized/Full Alert (Decision 5).
@@ -38,4 +45,34 @@ func validate() -> PackedStringArray:
 		for lane_error in lane.validate():
 			errors.append(lane_error)
 
+	var node_ids := _all_node_ids()
+	var seen_pairs := {}
+	for edge in edges:
+		for edge_error in edge.validate():
+			errors.append(edge_error)
+		if not node_ids.has(edge.node_a_id):
+			errors.append("edge references unknown node_a_id '%s'" % edge.node_a_id)
+		if not node_ids.has(edge.node_b_id):
+			errors.append("edge references unknown node_b_id '%s'" % edge.node_b_id)
+		var pair_key := _canonical_pair_key(edge.node_a_id, edge.node_b_id)
+		if seen_pairs.has(pair_key):
+			errors.append("duplicate edge between '%s' and '%s'" % [edge.node_a_id, edge.node_b_id])
+		seen_pairs[pair_key] = true
+
 	return errors
+
+
+func _all_node_ids() -> Dictionary:
+	var ids := {}
+	for lane in lanes:
+		for node in lane.nodes:
+			ids[node.id] = true
+	return ids
+
+
+func _canonical_pair_key(node_a_id: String, node_b_id: String) -> String:
+	return (
+		"%s|%s" % [node_a_id, node_b_id]
+		if node_a_id <= node_b_id
+		else "%s|%s" % [node_b_id, node_a_id]
+	)
