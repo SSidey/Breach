@@ -798,3 +798,49 @@ overriding its stated timing. Future map-level `MapDef` scalar fields are added 
 new `@export` on `MapSceneRoot` plus a merge line in its export handler — same pattern
 as the existing scalar exports, no further Decision needed for that specific
 extension.
+
+### Decision 22 — Explicit extra edges refine "tracks not a grid," not contradict it
+
+**Rationale:** The user wants branching topology representable — two lanes sharing a
+player base, and eventually a unit with more than one valid route home (raised in
+connection with `breach-addendum-unified-combat.md`'s already-drafted "Retreat: a
+general capability" mechanic — any mobile combatant retreating to the *nearest*
+friendly Structure, interceptable en route). Today `LaneDef.nodes: Array[NodeDef]`
+makes adjacency implicit in array order, so a node can only ever have exactly one
+predecessor and successor — branching literally cannot be represented.
+
+Investigating what this would reopen found the "tracks not a grid" framing is **not**
+Decision 4 (that Decision is about abstracted-vs-spatial *combat* mechanics, and
+explicitly keeps a spatial/routed design open for later via `structure_slots`). It's
+one unnumbered bullet in the base spec's "What's already validated" list, whose only
+recorded reason is a readability/feel judgment from early HTML/JS prototyping ("read
+as 'dots and boxes'") — no further detail about that prototype survives anywhere in
+the repo. Reopening it is a soft call, not a reversal of hard technical evidence.
+
+The fix: `MapEdgeDef`/`MapDef.edges` — a sparse, explicit, opt-in extra-connections
+concept, additive to `LaneDef`'s existing shape rather than replacing it. A map's full
+adjacency graph is the union of (a) each `LaneDef`'s own implied path edges
+(consecutive array entries, unchanged) and (b) `MapDef.edges`' explicit extra
+connections. This deliberately does **not** become a general open grid — a map author
+must explicitly place an edge marker to create a junction, preserving the "front line"
+read the original prototyping note cared about; only sparse, authored branch points
+are possible, not arbitrary node-to-node connectivity.
+
+**Explicit scope boundary, not solved here:** this Decision covers data only. How
+`LaneSimulation`'s movement (a bare int position + `+1`/`-1` direction, with zero
+adjacency structure or path-choice logic anywhere in `sim/` today) evolves to actually
+traverse a graph with junctions, and any route-choice/retreat-AI logic, is deferred to
+a future, separate design pass — not assumed or pre-decided by this Decision.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Replace `LaneDef`'s array-order-implies-path shape with a fully generic nodes+edges graph | Bigger migration for no immediate benefit — would force a rewrite of `LaneSimulation`'s movement model and the just-shipped (still unmerged at the time) map scene authoring tool even for maps that never use a junction. |
+| Do nothing until the movement/retreat-AI design is ready, design schema and movement together | Would leave the user's immediate, concrete request (author two lanes sharing a base) unaddressed for longer than necessary; the schema and movement-logic questions are genuinely separable — this item proves that by shipping the former with zero `sim/` changes. |
+
+**Consequences:** `breach-addendum-unified-combat.md` is tracked in version control as
+of this Decision (previously untracked; confirmed by the user to be real prior design
+content, not scratch) as the anticipated future consumer of this topology. A future
+movement/route-choice item can build directly on `MapDef.edges` without another schema
+migration.
