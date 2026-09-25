@@ -844,3 +844,67 @@ of this Decision (previously untracked; confirmed by the user to be real prior d
 content, not scratch) as the anticipated future consumer of this topology. A future
 movement/route-choice item can build directly on `MapDef.edges` without another schema
 migration.
+
+### Decision 23 — Resource typing, assignment roles, faction, and reward: additive schema, zero sim/ behavior change
+
+**Rationale:** Using the Lane Tile Designer prototype (a standalone HTML mockup, not
+part of this repo) to sketch maps surfaced four real gaps between what an author would
+want to configure and what `NodeDef` could actually represent: resource nodes are
+Food-only with no finite quantity; a garrison is a single pooled count with no role
+beyond "present"; ownership is a bare, ad-hoc `String` with no faction/relationship
+concept anywhere in `sim/`; and there was no way to attach a capture reward to a
+location. All four are additive, inert schema — the same "schema now, consumption
+later" discipline already used for `NodeDef.position` (Decision 19) and `MapDef.edges`
+(Decision 22):
+
+- `NodeDef.resource_type` (enum `FOOD/WOOD/STONE/METAL/CRYSTAL`, defaults `FOOD`) and
+  `total_reserves` (`0` = unlimited) — the existing Food-specific fields
+  (`yield_food_per_tick` etc.) are untouched, not renamed, so `sim/
+  capture_resolution.gd` keeps compiling and behaving identically. Documented intended
+  future semantics: reserves should only deplete from yield *above*
+  `decay_floor_food`, leaving room for a future "maintained by skilled units"
+  mechanic (confirmed: zero prior art for unit skills/traits anywhere in the repo)
+  without another schema change.
+- `NodeDef.patrol_route` (ordered node ids), `can_sortie` (matches the combat
+  addendum's already-drafted sortie concept), and `delivery_target_id` (matches the
+  addendum's Worker-as-Combatant section) — each requires `garrison > 0` where
+  applicable, cross-referenced against the map's real node ids in `MapDef.validate()`.
+  Static defense itself needed no schema change: `garrison`/`garrison_hp`/
+  `garrison_dmg` were confirmed not type-gated already — any structure could already
+  hold a garrison; the prototype's own UI was the only thing restricting it to FORT.
+- `FactionRelationDef` (new file): nested `enum FactionId { PLAYER, ENEMY }`
+  (append-only, same convention as `NodeType`), `faction_a`/`faction_b`/`stance`.
+  `NodeDef.garrison_faction` gives a garrison's single default affiliation.
+  **Documented limitation**, resolved directly with the user: `garrison` is a pooled
+  count, not a list of individual units, so this cannot express true per-unit mixed
+  affiliation (e.g. a prisoner inside an enemy structure) — that needs a
+  pooled-garrison → individual-unit-list redesign, deferred alongside the already-
+  deferred squads/unit-library extension. `sim/`'s existing ad-hoc `String` ownership
+  (`"player"`, `"defender"`) is explicitly **not** migrated to `FactionId` here.
+- `NodeDef.capture_reward` (free-text/id placeholder, empty = none) — no unlock system
+  consumes it yet.
+
+`MapDef.validate()`'s body was already 38 lines (near this project's 40-line
+function-length ceiling) before this Decision. Split into small private-helper
+delegates (`_validate_suspicion_thresholds()`, `_validate_lanes()`,
+`_validate_edges()`, `_validate_node_references()`, `_validate_faction_relations()`),
+with `validate()` itself becoming a short orchestrator — a behavior-preserving
+refactor (existing tests as the safety net) needed to add three more validation
+concerns without exceeding the ceiling.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Wire real reserve-depletion behavior into `EconomySystem`/`CaptureResolution` now | Explicitly declined by the user — would risk building depletion logic that gets reshaped once the "maintained by skilled units" idea is actually designed. |
+| Let reserves also deplete the `decay_floor_food` amount | Explicitly declined — forecloses the "a maintained field never truly runs out, only surplus does" framing without a further schema change. |
+| Give delivery/logistics no authored schema at all (treat it as purely runtime, like today's auto-extraction) | The user asked for `delivery_target_id` to be authored now even though nothing consumes it yet, so the concept exists in data ahead of the runtime system. |
+| Migrate `sim/`'s ownership strings to `FactionId` in this item | Explicitly declined — real, separate refactor touching `lane_simulation.gd`, `task_force_dispatch.gd`, `capture_resolution.gd`, `sim_events.gd`, `main.gd`, and their tests; deferred until something actually needs to consume factions. |
+
+**Consequences:** The Lane Tile Designer prototype's inspector panel is expected to be
+updated next to expose these fields (resource type/reserves, patrol/sortie/delivery
+controls, a faction picker, the reward field) — the user's own stated sequencing:
+iterate the data model, then update the prototype UI. Configurable unit library +
+squads (real per-unit faction assignment) and treasure "unlockables" beyond the plain
+`capture_reward` string remain explicitly deferred extensions, not part of this
+Decision.
