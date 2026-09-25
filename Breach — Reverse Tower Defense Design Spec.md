@@ -115,6 +115,8 @@ Every map also predefines its full set of structure slots — tower foundations 
 
 Build 2–3 hand-authored maps before any map-creator tooling — prove the campaign feel first, generalize into a tool second.
 
+> This timing was overridden by explicit user request — see Decision 21. Maps are still hand-authored one at a time (no batch/procedural generation), just via a scene-based editor tool instead of raw `.tres` text.
+
 **Worked early map (from your example):** one track, one loosely-defended farm, one lightly-defended fort.
 
 | Beat | What happens | Teaches |
@@ -748,3 +750,51 @@ spec guessed."
 `solid_mechanical.ocp.max_touched_files_per_new_case` is raised from 8 to 11 — this
 migration's actual, complete touched-file count. A future diff touching 12 or more
 pre-existing files still fails the gate and still needs its own justification.
+
+### Decision 21 — Map scene authoring tool built now, ahead of the "2–3 maps before tooling" guidance
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-25
+
+**Rationale:** The "Map structure and campaign progression" section states "Build 2–3
+hand-authored maps before any map-creator tooling — prove the campaign feel first,
+generalize into a tool second." Only one map (`p_f_F_c`) existed when this Decision was
+made. The user, looking at `content/maps/p_f_F_c.tres`'s raw hand-edited `sub_resource`
+text, asked whether that's really the best way to author map data and was given a
+direct choice between deferring a map editor, building a narrow one-off conversion
+script only, or building the tool now and explicitly recording the timing override.
+The user chose to build it now. This Decision records that choice rather than letting
+it silently contradict the spec's stated sequencing — same spirit as Decision 16
+superseding Decision 9's framing, though this overrides narrative guidance rather than
+a prior formal Decision, so no `> Superseded by...` heading edit applies; the original
+sentence in "Map structure and campaign progression" is left untouched, with a
+forward-pointer note added beside it instead.
+
+Per `specs/10-map-scene-authoring.md`: maps are authored as a `.tscn` scene
+(`MapSceneRoot` > `MapLaneRoot` > `MapNodeMarker`, the latter wrapping a real `NodeDef`
+resource rather than duplicating its schema) placed visually in Godot's 2D viewport,
+then converted to the existing `MapDef`/`LaneDef`/`NodeDef` shape by
+`MapSceneConverter` and saved via an Inspector-only "Export to .tres" button.
+`content/maps/*.tres` remains the only thing `main.gd` ever loads — this tool is
+purely additive authoring surface under `content/authoring/`, with zero changes to
+`main.gd` or any `sim/`/`presentation/`/existing `content/definitions/` file.
+`MapSceneConverter.build_map_def()` duplicates each marker's `NodeDef` before stamping
+`.position` and inserting it into the built `LaneDef` — without this, saving the
+resulting `MapDef` could serialize the shared `NodeDef` as an `ext_resource` pointing
+back into the source `.tscn` rather than an inline `sub_resource`.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Defer the editor; hand-author a second map first, per the spec's original sequencing | Would have honored the letter of "prove campaign feel first," but the user directly asked to build the tool now rather than wait. |
+| Build only a narrow one-off scene-to-MapDef conversion script, no ongoing "editor" surface or Decision | Smaller footprint, but the user's chosen option was explicit supersession, not a scoped-down alternative. |
+| A full custom `EditorPlugin`/dock with in-viewport node-type-colored rendering | Rejected as unnecessary: Godot's native `Marker2D` gizmo plus the Scene tree dock (renaming markers to their `id`) is sufficient for authoring placement; no project-authored `EditorPlugin` existed before this item, and building one would be substantially more new machinery than the scene-plus-converter approach for the same authoring benefit. |
+
+**Consequences:** Phase 4 item 7's second map (`P-f`) is expected to be authored via
+this tool rather than by hand-typing `.tres` text, which is how the tool actually
+serves the original spec's underlying goal (prove campaign feel across maps) despite
+overriding its stated timing. Future map-level `MapDef` scalar fields are added as a
+new `@export` on `MapSceneRoot` plus a merge line in its export handler — same pattern
+as the existing scalar exports, no further Decision needed for that specific
+extension.
