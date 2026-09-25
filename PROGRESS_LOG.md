@@ -31,3 +31,4 @@ Schema note: rows from 2026-09-20 onward that predate the `isp violations` / `he
 | 2026-09-21 | feature/node-graph-data-model | 142 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-09-25 | feature/map-scene-authoring-tool | 148 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-09-25 | feature/graph-topology-edges | 158 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
+| 2026-09-25 | feature/node-schema-round-3 | 168 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
