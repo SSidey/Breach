@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="FactionDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://content/definitions/faction_def.gd" id="1_the_kingdom"]
+
+[resource]
+script = ExtResource("1_the_kingdom")
+id = "the_kingdom"
+display_name = "The Kingdom"
