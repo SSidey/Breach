@@ -152,6 +152,43 @@ This is presentation layered on the existing math, not a rewrite of the round re
 - [ ] Suspicion decay rate and per-tier response-unit stats — needs a tuning pass once the state machine is implemented.
 - [ ] Does the map-creator tool get scoped at all for v1, or purely a post-launch investment (recommended)?
 - [ ] Roster sizes and training rates per unit type (Builder/Guard/Militia/Hero) — needs tuning once the Task Force system is implemented.
+- [ ] Resource replenishment/depletion redesign (raised while iterating on `NodeDef`'s resource fields, `specs/13-faction-def-and-garrison-unit.md`): natural baseline replenishment independent of workers; unit skills/traits that increase a specific resource type's replenishment at their tile (no skill/trait system exists yet); workers who both extract *and* replenish (e.g. a farmer granting +2/tick replenishment while harvesting 3/tick), with a priority rule needed between banking replenishment locally vs. hauling extracted output away; a cap on standing "available" resource (e.g. wheat in the field) distinct from the underlying reserve/capacity cap; neglect-decay — an untended, unharvested resource losing material over time, the *inverse* direction from today's harvest-pressure decay (`EconomySystem.decayed_yield()` decays *extraction rate* under sustained harvesting, not standing material under neglect) — and whether/how a tick-represents-real-calendar-time concept (e.g. 6 hours/tick, 3-day seasons) layers season and time-of-day effects on top. Not designed yet; `NodeDef.is_inexhaustible`/`total_reserves` (schema round 4) deliberately leave room for this without committing to any of it.
+
+## Future direction: Command & Control via messenger-delivered orders
+
+Not designed yet — captured here so it isn't lost, raised while reviewing
+`specs/13-faction-def-and-garrison-unit.md`'s `GarrisonUnitDef` (whose `can_sortie`/
+`patrol_route`/`delivery_target_id` fields are each unit's *baseline standing order*,
+authored for how it starts the map, not a fixed property).
+
+The core idea: a unit's orders aren't just static map-authored properties — they're
+the output of a command hierarchy (the Core, and potentially intermediate command
+echelons at structures or squads below it) issuing orders that must be **physically
+delivered** before they take effect. This is the natural symmetric counterpart to the
+Alarm/messenger mechanic already validated above (`content/response_units/
+messenger.tres`) — that system carries *information* (alarm reports) outward from a
+threatened location to the core, interceptable by an Infiltrator positioned ahead of
+it; this idea carries *commands* the other direction (core → field), equally
+interceptable, giving either side a real tactical lever: intercepting an
+order-messenger disrupts the enemy's C2, not just its alarm system.
+
+**Delivery-assurance tiers**, escalating in reliability/cost: plain messenger → a
+messenger with a guard retinue escort → a messenger bird → magical messages. Which
+tiers are actually available is gated by two independent axes: (1) a difficulty
+setting framed as a spectrum from dark fantasy (easy — low-tier delivery only, more
+interceptable) to high fantasy (hard — magical/creature-assisted delivery, harder to
+intercept), determining the enemy's available resources/technology overall, not just
+messenger tiers; and (2) campaign-length progression, independent of the difficulty
+setting — an enemy that starts a long campaign at a lower fantasy tier can grow into a
+higher one by its end.
+
+**Open questions for whenever this gets its own design pass:** does the player's own
+side have an equivalent order-delivery constraint, or is this enemy-only flavor? What
+exactly triggers a campaign-progression tier-up? Does intercepting an order-messenger
+just delay/cancel the order, or can it be read for intelligence (mirroring how Scout
+reveals the alarm-risk number)? Does this need its own messenger unit type, or does
+`content/response_units/messenger.tres`'s existing `purpose` field just gain an
+`"order"` value alongside `"report"`?
 
 ## Notes for the implementing agent (Godot)
 
@@ -847,6 +884,11 @@ migration.
 
 ### Decision 23 — Resource typing, assignment roles, faction, and reward: additive schema, zero sim/ behavior change
 
+> Superseded in part by Decision 24 on 2026-09-26 — `can_sortie`/`patrol_route`/
+> `delivery_target_id`/`garrison_faction`'s placement on `NodeDef`, and the closed
+> `FactionId` enum, are revised. The resource-typing/reserves and `capture_reward`
+> parts of this Decision stand unchanged.
+
 **Rationale:** Using the Lane Tile Designer prototype (a standalone HTML mockup, not
 part of this repo) to sketch maps surfaced four real gaps between what an author would
 want to configure and what `NodeDef` could actually represent: resource nodes are
@@ -908,3 +950,54 @@ iterate the data model, then update the prototype UI. Configurable unit library 
 squads (real per-unit faction assignment) and treasure "unlockables" beyond the plain
 `capture_reward` string remain explicitly deferred extensions, not part of this
 Decision.
+
+### Decision 24 — Unit/squad affiliation fields move off NodeDef; faction becomes content, not an enum
+
+**Supersedes:** Decision 23 (in part — see the pointer on that Decision's heading)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-26
+
+**Rationale:** Reviewing Decision 23's fields against the combat addendum surfaced two
+corrections. First: `can_sortie`, `patrol_route`, `delivery_target_id`, and
+`garrison_faction` are unit/squad properties, not structure properties — the addendum
+already models a Structure and its Garrison as separate Combatants with independent
+stats, and this project already has a deliberate precedent against premature
+unification (`ResponseUnitDef`'s own doc comment: "Deliberately independent of
+UnitDef... not a kind-of player unit in any substitutable sense"). Fully doing
+"a structure is just an immobile unit" properly means adopting the addendum's whole
+Combatant/Encounter model, which would also subsume `UnitDef`/`ResponseUnitDef` and
+every `sim/` consumer of them — large, separate, future work. This Decision does the
+smaller, honest version: a new `GarrisonUnitDef` holds just the four affiliation/
+behavior fields, explicitly documented as a deliberate stand-in, not the full
+unification. Second: a closed `FactionId` enum (`PLAYER`/`ENEMY`) can't express a
+map-authored faction like a stub "The Kingdom" — factions need to be author-definable
+content, like units and maps already are, not a fixed enum (enums are for closed,
+code-level categories, per `NodeType`'s own convention).
+
+Also explicit: `NodeDef.garrison`/`garrison_hp`/`garrison_dmg` are **not** touched by
+this Decision — they predate this session (Decision 11) and are read live by
+`sim/lane_simulation.gd`'s `_init()` today, so restructuring them into per-unit stats
+would be real behavior-affecting surgery on the running simulation, outside this line
+of work's established "schema-only, zero `sim/` change" discipline. `GarrisonUnitDef`
+holds only affiliation/behavior fields, not combat stats.
+
+Also explicit: `can_sortie`/`patrol_route`/`delivery_target_id` are each unit's
+**baseline standing order** — what it starts the map with — not a fixed property. A
+future Command & Control system (messenger-delivered orders, interceptable, tiered by
+delivery assurance — see "Future direction" above) is expected to let these change at
+runtime; this schema only authors the starting state.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Leave the four fields on `NodeDef`, just document them as temporary | Rejected directly by the user in favor of actually moving them now, since PR #26 (carrying Decision 23's changes) was still open/unreviewed — the cheapest possible time to fix this. |
+| Build the full addendum Combatant/Encounter unification now, folding structures and units into one type | Far larger scope than this item — would also require migrating `UnitDef`/`ResponseUnitDef` and every `sim/` consumer; deliberately deferred as its own future item. |
+| Keep `FactionId` as a closed enum, just add more values as needed | Doesn't allow map-authored custom factions (e.g. "The Kingdom") without a code change each time — factions are the kind of thing this project already treats as content (units, maps), not a fixed category. |
+
+**Consequences:** `content/factions/player.tres` and `content/factions/
+the_kingdom.tres` exist as the first two `FactionDef` instances — "The Kingdom,"
+hostile to the player, per direct request. `owning_faction_id` (new, on `NodeDef`) and
+`LaneDef.player_home_index` are now two independent ways to identify "the player's
+base" on the same node — a known, documented tension for whichever future item first
+needs faction-based ownership logic in `sim/` to reconcile, not resolved here.
