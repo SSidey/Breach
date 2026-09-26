@@ -15,9 +15,15 @@ extends Resource
 ## behavior change for any map that doesn't use branching.
 @export var edges: Array[MapEdgeDef] = []
 
-## Additive, per specs/12-node-schema-round-3.md. sim/'s existing ad-hoc String
-## ownership is not migrated to FactionId here - that's separate, future work.
+## Additive, per specs/13-faction-def-and-garrison-unit.md. sim/'s existing ad-hoc
+## String ownership is not migrated to this - that's separate, future work.
 @export var faction_relations: Array[FactionRelationDef] = []
+
+## The map's faction roster, per specs/13-faction-def-and-garrison-unit.md -
+## real author-definable content, not a closed enum. Includes the player's own
+## entry; "player" is authoring convention (an id like any other), not a hardcoded
+## special case.
+@export var factions: Array[FactionDef] = []
 
 @export var tick_duration_seconds: float = 0.0
 
@@ -37,9 +43,10 @@ func validate() -> PackedStringArray:
 	errors.append_array(_validate_lanes())
 
 	var node_ids := _all_node_ids()
+	var faction_ids := _all_faction_ids()
 	errors.append_array(_validate_edges(node_ids))
-	errors.append_array(_validate_node_references(node_ids))
-	errors.append_array(_validate_faction_relations())
+	errors.append_array(_validate_node_references(node_ids, faction_ids))
+	errors.append_array(_validate_faction_relations(faction_ids))
 
 	return errors
 
@@ -83,33 +90,73 @@ func _validate_edges(node_ids: Dictionary) -> PackedStringArray:
 	return errors
 
 
-func _validate_node_references(node_ids: Dictionary) -> PackedStringArray:
+func _validate_node_references(node_ids: Dictionary, faction_ids: Dictionary) -> PackedStringArray:
 	var errors := PackedStringArray()
 	for lane in lanes:
 		for node in lane.nodes:
-			for stop_id in node.patrol_route:
-				if not node_ids.has(stop_id):
-					errors.append(
-						(
-							"node '%s' patrol_route references unknown node id '%s'"
-							% [node.id, stop_id]
-						)
-					)
-			if not node.delivery_target_id.is_empty() and not node_ids.has(node.delivery_target_id):
+			if (
+				not node.owning_faction_id.is_empty()
+				and not faction_ids.has(node.owning_faction_id)
+			):
 				errors.append(
 					(
-						"node '%s' delivery_target_id references unknown node id '%s'"
-						% [node.id, node.delivery_target_id]
+						"node '%s' owning_faction_id references unknown faction id '%s'"
+						% [node.id, node.owning_faction_id]
 					)
 				)
+			errors.append_array(_validate_garrison_units(node, node_ids, faction_ids))
 	return errors
 
 
-func _validate_faction_relations() -> PackedStringArray:
+func _validate_garrison_units(
+	node: NodeDef, node_ids: Dictionary, faction_ids: Dictionary
+) -> PackedStringArray:
 	var errors := PackedStringArray()
+	for unit in node.garrison_units:
+		if not unit.faction_id.is_empty() and not faction_ids.has(unit.faction_id):
+			errors.append(
+				(
+					"node '%s' garrison unit references unknown faction id '%s'"
+					% [node.id, unit.faction_id]
+				)
+			)
+		for stop_id in unit.patrol_route:
+			if not node_ids.has(stop_id):
+				errors.append(
+					(
+						"node '%s' garrison unit patrol_route references unknown node id '%s'"
+						% [node.id, stop_id]
+					)
+				)
+		if not unit.delivery_target_id.is_empty() and not node_ids.has(unit.delivery_target_id):
+			errors.append(
+				(
+					"node '%s' garrison unit delivery_target_id references unknown node id '%s'"
+					% [node.id, unit.delivery_target_id]
+				)
+			)
+	return errors
+
+
+func _validate_faction_relations(faction_ids: Dictionary) -> PackedStringArray:
+	var errors := PackedStringArray()
+	var seen_pairs := {}
 	for relation in faction_relations:
 		for relation_error in relation.validate():
 			errors.append(relation_error)
+		if not faction_ids.has(relation.faction_a_id):
+			errors.append("relation references unknown faction_a_id '%s'" % relation.faction_a_id)
+		if not faction_ids.has(relation.faction_b_id):
+			errors.append("relation references unknown faction_b_id '%s'" % relation.faction_b_id)
+		var pair_key := _canonical_pair_key(relation.faction_a_id, relation.faction_b_id)
+		if seen_pairs.has(pair_key):
+			errors.append(
+				(
+					"duplicate faction relation between '%s' and '%s'"
+					% [relation.faction_a_id, relation.faction_b_id]
+				)
+			)
+		seen_pairs[pair_key] = true
 	return errors
 
 
@@ -118,6 +165,13 @@ func _all_node_ids() -> Dictionary:
 	for lane in lanes:
 		for node in lane.nodes:
 			ids[node.id] = true
+	return ids
+
+
+func _all_faction_ids() -> Dictionary:
+	var ids := {}
+	for faction in factions:
+		ids[faction.id] = true
 	return ids
 
 

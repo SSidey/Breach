@@ -36,11 +36,25 @@ enum ResourceType { FOOD, WOOD, STONE, METAL, CRYSTAL }
 ## compiling and behaving identically. Authored, not yet read by sim/.
 @export var resource_type: ResourceType = ResourceType.FOOD
 
-## 0 = unlimited (today's behavior, unchanged). Once consumed by a future item,
-## intended semantics: only yield ABOVE decay_floor_food should deplete this - the
-## floor stays an eternally-renewable baseline, leaving room for a future
-## "maintained by skilled units" mechanic without another schema change.
+## Fixes total_reserves' old 0-means-unlimited overload (round 3): 0 can't mean both
+## "empty" and "infinite". Defaults true so content authored before this field
+## existed keeps its effectively-unlimited behavior unchanged. Once total_reserves is
+## actually consumed by a future item, intended semantics: only yield ABOVE
+## decay_floor_food should deplete it when this is false - the floor stays an
+## eternally-renewable baseline, leaving room for a future "maintained by skilled
+## units" mechanic without another schema change.
+@export var is_inexhaustible: bool = true
+
+## The real finite pool size when is_inexhaustible is false. Ignored (unlimited)
+## when is_inexhaustible is true. Authored, not yet read by sim/.
 @export var total_reserves: int = 0
+
+## Which faction controls this node - meaningful for ORIGIN-type "base" nodes, not
+## hard-gated to that type. Cross-referenced against the map's faction roster in
+## MapDef.validate(). Per specs/13-faction-def-and-garrison-unit.md: this and
+## LaneDef.player_home_index are now two independent ways to identify "the player's
+## base" on the same node - a known, documented tension, not resolved here.
+@export var owning_faction_id: String = ""
 
 ## Structure-slot metadata for a future spatial-placement pass (Decision 4) - not
 ## validated in this slice since nothing consumes it yet.
@@ -52,27 +66,15 @@ enum ResourceType { FOOD, WOOD, STONE, METAL, CRYSTAL }
 @export var garrison_hp: int = 0
 @export var garrison_dmg: int = 0
 
-## Assignment roles, per specs/12-node-schema-round-3.md - additive, inert; no
-## patrol/sortie movement or AI exists anywhere in sim/ yet. Static defense needs no
-## field of its own: garrison/garrison_hp/garrison_dmg above already work on any
-## node_type (not type-gated), so "a structure can have a garrison" is already true.
-
-## Ordered node ids a garrisoned defender patrols between. Empty = static only
-## (unchanged default behavior). Only meaningful with garrison > 0. Cross-referenced
-## against the map's real node ids in MapDef.validate() - a single node can't see
-## the rest of the map's nodes to check its own ids exist.
-@export var patrol_route: Array[String] = []
-
-## Matches the combat addendum's already-drafted sortie concept (temporary
-## intercept, returns after). Only meaningful with garrison > 0.
-@export var can_sortie: bool = false
-
-## The garrison's single default affiliation. Only meaningful with garrison > 0.
-## garrison is a pooled count, not a list of individual units, so this cannot
-## express per-unit mixed affiliation (e.g. a prisoner inside an enemy structure) -
-## that needs a pooled-garrison -> individual-unit-list redesign, deferred alongside
-## the squads/unit-library extension.
-@export var garrison_faction: FactionRelationDef.FactionId = FactionRelationDef.FactionId.ENEMY
+## Assignment roles, per specs/13-faction-def-and-garrison-unit.md (revised from
+## specs/12 - see Decision 24): affiliation/behavior per stationed unit, not pooled
+## on the node. Static defense needs no field of its own: garrison/garrison_hp/
+## garrison_dmg above already work on any node_type (not type-gated), so "a
+## structure can have a garrison" is already true. Empty = static only, no units
+## assigned. Only meaningful with garrison > 0. Each entry's patrol_route/
+## delivery_target_id/faction_id are cross-referenced against the map's real node
+## ids/faction roster in MapDef.validate().
+@export var garrison_units: Array[GarrisonUnitDef] = []
 
 ## CaptureResolution's capture-choice figures. See
 ## specs/03-resource-nodes-and-workers.md. Food/Wood/Stone-specific rather than
@@ -83,11 +85,6 @@ enum ResourceType { FOOD, WOOD, STONE, METAL, CRYSTAL }
 @export var dismantle_stone_yield: int = 0  ## FORT nodes only.
 @export var fortify_wood_cost: int = 0  ## FORT nodes only.
 @export var fortify_stone_cost: int = 0  ## FORT nodes only.
-
-## Which node a RESOURCE node's future worker-delivery route targets, per the combat
-## addendum's Worker-as-Combatant section. No delivery movement exists in sim/ yet.
-## Cross-referenced against the map's real node ids in MapDef.validate().
-@export var delivery_target_id: String = ""
 
 ## Free-text/id placeholder for what unlocks on capture. Empty = none. No unlock
 ## system consumes this yet.
@@ -125,8 +122,9 @@ func validate() -> PackedStringArray:
 			errors.append("fortify_stone_cost must be > 0 for a FORT node")
 	if total_reserves < 0:
 		errors.append("total_reserves must be >= 0, got %d" % total_reserves)
-	if not patrol_route.is_empty() and garrison <= 0:
-		errors.append("patrol_route requires garrison > 0, got %d" % garrison)
-	if can_sortie and garrison <= 0:
-		errors.append("can_sortie requires garrison > 0, got %d" % garrison)
+	if not garrison_units.is_empty() and garrison <= 0:
+		errors.append("garrison_units requires garrison > 0, got %d" % garrison)
+	for unit in garrison_units:
+		for unit_error in unit.validate():
+			errors.append(unit_error)
 	return errors

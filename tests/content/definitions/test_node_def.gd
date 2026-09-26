@@ -1,6 +1,7 @@
 extends GdUnitTestSuite
 
 const NodeDef = preload("res://content/definitions/node_def.gd")
+const GarrisonUnitDef = preload("res://content/definitions/garrison_unit_def.gd")
 
 
 func test_resource_node_without_yield_is_invalid() -> void:
@@ -128,7 +129,7 @@ func test_fort_node_missing_dismantle_and_fortify_figures_is_invalid() -> void:
 	)
 
 
-func test_resource_node_defaults_to_food_with_unlimited_reserves() -> void:
+func test_resource_node_defaults_to_food_inexhaustible() -> void:
 	var node := NodeDef.new()
 	node.node_type = NodeDef.NodeType.RESOURCE
 	node.id = "farm"
@@ -137,6 +138,7 @@ func test_resource_node_defaults_to_food_with_unlimited_reserves() -> void:
 	node.ravage_yield_food = 40
 
 	assert_int(node.resource_type).is_equal(NodeDef.ResourceType.FOOD)
+	assert_bool(node.is_inexhaustible).is_true()
 	assert_int(node.total_reserves).is_equal(0)
 	assert_array(node.validate()).is_empty()
 
@@ -153,20 +155,27 @@ func test_negative_total_reserves_is_invalid() -> void:
 	assert_bool(Array(errors).any(func(m): return m.contains("total_reserves"))).is_true()
 
 
-func test_patrol_route_without_a_garrison_is_invalid() -> void:
+func _garrison_unit(faction_id: String = "the_kingdom") -> GarrisonUnitDef:
+	var unit := GarrisonUnitDef.new()
+	unit.faction_id = faction_id
+	return unit
+
+
+func test_garrison_units_without_a_garrison_is_invalid() -> void:
 	var node := NodeDef.new()
 	node.node_type = NodeDef.NodeType.ORIGIN
 	node.id = "home"
 	node.garrison = 0
-	node.patrol_route = ["a", "b"]
+	var units: Array[GarrisonUnitDef] = [_garrison_unit()]
+	node.garrison_units = units
 
 	var errors := node.validate()
 
 	assert_array(errors).is_not_empty()
-	assert_bool(Array(errors).any(func(m): return m.contains("patrol_route"))).is_true()
+	assert_bool(Array(errors).any(func(m): return m.contains("garrison_units"))).is_true()
 
 
-func test_patrol_route_with_a_garrison_is_valid() -> void:
+func test_garrison_units_with_a_garrison_is_valid() -> void:
 	var node := NodeDef.new()
 	node.node_type = NodeDef.NodeType.FORT
 	node.id = "fort"
@@ -177,19 +186,26 @@ func test_patrol_route_with_a_garrison_is_valid() -> void:
 	node.dismantle_stone_yield = 5
 	node.fortify_wood_cost = 10
 	node.fortify_stone_cost = 6
-	node.patrol_route = ["a", "b"]
+	var units: Array[GarrisonUnitDef] = [_garrison_unit()]
+	node.garrison_units = units
 
 	assert_array(node.validate()).is_empty()
 
 
-func test_can_sortie_without_a_garrison_is_invalid() -> void:
+func test_invalid_garrison_unit_error_is_aggregated() -> void:
 	var node := NodeDef.new()
-	node.node_type = NodeDef.NodeType.ORIGIN
-	node.id = "home"
-	node.garrison = 0
-	node.can_sortie = true
+	node.node_type = NodeDef.NodeType.FORT
+	node.id = "fort"
+	node.garrison = 2
+	node.garrison_hp = 10
+	node.garrison_dmg = 3
+	node.dismantle_wood_yield = 8
+	node.dismantle_stone_yield = 5
+	node.fortify_wood_cost = 10
+	node.fortify_stone_cost = 6
+	var units: Array[GarrisonUnitDef] = [_garrison_unit("")]
+	node.garrison_units = units
 
 	var errors := node.validate()
 
-	assert_array(errors).is_not_empty()
-	assert_bool(Array(errors).any(func(m): return m.contains("can_sortie"))).is_true()
+	assert_bool(Array(errors).any(func(m): return m.contains("faction_id"))).is_true()
