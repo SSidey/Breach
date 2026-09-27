@@ -153,8 +153,8 @@ This is presentation layered on the existing math, not a rewrite of the round re
 - [ ] Does the map-creator tool get scoped at all for v1, or purely a post-launch investment (recommended)?
 - [ ] Roster sizes and training rates per unit type (Builder/Guard/Militia/Hero) — needs tuning once the Task Force system is implemented.
 - [ ] Multiple critical assets per faction with per-faction loss criteria (raised while iterating on the tile designer prototype): should "is player home"-style node marking generalize to an "is_critical_asset" flag independent of node type — any faction could have several (lose any one = that faction is knocked out) plus ancillary, non-critical bases? For the player this could mean multiple defensible cores; for the enemy, multiple bases where only specific one(s) are the real objective. Would need a new per-faction loss-criteria config, and reconciling with `LaneDef.player_home_index`'s existing single-index model — not designed, ties to the still-unbuilt generalized win/loss system (Phase 4 item 5). **Candidate shape, now mocked up in the prototype (v7, prototype-only):** per faction, a list of named *loss groups*. Each group is a set of critical-asset node ids plus a rule: `ANY` (losing any one member triggers it) or `ALL` (only losing every member does). Groups are OR'd, so a faction is knocked out when any one of its groups triggers. That covers "lose if the home falls" (one `ANY` group), "lose only if both twin keeps fall" (one `ALL` group) and mixtures. The prototype warns about critical nodes in no group, which makes flagging them pointless.
-- [ ] Faction "design one-pager" (raised while iterating on the tile designer prototype): a dedicated view (separate from map authoring) for defining a faction's default suspicion ramp rate, available unit types, and AI strategy presets — reusable content, not per-map. Also raised: should faction relations be static per-map authored data, or something that can change at runtime based on save-game state (e.g. a faction the player recruits mid-campaign, previously hostile)? Not designed — a real extension to `FactionDef`/`FactionRelationDef` once there's an actual consumer. The prototype (v7) now gives this its own top-level "Factions" view, separate from the map. Its fields are still unconsumed stubs.
-- [ ] Terrain tiles (water, forest, mountain, ravine, etc.) — raised while iterating on the tile designer prototype, added there as purely cosmetic (no mechanical effect), and layered independently of structures (a Fort can sit in a Forest tile, a Resource node on a Mountain). Revisit what they should actually do once movement/combat design has a use for terrain — including a concrete idea raised alongside this: **terrain-based movement resistance** (a base map-wide terrain speed multiplier; roads as a buildable/upgradeable modifier that reduces resistance, built by workers with an ongoing upkeep cost; some terrain outright blocking certain unit types, e.g. siege weapons needing roads/fields; units pathing the least-resistant route). Not designed — a real alternative to (or refinement of) today's "lanes as fixed tracks" model, worth its own pass. **Partly mocked up in the prototype (v7):** a top-level "Terrain" view holds a cross-map terrain-type library. Each type has label, glyph, colour, whether it can be a map's base ground, a stub movement-cost multiplier, stub "blocks unit classes" text, and default stability/footprint (see "Future direction: layered tile model"). The view also holds a natural-feature library and a stub road movement multiplier, and roads are paintable as their own tile layer. None of it is simulated. Designer-view roadmap recorded alongside: Lanes / Factions / Terrain now, with Units, Squads and Static defenses as planned further views.
+- [ ] Faction "design one-pager" (raised while iterating on the tile designer prototype): a dedicated view (separate from map authoring) for defining a faction's default suspicion ramp rate, available unit types, and AI strategy presets — reusable content, not per-map. Also raised: should faction relations be static per-map authored data, or something that can change at runtime based on save-game state (e.g. a faction the player recruits mid-campaign, previously hostile)? Not designed — a real extension to `FactionDef`/`FactionRelationDef` once there's an actual consumer. The prototype (v7) now gives this its own top-level "Factions" view, separate from the map. Its fields are still unconsumed stubs. It also holds **library-level default relations** (v8, prototype-only): a default stance per faction pair that fills in automatically when both factions are added to a map, and that each map can still override. Real relations remain per-map `FactionRelationDef`s; defaults would be a new `FactionDef`-level concept.
+- [ ] Terrain tiles (water, forest, mountain, ravine, etc.) — raised while iterating on the tile designer prototype, added there as purely cosmetic (no mechanical effect), and layered independently of structures (a Fort can sit in a Forest tile, a Resource node on a Mountain). Revisit what they should actually do once movement/combat design has a use for terrain — including a concrete idea raised alongside this: **terrain-based movement resistance** (a base map-wide terrain speed multiplier; roads as a buildable/upgradeable modifier that reduces resistance, built by workers with an ongoing upkeep cost; some terrain outright blocking certain unit types, e.g. siege weapons needing roads/fields; units pathing the least-resistant route). Not designed — a real alternative to (or refinement of) today's "lanes as fixed tracks" model, worth its own pass. **Partly mocked up in the prototype (v7):** a top-level "Terrain" view holds a cross-map terrain-type library. Each type has label, glyph, colour, whether it can be a map's base ground, a stub movement-cost multiplier, stub "blocks unit classes" text, and default stability/footprint (see "Future direction: layered tile model"). The view also holds a natural-feature library and a stub road movement multiplier, and roads are drawn as explicit cell-to-cell connections, with bridges required on water and ravine. None of it is simulated. Designer-view roadmap recorded alongside: Lanes / Factions / Terrain now, with Units, Squads and Static defenses as planned further views.
 - [ ] Whether an authored `MapEdgeDef`/link is a hard constraint (the only route that exists) or a soft default a future pathfinding/movement-cost system could override — raised alongside the terrain-resistance idea above. Not designed; depends on that idea's outcome.
 - [ ] Undiscovered/unlinked resource nodes as side objectives (raised while iterating on the tile designer prototype) — a resource node authored with no `MapEdgeDef`/lane connection at all could act as a hidden objective the player must physically route to themselves, tying naturally into the base spec's existing Scout/fog-of-war concept. Likely achievable with the current graph-topology schema as-is (an unlinked node is already a valid, if unusual, authored shape) rather than needing new mechanics — worth confirming once movement/discovery is real.
 - [ ] Structure upgrade progression (raised while iterating on the tile designer prototype) — a resource deposit gaining a "mine" upgrade with a small garrison; a Fort's fortification level gating modular internal capacity (barracks for defender capacity, kitchens/stores for siege endurance, defense-point emplacements like arrow slits requiring a specific unit up to a limit, echoing the "static defenses" idea already noted above); saved prefabs for reuse; and faction-specific structure mechanics (e.g. an eldritch faction establishing summoning circles, or defenders acting unilaterally to open unpatrolled entry points). Large, not designed — a real future extension of the Combatant-unification/structure work already flagged.
@@ -209,8 +209,8 @@ Decision 24's non-goal), not as an inherent `dmg` value on the node. Not designe
 
 ## Future direction: layered tile model
 
-Raised while using the tile designer prototype, and mocked up there (v7) as
-prototype-only data. Nothing here is real schema yet.
+Raised while using the tile designer prototype, and mocked up there (v7, revised in v8)
+as prototype-only data. Nothing here is real schema yet.
 
 **The idea:** a map tile is a stack of independent layers, bottom to top:
 
@@ -218,39 +218,80 @@ prototype-only data. Nothing here is real schema yet.
    a base terrain, and individual tiles can override it.
 2. **Natural features**: what the land offers, sitting on the terrain (ore vein, arable
    land, spring, timber, quarry face). These are what a mine, farm or quarry exploits.
-3. **Structures**: what's built. A structure class sets its maximum *floors* (height) and
-   its *width*. Prototype classes: Barricade (0 floors, width 1), Watchtower (up to 2,
-   width 1), Fort (up to 2, width 2), Castle (up to 4, width 3).
-4. **Upgrades**: additions that don't need a larger defensible structure, e.g. a guard
+3. **Bridge** (only on terrain that needs one; see "Bridges" below).
+4. **Structures**: what's built (see "Build capacity and segment structures").
+5. **Upgrades**: additions that don't need a larger defensible structure, e.g. a guard
    barracks at a mine or farm. The tile has a number of *upgrade slots*.
 
-Roads are a further tile layer (see the terrain-movement-resistance bullet in "Open
-design questions").
+**Roads** are drawn as explicit connections between neighbouring cells, diagonals
+included. Two road tiles side by side are *not* joined unless the road was drawn across
+that boundary. That keeps two separate routes that pass each other separate: in the
+prototype, a diagonal spur out of the home stays apart from the straight road next to
+it. A road is a movement modifier (see the terrain-movement-resistance bullet in "Open
+design questions"), not topology. Open question: how roads relate to authored
+links/`MapEdgeDef`. Could a link be *derived* from a road chain, should a road just speed
+up an existing link, or do both coexist?
 
-**Two capacities, not one.** A tile carries both:
-- **Stability**: the maximum floors it can support. Height needs solid ground: rocky
-  ground and mountains are high, swamp is 0.
-- **Footprint**: the maximum width. Wide, short structures with more room for internal
-  features (barracks, stores, emplacements; see "Structure upgrade progression") need
-  space. Fields and desert are wide; mountain peaks and forest are narrow.
+### Build capacity and segment structures
 
-Both are needed because they vary independently: marsh is wide but can't go tall, and a
-rock spire is tall but narrow. A single "size" number can't express that. Terrain types
-supply defaults, and individual tiles can override them. A barricade is a 0-floor
-structure, so it fits on any tile with footprint ≥ 1, including a 0-slot routing
-waypoint. That answers the barricade question in the `structure_slots` bullet above, in
-prototype form.
+A tile has three capacity numbers. Terrain types supply defaults, and a tile can
+override each one:
+- **Stability**: the total *segment budget*, i.e. how much structure the ground can
+  bear in all.
+- **Max height**: the tallest column. Height needs solid ground: rocky ground and
+  mountains are high, swamp is 1, water 0.
+- **Max width**: the widest span. Wide, short structures need space. Fields and desert
+  are wide; mountain peaks and forest are narrow.
+
+A structure is a **side-view profile of segments**: columns of stacked segments, each
+resting on the one below. It is valid if total segments ≤ stability, no column exceeds
+max height, and its span ≤ max width. Example: stability 4, max height 2, max width 3
+allows a 2×2 block, or a 3-wide, 1-high wall with one column raised to 2, but not both
+at full size. Height and width stay separate because they vary independently (marsh is
+wide but can't go tall; a rock spire is tall but narrow), and the stability budget stops
+a tile maxing both at once.
+
+Each segment can hold a **room**. This folds in the fort-internals idea from "Structure
+upgrade progression": barracks (defender capacity), stores/kitchen (siege endurance),
+arrow slit (needs an Archer to man it), gatehouse, lookout (sight), walkway. A
+barricade is a single ground-level segment, so it fits on any tile with capacity,
+including a 0-slot routing waypoint. That answers the barricade question in the
+`structure_slots` bullet above, in prototype form.
+
+**Simplified per user review (v8):** the earlier "structure class + floors" fields were
+redundant with the segment numbers. The class survives only as an **art archetype**
+(barricade, palisade, watchtower, fort, castle), which picks what to render and has no
+mechanical meaning. Floors are gone; height comes from the profile.
+
+The prototype edits a structure in a panel **under the map**, so the whole lane stays in
+view. This foreshadows a per-tile detail/zoom view (a structure's interior, where a
+fight at that tile plays out), tied to the open 2D vs 3D presentation question (Decision
+4's "3D/2D space").
+
+### Bridges
+
+Some terrain (water, ravine) **needs a bridge before a road can cross**. The prototype
+refuses to draw a road onto such a tile until a bridge is placed there (the user chose
+bridge-first over auto-bridging), and removing a bridge cuts the roads through it. A
+bridge is a **structure in its own right**: it has an owner, is attackable (stub HP),
+and can optionally be **demolished by its owner**, as a defensive tactic that blows your
+own bridge to cut a route. That option is off by default because it can stall
+progress. Open question: in the real build, is a bridge a tile-level structure, or a real
+`NodeDef` so combat and capture treat it like any other node?
 
 **Open questions:**
-- Should *footprint* replace or redefine `NodeDef.structure_slots` (today a count of
-  discrete foundations, Decision 4)? Or do they coexist, with footprint as physical width
-  and slots as how many separate structures share it?
-- Are stability/footprint per tile (as prototyped), or per node, with terrain only
-  supplying defaults?
-- Are upgrades a closed list per structure class, or per feature (a mine upgrade needs an
-  ore vein)? And do upgrades consume footprint, or only upgrade slots?
-- How do floors and width translate into mechanics: defender capacity, siege endurance,
-  line of sight for towers?
+- Should the segment model (stability/height/width) replace or redefine
+  `NodeDef.structure_slots` (today a count of discrete foundations, Decision 4)? Or do
+  they coexist, with slots as how many separate structures share a tile's budget?
+- Is capacity per tile (as prototyped), or per node, with terrain only supplying
+  defaults?
+- **Upgrades should be restricted** by what the tile has: its resource type, natural
+  feature and terrain (a mine upgrade needs an ore vein, a granary needs arable land).
+  Recorded per user request, not built yet. Also: do upgrades consume stability budget,
+  or only upgrade slots?
+- How do segments and rooms translate into mechanics: defender capacity, siege
+  endurance, line of sight, which unit types can man which room?
+- Do structures get a depth dimension, or is a side profile enough?
 
 Not designed. It sits alongside the Combatant/structure unification (Decision 24's
 non-goal) and the spatial-placement pass (Decision 4's Option 2).
