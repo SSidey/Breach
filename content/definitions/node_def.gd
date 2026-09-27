@@ -56,10 +56,6 @@ enum ResourceType { FOOD, WOOD, STONE, METAL, CRYSTAL }
 ## base" on the same node - a known, documented tension, not resolved here.
 @export var owning_faction_id: String = ""
 
-## Structure-slot metadata for a future spatial-placement pass (Decision 4) - not
-## validated in this slice since nothing consumes it yet.
-@export var structure_slots: int = 0
-
 ## Pooled blocker stats CombatResolver fights against, required when garrison > 0.
 ## See specs/02-lane-movement-and-combat.md, Decision 11 - `garrison` is a
 ## presence/count check, these are the real combat numbers.

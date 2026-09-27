@@ -20,6 +20,13 @@ func test_resource_node_without_yield_is_invalid() -> void:
 	)
 
 
+func test_structure_slots_is_removed() -> void:
+	# Superseded by the tile capacity + segment-profile model (Decision 25, specs/14).
+	var node := NodeDef.new()
+
+	assert_bool("structure_slots" in node).is_false()
+
+
 func test_origin_node_does_not_require_resource_fields() -> void:
 	var node := NodeDef.new()
 	node.node_type = NodeDef.NodeType.ORIGIN
