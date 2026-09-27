@@ -155,12 +155,12 @@ This is presentation layered on the existing math, not a rewrite of the round re
 - [ ] Multiple critical assets per faction with per-faction loss criteria (raised while iterating on the tile designer prototype): should "is player home"-style node marking generalize to an "is_critical_asset" flag independent of node type — any faction could have several (lose any one = that faction is knocked out) plus ancillary, non-critical bases? For the player this could mean multiple defensible cores; for the enemy, multiple bases where only specific one(s) are the real objective. Would need a new per-faction loss-criteria config, and reconciling with `LaneDef.player_home_index`'s existing single-index model — not designed, ties to the still-unbuilt generalized win/loss system (Phase 4 item 5). **Candidate shape, now mocked up in the prototype (v7, prototype-only):** per faction, a list of named *loss groups*. Each group is a set of critical-asset node ids plus a rule: `ANY` (losing any one member triggers it) or `ALL` (only losing every member does). Groups are OR'd, so a faction is knocked out when any one of its groups triggers. That covers "lose if the home falls" (one `ANY` group), "lose only if both twin keeps fall" (one `ALL` group) and mixtures. The prototype warns about critical nodes in no group, which makes flagging them pointless.
 - [ ] Faction "design one-pager" (raised while iterating on the tile designer prototype): a dedicated view (separate from map authoring) for defining a faction's default suspicion ramp rate, available unit types, and AI strategy presets — reusable content, not per-map. Also raised: should faction relations be static per-map authored data, or something that can change at runtime based on save-game state (e.g. a faction the player recruits mid-campaign, previously hostile)? Not designed — a real extension to `FactionDef`/`FactionRelationDef` once there's an actual consumer. The prototype (v7) now gives this its own top-level "Factions" view, separate from the map. Its fields are still unconsumed stubs. It also holds **library-level default relations** (v8, prototype-only): a default stance per faction pair that fills in automatically when both factions are added to a map, and that each map can still override. Real relations remain per-map `FactionRelationDef`s; defaults would be a new `FactionDef`-level concept.
 - [ ] Terrain tiles (water, forest, mountain, ravine, etc.) — raised while iterating on the tile designer prototype, added there as purely cosmetic (no mechanical effect), and layered independently of structures (a Fort can sit in a Forest tile, a Resource node on a Mountain). Revisit what they should actually do once movement/combat design has a use for terrain — including a concrete idea raised alongside this: **terrain-based movement resistance** (a base map-wide terrain speed multiplier; roads as a buildable/upgradeable modifier that reduces resistance, built by workers with an ongoing upkeep cost; some terrain outright blocking certain unit types, e.g. siege weapons needing roads/fields; units pathing the least-resistant route). Not designed — a real alternative to (or refinement of) today's "lanes as fixed tracks" model, worth its own pass. **Partly mocked up in the prototype (v7):** a top-level "Terrain" view holds a cross-map terrain-type library. Each type has label, glyph, colour, whether it can be a map's base ground, a stub movement-cost multiplier, stub "blocks unit classes" text, and default stability/footprint (see "Future direction: layered tile model"). The view also holds a natural-feature library and a stub road movement multiplier, and roads are drawn as explicit cell-to-cell connections, with bridges required on water and ravine. None of it is simulated. Designer-view roadmap recorded alongside: Lanes / Factions / Terrain now, with Units, Squads and Static defenses as planned further views.
-- [ ] Whether an authored `MapEdgeDef`/link is a hard constraint (the only route that exists) or a soft default a future pathfinding/movement-cost system could override — raised alongside the terrain-resistance idea above. Not designed; depends on that idea's outcome.
+- [x] Whether an authored `MapEdgeDef`/link is a hard constraint (the only route that exists) or a soft default a future pathfinding/movement-cost system could override — raised alongside the terrain-resistance idea above. Not designed; depends on that idea's outcome. **Resolved by Decision 26 (2026-09-27):** both. An authored link is a hard constraint on *which* nodes connect, and its route *geometry* is pathfound over terrain cost.
 - [ ] Undiscovered/unlinked resource nodes as side objectives (raised while iterating on the tile designer prototype) — a resource node authored with no `MapEdgeDef`/lane connection at all could act as a hidden objective the player must physically route to themselves, tying naturally into the base spec's existing Scout/fog-of-war concept. Likely achievable with the current graph-topology schema as-is (an unlinked node is already a valid, if unusual, authored shape) rather than needing new mechanics — worth confirming once movement/discovery is real.
 - [ ] Structure upgrade progression (raised while iterating on the tile designer prototype) — a resource deposit gaining a "mine" upgrade with a small garrison; a Fort's fortification level gating modular internal capacity (barracks for defender capacity, kitchens/stores for siege endurance, defense-point emplacements like arrow slits requiring a specific unit up to a limit, echoing the "static defenses" idea already noted above); saved prefabs for reuse; and faction-specific structure mechanics (e.g. an eldritch faction establishing summoning circles, or defenders acting unilaterally to open unpatrolled entry points). Large, not designed — a real future extension of the Combatant-unification/structure work already flagged.
 - [ ] Captives/conversion mechanic (raised while iterating on the tile designer prototype, explicitly flagged as "likely not for now") — taking prisoners in combat and converting them to the player's side, or consuming them as a resource (food/blood/sacrifice/knowledge). Not designed.
 - [ ] Resource replenishment/depletion redesign (raised while iterating on `NodeDef`'s resource fields, `specs/13-faction-def-and-garrison-unit.md`): natural baseline replenishment independent of workers; unit skills/traits that increase a specific resource type's replenishment at their tile (no skill/trait system exists yet); workers who both extract *and* replenish (e.g. a farmer granting +2/tick replenishment while harvesting 3/tick), with a priority rule needed between banking replenishment locally vs. hauling extracted output away; a cap on standing "available" resource (e.g. wheat in the field) distinct from the underlying reserve/capacity cap; neglect-decay — an untended, unharvested resource losing material over time, the *inverse* direction from today's harvest-pressure decay (`EconomySystem.decayed_yield()` decays *extraction rate* under sustained harvesting, not standing material under neglect) — and whether/how a tick-represents-real-calendar-time concept (e.g. 6 hours/tick, 3-day seasons) layers season and time-of-day effects on top. Not designed yet; `NodeDef.is_inexhaustible`/`total_reserves` (schema round 4) deliberately leave room for this without committing to any of it.
-- [ ] `NodeDef.structure_slots` semantics (raised while iterating on the tile designer prototype): per Decision 4's original framing this is a *count* of discrete buildable foundations at a location ("room for 2 towers here"), not a physical size/area value — but nothing consumes it yet, so this is genuinely underspecified. A real gap raised directly: if `structure_slots: 0` means "nothing permanent can be built here" (used in the prototype as a pure routing waypoint), can a barricade or other lightweight stationary defense still go there? A barricade may need to be a different, non-slot-consuming category entirely rather than something gated by `structure_slots`. Not designed — belongs to the still-unbuilt spatial-placement pass (Decision 4's Option 2). See "Future direction: layered tile model" below, which treats a barricade as a 0-floor structure and asks whether *footprint* should replace or redefine `structure_slots`.
+- [x] `NodeDef.structure_slots` semantics (raised while iterating on the tile designer prototype): per Decision 4's original framing this is a *count* of discrete buildable foundations at a location ("room for 2 towers here"), not a physical size/area value — but nothing consumes it yet, so this is genuinely underspecified. A real gap raised directly: if `structure_slots: 0` means "nothing permanent can be built here" (used in the prototype as a pure routing waypoint), can a barricade or other lightweight stationary defense still go there? A barricade may need to be a different, non-slot-consuming category entirely rather than something gated by `structure_slots`. Not designed — belongs to the still-unbuilt spatial-placement pass (Decision 4's Option 2). See "Future direction: layered tile model" below, which treats a barricade as a 0-floor structure and asks whether *footprint* should replace or redefine `structure_slots`. **Resolved by Decision 25 (2026-09-27):** superseded by the tile capacity + segment-profile model, and the field has been removed (`specs/14-structure-slots-removal.md`).
 - [ ] A real JSON→`.tscn` converter for the Lane Tile Designer prototype's export (offered during this work, not yet built): would generate `MapSceneRoot`/`MapLaneRoot`/`MapNodeMarker`/`MapEdgeMarker` scene text from a pasted-out export JSON, reusing the already-tested `MapSceneConverter` (`specs/10-map-scene-authoring.md`) for the rest of the pipeline — the practical path from the prototype's clipboard-only export (an artifact cannot write to the repo/filesystem directly) to an actual loadable map. Not started.
 
 ## Future direction: Command & Control via messenger-delivered orders
@@ -228,9 +228,12 @@ included. Two road tiles side by side are *not* joined unless the road was drawn
 that boundary. That keeps two separate routes that pass each other separate: in the
 prototype, a diagonal spur out of the home stays apart from the straight road next to
 it. A road is a movement modifier (see the terrain-movement-resistance bullet in "Open
-design questions"), not topology. Open question: how roads relate to authored
-links/`MapEdgeDef`. Could a link be *derived* from a road chain, should a road just speed
-up an existing link, or do both coexist?
+design questions"), not topology. How roads relate to links/`MapEdgeDef` is settled by
+**Decision 26**:
+- Authored links are the intended routes, i.e. the topology.
+- Each link's route geometry is pathfound across terrain cost, and roads make it cheaper.
+- Unlinked node pairs never get a route. New routes appear only through play, such as
+  enemy workers building a road.
 
 ### Build capacity and segment structures
 
@@ -280,9 +283,9 @@ progress. Open question: in the real build, is a bridge a tile-level structure, 
 `NodeDef` so combat and capture treat it like any other node?
 
 **Open questions:**
-- Should the segment model (stability/height/width) replace or redefine
-  `NodeDef.structure_slots` (today a count of discrete foundations, Decision 4)? Or do
-  they coexist, with slots as how many separate structures share a tile's budget?
+- ~~Should the segment model replace `NodeDef.structure_slots`?~~ **Resolved by
+  Decision 25:** yes. The field has been removed; the replacement schema lands with the
+  spatial-placement pass.
 - Is capacity per tile (as prototyped), or per node, with terrain only supplying
   defaults?
 - **Upgrades should be restricted** by what the tile has: its resource type, natural
@@ -1107,3 +1110,68 @@ hostile to the player, per direct request. `owning_faction_id` (new, on `NodeDef
 `LaneDef.player_home_index` are now two independent ways to identify "the player's
 base" on the same node — a known, documented tension for whichever future item first
 needs faction-based ownership logic in `sim/` to reconcile, not resolved here.
+
+### Decision 25 — `NodeDef.structure_slots` is superseded by the tile capacity model and removed now
+
+**Rationale:** `structure_slots` was added (Decision 4 era) as a count of discrete
+buildable foundations for a future spatial-placement pass, but nothing ever read it:
+not `sim/`, the scene converter, tests, or any `.tres`. Iterating on the Lane Tile
+Designer prototype produced a clearer model for what a location can hold. A tile carries
+a **stability** segment budget plus **max height** and **max width**. A structure is a
+side-view profile of segments, each able to hold a room (see "Future direction: layered
+tile model"). The user decided this model supersedes `structure_slots`. Since the field
+has no consumers and PR #26 (the `NodeDef` schema PR) is still unmerged, it was removed
+immediately (`specs/14-structure-slots-removal.md`) rather than left as a misleading
+placeholder.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep the field until the replacement schema is built, then remove both together | Offered as the recommendation. The user chose immediate removal: an unused field that implies the wrong model is worse than no field, and removal is free while nothing consumes it. |
+| Redefine `structure_slots` as the tile's width ("footprint") | A single number can't express the model. Height and width vary independently, and the stability budget caps their product, so it needs three values plus a structure profile. |
+
+**Consequences:** Godot has no build-capacity concept until the spatial-placement pass
+(Decision 4's Option 2) adds one. That pass will also need a tile/grid representation
+`MapDef` lacks today. The prototype's routing waypoint, previously `structure_slots ==
+0`, becomes a prototype-only `WAYPOINT` node type, recorded as a candidate `NodeType`
+value (append-only, per `NodeType`'s ordinal-stability rule).
+
+### Decision 26 — Routes: authored links are intended topology; route geometry is pathfound over terrain
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-27
+
+**Rationale:** The prototype gained two ways to express "a way from A to B": node-to-node
+links (what `LaneDef` order and `MapEdgeDef` model) and cell-to-cell roads. The user
+chose a pathfinding model with one important constraint:
+- **Links stay the authored, intended routes.** They are not necessarily the most
+  efficient, but they alone decide *which* nodes connect.
+- **Each link's initial route geometry is optimised** by pathfinding across the terrain
+  grid: terrain movement cost, cheaper along roads, water/ravine impassable without a
+  bridge.
+- **No route is ever inferred between unlinked nodes.** If links run core → fort
+  horizontally and fort → farm vertically, no fort ↔ farm shortcut appears by itself.
+- **New routes arise through play.** For example, enemy workers could build a road
+  between two nodes, which is how the simulation might later add a connection.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A. Links and roads as independent layers (roads only speed travel along links) | Leaves a link's drawn shape arbitrary (a straight line, or waypoint-bent) and unrelated to terrain. The user wanted terrain to shape routes. |
+| B. Roads *are* topology (links derived from road chains) | Would make every route a road and infer connections the author never intended. The user explicitly wants no automatic routes between unlinked nodes. |
+| C. Links carry a hand-authored cell path | More authoring work, and it doesn't respond to terrain or roads. Pathfinding gives the same geometry automatically, with waypoint nodes available to force a shape. |
+| Full free pathfinding with no authored links (units path anywhere) | Loses the author's control of intended routes and would invent routes between any nodes. |
+
+**Consequences:**
+- `MapEdgeDef` and `LaneDef` order are unchanged and remain the authored topology.
+  Nothing in Godot changes now: `sim/` doesn't read `MapDef.edges` yet, and
+  `LaneSimulation` walks each lane's node array.
+- Making route geometry real in Godot needs a tile grid with terrain costs (prototype-only
+  today) and a pathfinding step, at load time or runtime. That work belongs with the
+  spatial-placement pass / terrain movement-resistance idea.
+- Runtime topology change (road-building adding links) is a new capability the sim
+  will need.
+- The prototype's pathfinder ignores terrain `blocks_unit_classes` for now, since routes
+  are unit-agnostic. Per-unit-class routing is open.

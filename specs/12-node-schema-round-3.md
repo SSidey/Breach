@@ -41,7 +41,7 @@ configurable unit library + squads (ties to true per-unit faction assignment, si
   - `resource_type: enum {FOOD, WOOD, STONE, METAL, CRYSTAL} = FOOD` — matches
     `EconomySystem._pools`'s existing five keys. Defaults to `FOOD` so
     `content/maps/p_f_F_c.tres`'s one Farm needs no changes. Authored, not yet read
-    by `sim/` — same status as `structure_slots` today.
+    by `sim/` — same status as `structure_slots` today (since removed by `specs/14-structure-slots-removal.md`).
   - `total_reserves: int = 0` (`0` = unlimited, preserving today's unlimited-harvest
     behavior by default). `validate()`: `>= 0`. **Documented intended future
     semantics (comment only):** once consumed, reserves should only deplete from
