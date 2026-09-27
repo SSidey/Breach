@@ -273,36 +273,88 @@ fight at that tile plays out), tied to the open 2D vs 3D presentation question (
 4's "3D/2D space"). Since v10 an **Expand** toggle lets the editor take over most of the
 workspace, while the map shrinks to a live strip above it.
 
-### Structure interiors (prototype v10)
+### Structure interiors (prototype v10–v11)
 
-Revised per user review: an arrow slit is **not a room**. It is a static defense
-*added to* the structure, and "needs an Archer to man it" belongs to the defense's own
-definition.
+Revised through two user reviews. Prototype-only, not simulated; the rules below are
+the intended design.
 
-- **A segment holds a room plus any number of interior features**: hearth, bunks,
-  storage racks, armoury rack, well, murder hole, portcullis. A room with arrow slits can
-  still be a barracks with a hearth.
-- **Doors and stairs are connections.** A door joins side-by-side segments, stairs join
-  stacked ones, and an exterior door joins a ground segment to the outside. The
-  prototype warns when a segment is **unreachable** from an exterior door, or when there
-  is no way in at all.
-- **Static defenses** (arrow slit, hoarding, boiling oil, ballista…) are a separate
-  cross-map library, edited in the new top-level **Static defenses** view. That is the
-  first of the planned Units / Squads / Static defenses designers.
-  - Each entry says where it mounts (a wall face, or the roof of a top segment), which
-    unit type mans it, and how many (e.g. Arrow slit: Archer ×1).
-  - A structure's total crew requirement is checked against its node's garrison, and a
-    shortfall is flagged.
-  - This is the prototype form of the note above ("Related, raised while reviewing the
-    tile designer prototype"): structure-mounted defenses are better modelled as an
-    immobile "defense" unit type once the Combatant unification happens.
+**Interior combat.**
+- **Melee** happens *within* a room.
+- **Ranged** fire reaches *between* rooms through doors. Stairs block ranged fire or
+  reduce its efficacy.
+- **Doors and stairs are fortifiable**: open, locked, barred or reinforced. A fortified
+  connection holds attackers back for a while (prototype: a stub delay in ticks) instead
+  of letting them in immediately.
+- Exterior doors join a ground segment to the outside. The editor flags segments
+  unreachable from an exterior door (red), or a structure with no way in. Reachable
+  segments show green.
+
+**Features, not room types.**
+- A segment has a **feature-point budget** (default 5, configurable), and each interior
+  feature has a cost and an effect:
+  - Bunks 1 (rests 4 units, so a full room of bunks rests 20)
+  - Kitchen 5 (fills a room; feeds 20 through a siege)
+  - Armoury rack, murder hole, portcullis, well, and so on
+- Any feature fits in any room; only the budget limits it.
+- "Rooms" are just **room prefabs**, named feature sets: Barracks = 5 Bunks, Gatehouse =
+  Portcullis + Murder hole.
+
+**Static defenses and manning.**
+- Static defenses (arrow slit, hoarding, boiling oil, ballista) live in their own library
+  (the **Static defenses** view). They are mounted on a wall face or a flat roof, not
+  treated as rooms.
+- Each has **firing points** and the unit type that mans them. Manning is **automatic
+  from the structure's whole garrison**, with no per-unit assignment. With 3 arrow slits
+  (1 firing point each) and 6 Archers, 3 Archers take the slits and 3 stay spare. Only a
+  real shortfall is flagged.
+- This is the prototype form of the earlier note that structure-mounted defenses become
+  an immobile "defense" unit type once the Combatant unification happens.
+
+**Roofs, basements, walls.**
+- **Roofs** sit on top of a column and do **not** use a level or stability:
+  - *flat*: walkable, and the only roof that takes roof-mounted defenses
+  - *pitched*: sheltered, no mounts
+  - *open*: no roof
+- **Basements**: a tile has a **max depth**, and terrain supplies the default (rocky 2,
+  mountain 3, fields/forest/desert 1, swamp/water 0). Levels below ground are dug from the
+  segment above and count toward the stability budget.
+- **Walls are addressable**: each segment face (left, right, front) has its own
+  **reinforcement** (timber, stone, reinforced stone; stub HP multipliers 1/2/3), and its
+  own mounted defenses.
+
+**How this translates to Godot.** The prototype export is deliberately shaped like
+future Resources, so a converter maps it one-to-one:
+- `StructureDef`: archetype (art only), requirements (stability / height / width / depth),
+  and the lists below.
+- `SegmentDef`: `col`, `level` (negative = basement), label, feature ids.
+- `FaceDef`: segment reference (`col`, `level`), `face` (LEFT/RIGHT/FRONT), `reinforcement`,
+  mounted defense ids. This is how "reinforce this specific wall" is expressed.
+- `RoofDef`: `col`, `type`, roof defense ids.
+- `ConnectionDef`: `a`, `b` (a segment reference or EXT_L/EXT_R), `kind` (door/stairs),
+  `fortification`.
+- Plus library Resources for features (`id`, cost, effect), room prefabs, and static
+  defenses (`mount`, `manned_by_unit`, `firing_points`, stats).
+
+Each is plain data with its own `validate()`, and cross-references are checked by the
+owner, the same split `NodeDef` / `MapEdgeDef` / `MapDef.validate()` already use.
+
+**Structure prefabs.** A whole structure can be saved to a cross-map library (the
+**Structures** view) and loaded onto another node. Loading checks the prefab's
+requirements against the tile's capacity. The Structures view also holds the room
+prefabs and the feature library.
+
+**Drawbridges.** A bridge next to a structure can be marked as a drawbridge controlled by
+that node. Raised, it counts as absent: routes over it are blocked and the link shows no
+passable route. It is controlled from the structure editor, linking a structure to an
+adjacent tile's feature.
 
 Open questions raised alongside:
-- Do doors and stairs have capacity or defensive value (chokepoints, a barred door,
-  a drawn ladder)?
-- Are interior features gated by room type, or free-form?
-- Does a static defense's crew come out of the general garrison, or is it a dedicated
-  assignment like `GarrisonUnitDef`'s roles?
+- How long do fortification delays last, and can attackers break them faster with
+  specific units (a ram)?
+- Should interior features have prerequisites beyond points (a well needs a basement or
+  ground floor)?
+- Does manning prefer specific units when several types qualify, and who re-mans a firing
+  point when its crew dies?
 
 ### Bridges
 
@@ -331,6 +383,32 @@ progress. Open question: in the real build, is a bridge a tile-level structure, 
 
 Not designed. It sits alongside the Combatant/structure unification (Decision 24's
 non-goal) and the spatial-placement pass (Decision 4's Option 2).
+
+## Future direction: multi-tile and linked structures
+
+Raised with the drawbridge idea (tile designer prototype v11). A structure is anchored to
+one map tile today. Two extensions are recorded, not designed:
+- **Multi-tile structures**: a castle that spans several adjacent map tiles, sharing one
+  interior graph and garrison.
+- **Structures owning adjacent-tile features**: a drawbridge (prototyped), an outer
+  palisade ring, a moat, or a gate tower over a road.
+
+Both need a way for a structure to reference neighbouring tiles, and a rule for what
+happens to routes and ownership when those tiles change hands.
+
+## Future direction: vertical planes (air and underground)
+
+Raised alongside basements (tile designer prototype v11). Today the lanes are a single
+surface plane. Two further planes are recorded as a direction, not designed:
+- **An air plane above the lanes** for flying units. They could bypass walls and routes,
+  and interact with roof types: a pitched roof shelters from arcing and flying attack,
+  while a flat roof is exposed but can mount anti-air.
+- **An underground plane** for tunnelling units. Tunnels could link basements between
+  structures, or undermine walls and foundations. This ties to each tile's max depth.
+
+Open questions: whether planes are separate route graphs or layers of one graph, how
+units move between planes (entrances, landing zones), and how the lane/tick model
+represents them.
 
 ## Notes for the implementing agent (Godot)
 
