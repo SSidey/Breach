@@ -317,30 +317,60 @@ the intended design.
 - This is the prototype form of the earlier note that structure-mounted defenses become
   an immobile "defense" unit type once the Combatant unification happens.
 
-**Roofs, basements, walls.**
-- **Roofs** sit on top of a column and do **not** use a level or stability:
-  - *flat*: walkable, and the only roof that takes roof-mounted defenses
-  - *pitched*: sheltered, no mounts
-  - *open*: no roof
-- **Basements**: a tile has a **max depth**, and terrain supplies the default (rocky 2,
-  mountain 3, fields/forest/desert 1, swamp/water 0). Levels below ground are dug from the
-  segment above and count toward the stability budget.
-- **Walls are addressable**: each segment face (left, right, front) has its own
-  **reinforcement** (timber, stone, reinforced stone; stub HP multipliers 1/2/3), and its
-  own mounted defenses.
+**Compass-oriented footprint (v12).** The single side view was replaced because attackers
+can reach a structure along either map axis, and a drawbridge approach over water is a
+different fight from a land approach.
+- A structure is a small **footprint grid** (width east–west × length north–south) of
+  cells, stacked into levels, with basements below.
+- The compass is the map grid's own: north is up the map.
+- It is edited in a **plan view**, one level at a time, and shown in two read-only
+  **elevations**: east–west as seen from the south, and north–south as seen from the east.
+- The earlier 2D side profile is the special case of a 1-deep footprint.
+
+**Boundaries are first-class.** Every boundary is addressable on its own:
+- **Walls**: on each cell edge; exterior walls face N/E/S/W. Walls between neighbouring
+  cells are **one shared internal wall**.
+- **Floors**: the boundary between two stacked cells.
+- **Roofs**: the top of each footprint cell's stack.
+
+Each boundary has a material and its own **modification slots**. None of them use room
+feature points; room features are furniture (bunks, kitchen, storage, hearth, well).
+- **Walls**: timber 1 slot, stone 2, reinforced stone 2 (stub HP ×1/×2/×3). Wall
+  defenses such as arrow slits, hoarding and boiling oil go on exterior walls only.
+- **Doorways**: a door is a property of a wall. It has a fortification level (open,
+  locked, barred, reinforced) and 1 doorway slot, e.g. a **portcullis** on the inner or
+  outer side.
+- **Floors**: an opening (solid, stairs, hatch/ladder) with a fortification level, and 1
+  slot, e.g. a **murder hole** over the space below.
+- **Roofs**: flat, pitched or open.
+  - They never use a level or stability.
+  - Only flat roofs take defenses (2 slots).
+  - A roof needs **stairs or a hatch up from the top cell** before its defenses can be
+    manned. Adjacent flat roofs at the same height connect.
+
+**Basements.** A tile has a **dig depth**, supplied by terrain by default (rocky 2,
+mountain 3, fields/forest/desert 1, swamp/water 0). Levels below ground are dug from the
+cell above and count toward the stability budget. Basement walls are underground and
+can't mount firing defenses.
+
+**Reachability.** Entrances are doors on exterior walls at ground level. From there, the
+editor walks internal doors, floor openings and roof access. Unreachable cells show red
+and reachable ones green. An exterior door above ground is flagged, because it leads
+nowhere.
 
 **How this translates to Godot.** The prototype export is deliberately shaped like
 future Resources, so a converter maps it one-to-one:
-- `StructureDef`: archetype (art only), requirements (stability / height / width / depth),
-  and the lists below.
-- `SegmentDef`: `col`, `level` (negative = basement), label, feature ids.
-- `FaceDef`: segment reference (`col`, `level`), `face` (LEFT/RIGHT/FRONT), `reinforcement`,
-  mounted defense ids. This is how "reinforce this specific wall" is expressed.
-- `RoofDef`: `col`, `type`, roof defense ids.
-- `ConnectionDef`: `a`, `b` (a segment reference or EXT_L/EXT_R), `kind` (door/stairs),
-  `fortification`.
-- Plus library Resources for features (`id`, cost, effect), room prefabs, and static
-  defenses (`mount`, `manned_by_unit`, `firing_points`, stats).
+- `StructureDef`: archetype (art only), requirements (stability / height / width / length /
+  dig depth), and the lists below.
+- `SegmentDef`: `x`, `y`, `level`, label, feature ids.
+- `WallDef`: `x`, `y`, `level`, `edge` (V = west side of cell x, H = north side of cell y),
+  derived `facing` (N/E/S/W or internal), `material`, optional door (fortification plus
+  doorway mods with a side), and wall mods. This is how "reinforce this specific wall" is
+  expressed.
+- `FloorDef`: `x`, `y`, `level` (the boundary to level+1), opening, fortification, mods.
+- `RoofDef`: `x`, `y`, type, access, defenses.
+- Library Resources for room features (id, cost, effect), room prefabs, and static
+  defenses (`mount`: WALL/FLOOR/DOOR/ROOF, `manned_by_unit`, `firing_points`, stats).
 
 Each is plain data with its own `validate()`, and cross-references are checked by the
 owner, the same split `NodeDef` / `MapEdgeDef` / `MapDef.validate()` already use.
@@ -360,6 +390,8 @@ Open questions raised alongside:
   specific units (a ram)?
 - Should interior features have prerequisites beyond points (a well needs a basement or
   ground floor)?
+- Should approach direction drive which walls attackers engage (only the faces toward their
+  route), and how does that interact with the "why attack a fort" question above?
 - Does manning prefer specific units when several types qualify, and who re-mans a firing
   point when its crew dies?
 
