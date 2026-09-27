@@ -256,7 +256,8 @@ a tile maxing both at once.
 
 Each segment can hold a **room**. This folds in the fort-internals idea from "Structure
 upgrade progression": barracks (defender capacity), stores/kitchen (siege endurance),
-arrow slit (needs an Archer to man it), gatehouse, lookout (sight), walkway. A
+gatehouse, lookout (sight), walkway. (Arrow slits started as a room and moved to static
+defenses in v10; see "Structure interiors" below.) A
 barricade is a single ground-level segment, so it fits on any tile with capacity,
 including a 0-slot routing waypoint. That answers the barricade question in the
 `structure_slots` bullet above, in prototype form.
@@ -269,7 +270,39 @@ mechanical meaning. Floors are gone; height comes from the profile.
 The prototype edits a structure in a panel **under the map**, so the whole lane stays in
 view. This foreshadows a per-tile detail/zoom view (a structure's interior, where a
 fight at that tile plays out), tied to the open 2D vs 3D presentation question (Decision
-4's "3D/2D space").
+4's "3D/2D space"). Since v10 an **Expand** toggle lets the editor take over most of the
+workspace, while the map shrinks to a live strip above it.
+
+### Structure interiors (prototype v10)
+
+Revised per user review: an arrow slit is **not a room**. It is a static defense
+*added to* the structure, and "needs an Archer to man it" belongs to the defense's own
+definition.
+
+- **A segment holds a room plus any number of interior features**: hearth, bunks,
+  storage racks, armoury rack, well, murder hole, portcullis. A room with arrow slits can
+  still be a barracks with a hearth.
+- **Doors and stairs are connections.** A door joins side-by-side segments, stairs join
+  stacked ones, and an exterior door joins a ground segment to the outside. The
+  prototype warns when a segment is **unreachable** from an exterior door, or when there
+  is no way in at all.
+- **Static defenses** (arrow slit, hoarding, boiling oil, ballista…) are a separate
+  cross-map library, edited in the new top-level **Static defenses** view. That is the
+  first of the planned Units / Squads / Static defenses designers.
+  - Each entry says where it mounts (a wall face, or the roof of a top segment), which
+    unit type mans it, and how many (e.g. Arrow slit: Archer ×1).
+  - A structure's total crew requirement is checked against its node's garrison, and a
+    shortfall is flagged.
+  - This is the prototype form of the note above ("Related, raised while reviewing the
+    tile designer prototype"): structure-mounted defenses are better modelled as an
+    immobile "defense" unit type once the Combatant unification happens.
+
+Open questions raised alongside:
+- Do doors and stairs have capacity or defensive value (chokepoints, a barred door,
+  a drawn ladder)?
+- Are interior features gated by room type, or free-form?
+- Does a static defense's crew come out of the general garrison, or is it a dedicated
+  assignment like `GarrisonUnitDef`'s roles?
 
 ### Bridges
 
