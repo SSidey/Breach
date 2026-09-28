@@ -1369,3 +1369,29 @@ graph, and firing lines, and none of those need 3D geometry. So:
   in "Structure interiors".
 - No Godot code changes now; everything here is prototype-only until the
   spatial-placement pass.
+
+### Decision 28 — Nodes can be hidden per faction (inert schema now; reveal rules later)
+
+**Rationale:** Secret and secondary objectives need nodes that some factions don't know
+about at map start, such as a hidden resource cache the player must scout for, or a
+secret enemy base. This fits the Scout/fog-of-war concept and Decision 27's hidden and
+optional routes. It was added to the tile designer prototype and, at the user's request,
+to the real schema on the still-open PR #26: `NodeDef.hidden_from_faction_ids`
+(`specs/15-node-hidden-from-factions.md`). Adding it now means the upcoming "Godot
+renders the designer's output" work can read it.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A single `is_hidden` flag | Visibility is relative: a node can be secret from the player but known to its owner, or known to an ally. It has to be per faction. |
+| `visible_to_faction_ids` (an allow-list) | Most nodes are known to everyone, so an allow-list would need filling on every node. An empty deny-list keeps the default as "everyone knows it", and `p_f_F_c.tres` validates unmodified. |
+| Prototype only, schema later | The user chose to land it before PR #26 merges, so the rendering work has a real field to read. |
+
+**Consequences:**
+- `NodeDef` gains an inert `Array[String]`. `NodeDef.validate()` rejects empty and
+  duplicate ids, and `MapDef.validate()` checks each against the faction roster.
+- How a hidden node becomes known (scouting, events, captured intelligence) is not
+  designed. Hidden links/routes are also open, and belong to the route work that follows
+  Decision 27.
+- No `sim/` or `presentation/` change.
