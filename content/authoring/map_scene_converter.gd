@@ -8,8 +8,10 @@ class_name MapSceneConverter
 const NodeDef = preload("res://content/definitions/node_def.gd")
 const LaneDef = preload("res://content/definitions/lane_def.gd")
 const MapDef = preload("res://content/definitions/map_def.gd")
+const MapEdgeDef = preload("res://content/definitions/map_edge_def.gd")
 const MapLaneRoot = preload("res://content/authoring/map_lane_root.gd")
 const MapNodeMarker = preload("res://content/authoring/map_node_marker.gd")
+const MapEdgeMarker = preload("res://content/authoring/map_edge_marker.gd")
 
 
 class MapSceneConversionResult:
@@ -24,14 +26,44 @@ class _LaneConversionResult:
 	var errors: PackedStringArray = PackedStringArray()
 
 
+class _EdgeConversionResult:
+	extends RefCounted
+	var edge_def: MapEdgeDef
+	var errors: PackedStringArray = PackedStringArray()
+
+
 static func build_map_def(scene_root: Node2D) -> MapSceneConversionResult:
 	var result := MapSceneConversionResult.new()
 	var lanes: Array[LaneDef] = []
-	for lane_root in scene_root.get_children():
-		var lane_result := _build_lane_def(lane_root)
-		lanes.append(lane_result.lane_def)
-		result.errors.append_array(lane_result.errors)
+	var edges: Array[MapEdgeDef] = []
+	for child in scene_root.get_children():
+		if child is MapLaneRoot:
+			var lane_result := _build_lane_def(child)
+			lanes.append(lane_result.lane_def)
+			result.errors.append_array(lane_result.errors)
+		elif child is MapEdgeMarker:
+			var edge_result := _build_edge_def(child)
+			if edge_result.edge_def != null:
+				edges.append(edge_result.edge_def)
+			result.errors.append_array(edge_result.errors)
 	result.map_def.lanes = lanes
+	result.map_def.edges = edges
+	return result
+
+
+static func _build_edge_def(marker: MapEdgeMarker) -> _EdgeConversionResult:
+	var result := _EdgeConversionResult.new()
+	if marker.node_a == null or marker.node_a.node_def == null:
+		result.errors.append("edge marker missing node_a (or its node_def)")
+		return result
+	if marker.node_b == null or marker.node_b.node_def == null:
+		result.errors.append("edge marker missing node_b (or its node_def)")
+		return result
+
+	var edge_def := MapEdgeDef.new()
+	edge_def.node_a_id = marker.node_a.node_def.id
+	edge_def.node_b_id = marker.node_b.node_def.id
+	result.edge_def = edge_def
 	return result
 
 

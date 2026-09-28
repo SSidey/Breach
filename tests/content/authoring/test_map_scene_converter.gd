@@ -3,6 +3,7 @@ extends GdUnitTestSuite
 const NodeDef = preload("res://content/definitions/node_def.gd")
 const MapLaneRoot = preload("res://content/authoring/map_lane_root.gd")
 const MapNodeMarker = preload("res://content/authoring/map_node_marker.gd")
+const MapEdgeMarker = preload("res://content/authoring/map_edge_marker.gd")
 const MapSceneConverter = preload("res://content/authoring/map_scene_converter.gd")
 
 
@@ -110,3 +111,49 @@ func test_multiple_lanes_preserve_scene_root_child_order() -> void:
 	assert_int(result.map_def.lanes.size()).is_equal(2)
 	assert_str(result.map_def.lanes[0].id).is_equal("a")
 	assert_str(result.map_def.lanes[1].id).is_equal("b")
+
+
+func test_lane_only_scene_still_converts_with_an_empty_edges_array() -> void:
+	var markers: Array[MapNodeMarker] = [
+		_marker(_origin_node("home"), Vector2.ZERO, true), _marker(_origin_node("core"))
+	]
+	var root := _scene_root([_lane("main", markers)])
+
+	var result := MapSceneConverter.build_map_def(root)
+
+	assert_array(result.errors).is_empty()
+	assert_array(result.map_def.edges).is_empty()
+
+
+func test_edge_marker_converts_to_a_matching_map_edge_def() -> void:
+	var marker_a := _marker(_origin_node("home"), Vector2.ZERO, true)
+	var marker_b := _marker(_origin_node("core"))
+	var lane := _lane("main", [marker_a, marker_b])
+	var edge: MapEdgeMarker = auto_free(MapEdgeMarker.new())
+	edge.node_a = marker_a
+	edge.node_b = marker_b
+	var root: Node2D = auto_free(Node2D.new())
+	root.add_child(lane)
+	root.add_child(edge)
+
+	var result := MapSceneConverter.build_map_def(root)
+
+	assert_array(result.errors).is_empty()
+	assert_int(result.map_def.edges.size()).is_equal(1)
+	assert_str(result.map_def.edges[0].node_a_id).is_equal("home")
+	assert_str(result.map_def.edges[0].node_b_id).is_equal("core")
+
+
+func test_edge_marker_missing_a_node_reference_reports_an_error_not_a_crash() -> void:
+	var marker_a := _marker(_origin_node("home"), Vector2.ZERO, true)
+	var lane := _lane("main", [marker_a, _marker(_origin_node("core"))])
+	var edge: MapEdgeMarker = auto_free(MapEdgeMarker.new())
+	edge.node_a = marker_a
+	edge.node_b = null
+	var root: Node2D = auto_free(Node2D.new())
+	root.add_child(lane)
+	root.add_child(edge)
+
+	var result := MapSceneConverter.build_map_def(root)
+
+	assert_array(result.errors).is_not_empty()
