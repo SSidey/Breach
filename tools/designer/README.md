@@ -1,0 +1,49 @@
+# Lane Tile Designer
+
+The map authoring tool (Decision 30, `specs/17-local-designer-app.md`).
+
+```
+python tools/designer/serve.py
+```
+
+This opens `http://127.0.0.1:8765/`. Python 3.10+ is required, standard library only.
+
+## What Save does
+
+**Save** (Ctrl+S) writes `content/maps_src/<name>.designer.json`, the designer's export.
+It then runs the Godot import (`tools/import_designer_map.gd`), which writes
+`content/maps/<name>.tres`. The header shows the result. If the import fails, a dialog
+lists its errors; the JSON is still saved, but the `.tres` is not updated.
+
+**Open…** (Ctrl+O) lists the saved maps. Any `*.designer.json` export opens, including
+older copy-pasted ones.
+
+## Godot
+
+The import needs a Godot 4.7 binary. The server looks for it in this order:
+1. `--godot <path>`
+2. the `GODOT_BIN` environment variable (the same one `ci/godot/scripts/run_tests.sh` uses)
+3. `tools/designer/local_config.json` (gitignored), for example:
+   `{"godot": "F:/Code/Godot_v4.7.2-stable_win64.exe"}`
+
+Without Godot, maps still save and the designer says the import didn't run.
+
+## Libraries
+
+The factions, terrain, emplacements, room features, room prefabs and structure prefabs
+libraries live in `content/designer/*.json`. The designer writes them as you edit, so
+commit them along with your maps. Opening a map adds any library entries it uses that
+are missing locally.
+
+To bring libraries across from the old claude.ai designer:
+1. Press **Copy libraries JSON** there.
+2. In this app, open **Import libraries…** and paste.
+
+## Files
+
+- `index.html`, `designer.css`, `designer.js`: the designer itself.
+- `repo.js`: repo mode (Open/Save, import status, library sync). Opening `index.html`
+  from disk skips this, and the designer then uses browser storage only.
+- `serve.py`, `designer_repo.py`: the local server.
+- `test_*.py`: the server's tests
+  (`python -m unittest discover -s tools/designer -p "test_*.py"`).

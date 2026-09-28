@@ -75,6 +75,13 @@ repos:
         files: \.gd$
         exclude: ^addons/
 
+      - id: designer-server-tests
+        name: designer-server-tests (tools/designer, stdlib unittest)
+        entry: python3 -m unittest discover -s tools/designer -p "test_*.py"
+        language: system
+        pass_filenames: false
+        files: ^tools/designer/.*\.py$
+
       - id: check-branch-name
         name: branch-name-conforms
         entry: bash ci/godot/scripts/check_branch_name.sh
