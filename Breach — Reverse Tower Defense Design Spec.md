@@ -152,6 +152,295 @@ This is presentation layered on the existing math, not a rewrite of the round re
 - [ ] Suspicion decay rate and per-tier response-unit stats — needs a tuning pass once the state machine is implemented.
 - [ ] Does the map-creator tool get scoped at all for v1, or purely a post-launch investment (recommended)?
 - [ ] Roster sizes and training rates per unit type (Builder/Guard/Militia/Hero) — needs tuning once the Task Force system is implemented.
+- [ ] Multiple critical assets per faction with per-faction loss criteria (raised while iterating on the tile designer prototype): should "is player home"-style node marking generalize to an "is_critical_asset" flag independent of node type — any faction could have several (lose any one = that faction is knocked out) plus ancillary, non-critical bases? For the player this could mean multiple defensible cores; for the enemy, multiple bases where only specific one(s) are the real objective. Would need a new per-faction loss-criteria config, and reconciling with `LaneDef.player_home_index`'s existing single-index model — not designed, ties to the still-unbuilt generalized win/loss system (Phase 4 item 5). **Candidate shape, now mocked up in the prototype (v7, prototype-only):** per faction, a list of named *loss groups*. Each group is a set of critical-asset node ids plus a rule: `ANY` (losing any one member triggers it) or `ALL` (only losing every member does). Groups are OR'd, so a faction is knocked out when any one of its groups triggers. That covers "lose if the home falls" (one `ANY` group), "lose only if both twin keeps fall" (one `ALL` group) and mixtures. The prototype warns about critical nodes in no group, which makes flagging them pointless.
+- [ ] Faction "design one-pager" (raised while iterating on the tile designer prototype): a dedicated view (separate from map authoring) for defining a faction's default suspicion ramp rate, available unit types, and AI strategy presets — reusable content, not per-map. Also raised: should faction relations be static per-map authored data, or something that can change at runtime based on save-game state (e.g. a faction the player recruits mid-campaign, previously hostile)? Not designed — a real extension to `FactionDef`/`FactionRelationDef` once there's an actual consumer. The prototype (v7) now gives this its own top-level "Factions" view, separate from the map. Its fields are still unconsumed stubs. It also holds **library-level default relations** (v8, prototype-only): a default stance per faction pair that fills in automatically when both factions are added to a map, and that each map can still override. Real relations remain per-map `FactionRelationDef`s; defaults would be a new `FactionDef`-level concept.
+- [ ] Terrain tiles (water, forest, mountain, ravine, etc.) — raised while iterating on the tile designer prototype, added there as purely cosmetic (no mechanical effect), and layered independently of structures (a Fort can sit in a Forest tile, a Resource node on a Mountain). Revisit what they should actually do once movement/combat design has a use for terrain — including a concrete idea raised alongside this: **terrain-based movement resistance** (a base map-wide terrain speed multiplier; roads as a buildable/upgradeable modifier that reduces resistance, built by workers with an ongoing upkeep cost; some terrain outright blocking certain unit types, e.g. siege weapons needing roads/fields; units pathing the least-resistant route). Not designed — a real alternative to (or refinement of) today's "lanes as fixed tracks" model, worth its own pass. **Partly mocked up in the prototype (v7):** a top-level "Terrain" view holds a cross-map terrain-type library. Each type has label, glyph, colour, whether it can be a map's base ground, a stub movement-cost multiplier, stub "blocks unit classes" text, and default stability/footprint (see "Future direction: layered tile model"). The view also holds a natural-feature library and a stub road movement multiplier, and roads are drawn as explicit cell-to-cell connections, with bridges required on water and ravine. None of it is simulated. Designer-view roadmap recorded alongside: Lanes / Factions / Terrain now, with Units, Squads and Static defenses as planned further views.
+- [x] Whether an authored `MapEdgeDef`/link is a hard constraint (the only route that exists) or a soft default a future pathfinding/movement-cost system could override — raised alongside the terrain-resistance idea above. Not designed; depends on that idea's outcome. **Resolved by Decision 26 (2026-09-27):** both. An authored link is a hard constraint on *which* nodes connect, and its route *geometry* is pathfound over terrain cost.
+- [ ] Why attack a fort instead of going around it? (Raised while designing structure interiors in the tile designer prototype.) Decision 4's Option 2 already says forts "bar a path" and the player routes "around or through", and Infiltrators bypass structures. Once routes are pathfound over terrain (Decision 26), a fort needs a reason to matter. Proposed combination, not yet designed:
+  - **Terrain chokepoints**: forts placed where the route is forced, such as bridges (drawbridges especially), passes or ravine crossings.
+  - **Zone of control**: static-defense range plus sorties and patrols cover nearby tiles, so passing within range is costly.
+  - **Rear threat**: a bypassed garrison raids workers, messengers and supply, and retakes undefended ground ("ground must be held").
+  - **Objective value**: critical assets and loss groups, resources, capture rewards, suspicion.
+
+  Goal: bypassing is a real choice with a cost, not always or never worthwhile.
+- [ ] Undiscovered/unlinked resource nodes as side objectives (raised while iterating on the tile designer prototype) — a resource node authored with no `MapEdgeDef`/lane connection at all could act as a hidden objective the player must physically route to themselves, tying naturally into the base spec's existing Scout/fog-of-war concept. Likely achievable with the current graph-topology schema as-is (an unlinked node is already a valid, if unusual, authored shape) rather than needing new mechanics — worth confirming once movement/discovery is real.
+- [ ] Structure upgrade progression (raised while iterating on the tile designer prototype) — a resource deposit gaining a "mine" upgrade with a small garrison; a Fort's fortification level gating modular internal capacity (barracks for defender capacity, kitchens/stores for siege endurance, defense-point emplacements like arrow slits requiring a specific unit up to a limit, echoing the "static defenses" idea already noted above); saved prefabs for reuse; and faction-specific structure mechanics (e.g. an eldritch faction establishing summoning circles, or defenders acting unilaterally to open unpatrolled entry points). Large, not designed — a real future extension of the Combatant-unification/structure work already flagged.
+- [ ] Captives/conversion mechanic (raised while iterating on the tile designer prototype, explicitly flagged as "likely not for now") — taking prisoners in combat and converting them to the player's side, or consuming them as a resource (food/blood/sacrifice/knowledge). Not designed.
+- [ ] Resource replenishment/depletion redesign (raised while iterating on `NodeDef`'s resource fields, `specs/13-faction-def-and-garrison-unit.md`): natural baseline replenishment independent of workers; unit skills/traits that increase a specific resource type's replenishment at their tile (no skill/trait system exists yet); workers who both extract *and* replenish (e.g. a farmer granting +2/tick replenishment while harvesting 3/tick), with a priority rule needed between banking replenishment locally vs. hauling extracted output away; a cap on standing "available" resource (e.g. wheat in the field) distinct from the underlying reserve/capacity cap; neglect-decay — an untended, unharvested resource losing material over time, the *inverse* direction from today's harvest-pressure decay (`EconomySystem.decayed_yield()` decays *extraction rate* under sustained harvesting, not standing material under neglect) — and whether/how a tick-represents-real-calendar-time concept (e.g. 6 hours/tick, 3-day seasons) layers season and time-of-day effects on top. Not designed yet; `NodeDef.is_inexhaustible`/`total_reserves` (schema round 4) deliberately leave room for this without committing to any of it.
+- [x] `NodeDef.structure_slots` semantics (raised while iterating on the tile designer prototype): per Decision 4's original framing this is a *count* of discrete buildable foundations at a location ("room for 2 towers here"), not a physical size/area value — but nothing consumes it yet, so this is genuinely underspecified. A real gap raised directly: if `structure_slots: 0` means "nothing permanent can be built here" (used in the prototype as a pure routing waypoint), can a barricade or other lightweight stationary defense still go there? A barricade may need to be a different, non-slot-consuming category entirely rather than something gated by `structure_slots`. Not designed — belongs to the still-unbuilt spatial-placement pass (Decision 4's Option 2). See "Future direction: layered tile model" below, which treats a barricade as a 0-floor structure and asks whether *footprint* should replace or redefine `structure_slots`. **Resolved by Decision 25 (2026-09-27):** superseded by the tile capacity + segment-profile model, and the field has been removed (`specs/14-structure-slots-removal.md`).
+- [ ] A real JSON→`.tscn` converter for the Lane Tile Designer prototype's export (offered during this work, not yet built): would generate `MapSceneRoot`/`MapLaneRoot`/`MapNodeMarker`/`MapEdgeMarker` scene text from a pasted-out export JSON, reusing the already-tested `MapSceneConverter` (`specs/10-map-scene-authoring.md`) for the rest of the pipeline — the practical path from the prototype's clipboard-only export (an artifact cannot write to the repo/filesystem directly) to an actual loadable map. Not started.
+
+## Future direction: Command & Control via messenger-delivered orders
+
+Not designed yet — captured here so it isn't lost, raised while reviewing
+`specs/13-faction-def-and-garrison-unit.md`'s `GarrisonUnitDef` (whose `can_sortie`/
+`patrol_route`/`delivery_target_id` fields are each unit's *baseline standing order*,
+authored for how it starts the map, not a fixed property).
+
+The core idea: a unit's orders aren't just static map-authored properties — they're
+the output of a command hierarchy (the Core, and potentially intermediate command
+echelons at structures or squads below it) issuing orders that must be **physically
+delivered** before they take effect. This is the natural symmetric counterpart to the
+Alarm/messenger mechanic already validated above (`content/response_units/
+messenger.tres`) — that system carries *information* (alarm reports) outward from a
+threatened location to the core, interceptable by an Infiltrator positioned ahead of
+it; this idea carries *commands* the other direction (core → field), equally
+interceptable, giving either side a real tactical lever: intercepting an
+order-messenger disrupts the enemy's C2, not just its alarm system.
+
+**Delivery-assurance tiers**, escalating in reliability/cost: plain messenger → a
+messenger with a guard retinue escort → a messenger bird → magical messages. Which
+tiers are actually available is gated by two independent axes: (1) a difficulty
+setting framed as a spectrum from dark fantasy (easy — low-tier delivery only, more
+interceptable) to high fantasy (hard — magical/creature-assisted delivery, harder to
+intercept), determining the enemy's available resources/technology overall, not just
+messenger tiers; and (2) campaign-length progression, independent of the difficulty
+setting — an enemy that starts a long campaign at a lower fantasy tier can grow into a
+higher one by its end.
+
+**Open questions for whenever this gets its own design pass:** does the player's own
+side have an equivalent order-delivery constraint, or is this enemy-only flavor? What
+exactly triggers a campaign-progression tier-up? Does intercepting an order-messenger
+just delay/cancel the order, or can it be read for intelligence (mirroring how Scout
+reveals the alarm-risk number)? Does this need its own messenger unit type, or does
+`content/response_units/messenger.tres`'s existing `purpose` field just gain an
+`"order"` value alongside `"report"`?
+
+**Related, raised while reviewing the tile designer prototype:** `NodeDef.garrison_hp`/
+`garrison_dmg` today represent the pooled *defenders'* combat stats, not the structure
+itself attacking — a wall has no separate stat of its own currently. Dedicated
+structure-mounted defenses (a ballista, boiling oil) are better modeled as a
+specialized immobile "defense" unit type once the Combatant unification happens (see
+Decision 24's non-goal), not as an inherent `dmg` value on the node. Not designed now
+— `garrison_hp`/`garrison_dmg` stay pooled and untouched until that larger work.
+
+## Future direction: layered tile model
+
+Raised while using the tile designer prototype, and mocked up there (v7, revised in v8)
+as prototype-only data. Nothing here is real schema yet.
+
+**The idea:** a map tile is a stack of independent layers, bottom to top:
+
+1. **Terrain**: the ground (fields, rocky, swamp, forest, mountain, water…). A map has
+   a base terrain, and individual tiles can override it.
+2. **Natural features**: what the land offers, sitting on the terrain (ore vein, arable
+   land, spring, timber, quarry face). These are what a mine, farm or quarry exploits.
+3. **Bridge** (only on terrain that needs one; see "Bridges" below).
+4. **Structures**: what's built (see "Build capacity and segment structures").
+5. **Upgrades**: additions that don't need a larger defensible structure, e.g. a guard
+   barracks at a mine or farm. The tile has a number of *upgrade slots*.
+
+**Roads** are drawn as explicit connections between neighbouring cells, diagonals
+included. Two road tiles side by side are *not* joined unless the road was drawn across
+that boundary. That keeps two separate routes that pass each other separate: in the
+prototype, a diagonal spur out of the home stays apart from the straight road next to
+it. A road is a movement modifier (see the terrain-movement-resistance bullet in "Open
+design questions"), not topology. How roads relate to links/`MapEdgeDef` is settled by
+**Decision 26**:
+- Authored links are the intended routes, i.e. the topology.
+- Each link's route geometry is pathfound across terrain cost, and roads make it cheaper.
+- Unlinked node pairs never get a route. New routes appear only through play, such as
+  enemy workers building a road.
+
+### Build capacity and segment structures
+
+A tile has three capacity numbers. Terrain types supply defaults, and a tile can
+override each one:
+- **Stability**: the total *segment budget*, i.e. how much structure the ground can
+  bear in all.
+- **Max height**: the tallest column. Height needs solid ground: rocky ground and
+  mountains are high, swamp is 1, water 0.
+- **Max width**: the widest span. Wide, short structures need space. Fields and desert
+  are wide; mountain peaks and forest are narrow.
+
+A structure is a **side-view profile of segments**: columns of stacked segments, each
+resting on the one below. It is valid if total segments ≤ stability, no column exceeds
+max height, and its span ≤ max width. Example: stability 4, max height 2, max width 3
+allows a 2×2 block, or a 3-wide, 1-high wall with one column raised to 2, but not both
+at full size. Height and width stay separate because they vary independently (marsh is
+wide but can't go tall; a rock spire is tall but narrow), and the stability budget stops
+a tile maxing both at once.
+
+Each segment can hold a **room**. This folds in the fort-internals idea from "Structure
+upgrade progression": barracks (defender capacity), stores/kitchen (siege endurance),
+gatehouse, lookout (sight), walkway. (Arrow slits started as a room and moved to static
+defenses in v10; see "Structure interiors" below.) A
+barricade is a single ground-level segment, so it fits on any tile with capacity,
+including a 0-slot routing waypoint. That answers the barricade question in the
+`structure_slots` bullet above, in prototype form.
+
+**Simplified per user review (v8):** the earlier "structure class + floors" fields were
+redundant with the segment numbers. The class survives only as an **art archetype**
+(barricade, palisade, watchtower, fort, castle), which picks what to render and has no
+mechanical meaning. Floors are gone; height comes from the profile.
+
+The prototype edits a structure in a panel **under the map**, so the whole lane stays in
+view. This foreshadows a per-tile detail/zoom view (a structure's interior, where a
+fight at that tile plays out), tied to the open 2D vs 3D presentation question (Decision
+4's "3D/2D space"). Since v10 an **Expand** toggle lets the editor take over most of the
+workspace, while the map shrinks to a live strip above it.
+
+### Structure interiors (prototype v10–v13; model settled by Decision 27)
+
+Prototype-only, not simulated; the rules below are the intended design. v12 briefly tried
+a compass-oriented footprint (plan view plus elevations). **Decision 27 replaced it**
+with a single side-on plane.
+
+**One side-on plane per structure fight.**
+- Attackers enter and leave at the **left or right end**. An angled real-world approach
+  still plays out on this one plane.
+- Each route (link) into the node is assigned the end it arrives at. The default comes
+  from map geometry, and the designer can change it per link.
+- A structure is a row of columns, stacked into levels, with basements dug below.
+
+**Interior combat.**
+- **Melee** happens within a room.
+- **Ranged** fire crosses boundaries that don't block projectiles.
+- **Sight** is separate: you can't target what you can't see.
+
+**Boundaries carry the defenses.** Every boundary has three properties: **blocks
+movement**, **blocks projectiles** and **blocks sight**. Each is set per direction (from
+left/right for walls, from above/below for floors and roof hatches). "Outside" resolves
+to the exterior side:
+- end walls: the exterior side
+- floors: below
+- roof hatches: above
+- internal walls: designer-toggled
+
+Presets (the designer can edit any property, which makes it Custom):
+
+| Preset | Movement | Projectiles | Sight | Notes |
+|---|---|---|---|---|
+| Solid wall / solid floor | both | both | both | |
+| Arrow slit (wall) | both | from outside | from outside | defenders shoot out; attackers can't shoot or see in |
+| Door | from outside | both | both | door type: defenders open it; fortification (locked / barred / reinforced) holds attackers back |
+| Portcullis | both | none | none | door type: bars block passage but not arrows or sight |
+| Open doorway | none | none | none | |
+| Stairs (floor) | none | both | none | stairs block ranged fire between levels |
+| Hatch / ladder (floor or roof) | none | both | both | |
+| Murder hole (floor) | both | from outside (below) | from outside (below) | defenders shoot down; attackers can't shoot up or see up |
+
+**Firing positions** follow from the properties; no per-weapon bookkeeping is needed. A
+boundary that lets projectiles out, reached by the defenders, is a firing position any
+ranged unit can use. These are:
+- exterior walls above ground whose projectiles aren't blocked from inside
+- murder-hole-style floors
+- reachable flat roofs
+
+**Emplacements** are the only remaining "static defenses": immobile crewed weapons
+(ballista, trebuchet, oil cauldron) placed in a room or on a flat roof. They are crewed
+automatically from the garrison by unit type. This is the prototype form of the earlier
+note: they become an immobile "defense" unit type after the Combatant unification.
+
+**Rooms, roofs, basements, walls.**
+- A segment has a **feature-point budget** (default 5) spent on furniture: bunks (rest
+  4 units), kitchen, storage, hearth, well. Rooms are named prefabs of features
+  (Barracks = 5 Bunks).
+- **Roofs** are flat, pitched or open, and never use a level or stability. Only flat roofs
+  take emplacements, and only when reachable through a roof hatch or stairs.
+- **Basements**: a tile's **dig depth** (terrain default) caps how far down you can dig.
+  A basement is dug down from a room above, *or* tunnelled sideways from a neighbouring
+  basement at the same level, so there doesn't need to be a room above it. Every basement
+  must still connect back to something above ground.
+- **Walkways**: a segment above ground with nothing under it, spanning between towers
+  (e.g. a bridge between two keeps at level 2).
+  - It holds no furniture or emplacements.
+  - It opens onto the towers at either end.
+  - It is flagged unless it is anchored on both sides.
+  - Filling in the column beneath it turns it into a normal room.
+- **Roofs** sit directly on each column's top room, not at a fixed height.
+- **Walls** have a material (timber, stone, reinforced stone; stub HP ×1/×2/×3).
+
+**Reachability.** Entrances are passable end walls at ground level. Defenders pass door
+types, and any boundary that doesn't block movement both ways. Unreachable rooms, and
+roofs with emplacements but no way up, are flagged.
+
+**How this translates to Godot.** The prototype export is shaped like future Resources,
+so a converter maps it one-to-one:
+- `StructureDef`: archetype (art only), requirements (stability / height / width / dig
+  depth), approaches (`from_node` → LEFT/RIGHT), and the lists below.
+- `SegmentDef`: `col`, `level`, label, feature ids, emplacement ids.
+- `BoundaryDef`: `kind` (WALL / FLOOR / ROOF_ACCESS), `col`, `level`, `exterior_side`,
+  `outside`, `preset`, `blocks_movement_from`, `blocks_projectiles_from`,
+  `blocks_sight_from`, `fortification`, `material`.
+- `RoofDef`: `col`, type, emplacement ids.
+- Library Resources for room features, room prefabs and emplacements (mount ROOM/ROOF,
+  crewing unit, crew, stats).
+
+Each is plain data with its own `validate()`, and cross-references are checked by the
+owner, the same split `NodeDef` / `MapEdgeDef` / `MapDef.validate()` already use.
+
+**Structure prefabs.** A whole structure can be saved to a cross-map library (the
+**Structures** view) and loaded onto another node. Loading checks the prefab's
+requirements against the tile's capacity.
+
+**Drawbridges.** A bridge next to a structure can be marked as a drawbridge controlled by
+that node. Raised, it counts as absent: routes over it are blocked.
+
+Open questions raised alongside:
+- **Hoarding** is built *onto the outside* of a wall, so it doesn't fit the boundary model
+  cleanly. Proposed model, not built: an **exterior gallery** attached to an upper end
+  wall. It is a thin outside space whose floor behaves like a murder hole over the wall
+  base, and whose outer face behaves like an arrow slit. It would be destructible
+  separately from the wall behind it.
+- How long do fortification delays last, and can specific units (a ram) break them
+  faster?
+- Should sight-blocking also limit what the defenders can see of attackers outside (a
+  closed door hides who is massing behind it)?
+
+### Bridges
+
+Some terrain (water, ravine) **needs a bridge before a road can cross**. The prototype
+refuses to draw a road onto such a tile until a bridge is placed there (the user chose
+bridge-first over auto-bridging), and removing a bridge cuts the roads through it. A
+bridge is a **structure in its own right**: it has an owner, is attackable (stub HP),
+and can optionally be **demolished by its owner**, as a defensive tactic that blows your
+own bridge to cut a route. That option is off by default because it can stall
+progress. Open question: in the real build, is a bridge a tile-level structure, or a real
+`NodeDef` so combat and capture treat it like any other node?
+
+**Open questions:**
+- ~~Should the segment model replace `NodeDef.structure_slots`?~~ **Resolved by
+  Decision 25:** yes. The field has been removed; the replacement schema lands with the
+  spatial-placement pass.
+- Is capacity per tile (as prototyped), or per node, with terrain only supplying
+  defaults?
+- **Upgrades should be restricted** by what the tile has: its resource type, natural
+  feature and terrain (a mine upgrade needs an ore vein, a granary needs arable land).
+  Recorded per user request, not built yet. Also: do upgrades consume stability budget,
+  or only upgrade slots?
+- How do segments and rooms translate into mechanics: defender capacity, siege
+  endurance, line of sight, which unit types can man which room?
+- Do structures get a depth dimension, or is a side profile enough?
+
+Not designed. It sits alongside the Combatant/structure unification (Decision 24's
+non-goal) and the spatial-placement pass (Decision 4's Option 2).
+
+## Future direction: multi-tile and linked structures
+
+Raised with the drawbridge idea (tile designer prototype v11). A structure is anchored to
+one map tile today. Two extensions are recorded, not designed:
+- **Multi-tile structures**: a castle that spans several adjacent map tiles, sharing one
+  interior graph and garrison.
+- **Structures owning adjacent-tile features**: a drawbridge (prototyped), an outer
+  palisade ring, a moat, or a gate tower over a road.
+
+Both need a way for a structure to reference neighbouring tiles, and a rule for what
+happens to routes and ownership when those tiles change hands.
+
+## Future direction: vertical planes (air and underground)
+
+Raised alongside basements (tile designer prototype v11). Today the lanes are a single
+surface plane. Two further planes are recorded as a direction, not designed:
+- **An air plane above the lanes** for flying units. They could bypass walls and routes,
+  and interact with roof types: a pitched roof shelters from arcing and flying attack,
+  while a flat roof is exposed but can mount anti-air.
+- **An underground plane** for tunnelling units. Tunnels could link basements between
+  structures, or undermine walls and foundations. This ties to each tile's max depth.
+
+Open questions: whether planes are separate route graphs or layers of one graph, how
+units move between planes (entrances, landing zones), and how the lane/tick model
+represents them.
 
 ## Notes for the implementing agent (Godot)
 
@@ -844,3 +1133,265 @@ of this Decision (previously untracked; confirmed by the user to be real prior d
 content, not scratch) as the anticipated future consumer of this topology. A future
 movement/route-choice item can build directly on `MapDef.edges` without another schema
 migration.
+
+### Decision 23 — Resource typing, assignment roles, faction, and reward: additive schema, zero sim/ behavior change
+
+> Superseded in part by Decision 24 on 2026-09-26 — `can_sortie`/`patrol_route`/
+> `delivery_target_id`/`garrison_faction`'s placement on `NodeDef`, and the closed
+> `FactionId` enum, are revised. The resource-typing/reserves and `capture_reward`
+> parts of this Decision stand unchanged.
+
+**Rationale:** Using the Lane Tile Designer prototype (a standalone HTML mockup, not
+part of this repo) to sketch maps surfaced four real gaps between what an author would
+want to configure and what `NodeDef` could actually represent: resource nodes are
+Food-only with no finite quantity; a garrison is a single pooled count with no role
+beyond "present"; ownership is a bare, ad-hoc `String` with no faction/relationship
+concept anywhere in `sim/`; and there was no way to attach a capture reward to a
+location. All four are additive, inert schema — the same "schema now, consumption
+later" discipline already used for `NodeDef.position` (Decision 19) and `MapDef.edges`
+(Decision 22):
+
+- `NodeDef.resource_type` (enum `FOOD/WOOD/STONE/METAL/CRYSTAL`, defaults `FOOD`) and
+  `total_reserves` (`0` = unlimited) — the existing Food-specific fields
+  (`yield_food_per_tick` etc.) are untouched, not renamed, so `sim/
+  capture_resolution.gd` keeps compiling and behaving identically. Documented intended
+  future semantics: reserves should only deplete from yield *above*
+  `decay_floor_food`, leaving room for a future "maintained by skilled units"
+  mechanic (confirmed: zero prior art for unit skills/traits anywhere in the repo)
+  without another schema change.
+- `NodeDef.patrol_route` (ordered node ids), `can_sortie` (matches the combat
+  addendum's already-drafted sortie concept), and `delivery_target_id` (matches the
+  addendum's Worker-as-Combatant section) — each requires `garrison > 0` where
+  applicable, cross-referenced against the map's real node ids in `MapDef.validate()`.
+  Static defense itself needed no schema change: `garrison`/`garrison_hp`/
+  `garrison_dmg` were confirmed not type-gated already — any structure could already
+  hold a garrison; the prototype's own UI was the only thing restricting it to FORT.
+- `FactionRelationDef` (new file): nested `enum FactionId { PLAYER, ENEMY }`
+  (append-only, same convention as `NodeType`), `faction_a`/`faction_b`/`stance`.
+  `NodeDef.garrison_faction` gives a garrison's single default affiliation.
+  **Documented limitation**, resolved directly with the user: `garrison` is a pooled
+  count, not a list of individual units, so this cannot express true per-unit mixed
+  affiliation (e.g. a prisoner inside an enemy structure) — that needs a
+  pooled-garrison → individual-unit-list redesign, deferred alongside the already-
+  deferred squads/unit-library extension. `sim/`'s existing ad-hoc `String` ownership
+  (`"player"`, `"defender"`) is explicitly **not** migrated to `FactionId` here.
+- `NodeDef.capture_reward` (free-text/id placeholder, empty = none) — no unlock system
+  consumes it yet.
+
+`MapDef.validate()`'s body was already 38 lines (near this project's 40-line
+function-length ceiling) before this Decision. Split into small private-helper
+delegates (`_validate_suspicion_thresholds()`, `_validate_lanes()`,
+`_validate_edges()`, `_validate_node_references()`, `_validate_faction_relations()`),
+with `validate()` itself becoming a short orchestrator — a behavior-preserving
+refactor (existing tests as the safety net) needed to add three more validation
+concerns without exceeding the ceiling.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Wire real reserve-depletion behavior into `EconomySystem`/`CaptureResolution` now | Explicitly declined by the user — would risk building depletion logic that gets reshaped once the "maintained by skilled units" idea is actually designed. |
+| Let reserves also deplete the `decay_floor_food` amount | Explicitly declined — forecloses the "a maintained field never truly runs out, only surplus does" framing without a further schema change. |
+| Give delivery/logistics no authored schema at all (treat it as purely runtime, like today's auto-extraction) | The user asked for `delivery_target_id` to be authored now even though nothing consumes it yet, so the concept exists in data ahead of the runtime system. |
+| Migrate `sim/`'s ownership strings to `FactionId` in this item | Explicitly declined — real, separate refactor touching `lane_simulation.gd`, `task_force_dispatch.gd`, `capture_resolution.gd`, `sim_events.gd`, `main.gd`, and their tests; deferred until something actually needs to consume factions. |
+
+**Consequences:** The Lane Tile Designer prototype's inspector panel is expected to be
+updated next to expose these fields (resource type/reserves, patrol/sortie/delivery
+controls, a faction picker, the reward field) — the user's own stated sequencing:
+iterate the data model, then update the prototype UI. Configurable unit library +
+squads (real per-unit faction assignment) and treasure "unlockables" beyond the plain
+`capture_reward` string remain explicitly deferred extensions, not part of this
+Decision.
+
+### Decision 24 — Unit/squad affiliation fields move off NodeDef; faction becomes content, not an enum
+
+**Supersedes:** Decision 23 (in part — see the pointer on that Decision's heading)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-26
+
+**Rationale:** Reviewing Decision 23's fields against the combat addendum surfaced two
+corrections. First: `can_sortie`, `patrol_route`, `delivery_target_id`, and
+`garrison_faction` are unit/squad properties, not structure properties — the addendum
+already models a Structure and its Garrison as separate Combatants with independent
+stats, and this project already has a deliberate precedent against premature
+unification (`ResponseUnitDef`'s own doc comment: "Deliberately independent of
+UnitDef... not a kind-of player unit in any substitutable sense"). Fully doing
+"a structure is just an immobile unit" properly means adopting the addendum's whole
+Combatant/Encounter model, which would also subsume `UnitDef`/`ResponseUnitDef` and
+every `sim/` consumer of them — large, separate, future work. This Decision does the
+smaller, honest version: a new `GarrisonUnitDef` holds just the four affiliation/
+behavior fields, explicitly documented as a deliberate stand-in, not the full
+unification. Second: a closed `FactionId` enum (`PLAYER`/`ENEMY`) can't express a
+map-authored faction like a stub "The Kingdom" — factions need to be author-definable
+content, like units and maps already are, not a fixed enum (enums are for closed,
+code-level categories, per `NodeType`'s own convention).
+
+Also explicit: `NodeDef.garrison`/`garrison_hp`/`garrison_dmg` are **not** touched by
+this Decision — they predate this session (Decision 11) and are read live by
+`sim/lane_simulation.gd`'s `_init()` today, so restructuring them into per-unit stats
+would be real behavior-affecting surgery on the running simulation, outside this line
+of work's established "schema-only, zero `sim/` change" discipline. `GarrisonUnitDef`
+holds only affiliation/behavior fields, not combat stats.
+
+Also explicit: `can_sortie`/`patrol_route`/`delivery_target_id` are each unit's
+**baseline standing order** — what it starts the map with — not a fixed property. A
+future Command & Control system (messenger-delivered orders, interceptable, tiered by
+delivery assurance — see "Future direction" above) is expected to let these change at
+runtime; this schema only authors the starting state.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Leave the four fields on `NodeDef`, just document them as temporary | Rejected directly by the user in favor of actually moving them now, since PR #26 (carrying Decision 23's changes) was still open/unreviewed — the cheapest possible time to fix this. |
+| Build the full addendum Combatant/Encounter unification now, folding structures and units into one type | Far larger scope than this item — would also require migrating `UnitDef`/`ResponseUnitDef` and every `sim/` consumer; deliberately deferred as its own future item. |
+| Keep `FactionId` as a closed enum, just add more values as needed | Doesn't allow map-authored custom factions (e.g. "The Kingdom") without a code change each time — factions are the kind of thing this project already treats as content (units, maps), not a fixed category. |
+
+**Consequences:** `content/factions/player.tres` and `content/factions/
+the_kingdom.tres` exist as the first two `FactionDef` instances — "The Kingdom,"
+hostile to the player, per direct request. `owning_faction_id` (new, on `NodeDef`) and
+`LaneDef.player_home_index` are now two independent ways to identify "the player's
+base" on the same node — a known, documented tension for whichever future item first
+needs faction-based ownership logic in `sim/` to reconcile, not resolved here.
+
+### Decision 25 — `NodeDef.structure_slots` is superseded by the tile capacity model and removed now
+
+**Rationale:** `structure_slots` was added (Decision 4 era) as a count of discrete
+buildable foundations for a future spatial-placement pass, but nothing ever read it:
+not `sim/`, the scene converter, tests, or any `.tres`. Iterating on the Lane Tile
+Designer prototype produced a clearer model for what a location can hold. A tile carries
+a **stability** segment budget plus **max height** and **max width**. A structure is a
+side-view profile of segments, each able to hold a room (see "Future direction: layered
+tile model"). The user decided this model supersedes `structure_slots`. Since the field
+has no consumers and PR #26 (the `NodeDef` schema PR) is still unmerged, it was removed
+immediately (`specs/14-structure-slots-removal.md`) rather than left as a misleading
+placeholder.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep the field until the replacement schema is built, then remove both together | Offered as the recommendation. The user chose immediate removal: an unused field that implies the wrong model is worse than no field, and removal is free while nothing consumes it. |
+| Redefine `structure_slots` as the tile's width ("footprint") | A single number can't express the model. Height and width vary independently, and the stability budget caps their product, so it needs three values plus a structure profile. |
+
+**Consequences:** Godot has no build-capacity concept until the spatial-placement pass
+(Decision 4's Option 2) adds one. That pass will also need a tile/grid representation
+`MapDef` lacks today. The prototype's routing waypoint, previously `structure_slots ==
+0`, becomes a prototype-only `WAYPOINT` node type, recorded as a candidate `NodeType`
+value (append-only, per `NodeType`'s ordinal-stability rule).
+
+### Decision 26 — Routes: authored links are intended topology; route geometry is pathfound over terrain
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-27
+
+**Rationale:** The prototype gained two ways to express "a way from A to B": node-to-node
+links (what `LaneDef` order and `MapEdgeDef` model) and cell-to-cell roads. The user
+chose a pathfinding model with one important constraint:
+- **Links stay the authored, intended routes.** They are not necessarily the most
+  efficient, but they alone decide *which* nodes connect.
+- **Each link's initial route geometry is optimised** by pathfinding across the terrain
+  grid: terrain movement cost, cheaper along roads, water/ravine impassable without a
+  bridge.
+- **No route is ever inferred between unlinked nodes.** If links run core → fort
+  horizontally and fort → farm vertically, no fort ↔ farm shortcut appears by itself.
+- **New routes arise through play.** For example, enemy workers could build a road
+  between two nodes, which is how the simulation might later add a connection.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A. Links and roads as independent layers (roads only speed travel along links) | Leaves a link's drawn shape arbitrary (a straight line, or waypoint-bent) and unrelated to terrain. The user wanted terrain to shape routes. |
+| B. Roads *are* topology (links derived from road chains) | Would make every route a road and infer connections the author never intended. The user explicitly wants no automatic routes between unlinked nodes. |
+| C. Links carry a hand-authored cell path | More authoring work, and it doesn't respond to terrain or roads. Pathfinding gives the same geometry automatically, with waypoint nodes available to force a shape. |
+| Full free pathfinding with no authored links (units path anywhere) | Loses the author's control of intended routes and would invent routes between any nodes. |
+
+**Consequences:**
+- `MapEdgeDef` and `LaneDef` order are unchanged and remain the authored topology.
+  Nothing in Godot changes now: `sim/` doesn't read `MapDef.edges` yet, and
+  `LaneSimulation` walks each lane's node array.
+- Making route geometry real in Godot needs a tile grid with terrain costs (prototype-only
+  today) and a pathfinding step, at load time or runtime. That work belongs with the
+  spatial-placement pass / terrain movement-resistance idea.
+- Runtime topology change (road-building adding links) is a new capability the sim
+  will need.
+- The prototype's pathfinder ignores terrain `blocks_unit_classes` for now, since routes
+  are unit-agnostic. Per-unit-class routing is open.
+
+### Decision 27 — Structure combat is a 2D side-on plane; boundaries carry defenses; routes are designer defaults the player can change
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-28
+
+**Rationale:** The tile designer prototype briefly modelled structures as a
+compass-oriented footprint (v12), so attackers could arrive along either map axis. On
+review, that adds a lot of authoring and simulation complexity for little gameplay value.
+What a structure fight needs is which boundaries the attackers reach first, the interior
+graph, and firing lines, and none of those need 3D geometry. So:
+- **Every structure fight is one 2D side-on plane.** Ingress and egress are at the left
+  or right end. An angled approach still plays out on this plane.
+- **Each route into a node is assigned an end.** The default comes from map geometry,
+  and the designer sets it per link.
+- **Defenses are boundary properties.** Each wall, floor and roof hatch blocks movement,
+  projectiles and sight, per direction.
+  - Arrow slits, murder holes, portcullises and doors are presets of those properties,
+    not separate mounted objects.
+  - Firing positions follow from the properties and are usable by any ranged unit.
+  - Only true **emplacements** (ballista, trebuchet, oil cauldron) remain separate
+    objects: immobile crewed weapons in a room or on a flat roof.
+- **Routes:**
+  - Authored links are the designer's **default** routes (Decision 26).
+  - The **player can reroute** in play.
+  - Workers plus resources can **build roads** on tiles.
+  - Freeform map design (secondary and tertiary objectives, secrets) is preserved
+    through optional, hidden and play-created routes, rather than by making combat 3D.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Compass-oriented footprint with plan view plus two elevations (prototype v12) | Much heavier authoring and simulation for little gameplay value. The fight only needs which boundaries attackers reach, the interior graph and firing lines, and approach-per-link captures direction without geometry. |
+| Isometric / 3D structure combat | Rejected for the simulation. Kept only as a possible future *presentation* layer rendered from the same 2D data. |
+| Mounted static defenses with per-type firing points (prototype v10–v12) | Arrow slits, murder holes and portcullises are really properties of a wall, floor or door. Modelling them as properties (what they block, from which side) is simpler and more general. |
+| Restrict movement to fixed lanes with no rerouting | Would block the freeform map design the user wants (optional and hidden objectives, player rerouting, road building). |
+
+**Consequences:**
+- Supersedes the v12 footprint model in the spec's "Structure interiors" section, which
+  now describes the side-on plane.
+- Refines Decision 26: links remain the designer's default topology, but the player may
+  reroute, and roads may be built in play. Both need runtime topology changes the sim
+  doesn't support yet.
+- A future structure-combat sim runs on the space/boundary graph. The proposed Godot
+  Resources are `StructureDef`, `SegmentDef`, `BoundaryDef` and `RoofDef`, plus the room
+  feature, room prefab and emplacement libraries.
+- Hoarding (a gallery built onto the outside of a wall) is still open; a model is proposed
+  in "Structure interiors".
+- No Godot code changes now; everything here is prototype-only until the
+  spatial-placement pass.
+
+### Decision 28 — Nodes can be hidden per faction (inert schema now; reveal rules later)
+
+**Rationale:** Secret and secondary objectives need nodes that some factions don't know
+about at map start, such as a hidden resource cache the player must scout for, or a
+secret enemy base. This fits the Scout/fog-of-war concept and Decision 27's hidden and
+optional routes. It was added to the tile designer prototype and, at the user's request,
+to the real schema on the still-open PR #26: `NodeDef.hidden_from_faction_ids`
+(`specs/15-node-hidden-from-factions.md`). Adding it now means the upcoming "Godot
+renders the designer's output" work can read it.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A single `is_hidden` flag | Visibility is relative: a node can be secret from the player but known to its owner, or known to an ally. It has to be per faction. |
+| `visible_to_faction_ids` (an allow-list) | Most nodes are known to everyone, so an allow-list would need filling on every node. An empty deny-list keeps the default as "everyone knows it", and `p_f_F_c.tres` validates unmodified. |
+| Prototype only, schema later | The user chose to land it before PR #26 merges, so the rendering work has a real field to read. |
+
+**Consequences:**
+- `NodeDef` gains an inert `Array[String]`. `NodeDef.validate()` rejects empty and
+  duplicate ids, and `MapDef.validate()` checks each against the faction roster.
+- How a hidden node becomes known (scouting, events, captured intelligence) is not
+  designed. Hidden links/routes are also open, and belong to the route work that follows
+  Decision 27.
+- No `sim/` or `presentation/` change.
