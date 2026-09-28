@@ -280,120 +280,103 @@ fight at that tile plays out), tied to the open 2D vs 3D presentation question (
 4's "3D/2D space"). Since v10 an **Expand** toggle lets the editor take over most of the
 workspace, while the map shrinks to a live strip above it.
 
-### Structure interiors (prototype v10–v11)
+### Structure interiors (prototype v10–v13; model settled by Decision 27)
 
-Revised through two user reviews. Prototype-only, not simulated; the rules below are
-the intended design.
+Prototype-only, not simulated; the rules below are the intended design. v12 briefly tried
+a compass-oriented footprint (plan view plus elevations). **Decision 27 replaced it**
+with a single side-on plane.
+
+**One side-on plane per structure fight.**
+- Attackers enter and leave at the **left or right end**. An angled real-world approach
+  still plays out on this one plane.
+- Each route (link) into the node is assigned the end it arrives at. The default comes
+  from map geometry, and the designer can change it per link.
+- A structure is a row of columns, stacked into levels, with basements dug below.
 
 **Interior combat.**
-- **Melee** happens *within* a room.
-- **Ranged** fire reaches *between* rooms through doors. Stairs block ranged fire or
-  reduce its efficacy.
-- **Doors and stairs are fortifiable**: open, locked, barred or reinforced. A fortified
-  connection holds attackers back for a while (prototype: a stub delay in ticks) instead
-  of letting them in immediately.
-- Exterior doors join a ground segment to the outside. The editor flags segments
-  unreachable from an exterior door (red), or a structure with no way in. Reachable
-  segments show green.
+- **Melee** happens within a room.
+- **Ranged** fire crosses boundaries that don't block projectiles.
+- **Sight** is separate: you can't target what you can't see.
 
-**Features, not room types.**
-- A segment has a **feature-point budget** (default 5, configurable), and each interior
-  feature has a cost and an effect:
-  - Bunks 1 (rests 4 units, so a full room of bunks rests 20)
-  - Kitchen 5 (fills a room; feeds 20 through a siege)
-  - Armoury rack, murder hole, portcullis, well, and so on
-- Any feature fits in any room; only the budget limits it.
-- "Rooms" are just **room prefabs**, named feature sets: Barracks = 5 Bunks, Gatehouse =
-  Portcullis + Murder hole.
+**Boundaries carry the defenses.** Every boundary has three properties: **blocks
+movement**, **blocks projectiles** and **blocks sight**. Each is set per direction (from
+left/right for walls, from above/below for floors and roof hatches). "Outside" resolves
+to the exterior side:
+- end walls: the exterior side
+- floors: below
+- roof hatches: above
+- internal walls: designer-toggled
 
-**Static defenses and manning.**
-- Static defenses (arrow slit, hoarding, boiling oil, ballista) live in their own library
-  (the **Static defenses** view). They are mounted on a wall face or a flat roof, not
-  treated as rooms.
-- Each has **firing points** and the unit type that mans them. Manning is **automatic
-  from the structure's whole garrison**, with no per-unit assignment. With 3 arrow slits
-  (1 firing point each) and 6 Archers, 3 Archers take the slits and 3 stay spare. Only a
-  real shortfall is flagged.
-- This is the prototype form of the earlier note that structure-mounted defenses become
-  an immobile "defense" unit type once the Combatant unification happens.
+Presets (the designer can edit any property, which makes it Custom):
 
-**Compass-oriented footprint (v12).** The single side view was replaced because attackers
-can reach a structure along either map axis, and a drawbridge approach over water is a
-different fight from a land approach.
-- A structure is a small **footprint grid** (width east–west × length north–south) of
-  cells, stacked into levels, with basements below.
-- The compass is the map grid's own: north is up the map.
-- It is edited in a **plan view**, one level at a time, and shown in two read-only
-  **elevations**: east–west as seen from the south, and north–south as seen from the east.
-- The earlier 2D side profile is the special case of a 1-deep footprint.
+| Preset | Movement | Projectiles | Sight | Notes |
+|---|---|---|---|---|
+| Solid wall / solid floor | both | both | both | |
+| Arrow slit (wall) | both | from outside | from outside | defenders shoot out; attackers can't shoot or see in |
+| Door | from outside | both | both | door type: defenders open it; fortification (locked / barred / reinforced) holds attackers back |
+| Portcullis | both | none | none | door type: bars block passage but not arrows or sight |
+| Open doorway | none | none | none | |
+| Stairs (floor) | none | both | none | stairs block ranged fire between levels |
+| Hatch / ladder (floor or roof) | none | both | both | |
+| Murder hole (floor) | both | from outside (below) | from outside (below) | defenders shoot down; attackers can't shoot up or see up |
 
-**Boundaries are first-class.** Every boundary is addressable on its own:
-- **Walls**: on each cell edge; exterior walls face N/E/S/W. Walls between neighbouring
-  cells are **one shared internal wall**.
-- **Floors**: the boundary between two stacked cells.
-- **Roofs**: the top of each footprint cell's stack.
+**Firing positions** follow from the properties; no per-weapon bookkeeping is needed. A
+boundary that lets projectiles out, reached by the defenders, is a firing position any
+ranged unit can use. These are:
+- exterior walls above ground whose projectiles aren't blocked from inside
+- murder-hole-style floors
+- reachable flat roofs
 
-Each boundary has a material and its own **modification slots**. None of them use room
-feature points; room features are furniture (bunks, kitchen, storage, hearth, well).
-- **Walls**: timber 1 slot, stone 2, reinforced stone 2 (stub HP ×1/×2/×3). Wall
-  defenses such as arrow slits, hoarding and boiling oil go on exterior walls only.
-- **Doorways**: a door is a property of a wall. It has a fortification level (open,
-  locked, barred, reinforced) and 1 doorway slot, e.g. a **portcullis** on the inner or
-  outer side.
-- **Floors**: an opening (solid, stairs, hatch/ladder) with a fortification level, and 1
-  slot, e.g. a **murder hole** over the space below.
-- **Roofs**: flat, pitched or open.
-  - They never use a level or stability.
-  - Only flat roofs take defenses (2 slots).
-  - A roof needs **stairs or a hatch up from the top cell** before its defenses can be
-    manned. Adjacent flat roofs at the same height connect.
+**Emplacements** are the only remaining "static defenses": immobile crewed weapons
+(ballista, trebuchet, oil cauldron) placed in a room or on a flat roof. They are crewed
+automatically from the garrison by unit type. This is the prototype form of the earlier
+note: they become an immobile "defense" unit type after the Combatant unification.
 
-**Basements.** A tile has a **dig depth**, supplied by terrain by default (rocky 2,
-mountain 3, fields/forest/desert 1, swamp/water 0). Levels below ground are dug from the
-cell above and count toward the stability budget. Basement walls are underground and
-can't mount firing defenses.
+**Rooms, roofs, basements, walls.**
+- A segment has a **feature-point budget** (default 5) spent on furniture: bunks (rest
+  4 units), kitchen, storage, hearth, well. Rooms are named prefabs of features
+  (Barracks = 5 Bunks).
+- **Roofs** are flat, pitched or open, and never use a level or stability. Only flat roofs
+  take emplacements, and only when reachable through a roof hatch or stairs.
+- **Basements**: a tile's **dig depth** (terrain default) caps how far down you can dig.
+- **Walls** have a material (timber, stone, reinforced stone; stub HP ×1/×2/×3).
 
-**Reachability.** Entrances are doors on exterior walls at ground level. From there, the
-editor walks internal doors, floor openings and roof access. Unreachable cells show red
-and reachable ones green. An exterior door above ground is flagged, because it leads
-nowhere.
+**Reachability.** Entrances are passable end walls at ground level. Defenders pass door
+types, and any boundary that doesn't block movement both ways. Unreachable rooms, and
+roofs with emplacements but no way up, are flagged.
 
-**How this translates to Godot.** The prototype export is deliberately shaped like
-future Resources, so a converter maps it one-to-one:
-- `StructureDef`: archetype (art only), requirements (stability / height / width / length /
-  dig depth), and the lists below.
-- `SegmentDef`: `x`, `y`, `level`, label, feature ids.
-- `WallDef`: `x`, `y`, `level`, `edge` (V = west side of cell x, H = north side of cell y),
-  derived `facing` (N/E/S/W or internal), `material`, optional door (fortification plus
-  doorway mods with a side), and wall mods. This is how "reinforce this specific wall" is
-  expressed.
-- `FloorDef`: `x`, `y`, `level` (the boundary to level+1), opening, fortification, mods.
-- `RoofDef`: `x`, `y`, type, access, defenses.
-- Library Resources for room features (id, cost, effect), room prefabs, and static
-  defenses (`mount`: WALL/FLOOR/DOOR/ROOF, `manned_by_unit`, `firing_points`, stats).
+**How this translates to Godot.** The prototype export is shaped like future Resources,
+so a converter maps it one-to-one:
+- `StructureDef`: archetype (art only), requirements (stability / height / width / dig
+  depth), approaches (`from_node` → LEFT/RIGHT), and the lists below.
+- `SegmentDef`: `col`, `level`, label, feature ids, emplacement ids.
+- `BoundaryDef`: `kind` (WALL / FLOOR / ROOF_ACCESS), `col`, `level`, `exterior_side`,
+  `outside`, `preset`, `blocks_movement_from`, `blocks_projectiles_from`,
+  `blocks_sight_from`, `fortification`, `material`.
+- `RoofDef`: `col`, type, emplacement ids.
+- Library Resources for room features, room prefabs and emplacements (mount ROOM/ROOF,
+  crewing unit, crew, stats).
 
 Each is plain data with its own `validate()`, and cross-references are checked by the
 owner, the same split `NodeDef` / `MapEdgeDef` / `MapDef.validate()` already use.
 
 **Structure prefabs.** A whole structure can be saved to a cross-map library (the
 **Structures** view) and loaded onto another node. Loading checks the prefab's
-requirements against the tile's capacity. The Structures view also holds the room
-prefabs and the feature library.
+requirements against the tile's capacity.
 
 **Drawbridges.** A bridge next to a structure can be marked as a drawbridge controlled by
-that node. Raised, it counts as absent: routes over it are blocked and the link shows no
-passable route. It is controlled from the structure editor, linking a structure to an
-adjacent tile's feature.
+that node. Raised, it counts as absent: routes over it are blocked.
 
 Open questions raised alongside:
-- How long do fortification delays last, and can attackers break them faster with
-  specific units (a ram)?
-- Should interior features have prerequisites beyond points (a well needs a basement or
-  ground floor)?
-- Should approach direction drive which walls attackers engage (only the faces toward their
-  route), and how does that interact with the "why attack a fort" question above?
-- Does manning prefer specific units when several types qualify, and who re-mans a firing
-  point when its crew dies?
+- **Hoarding** is built *onto the outside* of a wall, so it doesn't fit the boundary model
+  cleanly. Proposed model, not built: an **exterior gallery** attached to an upper end
+  wall. It is a thin outside space whose floor behaves like a murder hole over the wall
+  base, and whose outer face behaves like an arrow slit. It would be destructible
+  separately from the wall behind it.
+- How long do fortification delays last, and can specific units (a ram) break them
+  faster?
+- Should sight-blocking also limit what the defenders can see of attackers outside (a
+  closed door hides who is massing behind it)?
 
 ### Bridges
 
@@ -1325,3 +1308,54 @@ chose a pathfinding model with one important constraint:
   will need.
 - The prototype's pathfinder ignores terrain `blocks_unit_classes` for now, since routes
   are unit-agnostic. Per-unit-class routing is open.
+
+### Decision 27 — Structure combat is a 2D side-on plane; boundaries carry defenses; routes are designer defaults the player can change
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-28
+
+**Rationale:** The tile designer prototype briefly modelled structures as a
+compass-oriented footprint (v12), so attackers could arrive along either map axis. On
+review, that adds a lot of authoring and simulation complexity for little gameplay value.
+What a structure fight needs is which boundaries the attackers reach first, the interior
+graph, and firing lines, and none of those need 3D geometry. So:
+- **Every structure fight is one 2D side-on plane.** Ingress and egress are at the left
+  or right end. An angled approach still plays out on this plane.
+- **Each route into a node is assigned an end.** The default comes from map geometry,
+  and the designer sets it per link.
+- **Defenses are boundary properties.** Each wall, floor and roof hatch blocks movement,
+  projectiles and sight, per direction.
+  - Arrow slits, murder holes, portcullises and doors are presets of those properties,
+    not separate mounted objects.
+  - Firing positions follow from the properties and are usable by any ranged unit.
+  - Only true **emplacements** (ballista, trebuchet, oil cauldron) remain separate
+    objects: immobile crewed weapons in a room or on a flat roof.
+- **Routes:**
+  - Authored links are the designer's **default** routes (Decision 26).
+  - The **player can reroute** in play.
+  - Workers plus resources can **build roads** on tiles.
+  - Freeform map design (secondary and tertiary objectives, secrets) is preserved
+    through optional, hidden and play-created routes, rather than by making combat 3D.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Compass-oriented footprint with plan view plus two elevations (prototype v12) | Much heavier authoring and simulation for little gameplay value. The fight only needs which boundaries attackers reach, the interior graph and firing lines, and approach-per-link captures direction without geometry. |
+| Isometric / 3D structure combat | Rejected for the simulation. Kept only as a possible future *presentation* layer rendered from the same 2D data. |
+| Mounted static defenses with per-type firing points (prototype v10–v12) | Arrow slits, murder holes and portcullises are really properties of a wall, floor or door. Modelling them as properties (what they block, from which side) is simpler and more general. |
+| Restrict movement to fixed lanes with no rerouting | Would block the freeform map design the user wants (optional and hidden objectives, player rerouting, road building). |
+
+**Consequences:**
+- Supersedes the v12 footprint model in the spec's "Structure interiors" section, which
+  now describes the side-on plane.
+- Refines Decision 26: links remain the designer's default topology, but the player may
+  reroute, and roads may be built in play. Both need runtime topology changes the sim
+  doesn't support yet.
+- A future structure-combat sim runs on the space/boundary graph. The proposed Godot
+  Resources are `StructureDef`, `SegmentDef`, `BoundaryDef` and `RoofDef`, plus the room
+  feature, room prefab and emplacement libraries.
+- Hoarding (a gallery built onto the outside of a wall) is still open; a model is proposed
+  in "Structure interiors".
+- No Godot code changes now; everything here is prototype-only until the
+  spatial-placement pass.
