@@ -1395,3 +1395,39 @@ renders the designer's output" work can read it.
   designed. Hidden links/routes are also open, and belong to the route work that follows
   Decision 27.
 - No `sim/` or `presentation/` change.
+
+### Decision 29 — Designer maps reach Godot as JSON → typed `.tres`; everything the designer holds becomes real map data
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-28
+
+**Rationale:** The Lane Tile Designer is now the primary map-authoring tool, and the user
+wants Godot to render its maps. The next milestone is a map viewer; playability comes
+after. The user also wants *everything* in the designer to translate into Godot map data.
+The pipeline is:
+1. The designer exports JSON (with a `format` / `format_version` envelope).
+2. The user saves it into the repo.
+3. `DesignerMapImporter` builds typed, validated `.tres` resources, which are what the
+   game loads.
+
+Lanes are derived from the designer's links, per the user: links already define routes
+and a fort's approach directions. Nodes on no lane are kept in `MapDef.off_lane_nodes`.
+`specs/16-designer-map-import.md` covers everything that already had schema. Specs 17
+(map layout, objectives) and 19 (structures) give the remaining designer layers real
+schema, and spec 18 is the viewer. Placeholder art will be committed image files behind
+an art-set resource, so they can be replaced without code changes (the user's request).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| JSON → `.tscn` authoring scene → existing `MapSceneConverter` → `.tres` | Every designer layer (tiles, roads, structures, loss groups) would need a scene-node twin plus conversion code, so there'd be two representations to keep in sync. `.tres` is what the game loads. The `.tscn` tool stays for hand-placed maps. |
+| Author lanes explicitly in the designer | The user chose derivation: links already express routes, so a second lane concept would duplicate them. |
+| Render straight from JSON at runtime | Skips validation and typed data, and every consumer would re-parse loosely typed dictionaries. |
+
+**Consequences:**
+- `NodeType.WAYPOINT` is real (Decision 25's candidate).
+- `MapDef.off_lane_nodes` exists.
+- Designer exports must carry the envelope; breaking changes bump `format_version`.
+- `main.gd` still loads `p_f_F_c`. Playing a designer map needs `sim/` generalisation
+  (milestone 2).
