@@ -339,6 +339,16 @@ note: they become an immobile "defense" unit type after the Combatant unificatio
 - **Roofs** are flat, pitched or open, and never use a level or stability. Only flat roofs
   take emplacements, and only when reachable through a roof hatch or stairs.
 - **Basements**: a tile's **dig depth** (terrain default) caps how far down you can dig.
+  A basement is dug down from a room above, *or* tunnelled sideways from a neighbouring
+  basement at the same level, so there doesn't need to be a room above it. Every basement
+  must still connect back to something above ground.
+- **Walkways**: a segment above ground with nothing under it, spanning between towers
+  (e.g. a bridge between two keeps at level 2).
+  - It holds no furniture or emplacements.
+  - It opens onto the towers at either end.
+  - It is flagged unless it is anchored on both sides.
+  - Filling in the column beneath it turns it into a normal room.
+- **Roofs** sit directly on each column's top room, not at a fixed height.
 - **Walls** have a material (timber, stone, reinforced stone; stub HP ×1/×2/×3).
 
 **Reachability.** Entrances are passable end walls at ground level. Defenders pass door
