@@ -3,6 +3,7 @@ extends GdUnitTestSuite
 const NodeDef = preload("res://content/definitions/node_def.gd")
 const LaneDef = preload("res://content/definitions/lane_def.gd")
 const MapDef = preload("res://content/definitions/map_def.gd")
+const MapEdgeDef = preload("res://content/definitions/map_edge_def.gd")
 
 
 func _make_origin_node(id: String) -> NodeDef:
@@ -12,13 +13,22 @@ func _make_origin_node(id: String) -> NodeDef:
 	return node
 
 
-func _valid_lane() -> LaneDef:
+func _valid_lane(
+	lane_id: String = "main", node_a_id: String = "home", node_b_id: String = "core"
+) -> LaneDef:
 	var lane := LaneDef.new()
-	lane.id = "main"
-	var nodes: Array[NodeDef] = [_make_origin_node("home"), _make_origin_node("core")]
+	lane.id = lane_id
+	var nodes: Array[NodeDef] = [_make_origin_node(node_a_id), _make_origin_node(node_b_id)]
 	lane.nodes = nodes
 	lane.player_home_index = 0
 	return lane
+
+
+func _edge(node_a_id: String, node_b_id: String) -> MapEdgeDef:
+	var edge := MapEdgeDef.new()
+	edge.node_a_id = node_a_id
+	edge.node_b_id = node_b_id
+	return edge
 
 
 func test_valid_map_def_has_no_errors() -> void:
@@ -77,3 +87,47 @@ func test_invalid_child_lane_error_is_aggregated() -> void:
 		assert_bool(Array(errors).any(func(message): return message.contains("player_home_index")))
 		. is_true()
 	)
+
+
+func test_edge_referencing_nonexistent_node_id_is_invalid() -> void:
+	var map := MapDef.new()
+	var lanes: Array[LaneDef] = [_valid_lane("main", "p", "f")]
+	map.lanes = lanes
+	map.tick_duration_seconds = 2.0
+	map.suspicion_tier_thresholds = [25, 50, 75, 90]
+	var edges: Array[MapEdgeDef] = [_edge("p", "ghost")]
+	map.edges = edges
+
+	var errors := map.validate()
+
+	assert_array(errors).is_not_empty()
+	assert_bool(Array(errors).any(func(m): return m.contains("ghost"))).is_true()
+
+
+func test_duplicate_edge_either_order_is_invalid() -> void:
+	var map := MapDef.new()
+	var lanes: Array[LaneDef] = [_valid_lane("main", "p", "f")]
+	map.lanes = lanes
+	map.tick_duration_seconds = 2.0
+	map.suspicion_tier_thresholds = [25, 50, 75, 90]
+	var edges: Array[MapEdgeDef] = [_edge("p", "f"), _edge("f", "p")]
+	map.edges = edges
+
+	var errors := map.validate()
+
+	assert_array(errors).is_not_empty()
+	assert_bool(Array(errors).any(func(m): return m.contains("duplicate"))).is_true()
+
+
+func test_valid_edge_across_two_lanes_has_no_errors() -> void:
+	var map := MapDef.new()
+	var lanes: Array[LaneDef] = [
+		_valid_lane("a", "a_home", "a_core"), _valid_lane("b", "b_home", "b_core")
+	]
+	map.lanes = lanes
+	map.tick_duration_seconds = 2.0
+	map.suspicion_tier_thresholds = [25, 50, 75, 90]
+	var edges: Array[MapEdgeDef] = [_edge("a_home", "b_home")]
+	map.edges = edges
+
+	assert_array(map.validate()).is_empty()

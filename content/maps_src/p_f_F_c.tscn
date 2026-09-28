@@ -1,0 +1,83 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://content/authoring/map_scene_root.gd" id="1_root"]
+[ext_resource type="Script" path="res://content/authoring/map_lane_root.gd" id="2_lane"]
+[ext_resource type="Script" path="res://content/authoring/map_node_marker.gd" id="3_marker"]
+[ext_resource type="Script" path="res://content/definitions/node_def.gd" id="4_node"]
+
+[sub_resource type="Resource" id="Resource_node_p"]
+script = ExtResource("4_node")
+id = "p"
+node_type = 0
+garrison = 0
+
+[sub_resource type="Resource" id="Resource_node_f"]
+script = ExtResource("4_node")
+id = "f"
+node_type = 1
+garrison = 0
+yield_food_per_tick = 6
+decay_interval_ticks = 5
+decay_floor_food = 2
+ravage_yield_food = 40
+
+[sub_resource type="Resource" id="Resource_node_F"]
+script = ExtResource("4_node")
+id = "F"
+node_type = 2
+garrison = 1
+garrison_hp = 26
+garrison_dmg = 6
+dismantle_wood_yield = 8
+dismantle_stone_yield = 5
+fortify_wood_cost = 10
+fortify_stone_cost = 6
+
+[sub_resource type="Resource" id="Resource_node_midpoint"]
+script = ExtResource("4_node")
+id = "midpoint"
+node_type = 0
+garrison = 0
+
+[sub_resource type="Resource" id="Resource_node_c"]
+script = ExtResource("4_node")
+id = "c"
+node_type = 0
+garrison = 0
+
+[node name="PfFc" type="Node2D"]
+script = ExtResource("1_root")
+tick_duration_seconds = 1.5
+suspicion_tier_thresholds = Array[int]([20, 45, 70, 90])
+suspicion_decay_per_tick = 2
+output_tres_path = "res://content/maps/p_f_F_c.tres"
+
+[node name="main" type="Node2D" parent="."]
+script = ExtResource("2_lane")
+lane_id = "main"
+
+[node name="p" type="Marker2D" parent="main"]
+position = Vector2(0, 0)
+script = ExtResource("3_marker")
+node_def = SubResource("Resource_node_p")
+player_home = true
+
+[node name="f" type="Marker2D" parent="main"]
+position = Vector2(160, 0)
+script = ExtResource("3_marker")
+node_def = SubResource("Resource_node_f")
+
+[node name="F" type="Marker2D" parent="main"]
+position = Vector2(320, 0)
+script = ExtResource("3_marker")
+node_def = SubResource("Resource_node_F")
+
+[node name="midpoint" type="Marker2D" parent="main"]
+position = Vector2(480, 0)
+script = ExtResource("3_marker")
+node_def = SubResource("Resource_node_midpoint")
+
+[node name="c" type="Marker2D" parent="main"]
+position = Vector2(640, 0)
+script = ExtResource("3_marker")
+node_def = SubResource("Resource_node_c")

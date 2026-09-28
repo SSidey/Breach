@@ -28,6 +28,7 @@ these shapes, so they need to exist and be validated first.
   (`yield_food_per_tick: int`, `decay_interval_ticks: int`, `decay_floor_food: int`) that
   are only required when `node_type == RESOURCE`. Also carries a `structure_slots: int`
   field per Decision 4 (unused this slice, kept for the future Option 2 pass).
+  *(Since removed: superseded by the tile capacity model, `specs/14-structure-slots-removal.md`, Decision 25.)*
   **Added in Phase 3 item 4** (`specs/02-lane-movement-and-combat.md`, Decision 11):
   `garrison_hp: int`, `garrison_dmg: int` — the pooled blocker stats
   `CombatResolver` actually fights against, required whenever `garrison > 0`.
@@ -140,7 +141,7 @@ Scenario: A MapDef aggregates its nodes' own validation errors
   Real values are authored in `specs/06-map-content-p-f-F-c.md` once this schema exists.
 - `structure_slots` on `NodeDef` is present but unvalidated in this pass (no rule yet
   for what a valid slot count is, since nothing consumes it until a future Option 2
-  pass per Decision 4) — deliberately not over-specified ahead of need.
+  pass per Decision 4) — deliberately not over-specified ahead of need. *(Since removed: `specs/14-structure-slots-removal.md`, Decision 25.)*
 
 ## Rubric answers (qualitative, spec-baseline)
 

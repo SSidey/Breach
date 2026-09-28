@@ -27,7 +27,7 @@ invisible to the player; it exists purely to unblock item 3 and beyond.
   authoring identifier; needed once array index is no longer globally unique once
   lanes exist) and `position: Vector2` (rendering-only; `sim/` logic must never read
   it — same "authored but currently unconsumed by sim" precedent as the existing
-  unused `structure_slots` field). `NodeType` enum gains `NEUTRAL`, appended
+  unused `structure_slots` field, since removed by `specs/14-structure-slots-removal.md`). `NodeType` enum gains `NEUTRAL`, appended
   (never inserted — `.tres` files store the raw ordinal, and inserting would
   silently reinterpret existing content). `validate()` gains an `id`-non-empty
   check.
