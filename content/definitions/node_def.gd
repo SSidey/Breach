@@ -56,6 +56,13 @@ enum ResourceType { FOOD, WOOD, STONE, METAL, CRYSTAL }
 ## base" on the same node - a known, documented tension, not resolved here.
 @export var owning_faction_id: String = ""
 
+## Factions that do not know this node exists at map start - secret and secondary
+## objectives, per specs/15-node-hidden-from-factions.md (Decision 28). Empty = known to
+## every faction. Cross-referenced against the map's faction roster in MapDef.validate().
+## Authored, not yet read by sim/ or presentation/; how a hidden node gets revealed
+## (scouting, events) is not designed yet.
+@export var hidden_from_faction_ids: Array[String] = []
+
 ## Pooled blocker stats CombatResolver fights against, required when garrison > 0.
 ## See specs/02-lane-movement-and-combat.md, Decision 11 - `garrison` is a
 ## presence/count check, these are the real combat numbers.
@@ -120,7 +127,22 @@ func validate() -> PackedStringArray:
 		errors.append("total_reserves must be >= 0, got %d" % total_reserves)
 	if not garrison_units.is_empty() and garrison <= 0:
 		errors.append("garrison_units requires garrison > 0, got %d" % garrison)
+	errors.append_array(_validate_garrison_units_and_hidden_from())
+	return errors
+
+
+## Per-entry checks for the two faction-referencing lists. Local checks only; existence
+## against the map's node ids and faction roster is MapDef's job.
+func _validate_garrison_units_and_hidden_from() -> PackedStringArray:
+	var errors := PackedStringArray()
 	for unit in garrison_units:
 		for unit_error in unit.validate():
 			errors.append(unit_error)
+	var seen := {}
+	for faction_id in hidden_from_faction_ids:
+		if faction_id.is_empty():
+			errors.append("hidden_from_faction_ids must not contain an empty faction id")
+		elif seen.has(faction_id):
+			errors.append("hidden_from_faction_ids lists '%s' more than once" % faction_id)
+		seen[faction_id] = true
 	return errors

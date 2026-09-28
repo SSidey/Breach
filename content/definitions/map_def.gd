@@ -104,7 +104,21 @@ func _validate_node_references(node_ids: Dictionary, faction_ids: Dictionary) ->
 						% [node.id, node.owning_faction_id]
 					)
 				)
+			errors.append_array(_validate_hidden_from(node, faction_ids))
 			errors.append_array(_validate_garrison_units(node, node_ids, faction_ids))
+	return errors
+
+
+func _validate_hidden_from(node: NodeDef, faction_ids: Dictionary) -> PackedStringArray:
+	var errors := PackedStringArray()
+	for hidden_id in node.hidden_from_faction_ids:
+		if not hidden_id.is_empty() and not faction_ids.has(hidden_id):
+			errors.append(
+				(
+					"node '%s' hidden_from_faction_ids references unknown faction id '%s'"
+					% [node.id, hidden_id]
+				)
+			)
 	return errors
 
 

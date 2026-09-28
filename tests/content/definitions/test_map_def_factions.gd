@@ -144,6 +144,29 @@ func test_owning_faction_id_referencing_nonexistent_faction_is_invalid() -> void
 	assert_bool(Array(errors).any(func(m): return m.contains("ghost_faction"))).is_true()
 
 
+func test_hidden_from_unknown_faction_is_invalid() -> void:
+	var lane := _valid_lane()
+	lane.nodes[1].hidden_from_faction_ids = ["ghost_faction"]
+	var map := _map_with_lane(lane)
+	var factions: Array[FactionDef] = [_faction("player")]
+	map.factions = factions
+
+	var errors := map.validate()
+
+	assert_array(errors).is_not_empty()
+	assert_bool(Array(errors).any(func(m): return m.contains("ghost_faction"))).is_true()
+
+
+func test_hidden_from_declared_faction_is_valid() -> void:
+	var lane := _valid_lane()
+	lane.nodes[1].hidden_from_faction_ids = ["the_kingdom"]
+	var map := _map_with_lane(lane)
+	var factions: Array[FactionDef] = [_faction("player"), _faction("the_kingdom")]
+	map.factions = factions
+
+	assert_array(map.validate()).is_empty()
+
+
 func test_faction_relations_error_is_aggregated() -> void:
 	var relation := FactionRelationDef.new()
 	relation.faction_a_id = "player"

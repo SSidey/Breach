@@ -20,6 +20,37 @@ func test_resource_node_without_yield_is_invalid() -> void:
 	)
 
 
+func test_default_hidden_from_faction_ids_is_valid() -> void:
+	var node := NodeDef.new()
+	node.node_type = NodeDef.NodeType.ORIGIN
+	node.id = "home"
+
+	assert_array(node.hidden_from_faction_ids).is_empty()
+	assert_array(node.validate()).is_empty()
+
+
+func test_empty_hidden_from_faction_id_is_invalid() -> void:
+	var node := NodeDef.new()
+	node.node_type = NodeDef.NodeType.ORIGIN
+	node.id = "home"
+	node.hidden_from_faction_ids = [""]
+
+	var errors := node.validate()
+
+	assert_bool(Array(errors).any(func(m): return m.contains("hidden_from_faction_ids"))).is_true()
+
+
+func test_duplicate_hidden_from_faction_id_is_invalid() -> void:
+	var node := NodeDef.new()
+	node.node_type = NodeDef.NodeType.ORIGIN
+	node.id = "home"
+	node.hidden_from_faction_ids = ["the_kingdom", "the_kingdom"]
+
+	var errors := node.validate()
+
+	assert_bool(Array(errors).any(func(m): return m.contains("the_kingdom"))).is_true()
+
+
 func test_structure_slots_is_removed() -> void:
 	# Superseded by the tile capacity + segment-profile model (Decision 25, specs/14).
 	var node := NodeDef.new()
