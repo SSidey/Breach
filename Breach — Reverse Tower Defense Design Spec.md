@@ -1477,3 +1477,36 @@ to retire the artifact.
 - The designer's Python server has stdlib `unittest` tests, run by pre-commit and CI.
   The browser code itself is verified by hand and with Playwright; there is no JS test
   harness in the repo.
+
+### Decision 31 — The map viewer comes before the layout schema; placeholder art is committed files behind `MapArtSet`
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-29
+
+**Rationale:** With the import and the local designer app in place, a designer map
+reaches Godot as a `.tres` that can only be read as Inspector text. The user chose to
+build the map viewer before the layout schema (tiles, roads, routes, loss criteria), so a
+map can be *seen* straight away. The viewer draws everything `MapDef` already holds, and
+spec 19's layers become extra draw passes when they arrive. The user asked earlier that
+placeholder art be committed, replaceable files. So the viewer reads a `MapArtSet`
+resource whose default points at generated SVGs in `assets/placeholder/map/`, and any
+empty slot falls back to the same shape drawn in code.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Layout schema first (the order Decision 30 recorded) | The user chose to see maps first; the viewer doesn't depend on the layout schema. |
+| Code-drawn shapes only | The user wants art they can replace without touching code. |
+| Extend `main.tscn` / `LaneView` to draw designer maps | Those belong to the playable P-f-F-c slice; playing a designer map needs `sim/` generalisation (milestone 2). A separate viewer keeps the slice untouched. |
+
+**Consequences:**
+- Specs are renumbered by creation order: viewer → `specs/18-map-viewer.md`, layout and
+  objectives → spec 19, structures → spec 20. The importer's "not imported yet" warning
+  says "specs 19/20".
+- `presentation/` gains `MapViewModel` (pure, tested), `MapArtSet`, `MapDetails`,
+  `MapView` (`@tool`) and the `map_viewer.tscn` app. The designer's **View in Godot**
+  button opens it on the saved map.
+- Owner colours follow `MapDef.factions` order. A stored `FactionDef.color`, which would
+  match the designer exactly, remains an open choice.
+- The Python pre-commit hook now also covers `tools/` (the placeholder generator).

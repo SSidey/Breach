@@ -7,7 +7,7 @@ class_name DesignerMapImporter
 ## units and hidden_from_faction_ids) via DesignerNodeBuilder, factions, relations, and
 ## links (lanes + edges + off-lane nodes) via DesignerLaneDeriver. Prototype-only
 ## sections (tiles, roads, structures, loss groups, route geometry) are reported as
-## warnings until specs 18/20 give them real schema.
+## warnings until specs 19/20 give them real schema.
 
 const MapDef = preload("res://content/definitions/map_def.gd")
 const FactionDef = preload("res://content/definitions/faction_def.gd")
@@ -131,4 +131,4 @@ static func _warn_not_imported(export_data: Dictionary, warnings: PackedStringAr
 	if export_data.get("links", []).any(func(l): return not l.get("route", []).is_empty()):
 		skipped.append("link routes")
 	if not skipped.is_empty():
-		warnings.append("not imported yet (specs 18/20): " + ", ".join(skipped))
+		warnings.append("not imported yet (specs 19/20): " + ", ".join(skipped))
