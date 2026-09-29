@@ -20,6 +20,17 @@ func test_resource_node_without_yield_is_invalid() -> void:
 	)
 
 
+func test_waypoint_node_validates_with_no_type_specific_fields() -> void:
+	var node := NodeDef.new()
+	node.node_type = NodeDef.NodeType.WAYPOINT
+	node.id = "w1"
+
+	assert_array(node.validate()).is_empty()
+	# Appended, never inserted: .tres files store the raw ordinal.
+	assert_int(NodeDef.NodeType.WAYPOINT).is_equal(NodeDef.NodeType.size() - 1)
+	assert_int(NodeDef.NodeType.NEUTRAL).is_equal(3)
+
+
 func test_default_hidden_from_faction_ids_is_valid() -> void:
 	var node := NodeDef.new()
 	node.node_type = NodeDef.NodeType.ORIGIN

@@ -6,7 +6,9 @@ extends Resource
 
 ## NEUTRAL appended (Phase 4 item 2), never inserted - .tres files store the raw
 ## ordinal, and inserting would silently reinterpret already-authored content.
-enum NodeType { ORIGIN, RESOURCE, FORT, NEUTRAL }
+## WAYPOINT appended per specs/16-designer-map-import.md (Decision 25's candidate): a
+## pure routing point with no type-specific validation.
+enum NodeType { ORIGIN, RESOURCE, FORT, NEUTRAL, WAYPOINT }
 
 ## Append-only, per specs/12-node-schema-round-3.md. Matches EconomySystem._pools'
 ## existing five keys. Authored ahead of any node using anything but FOOD - a real

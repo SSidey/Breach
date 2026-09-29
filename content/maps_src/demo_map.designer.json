@@ -1,0 +1,59 @@
+{
+  "format": "breach-designer-map",
+  "format_version": 1,
+  "cell_size": 64,
+  "map_name": "P-f-F-c (branch test)",
+  "grid": { "cols": 12, "rows": 5 },
+  "default_terrain": "FIELDS",
+  "factions": [
+    { "id": "player", "display_name": "Player" },
+    { "id": "kingdom", "display_name": "The Kingdom", "stub_suspicion_ramp": "3/tick" }
+  ],
+  "faction_relations": [ { "a": "player", "b": "kingdom", "stance": "HOSTILE" } ],
+  "loss_criteria": [ { "faction_id": "player", "name": "Home", "rule": "ANY", "node_ids": ["p"] } ],
+  "nodes": [
+    { "id": "p", "node_type": "ORIGIN", "is_critical_asset": true, "owning_faction_id": "player", "hidden_from_faction_ids": [],
+      "grid_position": { "row": 2, "col": 1 }, "fields": {}, "garrison_count": 0, "garrison_units": [],
+      "structure": { "archetype": "WATCHTOWER", "segments": [] } },
+    { "id": "f", "node_type": "RESOURCE", "is_critical_asset": false, "owning_faction_id": null, "hidden_from_faction_ids": [],
+      "grid_position": { "row": 2, "col": 4 },
+      "fields": { "yield_food_per_tick": 6, "decay_interval_ticks": 5, "decay_floor_food": 2, "ravage_yield_food": 40,
+                  "resource_type": "FOOD", "is_inexhaustible": true, "total_reserves": 0 },
+      "garrison_count": 0, "garrison_units": [] },
+    { "id": "F", "node_type": "FORT", "is_critical_asset": false, "owning_faction_id": "kingdom", "hidden_from_faction_ids": [],
+      "grid_position": { "row": 2, "col": 6 },
+      "fields": { "garrison_hp": 26, "garrison_dmg": 6, "dismantle_wood_yield": 8, "dismantle_stone_yield": 5,
+                  "fortify_wood_cost": 10, "fortify_stone_cost": 6, "capture_reward": "" },
+      "garrison_count": 2,
+      "garrison_units": [
+        { "_display_label": "Guard", "faction_id": "", "can_sortie": false, "patrol_route": ["s2"], "delivery_target_id": "" },
+        { "_display_label": "Guard", "faction_id": "kingdom", "can_sortie": false, "patrol_route": [], "delivery_target_id": "" }
+      ] },
+    { "id": "c", "node_type": "ORIGIN", "is_critical_asset": true, "owning_faction_id": null, "hidden_from_faction_ids": [],
+      "grid_position": { "row": 2, "col": 9 }, "fields": {}, "garrison_count": 0, "garrison_units": [] },
+    { "id": "s2", "node_type": "FORT", "is_critical_asset": false, "owning_faction_id": "kingdom", "hidden_from_faction_ids": ["player"],
+      "grid_position": { "row": 0, "col": 3 },
+      "fields": { "garrison_hp": 60, "garrison_dmg": 14, "dismantle_wood_yield": 16, "dismantle_stone_yield": 12,
+                  "fortify_wood_cost": 20, "fortify_stone_cost": 14, "capture_reward": "" },
+      "garrison_count": 1,
+      "garrison_units": [
+        { "_display_label": "Knight", "faction_id": "kingdom", "can_sortie": true, "patrol_route": ["F"], "delivery_target_id": "" }
+      ] },
+    { "id": "w1", "node_type": "WAYPOINT", "is_critical_asset": false, "owning_faction_id": null, "hidden_from_faction_ids": [],
+      "grid_position": { "row": 0, "col": 6 }, "fields": { "capture_reward": "" }, "garrison_count": 0, "garrison_units": [] }
+  ],
+  "tiles": [ { "grid_position": { "row": 3, "col": 2 }, "terrain": "FOREST" } ],
+  "roads": [ { "a": { "row": 2, "col": 1 }, "b": { "row": 2, "col": 2 } } ],
+  "links": [
+    { "a": "p", "b": "f", "route_found": true, "route_cost": 3, "route": [] },
+    { "a": "f", "b": "F", "route_found": true, "route_cost": 2, "route": [] },
+    { "a": "F", "b": "c", "route_found": true, "route_cost": 3, "route": [] },
+    { "a": "p", "b": "s2", "route_found": true, "route_cost": 3, "route": [] },
+    { "a": "s2", "b": "w1", "route_found": true, "route_cost": 3, "route": [] },
+    { "a": "w1", "b": "F", "route_found": true, "route_cost": 2, "route": [] }
+  ],
+  "terrain_library": [],
+  "feature_library": [],
+  "validation_warnings": [],
+  "note": "fixture: the designer's seed demo map with a Kingdom faction added"
+}

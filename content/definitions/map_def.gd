@@ -15,6 +15,12 @@ extends Resource
 ## behavior change for any map that doesn't use branching.
 @export var edges: Array[MapEdgeDef] = []
 
+## Nodes that exist on the map but sit on no lane path - side objectives, secret
+## caches, branch waypoints - per specs/16-designer-map-import.md, so importing a
+## designer map never drops a node. Reachable only through edges (or not at all).
+## Validated and cross-referenced exactly like lane nodes. Defaults empty.
+@export var off_lane_nodes: Array[NodeDef] = []
+
 ## Additive, per specs/13-faction-def-and-garrison-unit.md. sim/'s existing ad-hoc
 ## String ownership is not migrated to this - that's separate, future work.
 @export var faction_relations: Array[FactionRelationDef] = []
@@ -70,6 +76,9 @@ func _validate_lanes() -> PackedStringArray:
 	for lane in lanes:
 		for lane_error in lane.validate():
 			errors.append(lane_error)
+	for node in off_lane_nodes:
+		for node_error in node.validate():
+			errors.append("off-lane node '%s': %s" % [node.id, node_error])
 	return errors
 
 
@@ -92,20 +101,16 @@ func _validate_edges(node_ids: Dictionary) -> PackedStringArray:
 
 func _validate_node_references(node_ids: Dictionary, faction_ids: Dictionary) -> PackedStringArray:
 	var errors := PackedStringArray()
-	for lane in lanes:
-		for node in lane.nodes:
-			if (
-				not node.owning_faction_id.is_empty()
-				and not faction_ids.has(node.owning_faction_id)
-			):
-				errors.append(
-					(
-						"node '%s' owning_faction_id references unknown faction id '%s'"
-						% [node.id, node.owning_faction_id]
-					)
+	for node in _all_nodes():
+		if not node.owning_faction_id.is_empty() and not faction_ids.has(node.owning_faction_id):
+			errors.append(
+				(
+					"node '%s' owning_faction_id references unknown faction id '%s'"
+					% [node.id, node.owning_faction_id]
 				)
-			errors.append_array(_validate_hidden_from(node, faction_ids))
-			errors.append_array(_validate_garrison_units(node, node_ids, faction_ids))
+			)
+		errors.append_array(_validate_hidden_from(node, faction_ids))
+		errors.append_array(_validate_garrison_units(node, node_ids, faction_ids))
 	return errors
 
 
@@ -174,11 +179,20 @@ func _validate_faction_relations(faction_ids: Dictionary) -> PackedStringArray:
 	return errors
 
 
+## Every node on the map: lane nodes (a node shared by several lanes appears once per
+## lane) followed by off_lane_nodes.
+func _all_nodes() -> Array[NodeDef]:
+	var nodes: Array[NodeDef] = []
+	for lane in lanes:
+		nodes.append_array(lane.nodes)
+	nodes.append_array(off_lane_nodes)
+	return nodes
+
+
 func _all_node_ids() -> Dictionary:
 	var ids := {}
-	for lane in lanes:
-		for node in lane.nodes:
-			ids[node.id] = true
+	for node in _all_nodes():
+		ids[node.id] = true
 	return ids
 
 
