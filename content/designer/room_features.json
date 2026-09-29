@@ -1,0 +1,41 @@
+{
+  "features": [
+    {
+      "id": "BUNKS",
+      "label": "Bunks",
+      "cost": 1,
+      "effect": "rest 4 units"
+    },
+    {
+      "id": "HEARTH",
+      "label": "Hearth",
+      "cost": 1,
+      "effect": "warmth and morale"
+    },
+    {
+      "id": "STORAGE_RACKS",
+      "label": "Storage racks",
+      "cost": 1,
+      "effect": "+10 siege supply"
+    },
+    {
+      "id": "ARMOURY_RACK",
+      "label": "Armoury rack",
+      "cost": 2,
+      "effect": "arms 4 units"
+    },
+    {
+      "id": "WELL",
+      "label": "Well",
+      "cost": 3,
+      "effect": "water through a siege"
+    },
+    {
+      "id": "KITCHEN",
+      "label": "Kitchen",
+      "cost": 5,
+      "effect": "feeds 20 through a siege"
+    }
+  ],
+  "feature_points_per_segment": 5
+}

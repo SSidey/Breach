@@ -9,3 +9,6 @@
 # Python-based pre-commit tooling (gdtoolkit, pre-commit itself)
 __pycache__/
 *.pyc
+
+# Designer app: per-machine Godot path (tools/designer/README.md)
+tools/designer/local_config.json

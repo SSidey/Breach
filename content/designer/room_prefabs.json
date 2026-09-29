@@ -1,0 +1,49 @@
+[
+  {
+    "id": "BARRACKS",
+    "label": "Barracks",
+    "features": [
+      "BUNKS",
+      "BUNKS",
+      "BUNKS",
+      "BUNKS",
+      "BUNKS"
+    ]
+  },
+  {
+    "id": "KITCHEN",
+    "label": "Kitchen",
+    "features": [
+      "KITCHEN"
+    ]
+  },
+  {
+    "id": "STOREROOM",
+    "label": "Storeroom",
+    "features": [
+      "STORAGE_RACKS",
+      "STORAGE_RACKS",
+      "STORAGE_RACKS",
+      "STORAGE_RACKS",
+      "STORAGE_RACKS"
+    ]
+  },
+  {
+    "id": "GATEHOUSE",
+    "label": "Gatehouse",
+    "features": [
+      "HEARTH",
+      "ARMOURY_RACK"
+    ]
+  },
+  {
+    "id": "GUARDROOM",
+    "label": "Guardroom",
+    "features": [
+      "ARMOURY_RACK",
+      "BUNKS",
+      "BUNKS",
+      "HEARTH"
+    ]
+  }
+]

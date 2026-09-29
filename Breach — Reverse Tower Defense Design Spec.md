@@ -1431,3 +1431,49 @@ an art-set resource, so they can be replaced without code changes (the user's re
 - Designer exports must carry the envelope; breaking changes bump `format_version`.
 - `main.gd` still loads `p_f_F_c`. Playing a designer map needs `sim/` generalisation
   (milestone 2).
+
+### Decision 30 — The designer is a local app in the repo; saving writes the source JSON and runs the Godot import
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-28
+
+**Rationale:** Decision 29's workflow ended in copy-paste: export in the claude.ai
+artifact, paste into a repo file, then run the import by hand. The user wants the designer
+to behave like a real application. It saves straight into the repo, every save also runs
+the translation, and the saved file reopens in the designer. An artifact can't write files
+or run programs. So the designer moves into the repo (`tools/designer/`) and is served by a
+small standard-library Python server bound to `127.0.0.1` (`tools/designer/serve.py`).
+Saving writes `content/maps_src/<name>.designer.json` and runs
+`tools/import_designer_map.gd` to produce `content/maps/<name>.tres`. The import's
+warnings and errors are shown in the designer.
+
+The saved file *is* the export, and the designer rebuilds its state from it
+(`loadFromExport`), so there is one source of truth and no private designer-state blob to
+drift from what Godot reads. The designer's libraries (factions, terrain, emplacements,
+room features and prefabs, structure prefabs) become repo data in `content/designer/*.json`
+rather than browser storage. The user chose all of this before the viewer work, and chose
+to retire the artifact.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep the artifact; the browser saves via the File System Access API | Chromium-only, a permission prompt per session, and it still can't run the Godot import, so the translation would stay a manual step. |
+| Designer as a Godot editor plugin | A rewrite of a large working HTML tool into Godot UI; much slower to iterate on. |
+| Save a designer-state blob alongside the export | Two representations of one map that can disagree; the export already carries everything the designer can set. |
+| Libraries stay in browser storage | Not shared between machines or visible in review; the user chose repo JSON. |
+
+**Consequences:**
+- Run: `python tools/designer/serve.py` (Godot from `--godot`, `GODOT_BIN`, or the
+  gitignored `tools/designer/local_config.json`). Without Godot, saving still writes the
+  JSON and the designer says the import didn't run.
+- The claude.ai artifact is retired: once this merges, it's republished as a read-only
+  snapshot pointing here, with a "Copy libraries JSON" button whose output the local app's
+  "Import libraries…" accepts. Browser storage is per-origin, so the artifact's libraries
+  can't be read directly.
+- Loading a map merges in any library entries it uses that the local library lacks.
+- The remaining render-plan specs are renumbered: map layout and objectives → spec 18,
+  map viewer → spec 19, structures → spec 20 (Decision 29 named them 17/18/19).
+- The designer's Python server has stdlib `unittest` tests, run by pre-commit and CI.
+  The browser code itself is verified by hand and with Playwright; there is no JS test
+  harness in the repo.

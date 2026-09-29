@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lane Tile Designer</title>
+<link rel="stylesheet" href="designer.css" />
+</head>
+<body>
+
+<div class="app">
+
+  <header class="top">
+    <div class="title-block">
+      <h1>Lane Tile Designer</h1>
+      <span class="subtitle">map authoring &mdash; Save writes content/maps_src/&lt;name&gt;.designer.json and imports it to content/maps/&lt;name&gt;.tres</span>
+    </div>
+    <span class="status" id="saveStatus">restored from last session</span>
+  </header>
+
+  <nav class="view-bar" aria-label="Designer views">
+    <button class="view-btn" data-view="lanes" data-active="true" type="button">Lanes</button>
+    <button class="view-btn" data-view="factions" type="button">Factions</button>
+    <button class="view-btn" data-view="terrain" type="button">Terrain</button>
+    <button class="view-btn" type="button" disabled title="Planned designer view">Units<span class="later">later</span></button>
+    <button class="view-btn" type="button" disabled title="Planned designer view">Squads<span class="later">later</span></button>
+    <button class="view-btn" data-view="structures" type="button">Structures</button>
+    <button class="view-btn" data-view="defenses" type="button">Static defenses</button>
+  </nav>
+
+  <!-- ================= LANES VIEW ================= -->
+  <section class="view" id="viewLanes">
+    <div class="toolbar">
+      <div class="field"><label for="mapName">Map</label><input type="text" id="mapName" value="P-f-F-c (branch test)" /></div>
+      <div class="field"><label for="cols">Cols</label><input type="number" id="cols" min="4" max="24" value="12" /></div>
+      <div class="field"><label for="rows">Rows</label><input type="number" id="rows" min="3" max="16" value="7" /></div>
+      <div class="field"><label for="defaultTerrain">Base terrain</label><select id="defaultTerrain"></select></div>
+      <div class="field"><label for="viewAs">View as</label><select id="viewAs"></select></div>
+      <button class="btn" id="resizeBtn" type="button">Resize grid</button>
+      <button class="btn ghost" id="newMapBtn" type="button">New map&hellip;</button>
+      <button class="btn ghost" id="clearBtn" type="button">Clear all</button>
+      <div class="spacer"></div>
+      <div class="counts" id="countChips"></div>
+      <button class="btn primary" id="exportBtn" type="button">Export shape &rarr;</button>
+    </div>
+
+    <div class="workspace">
+
+      <!-- Palette -->
+      <div class="palette-col">
+        <div class="tab-bar">
+          <button class="tab-btn" data-tab="place" data-active="true" type="button">Place</button>
+          <button class="tab-btn" data-tab="world" type="button">World</button>
+        </div>
+
+        <div class="tab-pane" id="tabPlace">
+          <div class="panel">
+            <h2>Tools</h2>
+            <div class="tool-grid">
+              <div class="tool" data-tool="select" data-active="true" tabindex="0">
+                <div class="glyph" style="background:var(--ink-dim)">&#8592;</div>
+                <div class="label">Select</div>
+              </div>
+              <div class="tool" data-tool="eraser" tabindex="0">
+                <div class="glyph" style="background:var(--ink-dim)">&times;</div>
+                <div class="label">Erase layer</div>
+              </div>
+              <div class="tool" data-tool="NODE" draggable="true" tabindex="0">
+                <div class="glyph tile NEUTRAL">N</div>
+                <div class="label">Node</div>
+              </div>
+              <div class="tool" data-tool="ROAD" tabindex="0">
+                <div class="glyph" style="background:var(--road)">&#9552;</div>
+                <div class="label">Road</div>
+              </div>
+              <div class="tool wide" data-tool="link" tabindex="0">
+                <div class="glyph" style="background:var(--good)">&#8646;</div>
+                <div class="label">Link two nodes (click, then click again)</div>
+              </div>
+            </div>
+            <div class="field" style="margin-top:8px;">
+              <label for="placementFaction">Place as</label>
+              <select id="placementFaction"></select>
+            </div>
+            <p class="hint">A Node is generic &mdash; set its type in the Inspector. A Waypoint node is a routing point (small dot) that a link&rsquo;s route must pass through. Road: drag from cell to neighbouring cell (diagonals too) &mdash; only cells you drag between are connected. Erase removes the top layer first: node, upgrades, roads, bridge, feature, terrain Erase removes the top layer first: node, upgrades, roads, bridge, feature, terrain.mdash; or pick layers in the Erase row under the map to remove only those. Link two linked nodes again to unlink them, or use Erase removes the top layer first: node, upgrades, roads, bridge, feature, terrain.times; in a nodeErase removes the top layer first: node, upgrades, roads, bridge, feature, terrain.rsquo;s Inspector.</p>
+          </div>
+
+          <div class="panel">
+            <h2>Structure presets</h2>
+            <div class="preset-list" id="presetList"></div>
+            <p class="hint">Selecting a preset arms the Node tool pre-filled with a type, values and structure class.</p>
+          </div>
+
+          <div class="panel">
+            <h2>Garrison units</h2>
+            <div class="unit-list" id="unitList"></div>
+            <p class="hint">Drag onto a selected node's garrison, or click it while a node is selected. Each becomes its own assignment (faction, sortie, patrol, delivery).</p>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tabWorld" hidden>
+          <div class="panel">
+            <h2>Factions on this map</h2>
+            <div class="faction-list" id="factionRoster"></div>
+            <div class="add-row">
+              <select id="rosterAddSel" aria-label="Faction to add to this map" style="flex:1;"></select>
+              <button class="btn small" id="rosterAddBtn" type="button">Add to map</button>
+            </div>
+            <p class="hint">Adding a faction fills in its default relations with factions already on the map. Names, profiles and default relations are edited in the <button class="btn small ghost" type="button" id="gotoFactions">Factions view</button></p>
+          </div>
+
+          <div class="panel">
+            <h2>Loss criteria</h2>
+            <div id="lossHost"></div>
+            <p class="hint">Prototype-only. Each group is a set of critical-asset nodes with a rule: lose if <b>any</b> is captured, or only once <b>all</b> are. A faction is knocked out when any one of its groups triggers.</p>
+          </div>
+
+          <div class="panel">
+            <h2>Faction relations</h2>
+            <div class="relation-list" id="relationList"></div>
+            <div class="add-row">
+              <select id="relFactionA" aria-label="First faction"></select>
+              <select id="relFactionB" aria-label="Second faction"></select>
+              <select id="relStance" aria-label="Stance">
+                <option value="HOSTILE">Hostile</option>
+                <option value="NEUTRAL">Neutral</option>
+                <option value="ALLIED">Allied</option>
+              </select>
+              <button class="btn small" id="addRelationBtn" type="button">Add</button>
+            </div>
+            <button class="btn small ghost" id="resetRelationsBtn" type="button" style="margin-top:6px;">Reset to library defaults</button>
+            <p class="hint">Per-map relations. Reset replaces them with the defaults set in the Factions view.</p>
+          </div>
+
+          <div class="panel">
+            <h2>Links</h2>
+            <div class="link-list" id="linkList"></div>
+            <p class="hint" id="linkHint">Pick "Link two nodes" (Place tab), then click two placed nodes. A link is an intended route: its path is found across the terrain (cheaper on roads, blocked by unbridged water and other nodes). Unlinked nodes never get a route. Use Waypoint nodes to force a route through a point.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas + layer strip -->
+      <div class="center-col">
+        <div class="canvas-wrap">
+          <div class="grid-stack">
+            <div class="grid" id="grid"></div>
+            <svg class="link-overlay" id="linkOverlay"></svg>
+          </div>
+        </div>
+        <div class="panel bottom-panel">
+          <div class="bottom-tabs">
+            <button class="tab-btn" type="button" id="bottomTabPaint" data-active="true">Paint layers</button>
+            <button class="tab-btn" type="button" id="bottomTabStructure" data-active="false" disabled>Structure</button>
+            <span class="strip-notice" id="stripNotice" role="status"></span>
+            <button class="btn small ghost" type="button" id="expandBtn" hidden>Expand ⤢</button>
+          </div>
+          <div id="layersStrip"></div>
+          <div id="structureEditor" hidden></div>
+        </div>
+      </div>
+
+      <!-- Inspector -->
+      <div class="panel" id="inspector" style="align-self:start;max-height:100%;">
+        <h2>Inspector</h2>
+        <div id="inspectorBody"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= FACTIONS VIEW ================= -->
+  <section class="view" id="viewFactions" hidden>
+    <div class="editor">
+      <div class="pane">
+        <div class="panel">
+          <h2>Faction library</h2>
+          <div class="faction-list" id="factionLibList"></div>
+          <div class="add-row">
+            <input type="text" id="newFactionId" placeholder="id" aria-label="New faction id" />
+            <input type="text" id="newFactionName" placeholder="Display name" aria-label="New faction display name" />
+            <button class="btn small" id="addFactionBtn" type="button">Add</button>
+          </div>
+          <p class="hint">Shared across every map. Which factions are in play on a given map is set in Lanes &rarr; World.</p>
+        </div>
+      </div>
+      <div class="pane">
+        <div class="panel" id="factionDetail"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TERRAIN VIEW ================= -->
+  <section class="view" id="viewTerrain" hidden>
+    <div class="editor">
+      <div class="pane">
+        <div class="panel">
+          <h2>Terrain types</h2>
+          <div class="terrain-list" id="terrainLibList"></div>
+          <div class="add-row">
+            <input type="text" id="newTerrainId" placeholder="ID (e.g. TUNDRA)" aria-label="New terrain id" />
+            <button class="btn small" id="addTerrainBtn" type="button">Add</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Natural features</h2>
+          <div class="terrain-list" id="featureLibList"></div>
+          <div class="add-row">
+            <input type="text" id="newFeatureId" placeholder="ID (e.g. SALT_FLAT)" aria-label="New feature id" />
+            <button class="btn small" id="addFeatureBtn" type="button">Add</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Roads</h2>
+          <div class="insp-row"><label for="roadMult">Movement cost multiplier on a road (stub)</label><input type="number" id="roadMult" step="0.05" min="0" /></div>
+          <p class="hint">A road multiplies the tile's terrain movement cost. Future idea on file: roads are built by workers and carry upkeep.</p>
+        </div>
+      </div>
+      <div class="pane">
+        <div class="panel" id="terrainDetail"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STRUCTURES VIEW ================= -->
+  <section class="view" id="viewStructures" hidden>
+    <div class="editor">
+      <div class="pane">
+        <div class="panel">
+          <h2>Structure prefabs</h2>
+          <div class="terrain-list" id="structurePrefabList"></div>
+          <p class="hint">Save a structure from Lanes &rarr; Structure &rarr; Prefabs, then load it onto any node whose tile has the capacity.</p>
+        </div>
+        <div class="panel">
+          <h2>Room prefabs</h2>
+          <div class="terrain-list" id="roomPrefabList"></div>
+          <div class="add-row">
+            <input type="text" id="newRoomPrefabId" placeholder="ID (e.g. INFIRMARY)" aria-label="New room prefab id" />
+            <button class="btn small" id="addRoomPrefabBtn" type="button">Add</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Feature library</h2>
+          <div class="insp-row"><label for="featurePoints">Feature points per segment</label><input type="number" min="1" id="featurePoints" /></div>
+          <div class="terrain-list" id="featureLibList2"></div>
+          <div class="add-row">
+            <input type="text" id="newFeatureDefId" placeholder="ID (e.g. SHRINE)" aria-label="New feature id" />
+            <button class="btn small" id="addFeatureDefBtn" type="button">Add</button>
+          </div>
+        </div>
+      </div>
+      <div class="pane">
+        <div class="panel" id="structuresDetail"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STATIC DEFENSES VIEW ================= -->
+  <section class="view" id="viewDefenses" hidden>
+    <div class="editor">
+      <div class="pane">
+        <div class="panel">
+          <h2>Static defense library</h2>
+          <div class="terrain-list" id="defenseLibList"></div>
+          <div class="add-row">
+            <input type="text" id="newDefenseId" placeholder="ID (e.g. MANGONEL)" aria-label="New static defense id" />
+            <button class="btn small" id="addDefenseBtn" type="button">Add</button>
+          </div>
+          <p class="hint">Shared across every map. Mount them on structure segments in Lanes &rarr; Structure.</p>
+        </div>
+      </div>
+      <div class="pane">
+        <div class="panel" id="defenseDetail"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal-backdrop" id="newMapModal" hidden>
+  <div class="modal">
+    <div class="modal-head"><h2>New map</h2><button class="close-x" id="closeNewMap" type="button" aria-label="Close">&times;</button></div>
+    <div class="modal-body">
+      <p>Replaces the current grid, tile layers, links, loss criteria and faction roster. The faction and terrain libraries are kept.</p>
+      <div class="insp-row"><label for="nmName">Name</label><input type="text" id="nmName" value="New map" /></div>
+      <div class="insp-row"><div class="two">
+        <div class="insp-row"><label for="nmCols">Cols</label><input type="number" id="nmCols" min="4" max="24" value="12" /></div>
+        <div class="insp-row"><label for="nmRows">Rows</label><input type="number" id="nmRows" min="3" max="16" value="7" /></div>
+      </div></div>
+      <div class="insp-row"><label for="nmDefaultTerrain">Base terrain</label><select id="nmDefaultTerrain"></select></div>
+      <label style="font-size:10px;text-transform:uppercase;color:var(--ink-dim);font-weight:600;">Factions on this map</label>
+      <div class="faction-pick-list" id="nmFactionList"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="cancelNewMap" type="button">Cancel</button>
+      <button class="btn primary" id="createNewMap" type="button">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="exportModal" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Exported shape</h2>
+      <button class="close-x" id="closeExport" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Schematic preview for a future converter to <span class="mono">MapDef</span>/<span class="mono">LaneDef</span>/<span class="mono">NodeDef</span>/<span class="mono">MapEdgeDef</span>/<span class="mono">FactionDef</span>/<span class="mono">GarrisonUnitDef</span>. <span class="mono">links</span> is the only source of topology. <b>Prototype-only, no Godot equivalent yet:</b> <span class="mono">is_critical_asset</span>, <span class="mono">loss_criteria</span>, the whole <span class="mono">tiles</span> layer stack (terrain, feature, bridge, stability/max height/max width, upgrades), <span class="mono">roads</span>, node <span class="mono">structure</span> segment profiles, and the terrain/feature libraries. Each has a design note on file.</p>
+      <div id="exportWarnings"></div>
+      <pre class="mono" id="exportJson"></pre>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="copyExport" type="button">Copy JSON</button>
+      <button class="btn primary" id="doneExport" type="button">Done</button>
+    </div>
+  </div>
+</div>
+
+<script src="repo.js"></script>
+</body>
+</html>
