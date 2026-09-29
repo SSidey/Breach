@@ -35,7 +35,8 @@ Nothing here plays the map. `main.tscn` and the P-f-F-c slice are untouched.
     owner, garrison, hidden_from, on_lane and hidden_badge.
   - **`lane_paths`**: per lane, its id and one or more runs of positions in node order.
   - **`edge_segments`**: position pairs, resolved by node id.
-  - **`bounds`**: a `Rect2` covering the markers, grown by one 64 px cell. The default
+  - **`bounds`**: a `Rect2` covering the markers, snapped outward to whole 64 px cells
+    (nodes sit at cell centres) and grown by one more cell. The default
     is a 10×6-cell rect when the map has no nodes.
   - **`faction_color(id, palette, neutral)`**: the faction's index in `MapDef.factions`,
     wrapped over the palette. An empty or unknown owner gets `neutral`.
@@ -99,7 +100,8 @@ Scenario: Lanes and edges resolve to positions
 Scenario: Bounds frame the map
   Given nodes spanning (32,32)..(416,224)
   When the view model is built
-  Then bounds is that rect grown by 64 on every side; with no nodes it is the default rect
+  Then bounds is (-64,-64)..(512,320): whole cells around the nodes plus one cell, every
+  edge on a cell boundary; with no nodes it is the default rect
 
 Scenario: Designer view badges hidden nodes
   Given a node hidden from "kingdom"

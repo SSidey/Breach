@@ -102,10 +102,19 @@ func test_lane_paths_follow_node_order_and_edges_resolve_to_positions() -> void:
 	)
 
 
-func test_bounds_cover_every_marker_grown_by_one_cell() -> void:
-	var model := MapViewModel.build(_map())
+## Nodes sit at cell centres, so bounds snap outward to whole cells (the cells the
+## outermost nodes are in) plus one cell of margin; the grid then never shows a half cell.
+func test_bounds_cover_whole_cells_around_the_markers_plus_one_cell() -> void:
+	var model := MapViewModel.build(_map())  # nodes span (32,32)..(416,224)
 
-	assert_object(model.bounds).is_equal(Rect2(Vector2(-32, -32), Vector2(512, 320)))
+	assert_object(model.bounds).is_equal(Rect2(Vector2(-64, -64), Vector2(576, 384)))
+
+
+func test_bounds_edges_fall_on_cell_boundaries() -> void:
+	var bounds := MapViewModel.build(_map()).bounds
+
+	for edge in [bounds.position.x, bounds.position.y, bounds.end.x, bounds.end.y]:
+		assert_float(fposmod(edge, MapViewModel.CELL)).is_equal(0.0)
 
 
 func test_an_empty_map_gets_the_default_bounds() -> void:

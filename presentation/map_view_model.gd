@@ -116,7 +116,11 @@ static func _bounds(all_markers: Array[Marker]) -> Rect2:
 	var rect := Rect2(all_markers[0].position, Vector2.ZERO)
 	for marker in all_markers:
 		rect = rect.expand(marker.position)
-	return rect.grow(CELL)
+	# Nodes sit at cell centres; snap outward to whole cells so the frame (and the grid
+	# drawn inside it) never cuts a cell in half, then add one cell of margin.
+	var low := (rect.position / CELL).floor() * CELL
+	var high := (rect.end / CELL).ceil() * CELL
+	return Rect2(low, high - low).grow(CELL)
 
 
 ## The faction's index in the map's roster, wrapped over the palette; neutral otherwise.
