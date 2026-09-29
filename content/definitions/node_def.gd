@@ -65,6 +65,10 @@ enum ResourceType { FOOD, WOOD, STONE, METAL, CRYSTAL }
 ## (scouting, events) is not designed yet.
 @export var hidden_from_faction_ids: Array[String] = []
 
+## A node whose loss matters to its faction - the members of LossGroupDef groups, per
+## specs/19-map-layout-and-objectives.md. Authored data; sim/ doesn't read it yet.
+@export var is_critical_asset: bool = false
+
 ## Pooled blocker stats CombatResolver fights against, required when garrison > 0.
 ## See specs/02-lane-movement-and-combat.md, Decision 11 - `garrison` is a
 ## presence/count check, these are the real combat numbers.
