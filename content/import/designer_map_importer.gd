@@ -3,17 +3,24 @@ class_name DesignerMapImporter
 ## specs/16-designer-map-import.md. Pure and @tool-free, like MapSceneConverter:
 ## operates on a parsed Dictionary, so it's testable headlessly with no SceneTree.
 ##
-## Covers everything in the export that already has real schema: nodes (incl. garrison
-## units and hidden_from_faction_ids) via DesignerNodeBuilder, factions, relations, and
-## links (lanes + edges + off-lane nodes) via DesignerLaneDeriver. Prototype-only
-## sections (tiles, roads, structures, loss groups, route geometry) are reported as
-## warnings until specs 19/20 give them real schema.
+## Covers everything in the export that has real schema: nodes (incl. garrison units,
+## hidden_from_faction_ids, critical assets) via DesignerNodeBuilder, factions,
+## relations, links (lanes + edges + off-lane nodes) via DesignerLaneDeriver, and - per
+## specs/19 - the layout (grid, tiles, roads, routes; DesignerLayoutBuilder, against the
+## shared terrain library) and loss groups (DesignerObjectivesBuilder). Structures are
+## reported as a warning until spec 20 gives them schema.
 
 const MapDef = preload("res://content/definitions/map_def.gd")
 const FactionDef = preload("res://content/definitions/faction_def.gd")
 const FactionRelationDef = preload("res://content/definitions/faction_relation_def.gd")
 const DesignerNodeBuilder = preload("res://content/import/designer_node_builder.gd")
 const DesignerLaneDeriver = preload("res://content/import/designer_lane_deriver.gd")
+const DesignerLayoutBuilder = preload("res://content/import/designer_layout_builder.gd")
+const DesignerObjectivesBuilder = preload("res://content/import/designer_objectives_builder.gd")
+const TerrainLibraryDef = preload("res://content/definitions/terrain_library_def.gd")
+
+## The one shared terrain library every imported layout references (Decision 32).
+const TERRAIN_LIBRARY := "res://content/terrain/terrain_library.tres"
 
 const FORMAT := "breach-designer-map"
 const FORMAT_VERSION := 1
@@ -24,7 +31,7 @@ const DEFAULT_SIM := {
 	"suspicion_tier_thresholds": [20, 45, 70, 90],
 	"suspicion_decay_per_tick": 2,
 }
-const NOT_YET_IMPORTED := ["tiles", "roads", "terrain_library", "feature_library", "loss_criteria"]
+const NOT_YET_IMPORTED := ["static_defense_library", "structure_feature_library"]
 
 
 class DesignerMapImportResult:
@@ -47,7 +54,10 @@ static func import_file(json_path: String) -> DesignerMapImportResult:
 	return import_map(parsed)
 
 
-static func import_map(export_data: Dictionary) -> DesignerMapImportResult:
+## library defaults to the shared content/terrain/terrain_library.tres.
+static func import_map(
+	export_data: Dictionary, library: TerrainLibraryDef = null
+) -> DesignerMapImportResult:
 	var result := DesignerMapImportResult.new()
 	if (
 		export_data.get("format") != FORMAT
@@ -72,6 +82,14 @@ static func import_map(export_data: Dictionary) -> DesignerMapImportResult:
 	)
 	var nodes := DesignerNodeBuilder.build_nodes(export_data, result.errors, result.warnings)
 	DesignerLaneDeriver.derive(export_data, nodes, result.map_def, result.errors)
+	if not export_data.get("grid", {}).is_empty():
+		if library == null:
+			library = _load_library(result.errors)
+		if library != null:
+			result.map_def.layout = DesignerLayoutBuilder.build(export_data, library, result.errors)
+	result.map_def.loss_groups = DesignerObjectivesBuilder.build_loss_groups(
+		export_data, result.errors
+	)
 	_warn_not_imported(export_data, result.warnings)
 	return result
 
@@ -121,6 +139,18 @@ static func _build_relations(
 	return relations
 
 
+static func _load_library(errors: PackedStringArray) -> TerrainLibraryDef:
+	if not ResourceLoader.exists(TERRAIN_LIBRARY):
+		errors.append(
+			(
+				"shared terrain library missing (%s): run tools/import_designer_library.gd"
+				% TERRAIN_LIBRARY
+			)
+		)
+		return null
+	return load(TERRAIN_LIBRARY)
+
+
 static func _warn_not_imported(export_data: Dictionary, warnings: PackedStringArray) -> void:
 	var skipped: Array[String] = []
 	for section in NOT_YET_IMPORTED:
@@ -128,7 +158,5 @@ static func _warn_not_imported(export_data: Dictionary, warnings: PackedStringAr
 			skipped.append(section)
 	if export_data.get("nodes", []).any(func(n): return n.has("structure")):
 		skipped.append("structures")
-	if export_data.get("links", []).any(func(l): return not l.get("route", []).is_empty()):
-		skipped.append("link routes")
 	if not skipped.is_empty():
-		warnings.append("not imported yet (specs 19/20): " + ", ".join(skipped))
+		warnings.append("not imported yet (spec 20): " + ", ".join(skipped))

@@ -126,7 +126,7 @@ func test_unknown_fields_and_prototype_sections_are_warnings() -> void:
 
 	assert_array(result.errors).is_empty()
 	assert_bool(_any(result.warnings, "mystery")).is_true()
-	assert_bool(_any(result.warnings, "tiles")).is_true()
+	assert_bool(_any(result.warnings, "structures")).is_true()
 
 
 func test_wrong_format_or_version_is_rejected() -> void:
