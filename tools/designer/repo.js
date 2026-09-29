@@ -23,6 +23,8 @@
     structure_prefabs: 'breach_structure_prefab_library_v1'
   };
   var CURRENT_FILE_KEY = 'breach_designer_current_file';
+  // Must match serve.py's API_VERSION; an older server is missing endpoints this page uses.
+  var REQUIRED_API = 2;
   var DIRTY_KEY = 'breach_designer_dirty';
 
   var health = null;
@@ -44,7 +46,13 @@
     var opts = { method: method, headers: {} };
     if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
     return fetch(path, opts).then(function (r) {
-      return r.json().then(function (j) {
+      return r.text().then(function (text) {
+        var j;
+        try { j = JSON.parse(text); } catch (e) {
+          // Not our JSON API: most often a serve.py started before an update (e.g. 501 for a new method).
+          throw new Error('the designer server answered HTTP ' + r.status + ' instead of JSON' +
+            (r.status === 501 || r.status === 404 ? ' — restart serve.py so it runs the current code' : ''));
+        }
         if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
         return j;
       });
@@ -194,6 +202,9 @@
     parts.push(currentFile
       ? '<span>File <span class="file">' + esc(currentFile) + '.designer.json</span></span>'
       : '<span>File <span class="file">(unsaved)</span></span>');
+    if ((health.api_version || 1) < REQUIRED_API) {
+      parts.push('<span class="bad" title="serve.py was started before the designer was updated">Server is out of date — restart serve.py</span>');
+    }
     if (dirty) parts.push('<span class="dirty">● unsaved changes</span>');
     if (statusText) {
       parts.push('<span class="' + statusTone + '">' + esc(statusText) + '</span>');
@@ -280,6 +291,7 @@
   }
   // ---------- view in Godot (specs/18) ----------
   function viewInGodot() {
+    if ((health.api_version || 1) < REQUIRED_API) { showStatus('The designer server is out of date — stop serve.py and start it again, then retry', 'bad'); return; }
     if (!health.godot_found) { showStatus('Godot not configured, so the viewer cannot be opened', 'bad'); return; }
     if (!currentFile || dirty) {
       saveMap(false, function (imp) { if (imp.ok) launchViewer(currentFile); });

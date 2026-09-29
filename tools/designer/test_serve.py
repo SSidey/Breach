@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from designer_repo import DesignerRepo  # noqa: E402
-from serve import make_handler  # noqa: E402
+from serve import API_VERSION, make_handler  # noqa: E402
 from test_designer_repo import MAP, FakeRunner  # noqa: E402
 
 
@@ -58,6 +58,7 @@ class ServeTest(unittest.TestCase):
         status, body = self.request("GET", "/api/health")
         self.assertEqual(status, 200)
         self.assertTrue(json.loads(body)["godot_found"])
+        self.assertEqual(json.loads(body)["api_version"], API_VERSION)
 
     def test_given_a_map_when_put_then_it_is_saved_imported_listed_and_readable(self):
         status, body = self.request("PUT", "/api/maps/m", MAP)
