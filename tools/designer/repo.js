@@ -132,7 +132,8 @@
     var exportBtn = document.getElementById('exportBtn');
     [['repoOpen', 'Open…', 'btn ghost', openMapPicker, 'Open a map from content/maps_src (Ctrl+O)'],
       ['repoSaveAs', 'Save as…', 'btn ghost', function () { saveMap(true); }, 'Save under a new file name'],
-      ['repoSave', 'Save', 'btn primary', function () { saveMap(false); }, 'Save to content/maps_src and import to content/maps (Ctrl+S)']
+      ['repoSave', 'Save', 'btn primary', function () { saveMap(false); }, 'Save to content/maps_src and import to content/maps (Ctrl+S)'],
+      ['repoView', 'View in Godot', 'btn ghost', viewInGodot, 'Open this map in the Godot map viewer (saves first if there are unsaved changes)']
     ].forEach(function (b) {
       var el = document.createElement('button');
       el.id = b[0]; el.type = 'button'; el.className = b[2]; el.textContent = b[1]; el.title = b[4];
@@ -230,9 +231,10 @@
   }
   function validName(n) { return /^[A-Za-z0-9_-]{1,64}$/.test(n); }
 
-  function saveMap(askName) {
-    if (!currentFile || askName) { promptName(function (name) { doSave(name); }); return; }
-    doSave(currentFile);
+  // after(importResult) runs once a save finishes (used by View in Godot).
+  function saveMap(askName, after) {
+    if (!currentFile || askName) { promptName(function (name) { doSave(name, after); }); return; }
+    doSave(currentFile, after);
   }
   function promptName(then) {
     var suggested = currentFile || slug(window.BreachDesigner.mapName());
@@ -253,7 +255,7 @@
       return true;
     }
   }
-  function doSave(name) {
+  function doSave(name, after) {
     var data = window.BreachDesigner.buildExport();
     showStatus('Saving ' + name + ' and importing…', '');
     var btn = document.getElementById('repoSave');
@@ -270,11 +272,27 @@
         showStatus('Saved source JSON, but the import ' + (imp.ran ? 'failed' : 'did not run') + ' — .tres not updated', 'bad');
         showImportDetails();
       }
+      if (after) after(imp);
     }).catch(function (e) {
       lastImport = null;
       showStatus('Save failed: ' + e.message, 'bad');
     }).then(function () { if (btn) btn.disabled = false; });
   }
+  // ---------- view in Godot (specs/18) ----------
+  function viewInGodot() {
+    if (!health.godot_found) { showStatus('Godot not configured, so the viewer cannot be opened', 'bad'); return; }
+    if (!currentFile || dirty) {
+      saveMap(false, function (imp) { if (imp.ok) launchViewer(currentFile); });
+      return;
+    }
+    launchViewer(currentFile);
+  }
+  function launchViewer(name) {
+    api('POST', '/api/maps/' + encodeURIComponent(name) + '/view', {}).then(function () {
+      showStatus('Opening ' + name + ' in the Godot map viewer…', 'ok');
+    }).catch(function (e) { showStatus('Could not open the viewer: ' + e.message, 'bad'); });
+  }
+
   function showImportDetails() {
     if (!lastImport) return;
     var imp = lastImport.result;

@@ -28,6 +28,7 @@ LIBRARIES = (
 )
 MAP_SUFFIX = ".designer.json"
 IMPORT_SCRIPT = "res://tools/import_designer_map.gd"
+VIEWER_SCENE = "res://presentation/map_viewer.tscn"
 IMPORT_TIMEOUT_SECONDS = 180
 
 
@@ -95,10 +96,11 @@ def parse_import_output(stdout: str, stderr: str, returncode: int) -> dict:
 class DesignerRepo:
     """The designer's view of one repo checkout."""
 
-    def __init__(self, root: Path, godot: str | None, runner=subprocess.run):
+    def __init__(self, root: Path, godot: str | None, runner=subprocess.run, launcher=None):
         self.root = root
         self.godot = godot
         self._runner = runner
+        self._launcher = launcher or _launch_detached
         self.maps_src = root / "content" / "maps_src"
         self.maps_out = root / "content" / "maps"
         self.libraries = root / "content" / "designer"
@@ -170,6 +172,27 @@ class DesignerRepo:
             return self._failed(f"Godot import timed out after {IMPORT_TIMEOUT_SECONDS}s")
         return parse_import_output(done.stdout or "", done.stderr or "", done.returncode)
 
+    def view_map(self, name: str) -> dict:
+        """Opens the Godot map viewer (specs/18) on content/maps/<name>.tres."""
+        self._require_name(name)
+        if not self.godot:
+            raise ValueError("Godot binary not configured, so the viewer can't be opened")
+        if not (self.maps_out / f"{name}.tres").is_file():
+            raise ValueError(f"content/maps/{name}.tres doesn't exist yet - save the map first")
+        command = [
+            self.godot,
+            "--path",
+            str(self.root),
+            VIEWER_SCENE,
+            "--",
+            f"--map=res://content/maps/{name}.tres",
+        ]
+        try:
+            self._launcher(command)
+        except OSError as error:
+            raise ValueError(f"could not start Godot ({self.godot}): {error}") from error
+        return {"launched": True, "map": f"content/maps/{name}.tres"}
+
     def read_library(self, library: str):
         self._require_library(library)
         return read_json(self.libraries / f"{library}.json")
@@ -191,3 +214,18 @@ class DesignerRepo:
     def _require_library(library: str) -> None:
         if library not in LIBRARIES:
             raise ValueError(f"unknown library {library!r}")
+
+
+def _launch_detached(command: list) -> None:
+    """Starts Godot without tying it to the server (closing either leaves the other)."""
+    flags = 0
+    if os.name == "nt":
+        flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    subprocess.Popen(  # noqa: S603 - fixed argv, whitelisted map name
+        command,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        creationflags=flags,
+        start_new_session=os.name != "nt",
+    )

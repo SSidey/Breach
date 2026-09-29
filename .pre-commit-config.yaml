@@ -75,12 +75,12 @@ repos:
         files: \.gd$
         exclude: ^addons/
 
-      - id: designer-server-tests
-        name: designer-server-tests (tools/designer, stdlib unittest)
-        entry: python3 -m unittest discover -s tools/designer -p "test_*.py"
+      - id: tools-python-tests
+        name: tools-python-tests (tools/ and tools/designer, stdlib unittest)
+        entry: bash -c 'python3 -m unittest discover -s tools/designer -p "test_*.py" && python3 -m unittest discover -s tools -p "test_*.py"'
         language: system
         pass_filenames: false
-        files: ^tools/designer/.*\.py$
+        files: ^(tools/.*\.py|assets/placeholder/.*)$
 
       - id: check-branch-name
         name: branch-name-conforms

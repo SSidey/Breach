@@ -27,7 +27,8 @@ class ServeTest(unittest.TestCase):
         self.static.mkdir()
         (self.static / "index.html").write_text("<p>designer</p>", encoding="utf-8")
         self.runner = FakeRunner(stdout="wrote res://content/maps/m.tres\n")
-        repo = DesignerRepo(self.root, "godot", self.runner)
+        self.launched = []
+        repo = DesignerRepo(self.root, "godot", self.runner, launcher=self.launched.append)
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(repo, self.static, log_requests=False))
         self.base = f"http://127.0.0.1:{self.server.server_address[1]}"
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
@@ -94,6 +95,25 @@ class ServeTest(unittest.TestCase):
         status, body = self.request("PUT", "/api/libraries/factions", value)
         self.assertEqual((status, json.loads(body)), (200, {"changed": True}))
         self.assertEqual(json.loads(self.request("GET", "/api/libraries/factions")[1]), value)
+
+    def test_view_opens_the_viewer_for_an_imported_map(self):
+        (self.root / "content/maps").mkdir(parents=True)
+        (self.root / "content/maps/m.tres").write_text("x", encoding="utf-8")
+
+        status, body = self.request("POST", "/api/maps/m/view", {})
+
+        self.assertEqual(status, 200)
+        self.assertTrue(json.loads(body)["launched"])
+        self.assertEqual(self.launched[0][-1], "--map=res://content/maps/m.tres")
+
+    def test_view_of_a_map_that_was_never_imported_is_400(self):
+        status, body = self.request("POST", "/api/maps/absent/view", {})
+        self.assertEqual(status, 400)
+        self.assertIn("save the map first", json.loads(body)["error"])
+        self.assertEqual(self.launched, [])
+
+    def test_view_needs_post(self):
+        self.assertEqual(self.request("GET", "/api/maps/m/view")[0], 400)
 
     def test_unknown_api_path_is_404_and_unknown_library_is_400(self):
         self.assertEqual(self.request("GET", "/api/nothing")[0], 404)

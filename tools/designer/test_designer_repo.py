@@ -132,6 +132,49 @@ class ListAndReadMapsTest(RepoTestCase):
         self.assertEqual(DesignerRepo(self.root, None).list_maps(), [])
 
 
+class ViewMapTest(RepoTestCase):
+    def _imported(self, name="m"):
+        (self.root / "content/maps").mkdir(parents=True, exist_ok=True)
+        (self.root / "content/maps" / f"{name}.tres").write_text("x", encoding="utf-8")
+
+    def test_given_an_imported_map_when_viewed_then_godot_opens_the_viewer_on_it(self):
+        launched = []
+        self._imported()
+        repo = DesignerRepo(self.root, "godot", FakeRunner(), launcher=launched.append)
+
+        result = repo.view_map("m")
+
+        self.assertTrue(result["launched"])
+        command = launched[0]
+        self.assertEqual(command[0], "godot")
+        self.assertNotIn("--headless", command)
+        self.assertIn("res://presentation/map_viewer.tscn", command)
+        self.assertEqual(command[-1], "--map=res://content/maps/m.tres")
+
+    def test_without_godot_or_without_the_tres_nothing_is_launched(self):
+        launched = []
+        with self.assertRaises(ValueError):
+            DesignerRepo(self.root, None, launcher=launched.append).view_map("m")
+        with self.assertRaises(ValueError) as caught:
+            DesignerRepo(self.root, "godot", launcher=launched.append).view_map("m")
+        self.assertIn("save the map first", str(caught.exception))
+        self.assertEqual(launched, [])
+
+    def test_invalid_name_is_rejected(self):
+        with self.assertRaises(ValueError):
+            DesignerRepo(self.root, "godot", launcher=lambda c: None).view_map("../x")
+
+    def test_a_godot_that_cannot_start_is_reported(self):
+        self._imported()
+
+        def fail(command):
+            raise OSError("no such file")
+
+        with self.assertRaises(ValueError) as caught:
+            DesignerRepo(self.root, "godot", launcher=fail).view_map("m")
+        self.assertIn("could not start Godot", str(caught.exception))
+
+
 class LibraryTest(RepoTestCase):
     def test_library_round_trip_and_unchanged_write_reports_no_change(self):
         repo = DesignerRepo(self.root, None)
