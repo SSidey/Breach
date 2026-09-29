@@ -1290,7 +1290,7 @@
     var rows = '26px 12px ' + levels.map(function (l, i) { return cellH + 'px' + (i < levels.length - 1 ? ' 12px' : ''); }).join(' ') + ' 6px';
     var links = linkedNodeIds(node);
     var leftFrom = links.filter(function (o) { return approachSide(node, o) === 'LEFT'; }), rightFrom = links.filter(function (o) { return approachSide(node, o) === 'RIGHT'; });
-    var endsHtml = '<div class="ends"><span>' + (leftFrom.length ? '→ from ' + esc(leftFrom.join(', ')) : 'no approach from the left') + '</span><span>' + (rightFrom.length ? 'from ' + esc(rightFrom.join(', ')) + ' ←' : 'no approach from the right') + '</span></div>';
+    var endsHtml = '<div class="ends"><span>' + (leftFrom.length ? '→ from ' + esc(leftFrom.join(', ')) : '<span title="No linked route enters this end. Fine if intended; set sides under Approaches.">left end: no route enters</span>') + '</span><span>' + (rightFrom.length ? 'from ' + esc(rightFrom.join(', ')) + ' ←' : '<span title="No linked route enters this end. Fine if intended; set sides under Approaches.">right end: no route enters</span>') + '</span></div>';
     var gridHtml = endsHtml + '<div class="sx-grid" style="--cw:' + cellW + 'px;--ch:' + cellH + 'px;grid-template-columns:12px repeat(' + W + ', ' + cellW + 'px 12px);grid-template-rows:' + rows + ';">' + items + '</div>';
 
     // ----- selection panel -----
@@ -2018,7 +2018,7 @@
           (rt.found ? '· ' + plural(rt.cells.length - 1, 'step') + ' · cost ' + rt.cost : '· no passable route') + '</span></span>';
         var rm = document.createElement('button');
         rm.className = 'row-remove'; rm.type = 'button'; rm.textContent = '×'; rm.setAttribute('aria-label', 'Remove link');
-        rm.addEventListener('click', function () { state.links.splice(i, 1); safeSave(); renderLinks(); renderGrid(); renderCounts(); });
+        rm.addEventListener('click', function () { state.links.splice(i, 1); linksChanged(); });
         el.appendChild(rm);
         list.appendChild(el);
       });
@@ -2290,7 +2290,7 @@
         if (at !== -1) { state.links.splice(at, 1); setNotice('Unlinked ' + a + ' \u2194 ' + b + '.'); }
         else if (a !== b) { state.links.push({ a: a, b: b }); setNotice(''); }
         state.linkPending = null;
-        safeSave(); renderGrid(); renderLinks(); renderCounts();
+        linksChanged();
       }
       return;
     }
@@ -2308,6 +2308,25 @@
       return;
     }
     applyTool(k, state.activeTool);
+  }
+
+  function refreshSelectionPanels() {
+    if (state.selectedCell) renderInspector();
+    if (state.bottomTab === 'structure') renderStructureEditor();
+  }
+  function pruneApproaches() {
+    Object.keys(state.cells).forEach(function (k) {
+      var d = state.cells[k];
+      if (!d.approaches) return;
+      var linked = linkedNodeIds(d);
+      Object.keys(d.approaches).forEach(function (o) { if (linked.indexOf(o) === -1) delete d.approaches[o]; });
+      if (!Object.keys(d.approaches).length) delete d.approaches;
+    });
+  }
+  function linksChanged() {
+    pruneApproaches();
+    safeSave(); renderGrid(); renderLinks(); renderCounts(); renderLoss();
+    refreshSelectionPanels();
   }
 
   function removeNodeRefs(id) {
@@ -2336,8 +2355,10 @@
   }
 
   function applyTool(k, tool) {
+    var linkCount = state.links.length;
     applyToolInner(k, tool);
-    renderLinks(); // terrain, roads and bridges all change link routes and costs
+    if (state.links.length !== linkCount) linksChanged();
+    else renderLinks(); // terrain, roads and bridges all change link routes and costs
   }
 
   function applyToolInner(k, tool) {
@@ -2634,7 +2655,7 @@
     body.querySelectorAll('[data-unlink]').forEach(function (b) {
       b.addEventListener('click', function () {
         state.links.splice(Number(b.getAttribute('data-unlink')), 1);
-        safeSave(); renderLinks(); renderGrid(); renderCounts(); renderInspector();
+        linksChanged();
       });
     });
     document.getElementById('f_id').addEventListener('change', function () {
