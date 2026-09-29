@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="MapArtSet" format=3]
+
+[ext_resource type="Script" path="res://presentation/map_art_set.gd" id="1_art"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/map/origin.svg" id="2_origin"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/map/resource.svg" id="3_resource"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/map/fort.svg" id="4_fort"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/map/neutral.svg" id="5_neutral"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/map/waypoint.svg" id="6_waypoint"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/map/hidden_badge.svg" id="7_hidden"]
+
+[resource]
+script = ExtResource("1_art")
+origin_texture = ExtResource("2_origin")
+resource_texture = ExtResource("3_resource")
+fort_texture = ExtResource("4_fort")
+neutral_texture = ExtResource("5_neutral")
+waypoint_texture = ExtResource("6_waypoint")
+hidden_badge = ExtResource("7_hidden")
