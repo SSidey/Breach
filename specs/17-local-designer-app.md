@@ -70,6 +70,18 @@ This comes before the rest of the render plan (Decision 29), which is renumbered
       blocks DNS rebinding and cross-site writes). PUT bodies must be JSON, up to 16 MB.
     - Writes are serialised.
   - **`README.md`**: how to run it and what Save does.
+- **Designer editing additions** (user request, 2026-09-29): editing terrain only ever
+  *reroutes* a link, since routes are pathfound (Decision 26). So removing a connection
+  needs explicit tools:
+  - **Selective erase:** an Erase row in the layer strip under the map. Pick any mix of
+    Node, Upgrades, Roads, Bridge, Feature, Terrain and Capacity overrides, and the Erase
+    tool (click or drag) removes only those. With nothing picked, it keeps the old
+    top-layer-first behaviour.
+  - **Unlinking:**
+    - The link tool toggles: linking two already-linked nodes unlinks them, with a
+      notice.
+    - A selected node's Inspector lists its links, each with ×.
+    - The World tab's link list keeps its ×.
 - **`content/designer/*.json`**: the designer's libraries, seeded with its defaults.
 - **Hooks and CI:** a `designer-server-tests` pre-commit hook runs
   `python -m unittest discover -s tools/designer`. CI already runs every pre-commit
@@ -116,6 +128,16 @@ Scenario: Only local pages may use the API
   Given a request with a foreign Origin or Host
   When it reaches the server
   Then it is refused with 403
+
+Scenario: Selective erase removes only the picked layers (Playwright)
+  Given a node on a cell with roads, and the Erase tool with only "Roads" picked
+  When the cell is erased
+  Then its roads are gone and the node and its links remain
+
+Scenario: Nodes can be unlinked directly (Playwright)
+  Given two linked nodes
+  When the link tool is used on both again, or × is pressed in a node's Inspector links
+  Then that link is removed and nothing else changes
 
 Scenario: A saved map reopens identically (manual / Playwright)
   Given a map saved from the designer

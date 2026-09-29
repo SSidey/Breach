@@ -278,6 +278,7 @@
     roadAnchor: null,
     bottomTab: 'paint',
     structureSel: null, // {col, level} within the selected node's structure
+    eraseLayers: [], // Erase tool: layers to remove; empty = topmost layer first
     nextId: { NODE: 1 }
   };
 
@@ -673,10 +674,27 @@
       '<button type="button" class="chip" data-kind="road" data-active="' + (state.activeTool === 'ROAD') + '"><span class="dot" style="background:var(--road)">&#9552;</span>Road (drag cell to cell)</button>' +
       '<button type="button" class="chip" data-kind="bridge" data-active="' + (state.activeTool === 'BRIDGE') + '"><span class="dot" style="background:var(--bridge)">&#9636;</span>Bridge (water, ravine)</button>' +
       '</div>';
+    var eraseOn = state.activeTool === 'eraser';
+    html += '<div class="layer-row"><span class="row-label">Erase</span>' +
+      '<button type="button" class="chip" data-kind="erase-top" data-active="' + (eraseOn && !state.eraseLayers.length) + '"><span class="dot" style="background:var(--ink-dim)">&times;</span>Top layer first</button>';
+    eraseLayerList().forEach(function (L) {
+      html += '<button type="button" class="chip" data-kind="erase" data-id="' + L[0] + '" data-active="' + (eraseOn && state.eraseLayers.indexOf(L[0]) !== -1) + '">' + esc(L[1]) + '</button>';
+    });
+    html += '<span class="hint" style="margin:0;">' + (eraseOn && state.eraseLayers.length ? 'Erases only the picked layers (click or drag).' : 'Pick layers to erase only those; toggle several.') + '</span></div>';
     host.innerHTML = html;
     host.querySelectorAll('.chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
         var kind = chip.getAttribute('data-kind'), id = chip.getAttribute('data-id');
+        if (kind === 'erase-top' || kind === 'erase') {
+          if (state.activeTool !== 'eraser') setActiveTool('eraser');
+          if (kind === 'erase-top') state.eraseLayers = [];
+          else {
+            var at = state.eraseLayers.indexOf(id);
+            if (at === -1) state.eraseLayers.push(id); else state.eraseLayers.splice(at, 1);
+          }
+          renderLayersStrip();
+          return;
+        }
         if (kind === 'terrain') { setActiveTool('TERRAIN'); state.armedTerrain = id; }
         else if (kind === 'feature') { setActiveTool('FEATURE'); state.armedFeature = id; }
         else if (kind === 'bridge') setActiveTool('BRIDGE');
@@ -1763,8 +1781,8 @@
       t.setAttribute('data-active', t.getAttribute('data-tool') === tool ? 'true' : 'false');
     });
     document.getElementById('linkHint').textContent = tool === 'link'
-      ? 'Click a first node, then a second node to link them.'
-      : 'Pick "Link two nodes" (Place tab), then click two placed nodes. A link is an intended route: its path is found across the terrain (cheaper on roads, blocked by unbridged water and other nodes). Unlinked nodes never get a route. Use Waypoint nodes to force a route through a point.';
+      ? 'Click a first node, then a second node to link them. Clicking two linked nodes unlinks them.'
+      : 'Pick "Link two nodes" (Place tab), then click two placed nodes (click two linked nodes to unlink). A link is an intended route: its path is found across the terrain (cheaper on roads, blocked by unbridged water and other nodes). Unlinked nodes never get a route. Use Waypoint nodes to force a route through a point.';
     if (state.bottomTab === 'paint') renderLayersStrip();
     renderGrid();
   }
@@ -2268,8 +2286,9 @@
         state.linkPending = k; renderGrid();
       } else if (state.linkPending !== k) {
         var a = state.cells[state.linkPending].id, b = cell.id;
-        var exists = state.links.some(function (l) { return (l.a === a && l.b === b) || (l.a === b && l.b === a); });
-        if (!exists && a !== b) state.links.push({ a: a, b: b });
+        var at = state.links.findIndex(function (l) { return (l.a === a && l.b === b) || (l.a === b && l.b === a); });
+        if (at !== -1) { state.links.splice(at, 1); setNotice('Unlinked ' + a + ' \u2194 ' + b + '.'); }
+        else if (a !== b) { state.links.push({ a: a, b: b }); setNotice(''); }
         state.linkPending = null;
         safeSave(); renderGrid(); renderLinks(); renderCounts();
       }
@@ -2296,13 +2315,37 @@
     state.lossCriteria.forEach(function (g) { g.node_ids = g.node_ids.filter(function (x) { return x !== id; }); });
   }
 
+  // Layers the Erase tool can target on their own (the layer strip's Erase row).
+  function eraseLayerList() {
+    return [['NODE', 'Node'], ['UPGRADES', 'Upgrades'], ['ROADS', 'Roads'], ['BRIDGE', 'Bridge'],
+      ['FEATURE', 'Feature'], ['TERRAIN', 'Terrain'], ['CAPACITY', 'Capacity overrides']];
+  }
+  function eraseLayersAt(k, layers) {
+    var t = state.tiles[k];
+    function on(id) { return layers.indexOf(id) !== -1; }
+    if (on('NODE') && state.cells[k]) { removeNodeRefs(state.cells[k].id); delete state.cells[k]; }
+    if (on('ROADS')) removeRoadsAt(k);
+    if (t) {
+      if (on('UPGRADES')) { delete t.upgrades; delete t.upgrade_slots; }
+      if (on('BRIDGE')) delete t.bridge;
+      if (on('FEATURE')) delete t.feature;
+      if (on('TERRAIN')) delete t.terrain;
+      if (on('CAPACITY')) ['stability', 'max_height', 'max_width', 'max_length', 'max_depth'].forEach(function (f) { delete t[f]; });
+    }
+    pruneTile(k);
+  }
+
   function applyTool(k, tool) {
     applyToolInner(k, tool);
     renderLinks(); // terrain, roads and bridges all change link routes and costs
   }
 
   function applyToolInner(k, tool) {
-    if (tool === 'eraser') {
+    if (tool === 'eraser' && state.eraseLayers.length) {
+      eraseLayersAt(k, state.eraseLayers);
+      renderLinks(); renderLoss();
+      if (state.selectedCell === k) { setBottomTab(state.bottomTab); renderInspector(); }
+    } else if (tool === 'eraser') {
       // Topmost layer first: node, upgrades, roads, bridge, feature, terrain (+ overrides).
       var removed = state.cells[k];
       var t = state.tiles[k];
@@ -2534,6 +2577,17 @@
       html += '<p class="hint">Routing waypoint: a link’s route is forced through this cell. It holds no structure, resources or garrison.</p>';
     }
 
+    // Links (Decision 26: the authored routes). Unlinking here is the direct way to drop one;
+    // editing terrain only reroutes a link, it never removes it.
+    var myLinks = state.links.map(function (l, i) { return { l: l, i: i }; }).filter(function (x) { return x.l.a === cell.id || x.l.b === cell.id; });
+    html += '<div class="insp-section-label">Links</div>';
+    html += myLinks.length
+      ? '<div class="link-list">' + myLinks.map(function (x) {
+        var other = x.l.a === cell.id ? x.l.b : x.l.a;
+        return '<div class="link-row"><span>&harr; ' + esc(other) + '</span><button class="row-remove" type="button" data-unlink="' + x.i + '" aria-label="Unlink ' + esc(other) + '">&times;</button></div>';
+      }).join('') + '</div>'
+      : '<p class="empty-note" style="margin:0 0 6px;font-size:12px;">not linked</p>';
+
     // Structure (prototype-only segment profile)
     var s = structureStats(cell), cap = capacity(k);
     if (!isWp) {
@@ -2577,6 +2631,12 @@
 
     var editBtn = document.getElementById('f_editStructure');
     if (editBtn) editBtn.addEventListener('click', function () { setBottomTab('structure'); });
+    body.querySelectorAll('[data-unlink]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        state.links.splice(Number(b.getAttribute('data-unlink')), 1);
+        safeSave(); renderLinks(); renderGrid(); renderCounts(); renderInspector();
+      });
+    });
     document.getElementById('f_id').addEventListener('change', function () {
       var oldId = cell.id, newId = this.value.trim();
       if (!newId || newId === oldId) { this.value = oldId; return; }
