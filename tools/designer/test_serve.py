@@ -94,7 +94,7 @@ class ServeTest(unittest.TestCase):
         value = [{"id": "player", "display_name": "Player"}]
         self.assertEqual(json.loads(self.request("GET", "/api/libraries/factions")[1]), None)
         status, body = self.request("PUT", "/api/libraries/factions", value)
-        self.assertEqual((status, json.loads(body)), (200, {"changed": True}))
+        self.assertEqual((status, json.loads(body)), (200, {"changed": True, "import": None}))
         self.assertEqual(json.loads(self.request("GET", "/api/libraries/factions")[1]), value)
 
     def test_view_opens_the_viewer_for_an_imported_map(self):
