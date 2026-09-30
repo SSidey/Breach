@@ -2,10 +2,16 @@ class_name UnitDef
 extends Resource
 ## Player unit definition (e.g. Grem). See specs/07-data-resource-schemas.md.
 
+const MAX_FOOTPRINT := 8
+
 @export var cost_food: int = 0
 @export var hp: int = 0
 @export var dmg: int = 0
 @export var speed: float = 0.0
+## Formation slots the unit occupies, depth (ranks) x width (columns), per Decision 40:
+## 1x1 a grem, 2x1 cavalry, 2x2 a brute, up to 8x8 (a dragon, the widest lane).
+@export var footprint_depth: int = 1
+@export var footprint_width: int = 1
 
 
 func validate() -> PackedStringArray:
@@ -18,4 +24,7 @@ func validate() -> PackedStringArray:
 		errors.append("dmg must be >= 0, got %d" % dmg)
 	if speed < 0.0:
 		errors.append("speed must be >= 0, got %f" % speed)
+	for field in ["footprint_depth", "footprint_width"]:
+		if get(field) < 1 or get(field) > MAX_FOOTPRINT:
+			errors.append("%s must be 1..%d, got %d" % [field, MAX_FOOTPRINT, get(field)])
 	return errors
