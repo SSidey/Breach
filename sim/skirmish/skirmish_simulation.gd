@@ -19,8 +19,11 @@ const UnitDef = preload("res://content/definitions/unit_def.gd")
 
 ## Cells between two units for them to fight.
 const MELEE_REACH := 0.35
-## Ticks between a unit's blows (4 at 0.25 s = one blow a second).
-const ATTACK_COOLDOWN_TICKS := 4
+## Seconds between a unit's blows. Timings are in seconds, not ticks, so retuning the
+## tick length (playtest 1: 0.25 s -> 0.1 s) doesn't change the pace of a fight.
+const ATTACK_INTERVAL_SECONDS := 1.0
+## Movement is UnitDef.speed x this, in cells per second (playtest 1: x1 felt too fast).
+const TRAVEL_SCALE := 0.5
 const EPSILON := 0.000001
 
 var route_length: float
@@ -141,9 +144,8 @@ func _move(events: Array) -> void:
 			if mover.order == SkirmishUnit.Order.ADVANCE
 			else -mover.advance_direction
 		)
-		var next := clampf(
-			mover.distance + direction * mover.speed * tick_seconds, 0.0, route_length
-		)
+		var step := mover.speed * TRAVEL_SCALE * tick_seconds
+		var next := clampf(mover.distance + direction * step, 0.0, route_length)
 		if mover.order == SkirmishUnit.Order.ADVANCE:
 			next = _stop_at_contact(mover, next)
 		mover.distance = next
@@ -157,7 +159,7 @@ func _fight(events: Array) -> void:
 			continue
 		attacker.attack_cooldown -= 1
 		if attacker.attack_cooldown <= 0:
-			attacker.attack_cooldown = ATTACK_COOLDOWN_TICKS
+			attacker.attack_cooldown = _attack_interval_ticks()
 			blows.append([attacker, unit(attacker.target_id)])
 	for blow in blows:
 		blow[1].hp -= blow[0].dmg
@@ -228,15 +230,21 @@ func _stop_at_contact(mover: SkirmishUnit, next: float) -> float:
 func _check_ends(mover: SkirmishUnit, events: Array) -> void:
 	var enemy_end := route_length if mover.advance_direction > 0 else 0.0
 	if mover.order == SkirmishUnit.Order.ADVANCE and is_equal_approx(mover.distance, enemy_end):
+		mover.distance = enemy_end  # snap: many small float steps land a hair short
 		mover.state = SkirmishUnit.State.ARRIVED  # the enemy fort is immune in the feel test
 		events.append(_event("arrived", mover))
 	elif (
 		mover.order == SkirmishUnit.Order.RETREAT
 		and is_equal_approx(mover.distance, mover.home_distance)
 	):
+		mover.distance = mover.home_distance
 		mover.order = SkirmishUnit.Order.HOLD
 		mover.state = SkirmishUnit.State.HOLDING
 		events.append(_event("returned", mover))
+
+
+func _attack_interval_ticks() -> int:
+	return maxi(1, roundi(ATTACK_INTERVAL_SECONDS / tick_seconds))
 
 
 func _event(kind: String, subject: SkirmishUnit, extra: Dictionary = {}) -> Dictionary:

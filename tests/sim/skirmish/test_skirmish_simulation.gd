@@ -7,7 +7,7 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
 const ROUTE := 9.0
-const TICK := 0.25
+const TICK := 0.1
 
 
 func _def(hp: int, dmg: int, speed: float) -> UnitDef:
@@ -30,7 +30,7 @@ func _sim() -> SkirmishSimulation:
 	return SkirmishSimulation.new(ROUTE, TICK)
 
 
-func _step_until(sim: SkirmishSimulation, done: Callable, limit: int = 400) -> Array:
+func _step_until(sim: SkirmishSimulation, done: Callable, limit: int = 4000) -> Array:
 	var log := []
 	for i in range(limit):
 		log.append_array(sim.step())
@@ -54,15 +54,16 @@ func test_units_start_at_their_own_ends() -> void:
 	assert_int(grem.state).is_equal(SkirmishUnit.State.MOVING)
 
 
-func test_advancing_units_move_speed_times_tick_toward_the_enemy_end() -> void:
+func test_advancing_units_move_speed_times_travel_scale_times_tick() -> void:
 	var sim := _sim()
 	var grem := sim.spawn(_grem(), "player", true)
 	var militia := sim.spawn(_militia(), "the_kingdom", false)
 
 	sim.step()
 
-	assert_float(grem.distance).is_equal_approx(0.25, 0.0001)
-	assert_float(militia.distance).is_equal_approx(ROUTE - 0.2, 0.0001)
+	# Playtest 1: travel at x1 felt too fast, so speed is scaled by TRAVEL_SCALE (0.5).
+	assert_float(grem.distance).is_equal_approx(1.0 * 0.5 * TICK, 0.0001)
+	assert_float(militia.distance).is_equal_approx(ROUTE - 0.8 * 0.5 * TICK, 0.0001)
 
 
 func test_hostiles_meet_engage_and_stop_without_passing_through() -> void:
@@ -87,9 +88,9 @@ func test_melee_is_deterministic_and_the_militia_narrowly_wins_one_on_one() -> v
 
 	_step_until(sim, func(): return grem.state == SkirmishUnit.State.DEAD)
 
-	# Blows are simultaneous every 4 ticks from the engaging tick: the grem takes its
-	# fourth 5-damage blow 12 ticks after engaging; the militia has taken 24 of its 26.
-	assert_int(sim.tick_number() - engaged_at).is_equal(12)
+	# Blows are simultaneous once a second from the engaging tick: the grem takes its
+	# fourth 5-damage blow 3 s after engaging; the militia has taken 24 of its 26.
+	assert_float((sim.tick_number() - engaged_at) * TICK).is_equal_approx(3.0, 0.0001)
 	assert_int(militia.hp).is_equal(2)
 	assert_int(militia.state).is_not_equal(SkirmishUnit.State.DEAD)
 
@@ -101,8 +102,8 @@ func test_the_same_inputs_replay_to_the_same_events() -> void:
 		var grem := sim.spawn(_grem(), "player", true)
 		sim.spawn(_militia(), "the_kingdom", false)
 		var log := []
-		for i in range(80):
-			if i == 30:
+		for i in range(400):
+			if i == 150:
 				sim.order(grem.id, SkirmishUnit.Order.RETREAT)
 			log.append_array(sim.step())
 		runs.append(JSON.stringify(log))

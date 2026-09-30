@@ -58,7 +58,7 @@ func _build_lane_controls(box: VBoxContainer) -> void:
 	_wave_bar.show_percentage = false
 	box.add_child(_wave_bar)
 	var wave_row := _row(box)
-	_button(wave_row, "Send wave", func(): send_wave_pressed.emit())
+	_button(wave_row, "Send wave (S)", func(): send_wave_pressed.emit())
 	_button(wave_row, "Spawn 1 now", func(): spawn_player_pressed.emit())
 	_toggle(box, "Depart automatically when full", false, func(on): auto_departure_toggled.emit(on))
 	_toggle(

@@ -6,9 +6,10 @@ extends RefCounted
 ## and it can report several ticks due in one frame. Catch-up is capped so a long frame
 ## (a breakpoint, a window drag) doesn't flood the simulation.
 
-const MAX_CATCH_UP_TICKS := 8
+const MAX_CATCH_UP_TICKS := 20
 
-var tick_seconds: float = 0.25
+## Playtest 1: 0.25 s felt laggy between an order and its effect.
+var tick_seconds: float = 0.1
 var speed_multiplier: float = 1.0
 
 var _accumulated := 0.0

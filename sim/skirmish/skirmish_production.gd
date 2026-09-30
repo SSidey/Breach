@@ -13,18 +13,20 @@ const SkirmishSimulation = preload("res://sim/skirmish/skirmish_simulation.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
-## Ticks between one departing unit and the next, so a wave reads as a group.
-const DEPART_STAGGER_TICKS := 2
+## Seconds between one departing unit and the next, so a wave reads as a group.
+const DEPART_STAGGER_SECONDS := 0.5
 
 var unit_def: UnitDef
 var faction_id: String
 var at_player_end: bool
 var wave_size: int = 3
-var build_ticks: int = 8
+## Seconds to build one unit (timings are seconds, so the tick length can change).
+var build_seconds: float = 2.0
 var departure: Departure = Departure.MANUAL
 var built: int = 0
 
 var _progress := 0
+var _build_ticks := 1
 
 
 func _init(def: UnitDef, faction: String, player_end: bool) -> void:
@@ -39,15 +41,16 @@ func is_full() -> bool:
 
 ## 0..1 progress on the unit currently being built (0 when the wave is full).
 func progress() -> float:
-	return 0.0 if is_full() else float(_progress) / float(build_ticks)
+	return 0.0 if is_full() else float(_progress) / float(_build_ticks)
 
 
 func step(sim: SkirmishSimulation) -> Array:
 	var events := []
 	if is_full():
 		return events
+	_build_ticks = maxi(1, roundi(build_seconds / sim.tick_seconds))
 	_progress += 1
-	if _progress < build_ticks:
+	if _progress < _build_ticks:
 		return events
 	_progress = 0
 	built += 1
@@ -63,8 +66,9 @@ func step(sim: SkirmishSimulation) -> Array:
 ## Sends whatever is ready (the full wave, or a partial one early) and restarts building.
 func send(sim: SkirmishSimulation) -> Array[SkirmishUnit]:
 	var sent: Array[SkirmishUnit] = []
+	var stagger := roundi(DEPART_STAGGER_SECONDS / sim.tick_seconds)
 	for i in range(built):
-		sent.append(sim.spawn(unit_def, faction_id, at_player_end, i * DEPART_STAGGER_TICKS))
+		sent.append(sim.spawn(unit_def, faction_id, at_player_end, i * stagger))
 	built = 0
 	_progress = 0
 	return sent

@@ -40,6 +40,29 @@ func test_a_full_wave_only_notifies_when_the_option_is_notify() -> void:
 	assert_bool(scene.clock().is_paused()).is_false()
 
 
+func test_sending_the_wave_after_a_wave_full_pause_resumes_the_game() -> void:
+	var scene := _scene()
+	scene.pause_on_wave_full = true
+	scene.handle_events([{"type": "wave_full", "tick": 1, "faction": "player", "wave_size": 3}])
+
+	scene.send_wave()
+
+	assert_bool(scene.clock().is_paused()).is_false()
+
+
+func test_sending_the_wave_during_a_manual_pause_keeps_the_game_paused() -> void:
+	var scene := _scene()
+	scene.clock().pause()
+
+	scene.send_wave()
+
+	assert_bool(scene.clock().is_paused()).is_true()
+
+
+func test_the_clock_ticks_every_tenth_of_a_second() -> void:
+	assert_float(_scene().clock().tick_seconds).is_equal_approx(0.1, 0.0001)
+
+
 func test_the_unit_layer_constructs() -> void:
 	var layer: SkirmishUnitLayer = auto_free(SkirmishUnitLayer.new())
 

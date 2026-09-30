@@ -14,7 +14,7 @@ func _production(departure: int) -> SkirmishProduction:
 	unit_def.speed = 1.0
 	var production := SkirmishProduction.new(unit_def, "player", true)
 	production.wave_size = 3
-	production.build_ticks = 8
+	production.build_seconds = 0.8  # 8 ticks at 0.1 s
 	production.departure = departure
 	return production
 
@@ -32,7 +32,7 @@ func _count(events: Array, kind: String) -> int:
 
 func test_one_unit_is_built_every_build_ticks() -> void:
 	var production := _production(SkirmishProduction.Departure.MANUAL)
-	var sim := SkirmishSimulation.new(9.0, 0.25)
+	var sim := SkirmishSimulation.new(9.0, 0.1)
 
 	_run(production, sim, 16)
 
@@ -42,7 +42,7 @@ func test_one_unit_is_built_every_build_ticks() -> void:
 
 func test_a_full_wave_is_announced_once_and_building_stops() -> void:
 	var production := _production(SkirmishProduction.Departure.MANUAL)
-	var sim := SkirmishSimulation.new(9.0, 0.25)
+	var sim := SkirmishSimulation.new(9.0, 0.1)
 
 	var events := _run(production, sim, 60)
 
@@ -54,13 +54,13 @@ func test_a_full_wave_is_announced_once_and_building_stops() -> void:
 
 func test_send_spawns_the_wave_staggered_and_restarts_building() -> void:
 	var production := _production(SkirmishProduction.Departure.MANUAL)
-	var sim := SkirmishSimulation.new(9.0, 0.25)
+	var sim := SkirmishSimulation.new(9.0, 0.1)
 	_run(production, sim, 24)
 
 	var sent := production.send(sim)
 
 	assert_int(sent.size()).is_equal(3)
-	assert_array(sent.map(func(u): return u.wait_ticks)).is_equal([0, 2, 4])
+	assert_array(sent.map(func(u): return u.wait_ticks)).is_equal([0, 5, 10])  # 0.5 s apart
 	assert_int(production.built).is_equal(0)
 	assert_bool(production.is_full()).is_false()
 	_run(production, sim, 8)
@@ -69,7 +69,7 @@ func test_send_spawns_the_wave_staggered_and_restarts_building() -> void:
 
 func test_auto_departure_sends_the_wave_on_the_tick_it_fills() -> void:
 	var production := _production(SkirmishProduction.Departure.AUTO_WHEN_FULL)
-	var sim := SkirmishSimulation.new(9.0, 0.25)
+	var sim := SkirmishSimulation.new(9.0, 0.1)
 
 	var events := _run(production, sim, 24)
 
@@ -81,7 +81,7 @@ func test_auto_departure_sends_the_wave_on_the_tick_it_fills() -> void:
 
 func test_sending_an_empty_wave_does_nothing() -> void:
 	var production := _production(SkirmishProduction.Departure.MANUAL)
-	var sim := SkirmishSimulation.new(9.0, 0.25)
+	var sim := SkirmishSimulation.new(9.0, 0.1)
 
 	assert_array(production.send(sim)).is_empty()
 	assert_array(sim.units()).is_empty()

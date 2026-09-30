@@ -123,9 +123,29 @@ Scenario: Pause on wave full is a player option
 6. Manual: the user plays it and reports on the tick length, responsiveness and
    readability. The outcome is recorded below.
 
-## Outcome (filled in after the user plays it)
+## Outcome
 
-_Pending._
+**Playtest 1 (2026-09-30), the user's feedback and what changed:**
+
+1. **Travel at ×1 felt too fast.** Movement is now `UnitDef.speed × TRAVEL_SCALE`
+   (0.5) cells per second, which halves it. The unit data is unchanged, so the scale can
+   be retuned in one place.
+2. **A little lag before an order took effect.** The tick is now **0.1 s** (from
+   0.25 s). All timings are now in seconds, not ticks: attack interval 1 s, build time
+   2 s per unit, departure stagger 0.5 s, kingdom auto-spawn 10 s. Changing the tick
+   length doesn't change the pace.
+3. **Pausing on a full wave helped, but unpausing and then sending felt clunky.** After
+   a wave-full pause, **Send wave** (button or **S**) now sends *and* resumes in one
+   action. A pause the player chose themselves stays paused.
+4. **The frontline needs aligning** (the user's direction, to be designed):
+   - Units get a **grid footprint**: 1×1 for a grem or a person, 2×1 for cavalry, 2×2
+     for a brute, 4×4 for large creatures, 8×8 at most (a dragon).
+   - A lane has a **configurable frontline size**, and a wave is a **formation laid
+     out** on it. This matches the user's original intent of, for example, a 3×1 wave
+     with more slots unlocked over time.
+   - The player could set a wide frontline rather than a single file entering the
+     fight.
+   - To be settled before the feel test is extended, and recorded as a Decision.
 
 ## Notes / open questions
 

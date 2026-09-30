@@ -19,7 +19,7 @@ const MapView = preload("res://presentation/map_view.gd")
 const MAP := preload("res://content/maps/skirmish_p_c.tres")
 const PLAYER_UNIT := preload("res://content/units/grem.tres")
 const KINGDOM_UNIT := preload("res://content/units/kingdom_militia.tres")
-const KINGDOM_AUTO_TICKS := 40  # 10 s at 0.25 s ticks
+const KINGDOM_AUTO_SECONDS := 10.0
 
 ## Decision 39: what a full wave does - pause the game (true) or only notify (false).
 var pause_on_wave_full := true
@@ -30,6 +30,8 @@ var _lane: SkirmishProduction
 var _kingdom: SkirmishProduction
 var _kingdom_auto := false
 var _hud: SkirmishHud
+## True while the clock is paused because a wave filled (so Send wave also resumes).
+var _paused_for_wave := false
 
 
 func map_view() -> MapView:
@@ -56,7 +58,7 @@ func _ready() -> void:
 	_lane = SkirmishProduction.new(PLAYER_UNIT, "player", true)
 	_kingdom = SkirmishProduction.new(KINGDOM_UNIT, "the_kingdom", false)
 	_kingdom.wave_size = 1
-	_kingdom.build_ticks = KINGDOM_AUTO_TICKS
+	_kingdom.build_seconds = KINGDOM_AUTO_SECONDS
 	_kingdom.departure = SkirmishProduction.Departure.AUTO_WHEN_FULL
 	var layer: SkirmishUnitLayer = $Units
 	layer.simulation = _sim
@@ -96,9 +98,10 @@ func handle_events(events: Array) -> void:
 
 
 func _on_wave_full() -> void:
-	if pause_on_wave_full:
+	if pause_on_wave_full and not _clock.is_paused():
 		_clock.pause()
-		_hud_banner("Lane P → c: wave ready - paused (Space to resume)")
+		_paused_for_wave = true
+		_hud_banner("Lane P → c: wave ready - paused. Send wave (S) to go")
 	else:
 		_hud_banner("Lane P → c: wave ready")
 	_hud_log({"type": "wave_full", "tick": _sim.tick_number() if _sim else 0, "faction": "player"})
@@ -117,6 +120,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_order_selected(SkirmishUnit.Order.RETREAT)
 			KEY_TAB:
 				_cycle_selection()
+			KEY_S:
+				send_wave()
 	elif (
 		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
 	):
@@ -126,7 +131,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _connect_hud() -> void:
 	_hud.pause_toggled.connect(_toggle_pause)
 	_hud.speed_chosen.connect(func(multiplier): _clock.speed_multiplier = multiplier)
-	_hud.send_wave_pressed.connect(func(): _lane.send(_sim))
+	_hud.send_wave_pressed.connect(send_wave)
 	_hud.spawn_player_pressed.connect(func(): _sim.spawn(PLAYER_UNIT, "player", true))
 	_hud.spawn_kingdom_pressed.connect(func(): _sim.spawn(KINGDOM_UNIT, "the_kingdom", false))
 	_hud.auto_departure_toggled.connect(
@@ -142,7 +147,18 @@ func _connect_hud() -> void:
 	_hud.order_chosen.connect(_order_selected)
 
 
+## Sends the lane's wave. After a wave-full pause it also resumes, so "wave ready ->
+## go" is one action (playtest 1 found pause-then-unpause-then-send clunky); a pause the
+## player chose themselves stays paused.
+func send_wave() -> void:
+	_lane.send(_sim)
+	if _paused_for_wave:
+		_paused_for_wave = false
+		_clock.resume()
+
+
 func _toggle_pause() -> void:
+	_paused_for_wave = false
 	if _clock.is_paused():
 		_clock.resume()
 	else:
