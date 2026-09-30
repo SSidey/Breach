@@ -78,3 +78,31 @@ func test_units_in_different_lanes_with_the_same_id_stay_apart() -> void:
 	assert_float(layer._distance("k", in_k.units[0])).is_greater(
 		layer._distance("c", in_c.units[0])
 	)
+
+
+# --- Decision 42: painted templates, applied at once -----------------------------
+
+
+func test_painting_a_brute_changes_the_lanes_template_at_once() -> void:
+	var scene := _scene()
+	scene._choose_brush("c", 1)  # Brute 2x2
+	scene.assign_slots("k", 0)
+	scene.assign_slots("c", 8)
+
+	scene._paint_cell("c", Vector2i(0, 1))
+
+	var places: Array = scene._lanes["c"].production.preview()
+	assert_bool(places.any(func(p): return p[2] == 2 and p[3] == 2 and p[0] == 0)).is_true()
+
+
+func test_lowering_a_lanes_share_trims_its_template_and_banks_built_units() -> void:
+	var scene := _scene()
+	var production = scene._lanes["c"].production
+	for i in range(110):  # a grem takes 2 s (20 ticks): lane c's 5-grem line
+		production.step(scene.simulation("c"))
+	assert_int(production.built()).is_equal(5)
+
+	scene.assign_slots("c", 2)
+
+	assert_int(production.preview().size()).is_equal(2)
+	assert_int(production.reserve_count()).is_equal(3)

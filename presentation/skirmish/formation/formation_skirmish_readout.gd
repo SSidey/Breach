@@ -6,7 +6,6 @@ extends RefCounted
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishSlotPool = preload("res://sim/skirmish/formation/skirmish_slot_pool.gd")
-const SkirmishFormation = preload("res://sim/skirmish/formation/skirmish_formation.gd")
 const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
 
 
@@ -16,7 +15,7 @@ static func status(seconds: float, speed: float, paused: bool) -> String:
 
 static func pool(slot_pool: SkirmishSlotPool) -> String:
 	return (
-		"Slot pool %d: c %d · k %d · free %d (changes apply to the next wave)"
+		"Slot pool %d: c %d · k %d · free %d (applies now; displaced units are banked)"
 		% [
 			slot_pool.total,
 			slot_pool.assigned("c"),
@@ -26,17 +25,19 @@ static func pool(slot_pool: SkirmishSlotPool) -> String:
 	)
 
 
-## [summary text, build share 0..1, preview [width, slots, cells]] for one lane.
-static func lane(production: FormationProduction, requested_width: int, lane_width: int) -> Array:
-	var slots := production.wave_slots()
-	var width := SkirmishFormation.clamp_width(requested_width, lane_width, slots)
+## [summary text, build share 0..1, template places] for one lane.
+static func lane(production: FormationProduction, slot_share: int) -> Array:
+	var places := production.preview()
+	var used := 0
+	for place in places:
+		used += place[2] * place[3]
 	var state := "ready - send it" if production.is_full() else "building"
 	var text := (
-		"wave %d units, %d slots × %d wide · %s · lane max %d wide"
-		% [production.built(), slots, width, state, lane_width]
+		"cells %d/%d · built %d/%d · reserve %d · %s"
+		% [used, slot_share, production.built(), places.size(), production.reserve_count(), state]
 	)
 	var share := 1.0 if production.is_full() else production.progress
-	return [text, share, [width, slots, production.preview()]]
+	return [text, share, places]
 
 
 static func selected(lane_key: String, squad: SkirmishSquad) -> String:

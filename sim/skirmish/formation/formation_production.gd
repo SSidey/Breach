@@ -1,92 +1,96 @@
 class_name FormationProduction
 extends RefCounted
-## One lane's wave build in the formation feel test (specs/22-formation-feel-test.md,
-## Decisions 39-40). When a wave starts building it snapshots the lane's slots and width
-## into a SkirmishFormation, so a slot-pool change made meanwhile applies to the next
-## wave. Units are built one at a time per the composition preset and placed front-first.
-## "wave_full" is emitted once when the next unit won't fit; the wave then departs as one
-## squad, manually (send()) or automatically. Never pauses anything itself.
+## One lane's wave build (Decisions 39 and 42, specs/22-formation-feel-test.md): it builds
+## toward the lane's painted WaveTemplate, front-first. A new template takes effect at
+## once - units already built fold into matching places (same unit type, front-first) and
+## any left over are banked in the lane's reserve, which fills matching places instantly
+## before anything new is built. "wave_full" is emitted once when every place is filled;
+## the wave departs as one squad, manually (send()) or automatically. Never pauses itself.
 
-## Grems only; one brute at the front centre then grems; brutes only.
-enum Preset { LIGHT, HEAVY_FRONT, HEAVY }
 enum Departure { MANUAL, AUTO_WHEN_FULL }
 
-const SkirmishFormation = preload("res://sim/skirmish/formation/skirmish_formation.gd")
+const WaveTemplate = preload("res://sim/skirmish/formation/wave_template.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
 var faction_id: String
 var at_player_end: bool
-var light_def: UnitDef
-var heavy_def: UnitDef
-var preset: Preset = Preset.LIGHT
 var departure: Departure = Departure.MANUAL
-## The lane's maximum frontline width (Decision 41: never more than 8).
-var lane_width: int = SkirmishFormation.MAX_LANE_WIDTH
 ## Seconds to build a 1x1 unit; larger footprints take twice as long.
 var build_seconds: float = 2.0
 ## 0..1 through the unit currently being built.
 var progress: float = 0.0
 
-var _slots := 0  # the lane's current pool share (applies from the next wave)
-var _width := 1
-var _formation: SkirmishFormation  # the wave being built; null between waves
-var _placements := []  # [[UnitDef, Vector2i(rank, column)], ...]
+var _template := WaveTemplate.new(1, 0)
+var _filled := []  # one bool per _template.ordered() place
+var _reserve: Array[UnitDef] = []
 var _ticks := 0
+var _building: UnitDef
 var _announced := false
 
 
-func _init(faction: String, player_end: bool, light: UnitDef, heavy: UnitDef) -> void:
+func _init(faction: String, player_end: bool) -> void:
 	faction_id = faction
 	at_player_end = player_end
-	light_def = light
-	heavy_def = heavy
 
 
-## The lane's pool share and requested width - used when the next wave starts.
-func configure(slot_count: int, requested_width: int) -> void:
-	_slots = slot_count
-	_width = requested_width
+## Switches to a new template now: built units fold into matching places, the rest are
+## banked. Returns a "folded" event describing it.
+func set_template(template: WaveTemplate) -> Array:
+	var built_defs := []
+	var places := _template.ordered()
+	for index in range(places.size()):
+		if _filled[index]:
+			built_defs.append(places[index][0])
+	_template = template
+	_filled = []
+	var kept := 0
+	for place in _template.ordered():
+		var match_at := built_defs.find(place[0])
+		_filled.append(match_at != -1)
+		if match_at != -1:
+			built_defs.remove_at(match_at)
+			kept += 1
+	for leftover in built_defs:
+		_reserve.append(leftover)
+	_announced = is_full() and _announced
+	return [{"type": "folded", "faction": faction_id, "kept": kept, "banked": built_defs.size()}]
 
 
 func step(sim: FormationSimulation) -> Array:
 	var events := []
-	if _formation == null:
-		if _slots <= 0:
-			return events
-		var width := SkirmishFormation.clamp_width(_width, lane_width, _slots)
-		_formation = SkirmishFormation.new(width, _slots)
-	var next := _next_def()
-	if next == null:
-		return events
-	_ticks += 1
-	var needed := _build_ticks(next, sim)
-	progress = float(_ticks) / float(needed)
-	if _ticks < needed:
-		return events
-	_ticks = 0
-	progress = 0.0
-	var prefer_centre := preset == Preset.HEAVY_FRONT and next == heavy_def
-	var at := _formation.place(next.footprint_depth, next.footprint_width, prefer_centre)
-	_placements.append([next, at])
-	events.append(_event("built", sim, {"built": _placements.size()}))
-	if _next_def() == null and not _announced:
+	var places := _template.ordered()
+	for index in range(places.size()):
+		var banked := _reserve.find(places[index][0])
+		if not _filled[index] and banked != -1:
+			_reserve.remove_at(banked)
+			_filled[index] = true
+			events.append(_event("from_reserve", sim, {"built": built()}))
+	var next := _filled.find(false)
+	if next != -1:
+		_build_toward(places[next][0], next, sim, events)
+	if is_full() and not _announced:
 		_announced = true
-		events.append(_event("wave_full", sim, {"built": _placements.size()}))
+		events.append(_event("wave_full", sim, {"built": built()}))
 		if departure == Departure.AUTO_WHEN_FULL:
 			send(sim)
 			events.append(_event("departed", sim, {"units": events[-1]["built"]}))
 	return events
 
 
-## Sends whatever is built as one squad and ends the wave; null when nothing is built.
+## Deploys the filled places as one squad (the painted layout) and restarts the same
+## template, empty; null when nothing is built.
 func send(sim: FormationSimulation) -> SkirmishSquad:
-	if _placements.is_empty():
+	if built() == 0:
 		return null
-	var squad := sim.spawn_squad(_formation.width, _placements, faction_id, at_player_end)
-	_formation = null
-	_placements = []
+	var layout := _template.layout()
+	var placements := []
+	for index in range(_filled.size()):
+		if _filled[index]:
+			placements.append(layout[1][index])
+	var squad := sim.spawn_squad(layout[0], placements, faction_id, at_player_end)
+	_filled.fill(false)
 	_ticks = 0
 	progress = 0.0
 	_announced = false
@@ -94,45 +98,42 @@ func send(sim: FormationSimulation) -> SkirmishSquad:
 
 
 func is_full() -> bool:
-	return _formation != null and _next_def() == null
+	return not _filled.is_empty() and not _filled.has(false)
 
 
 func built() -> int:
-	return _placements.size()
+	return _filled.count(true)
 
 
-## The wave's slot count (the formation it is building into, else the next wave's share).
-func wave_slots() -> int:
-	return _formation.slots if _formation != null else _slots
+func reserve_count() -> int:
+	return _reserve.size()
 
 
-## [[rank, column, depth, width], ...] of the units built so far, for the HUD preview.
+## [[rank, column, depth, width, filled], ...] for every template place (template grid).
 func preview() -> Array:
-	return _placements.map(
-		func(p): return [p[1].x, p[1].y, p[0].footprint_depth, p[0].footprint_width]
-	)
+	var places := _template.ordered()
+	var out := []
+	for index in range(places.size()):
+		var unit_def: UnitDef = places[index][0]
+		var at: Vector2i = places[index][1]
+		out.append([at.x, at.y, unit_def.footprint_depth, unit_def.footprint_width, _filled[index]])
+	return out
 
 
-func _next_def() -> UnitDef:
-	if _formation == null:
-		return null
-	var has_heavy := _placements.any(func(p): return p[0] == heavy_def)
-	var wants_heavy := preset == Preset.HEAVY or (preset == Preset.HEAVY_FRONT and not has_heavy)
-	if wants_heavy and heavy_def != null and _fits(heavy_def):
-		return heavy_def
-	if preset == Preset.HEAVY and not _placements.is_empty():
-		return null  # brutes only: stop when no more brutes fit
-	return light_def if _fits(light_def) else null
-
-
-func _fits(unit_def: UnitDef) -> bool:
-	return _formation.can_fit(unit_def.footprint_depth, unit_def.footprint_width)
-
-
-func _build_ticks(unit_def: UnitDef, sim: FormationSimulation) -> int:
+func _build_toward(unit_def: UnitDef, index: int, sim: FormationSimulation, events: Array) -> void:
+	if _building != unit_def:
+		_building = unit_def
+		_ticks = 0
+	_ticks += 1
 	var area := unit_def.footprint_depth * unit_def.footprint_width
-	var seconds := build_seconds * (2.0 if area > 1 else 1.0)
-	return maxi(1, roundi(seconds / sim.tick_seconds))
+	var needed := maxi(1, roundi(build_seconds * (2.0 if area > 1 else 1.0) / sim.tick_seconds))
+	progress = float(_ticks) / float(needed)
+	if _ticks < needed:
+		return
+	_ticks = 0
+	progress = 0.0
+	_filled[index] = true
+	events.append(_event("built", sim, {"built": built()}))
 
 
 func _event(kind: String, sim: FormationSimulation, extra: Dictionary) -> Dictionary:

@@ -134,6 +134,40 @@ Scenario: The spec 21 duel still holds
      effect immediately, built units fold in, and leftovers are banked in a reserve.
    - The oversized debug units should later stay within their tile (fine for now).
 
+## Round 2: wave painter (Decision 42)
+
+Playtest 1's clunky controls are replaced:
+- **`WaveTemplate`** (`sim/skirmish/formation/wave_template.gd`): a lane's wave, painted
+  unit by unit into a grid up to the lane's width by 4 ranks.
+  - The painted units *are* the shape.
+  - `paint` replaces whatever it overlaps and never exceeds the lane's pool share;
+    `erase` removes a unit.
+  - `ordered` gives the front-first order; `trim_to` removes from the back.
+  - `layout` normalises columns for spawning; `default_line` is the starting template.
+- **`FormationProduction`** now builds toward the template. `set_template` applies at
+  once:
+  - built units **fold** into matching places, front-first
+  - leftovers are **banked** in the lane's reserve, which fills matching places
+    instantly before anything new is built
+- **`FormationLane`** holds one lane's simulation, production, template and brush, and
+  the kingdom's line. Painting and pool changes go through it.
+- **`WavePainter`**, in the HUD:
+  - an 8×4 grid with the front at the top and columns past the lane's width shaded
+  - template outlines, built units filled, and the unit being built filling with its
+    progress
+  - left click or drag paints with the lane's brush (Grem 1×1, Brute 2×2, Erase), and
+    right click erases
+  - a readout: cells used/share, built, reserve
+- The pool's −/+ now takes effect at once: a lane that loses slots is trimmed from the
+  back, and its displaced units are banked.
+- Width −/+, the composition presets and `SkirmishFormation` are removed.
+
+A scripted run showed each step:
+1. A brute painted at the front centre, with two grems behind it, leads the wave.
+2. Repainting mid-build as a five-grem line folded the built grem in and banked the
+   brute (reserve 1).
+3. After sending, painting a brute again filled it instantly from the reserve.
+
 ## Notes / open questions
 
 - Orders are per wave. Pulling back a single unit is left out for now.

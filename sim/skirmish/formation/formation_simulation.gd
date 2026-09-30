@@ -43,7 +43,7 @@ func _init(length: float, seconds_per_tick: float) -> void:
 	tick_seconds = seconds_per_tick
 
 
-## placements: [[UnitDef, Vector2i(rank, column)], ...] from a SkirmishFormation.
+## placements: [[UnitDef, Vector2i(rank, column)], ...] from a WaveTemplate layout.
 func spawn_squad(
 	width: int, placements: Array, faction_id: String, at_player_end: bool, wait_ticks: int = 0
 ) -> SkirmishSquad:

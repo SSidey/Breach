@@ -11,37 +11,21 @@ signal pause_on_full_toggled(enabled: bool)
 signal kingdom_auto_toggled(enabled: bool)
 signal order_chosen(order: int)
 signal slots_changed(lane_key: String, delta: int)
-signal width_changed(lane_key: String, delta: int)
-signal preset_chosen(lane_key: String, preset: int)
+signal brush_chosen(lane_key: String, brush: int)
+signal cell_painted(lane_key: String, cell: Vector2i)
+signal cell_erased(lane_key: String, cell: Vector2i)
 signal send_wave_pressed(lane_key: String)
 signal auto_departure_toggled(lane_key: String, enabled: bool)
 signal spawn_kingdom_pressed(lane_key: String)
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const WavePainter = preload("res://presentation/skirmish/formation/wave_painter.gd")
 
 const PANEL_WIDTH := 330.0
 const LOG_LINES := 9
 const BANNER_SECONDS := 3.0
-const PRESETS := ["Grems", "Brute front + grems", "Brutes"]
-
-
-## A tiny grid of the wave being built: the formation's usable cells and the units in it.
-class WavePreview:
-	extends Control
-	const CELL := 9.0
-	var width := 1
-	var slots := 0
-	var cells := []  # [[rank, column, depth, width], ...]
-
-	func _draw() -> void:
-		for index in range(slots):
-			var at := Vector2(index % width, index / width) * CELL
-			draw_rect(Rect2(at, Vector2(CELL - 1, CELL - 1)), Color(1, 1, 1, 0.15))
-		for unit in cells:
-			var at := Vector2(unit[1], unit[0]) * CELL
-			var size := Vector2(unit[3], unit[2]) * CELL - Vector2.ONE
-			draw_rect(Rect2(at, size), Color("#b3761d"))
-
+## Brush choices, in order (the scene maps them to unit types; the last erases).
+const BRUSHES := ["Grem 1×1", "Brute 2×2", "Erase"]
 
 var _status: Label
 var _pool: Label
@@ -49,7 +33,7 @@ var _pause_button: Button
 var _selected: Label
 var _log: RichTextLabel
 var _banner: Label
-var _lanes := {}  # lane key -> {"label": Label, "bar": ProgressBar, "preview": WavePreview}
+var _lanes := {}  # lane key -> {"label": Label, "painter": WavePainter}
 var _lines: PackedStringArray = []
 var _banner_left := 0.0
 
@@ -105,18 +89,14 @@ func set_pool(text: String) -> void:
 	_pool.text = text
 
 
-## text: the lane's summary; share: build progress; preview: [width, slots, cells].
-func set_lane(lane_key: String, text: String, share: float, preview: Array) -> void:
+## text: the lane's summary; share: build progress; places: FormationProduction.preview().
+func set_lane(lane_key: String, text: String, share: float, places: Array, lane_width: int) -> void:
 	var lane: Dictionary = _lanes[lane_key]
 	lane["label"].text = text
-	lane["bar"].value = share
-	lane["preview"].width = preview[0]
-	lane["preview"].slots = preview[1]
-	lane["preview"].cells = preview[2]
-	lane["preview"].custom_minimum_size = Vector2(
-		PANEL_WIDTH, ceilf(float(preview[1]) / maxf(preview[0], 1)) * WavePreview.CELL + 2
-	)
-	lane["preview"].queue_redraw()
+	lane["painter"].places = places
+	lane["painter"].progress = share
+	lane["painter"].lane_width = lane_width
+	lane["painter"].queue_redraw()
 
 
 func set_selected(text: String) -> void:
@@ -141,25 +121,21 @@ func _build_lane(box: VBoxContainer, lane_key: String) -> void:
 	var row := _row(box)
 	_button(row, "slots −", func(): slots_changed.emit(lane_key, -1))
 	_button(row, "+", func(): slots_changed.emit(lane_key, 1))
-	_button(row, "width −", func(): width_changed.emit(lane_key, -1))
-	_button(row, "+", func(): width_changed.emit(lane_key, 1))
-	var presets := OptionButton.new()
-	presets.focus_mode = Control.FOCUS_NONE
-	for name in PRESETS:
-		presets.add_item(name)
-	presets.item_selected.connect(func(index): preset_chosen.emit(lane_key, index))
-	box.add_child(presets)
+	var brushes := OptionButton.new()
+	brushes.focus_mode = Control.FOCUS_NONE
+	for name in BRUSHES:
+		brushes.add_item(name)
+	brushes.item_selected.connect(func(index): brush_chosen.emit(lane_key, index))
+	row.add_child(brushes)
+	var painter := WavePainter.new()
+	painter.painted.connect(func(cell): cell_painted.emit(lane_key, cell))
+	painter.erased.connect(func(cell): cell_erased.emit(lane_key, cell))
+	box.add_child(painter)
 	var label := _label(box, "")
-	var bar := ProgressBar.new()
-	bar.max_value = 1.0
-	bar.show_percentage = false
-	box.add_child(bar)
-	var preview := WavePreview.new()
-	box.add_child(preview)
 	var send_row := _row(box)
 	_button(send_row, "Send wave", func(): send_wave_pressed.emit(lane_key))
 	_toggle(send_row, "Auto depart", false, func(on): auto_departure_toggled.emit(lane_key, on))
-	_lanes[lane_key] = {"label": label, "bar": bar, "preview": preview}
+	_lanes[lane_key] = {"label": label, "painter": painter}
 
 
 func _build_kingdom_and_orders(box: VBoxContainer, lane_keys: Array) -> void:
