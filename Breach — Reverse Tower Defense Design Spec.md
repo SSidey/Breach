@@ -2077,3 +2077,61 @@ user's direction replaces that with formations.
   designer is updated in the same pass when it lands).
 - Domain upgrades (slot count, unit gates such as the Font of Malice, build speed)
   belong to the Lair meta-layer, which is not designed in detail yet.
+
+### Decision 41 — Everything buildable belongs to a faction's tech tree; the player's overlord and each enemy field their own forces; lane width is at most 8
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** The user wants progression and faction ties across units, upgrades,
+static defences and structure parts. This is implicit today (the player fields grems,
+the kingdom its own units); it should become explicit and general. The player picks an
+**overlord**. Each **enemy** fields its own forces, and each side uses the units,
+defences and upgrades that fit its faction.
+
+**Model:**
+- **Every buildable has a faction tie.**
+  - This covers unit types, emplacements (static defences), tile and structure upgrades,
+    room features and boundary presets.
+  - Each is either **faction-exclusive** (knights and ballistae belong to the kingdom)
+    or **universal** (an arrow slit).
+- **Using what's already on the map is open to anyone who holds it and has the means.**
+  A pre-placed structure or emplacement can be used by any faction that holds it, if it
+  has the traits or weapons the thing needs. For example, a ballista needs crew able to
+  operate it.
+- **Building needs tech.** Building an upgrade, structure part or unit mid-map requires
+  that tech to be unlocked. By default a faction has only **its own faction's tech
+  tree**.
+- **The player can branch out:** finding tomes or capturing people (among other means)
+  unlocks tech from other factions' trees.
+- **Enemies get access by authoring.** Either:
+  - a map grants an enemy extra unlocks, or
+  - an **assignable unlock event**, e.g. the kingdom allies with another faction, after
+    which it has access to both factions' tech. This persists in that player's campaign
+    from then on.
+- **Lane width is at most 8 slots.** This matches the largest footprint (8×8, a dragon).
+  Each lane authors its own frontline width, at or under 8; terrain may narrow it later.
+- **Decision 40's proposals are confirmed** by the user: slots are a shared pool across
+  lanes, and a reassignment applies to each lane's next wave.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| One shared roster for every faction | Loses faction identity; the user wants exclusives such as knights and ballistae for the kingdom. |
+| Only faction-exclusive content | Some things, such as arrow slits, are naturally universal. |
+| Captured structures unusable by their new owner | The user wants whoever holds a structure to use it, given the means. |
+
+**Consequences (future schema; nothing built here):**
+- `FactionDef` gains a **tech tree**. Unit, emplacement, upgrade, room-feature and
+  boundary-preset definitions gain a **faction tie** (exclusive to certain factions, or
+  universal) and a **tech requirement**.
+- Operating a structure or emplacement checks the holder's traits or weapons (e.g.
+  ballista crew), not its faction.
+- Maps author **enemy unlocks**. The Map Script (calendar addendum) gains an
+  unlock/alliance action for mid-campaign events. Unlocks can persist across a player's
+  campaign, which ties into the Lair meta-layer.
+- The designer's libraries (static defences, room features, prefabs, upgrades, and units
+  once they have a view) gain a "faction / universal" field and a tech requirement. By
+  the sync rule, this is updated when the schema lands.
+- The feel test stays player-versus-kingdom with fixed rosters.
