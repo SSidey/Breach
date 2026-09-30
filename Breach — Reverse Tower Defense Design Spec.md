@@ -442,6 +442,45 @@ Open questions: whether planes are separate route graphs or layers of one graph,
 units move between planes (entrances, landing zones), and how the lane/tick model
 represents them.
 
+## Future direction: a living board (reactive map presentation)
+
+Raised with the map viewer (specs/18, specs/19). The board the player sees is not a
+static picture of the authored map. The underlying terrain stays recognisable, but the
+world visibly reacts to what happens on it. This is recorded as a direction, not
+designed.
+
+- **Corruption spreads with control.** As the player controls more of the map, the
+  terrain appears increasingly corrupted. Open questions:
+  - Whether this belongs to one player faction or is shared by every player overlord.
+  - Whether it is driven locally (tiles near controlled nodes) or globally (the share of
+    the map controlled).
+  - How many visual stages it has.
+- **Assets react to state.** A forest cut down for wood shows as felled or cleared. A
+  quarry or ore vein that's been worked out looks exhausted. A destroyed fort appears as a
+  ruin, and a damaged one looks damaged.
+- **Control is shown in the world, not as icons.** The small in-tile icons (owner ring,
+  critical-asset crown, hidden badge) are the accepted interim. Eventually control should
+  read thematically: forts fly the controlling faction's flag, and banners or other
+  markers appear on held ground. The icons stay for the designer and debug views.
+- **Depth, not flat tiles.** A forest should look like a forest, with trees that have
+  height and overlap the cells around them, not a green square. The same goes for
+  mountains, water and structures.
+- **Weather and day/night** add further dynamism. The user has addenda to add; they will
+  be linked here when recorded.
+
+Implications for the Godot build:
+- **Keep the viewer's layer split.** Terrain → features → roads/bridges → structures →
+  units → overlays, with drawing driven by a view model. Each layer can then move from
+  code-drawn shapes to art (e.g. a `TileMapLayer` for terrain, y-sorted prop sprites for
+  depth) without touching the others.
+- **The art set grows variants.** It needs art per terrain and corruption stage,
+  depletion states, structure condition (intact/damaged/ruined), faction flags, and prop
+  sets per terrain. Code-drawn fallbacks remain for anything without art.
+- **The board needs runtime state.** Reserves remaining, structure condition, and
+  control/corruption per tile or node come from the simulation in milestone 2. `MapDef`
+  stays the authored starting state; the play scene's view model combines it with live
+  state.
+
 ## Notes for the implementing agent (Godot)
 
 - **Data-driven units and recipes.** Units, fusion recipes, fort/tower stats, and map layouts should all be Resource (`.tres`) definitions, not hardcoded scenes — this is what makes "one overlord now, more later" and "map-creator eventually" affordable.
