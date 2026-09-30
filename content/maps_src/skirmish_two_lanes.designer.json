@@ -1,0 +1,376 @@
+{
+  "format": "breach-designer-map",
+  "format_version": 1,
+  "cell_size": 64,
+  "map_name": "Skirmish, two lanes (formation feel test)",
+  "grid": {
+    "cols": 12,
+    "rows": 5
+  },
+  "default_terrain": "FIELDS",
+  "factions": [
+    {
+      "id": "player",
+      "display_name": "Player"
+    },
+    {
+      "id": "the_kingdom",
+      "display_name": "The Kingdom"
+    }
+  ],
+  "faction_relations": [
+    {
+      "a": "player",
+      "b": "the_kingdom",
+      "stance": "HOSTILE"
+    }
+  ],
+  "loss_criteria": [
+    {
+      "faction_id": "player",
+      "name": "Home",
+      "rule": "ANY",
+      "node_ids": [
+        "P"
+      ]
+    },
+    {
+      "faction_id": "the_kingdom",
+      "name": "Keeps",
+      "rule": "ALL",
+      "node_ids": [
+        "c",
+        "k"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "P",
+      "node_type": "ORIGIN",
+      "is_critical_asset": true,
+      "owning_faction_id": "player",
+      "hidden_from_faction_ids": [],
+      "grid_position": {
+        "row": 2,
+        "col": 1
+      },
+      "fields": {},
+      "garrison_count": 0,
+      "garrison_units": []
+    },
+    {
+      "id": "c",
+      "node_type": "ORIGIN",
+      "is_critical_asset": true,
+      "owning_faction_id": "the_kingdom",
+      "hidden_from_faction_ids": [],
+      "grid_position": {
+        "row": 0,
+        "col": 10
+      },
+      "fields": {},
+      "garrison_count": 0,
+      "garrison_units": []
+    },
+    {
+      "id": "k",
+      "node_type": "ORIGIN",
+      "is_critical_asset": true,
+      "owning_faction_id": "the_kingdom",
+      "hidden_from_faction_ids": [],
+      "grid_position": {
+        "row": 4,
+        "col": 10
+      },
+      "fields": {},
+      "garrison_count": 0,
+      "garrison_units": []
+    }
+  ],
+  "tiles": [],
+  "roads": [
+    {
+      "a": {
+        "row": 2,
+        "col": 1
+      },
+      "b": {
+        "row": 1,
+        "col": 2
+      }
+    },
+    {
+      "a": {
+        "row": 1,
+        "col": 2
+      },
+      "b": {
+        "row": 0,
+        "col": 3
+      }
+    },
+    {
+      "a": {
+        "row": 0,
+        "col": 3
+      },
+      "b": {
+        "row": 0,
+        "col": 4
+      }
+    },
+    {
+      "a": {
+        "row": 0,
+        "col": 4
+      },
+      "b": {
+        "row": 0,
+        "col": 5
+      }
+    },
+    {
+      "a": {
+        "row": 0,
+        "col": 5
+      },
+      "b": {
+        "row": 0,
+        "col": 6
+      }
+    },
+    {
+      "a": {
+        "row": 0,
+        "col": 6
+      },
+      "b": {
+        "row": 0,
+        "col": 7
+      }
+    },
+    {
+      "a": {
+        "row": 0,
+        "col": 7
+      },
+      "b": {
+        "row": 0,
+        "col": 8
+      }
+    },
+    {
+      "a": {
+        "row": 0,
+        "col": 8
+      },
+      "b": {
+        "row": 0,
+        "col": 9
+      }
+    },
+    {
+      "a": {
+        "row": 0,
+        "col": 9
+      },
+      "b": {
+        "row": 0,
+        "col": 10
+      }
+    },
+    {
+      "a": {
+        "row": 2,
+        "col": 1
+      },
+      "b": {
+        "row": 3,
+        "col": 2
+      }
+    },
+    {
+      "a": {
+        "row": 3,
+        "col": 2
+      },
+      "b": {
+        "row": 4,
+        "col": 3
+      }
+    },
+    {
+      "a": {
+        "row": 4,
+        "col": 3
+      },
+      "b": {
+        "row": 4,
+        "col": 4
+      }
+    },
+    {
+      "a": {
+        "row": 4,
+        "col": 4
+      },
+      "b": {
+        "row": 4,
+        "col": 5
+      }
+    },
+    {
+      "a": {
+        "row": 4,
+        "col": 5
+      },
+      "b": {
+        "row": 4,
+        "col": 6
+      }
+    },
+    {
+      "a": {
+        "row": 4,
+        "col": 6
+      },
+      "b": {
+        "row": 4,
+        "col": 7
+      }
+    },
+    {
+      "a": {
+        "row": 4,
+        "col": 7
+      },
+      "b": {
+        "row": 4,
+        "col": 8
+      }
+    },
+    {
+      "a": {
+        "row": 4,
+        "col": 8
+      },
+      "b": {
+        "row": 4,
+        "col": 9
+      }
+    },
+    {
+      "a": {
+        "row": 4,
+        "col": 9
+      },
+      "b": {
+        "row": 4,
+        "col": 10
+      }
+    }
+  ],
+  "links": [
+    {
+      "a": "P",
+      "b": "c",
+      "route_found": true,
+      "route_cost": 4.9,
+      "route": [
+        {
+          "row": 2,
+          "col": 1
+        },
+        {
+          "row": 1,
+          "col": 2
+        },
+        {
+          "row": 0,
+          "col": 3
+        },
+        {
+          "row": 0,
+          "col": 4
+        },
+        {
+          "row": 0,
+          "col": 5
+        },
+        {
+          "row": 0,
+          "col": 6
+        },
+        {
+          "row": 0,
+          "col": 7
+        },
+        {
+          "row": 0,
+          "col": 8
+        },
+        {
+          "row": 0,
+          "col": 9
+        },
+        {
+          "row": 0,
+          "col": 10
+        }
+      ]
+    },
+    {
+      "a": "P",
+      "b": "k",
+      "route_found": true,
+      "route_cost": 4.9,
+      "route": [
+        {
+          "row": 2,
+          "col": 1
+        },
+        {
+          "row": 3,
+          "col": 2
+        },
+        {
+          "row": 4,
+          "col": 3
+        },
+        {
+          "row": 4,
+          "col": 4
+        },
+        {
+          "row": 4,
+          "col": 5
+        },
+        {
+          "row": 4,
+          "col": 6
+        },
+        {
+          "row": 4,
+          "col": 7
+        },
+        {
+          "row": 4,
+          "col": 8
+        },
+        {
+          "row": 4,
+          "col": 9
+        },
+        {
+          "row": 4,
+          "col": 10
+        }
+      ]
+    }
+  ],
+  "terrain_library": [],
+  "feature_library": [],
+  "validation_warnings": [],
+  "note": "Formation feel test (specs/22): two lanes from the player origin P to the kingdom's c and k; the kingdom's forts are immune in the feel test."
+}
