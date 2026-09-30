@@ -473,17 +473,19 @@ designed.
   - A full moon on a fixed calendar date.
   - Weather as zones, either blanketing whole cells or shaped (a moving tornado).
   All of this is derived from the round counter, so the board reads it and never
-  simulates it. `breach-addendum-unit-ai-and-tactical-space.md` adds the other half: a
+  simulates it. Per Decisions 34–35, time of day is an N-hour clock, and it is shown on
+  the 2D board through lighting and tint (e.g. `CanvasModulate` and 2D lights following
+  the sun and moon), not a 3D light. `breach-addendum-unit-ai-and-tactical-space.md` adds the other half: a
   fight opens its own continuous local space, and a ranged fight shows two linked
   viewports that merge as the forces close.
 
 Implications for the Godot build:
 - **Keep the viewer's layer split.** Terrain → features → roads/bridges → structures →
-  units → overlays, with drawing driven by a view model. The play board is 3D (Decision
-  34): terrain meshes, low-poly structures, forest props with real height, side-on unit
-  sprites, and a clock-driven sun and moon. The renderer-agnostic view models
-  (`MapViewModel`, `MapLayoutView`) are what carry over from the 2D viewer; the 2D
-  viewer's drawing does not.
+  units → overlays, with drawing driven by a view model. The board is 2D (Decision 35):
+  each layer moves from code-drawn shapes to art without touching the others. Depth comes
+  from layered, y-sorted sprites (a forest's trees overlapping the cells around them), not
+  3D geometry. Side-on views of structures and fights appear only in the Inspector
+  Viewport.
 - **The art set grows variants.** It needs art per terrain and corruption stage,
   depletion states, structure condition (intact/damaged/ruined), faction flags, and prop
   sets per terrain. Code-drawn fallbacks remain for anything without art.
@@ -1674,6 +1676,11 @@ is built, so a later item doesn't re-derive it.
 
 ### Decision 34 — Calendar is an N-hour clock with static seasons and a configurable moon; zones are placed on grid cells; weapon range is shared by units and emplacements; the play board is 3D
 
+> Superseded in part by Decision 35 on 2026-09-30: the board is **2D**, not 3D (the side-on
+> view lives only in the Inspector Viewport); seasons can advance every N ticks or stay static,
+> per map; hours per tick is a per-map setting. The zone, clock, moon and weapon-range parts
+> stand.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-09-30
 
@@ -1768,3 +1775,46 @@ view. What carries over to the 3D board is the renderer-agnostic data: `MapDef`,
   emplacement vs firing position split still needs the user's confirmation there.
 - `breach-addendum-calendar-weather.md` carries a note at its top pointing here, so the
   superseded parts aren't implemented as written.
+
+### Decision 35 — The board is 2D, with side-on views only in the Inspector Viewport; seasons and time per tick are per-map settings
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** The user corrected Decision 34. The game had already settled on **2D**; 3D
+was abandoned for now. The side-on view of a structure or a fight appears **only in the
+Inspector Viewport**, opened when a structure is selected or as part of a combat. The
+main camera **no longer zooms or arcs to open a cutaway**.
+`breach-addendum-inspector-viewport.md` keeps its pattern, a separate viewport with its
+own fixed camera pointed at the selection, but in 2D (a `SubViewport` with a `Camera2D`
+and its own canvas layers). Its `Camera3D` and 3D-geometry wording records the earlier
+3D thinking; it does not describe the current direction.
+
+The user also set two calendar settings:
+- **Seasons are configurable per map.** A map either stays in one season or advances to
+  the next every N ticks, in an authored order. This refines Decision 34's "static for
+  now".
+- **Time passing per tick is configurable per map** (`hours_per_tick`), which answers
+  Decision 34's open question about pace. Each map chooses; a default is picked when the
+  schema lands.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A 3D board (Decision 34, as first recorded) | Not the settled direction; the user abandoned 3D for now. |
+| The main camera zooming into a cutaway | Abandoned in favour of the Inspector Viewport, which keeps the main view's angle uncompromised. |
+| One fixed game-wide pace or season behaviour | The user wants each map to choose. |
+
+**Consequences:**
+- The 2D map viewer's approach carries forward: its layers and view models are the
+  basis for the play board, with real art replacing code-drawn shapes. This restores
+  what Decision 34 had withdrawn.
+- The sun and moon are shown through 2D lighting and tint driven by the clock.
+- Future map calendar schema:
+  - `season` plus `season_mode` (static, or advance every `season_ticks` through an
+    authored order)
+  - `hours_per_day`, `hours_per_tick`, `start_hour`, `clock_paused`
+  - hour bands
+  - `moon_cycle_days`, `days_until_full_moon`, `moon_paused`
+- `breach-addendum-inspector-viewport.md` carries a note at its top pointing here.

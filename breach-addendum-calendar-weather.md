@@ -4,6 +4,8 @@
 > paused) with hour bands instead of four named phases; seasons are static per map and drive
 > colour and art variants; the moon has its own cycle (length, days until full, pausable);
 > blanket zones name grid cells, not node ids. Read this addendum with that decision.
+> **Refined by Decision 35:** a map can also advance its season every N ticks, and hours per
+> tick is a per-map setting.
 
 *Addendum to the base spec, "Unified Combat Resolution," and "Unit AI and Tactical Space." Assumes the Combatant/Encounter model, node grid coordinates, and the continuous cluster-path model from the latter.*
 
