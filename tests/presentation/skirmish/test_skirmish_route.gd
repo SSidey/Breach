@@ -47,3 +47,23 @@ func test_a_single_point_route_is_that_point() -> void:
 
 	assert_object(SkirmishRoute.point_at(single, 1.0, CELL)).is_equal(Vector2(10, 20))
 	assert_float(SkirmishRoute.length_cells(single, CELL)).is_equal(0.0)
+
+
+# --- specs/22: formations sit across the route ---------------------------------
+
+
+func test_the_normal_is_perpendicular_to_the_segment_under_a_distance() -> void:
+	var points := _points()
+
+	var along_straight := SkirmishRoute.normal_at(points, 0.5, CELL)
+	var along_diagonal := SkirmishRoute.normal_at(points, 2.0 + sqrt(2.0) / 2.0, CELL)
+
+	assert_object(along_straight).is_equal(Vector2(0, 1))
+	assert_float(along_diagonal.dot(Vector2(1, 1).normalized())).is_equal_approx(0.0, 0.0001)
+	assert_float(along_diagonal.length()).is_equal_approx(1.0, 0.0001)
+
+
+func test_the_normal_of_a_single_point_route_is_a_default() -> void:
+	assert_object(SkirmishRoute.normal_at(PackedVector2Array([Vector2(1, 1)]), 0.0, CELL)).is_equal(
+		Vector2(0, 1)
+	)

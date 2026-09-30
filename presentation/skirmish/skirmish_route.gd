@@ -24,3 +24,22 @@ static func point_at(
 			return points[i - 1].lerp(points[i], remaining / segment if segment > 0.0 else 0.0)
 		remaining -= segment
 	return points[-1]
+
+
+## The unit normal of the route segment under a distance (the travel direction turned a
+## quarter to the right in screen space): formation columns are laid out along it.
+static func normal_at(
+	points: PackedVector2Array, distance_cells: float, cell_size: float
+) -> Vector2:
+	if points.size() < 2:
+		return Vector2(0, 1)
+	var remaining := maxf(distance_cells, 0.0) * cell_size
+	var segment_index := points.size() - 1
+	for i in range(1, points.size()):
+		var segment := points[i - 1].distance_to(points[i])
+		if remaining <= segment:
+			segment_index = i
+			break
+		remaining -= segment
+	var along := (points[segment_index] - points[segment_index - 1]).normalized()
+	return Vector2(-along.y, along.x)
