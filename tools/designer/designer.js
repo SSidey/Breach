@@ -2559,7 +2559,65 @@
     });
   }
 
+  // The inspector lists its sections (Ground layers, Upgrades, Node, Links, Structure,
+  // Resource, Garrison, Reward) as tabs, one visible at a time; see tabifySections.
   function renderInspector() {
+    renderInspectorContent();
+    var cell = state.selectedCell ? nodeAt(state.selectedCell) : null;
+    tabifySections(document.getElementById('inspectorBody'), 'inspector', cell ? 'Node' : 'Ground layers');
+  }
+
+  // Splits a panel's flat run of .insp-section-label sections into tabs. Elements are moved,
+  // not re-created, so listeners bound during rendering keep working. The last tab chosen
+  // per panel is remembered (falling back to `preferred`, then the first); a tab whose
+  // hidden section holds a warning is flagged so problems aren't missed.
+  var sectionTabs = {};
+  function tabifySections(container, panelKey, preferred) {
+    var children = Array.prototype.slice.call(container.children);
+    var sections = [], current = null;
+    children.forEach(function (el) {
+      if (el.classList.contains('insp-section-label')) {
+        current = document.createElement('div');
+        current.className = 'insp-sec';
+        current.setAttribute('data-sec', el.textContent.trim());
+        container.insertBefore(current, el);
+        el.remove();
+        sections.push(current);
+      } else if (current) {
+        current.appendChild(el);
+      }
+    });
+    if (sections.length < 2) return;
+    var names = sections.map(function (sec) { return sec.getAttribute('data-sec'); });
+    var active = names.indexOf(sectionTabs[panelKey]) !== -1 ? sectionTabs[panelKey]
+      : names.indexOf(preferred) !== -1 ? preferred : names[0];
+    var bar = document.createElement('div');
+    bar.className = 'insp-tabs';
+    bar.setAttribute('role', 'tablist');
+    function show(name) {
+      sections.forEach(function (sec) { sec.hidden = sec.getAttribute('data-sec') !== name; });
+      bar.querySelectorAll('.tab-btn').forEach(function (b) { b.setAttribute('data-active', b.getAttribute('data-sec') === name ? 'true' : 'false'); });
+    }
+    sections.forEach(function (sec, i) {
+      var name = names[i];
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tab-btn';
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('data-sec', name);
+      btn.textContent = name;
+      if (sec.querySelector('.warn-inline, .warnings')) {
+        btn.setAttribute('data-warn', 'true');
+        btn.title = name + ' has a problem to look at';
+      }
+      btn.addEventListener('click', function () { sectionTabs[panelKey] = name; show(name); });
+      bar.appendChild(btn);
+    });
+    container.insertBefore(bar, sections[0]);
+    show(active);
+  }
+
+  function renderInspectorContent() {
     var body = document.getElementById('inspectorBody');
     var k = state.selectedCell;
     if (!k) {

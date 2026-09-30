@@ -223,6 +223,10 @@ header.top .status { font-size: 11px; color: var(--ink-dim); letter-spacing: 0.0
 .insp-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 .insp-head .glyph { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Big Shoulders Display', sans-serif; font-weight: 800; font-size: 12px; color: #fff; flex: none; border: 2px solid transparent; }
 .insp-head .kind { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.insp-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; }
+.insp-tabs .tab-btn { flex: none; padding: 4px 8px; font-size: 10px; }
+.insp-tabs .tab-btn[data-warn="true"]::after { content: ' !'; color: var(--danger); font-weight: 800; }
+.insp-tabs .tab-btn[data-active="true"][data-warn="true"]::after { color: var(--accent-ink); }
 .insp-section-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700; color: var(--ink-dim); margin: 14px 0 8px; padding-top: 10px; border-top: 1px solid var(--line); }
 .warn-inline { font-size: 10.5px; color: var(--danger); margin: 6px 0 0; line-height: 1.5; }
 

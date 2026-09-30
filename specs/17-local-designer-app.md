@@ -82,6 +82,11 @@ This comes before the rest of the render plan (Decision 29), which is renumbered
       notice.
     - A selected node's Inspector lists its links, each with ×.
     - The World tab's link list keeps its ×.
+- **Inspector tabs** (user request, 2026-09-30): the inspector's sections (Ground layers,
+  Upgrades, Node, Links, Structure, Resource, Garrison, Reward) show as tabs, one at a
+  time, instead of one long list. The last tab chosen is kept across cells and edits,
+  falling back to Node for a node and Ground layers for an empty cell. A tab whose hidden
+  section holds a warning is marked with a red "!".
 - **`content/designer/*.json`**: the designer's libraries, seeded with its defaults.
 - **Hooks and CI:** a `designer-server-tests` pre-commit hook runs
   `python -m unittest discover -s tools/designer`. CI already runs every pre-commit
