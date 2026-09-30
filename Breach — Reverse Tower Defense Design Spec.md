@@ -1873,3 +1873,41 @@ applies only if 3D structures ever return.
   the shared terrain library, `MapViewModel`, `MapLayoutView`). The art set's texture
   slots map naturally onto sprite textures.
 - Seasons and hours per tick stay per-map settings (Decision 35).
+
+### Decision 37 — Arrow slits and battlements are wall properties; only crewed weapons (ballista, oil cauldron) are emplacements
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** This settles the refinement Decision 34 left for spec 20. The user's model
+replaces the "firing position" type that was proposed there.
+- **Arrow slits and battlements are wall properties, not emplacements or fixed firing
+  positions.** They are Decision 27's boundary presets. Each boundary blocks movement,
+  projectiles and sight from given sides. A ranged unit in a room shoots out through a
+  wall whose projectiles aren't blocked from the inside. The wall decides *whether* a
+  shot can pass; the unit's own weapon (shared attack profile, Decision 34) decides reach
+  and damage. The designer already derives firing positions this way from boundaries
+  (`firingPositions`): exterior walls that let projectiles out, reachable flat roofs, and
+  murder-hole floors.
+- **Emplacements are crewed weapons.** A ballista, trebuchet or oil cauldron has its own
+  attack profile, including `engage_range`, and needs a crew from the garrison to fire.
+  The designer's Static defenses library already records a crew (`manned_by_unit`,
+  `firing_points`) and placeholder `stub_damage` / `stub_range`.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A separate "firing position" type that modifies the crew's weapon (proposed in Decision 34) | Duplicates what boundary presets already express with their per-side projectile flags. |
+| Arrow slits as emplacements with their own range | An arrow slit has no weapon; the archer behind it does. |
+
+**Consequences for spec 20 (structures schema):**
+- Boundaries import with their movement, projectile and sight flags, which determine
+  where ranged units can fire from. There is no firing-position resource.
+- An emplacement definition references a shared attack profile, the same shape units
+  use. The designer's `stub_range` / `stub_damage` become `engage_range` / damage there.
+  The emplacement also has a crew requirement, which the designer calls `firing_points`.
+  Spec 20 should name this `crew` in the Godot schema, so it isn't confused with the
+  derived firing positions.
+- Whether height, such as a battlement or a flat roof, adds reach to a unit firing from
+  it is left open.
