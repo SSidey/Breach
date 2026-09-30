@@ -10,6 +10,7 @@ name, so a request can never reach an arbitrary path:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -157,11 +158,17 @@ class DesignerRepo:
         return self._run_godot_script(LIBRARY_IMPORT_SCRIPT, [])
 
     def _library_is_stale(self) -> bool:
+        """True when terrain_library.tres wasn't built from the current terrain.json. The
+        import records sha256 of its source JSON (TerrainLibraryDef.source_hash); comparing
+        content, not file times, also catches a .tres checked out newer than a local edit."""
         source = self.libraries / "terrain.json"
         if not source.is_file():
             return False
         target = self.terrain_library_tres
-        return not target.is_file() or target.stat().st_mtime < source.stat().st_mtime
+        if not target.is_file():
+            return True
+        match = re.search(r'^source_hash = "([0-9a-f]*)"', target.read_text(encoding="utf-8"), re.M)
+        return match is None or match.group(1) != hashlib.sha256(source.read_bytes()).hexdigest()
 
     def _run_godot_script(self, script: str, script_args: list) -> dict:
         if not self.godot:
@@ -213,7 +220,7 @@ class DesignerRepo:
     def save_library(self, library: str, value) -> dict:
         """write_library, plus (for the terrain library) the shared .tres import, per specs/19."""
         changed = self.write_library(library, value)
-        needs_import = library == "terrain" and (changed or not self.terrain_library_tres.is_file())
+        needs_import = library == "terrain" and (changed or self._library_is_stale())
         return {"changed": changed, "import": self.run_library_import() if needs_import else None}
 
     @staticmethod

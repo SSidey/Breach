@@ -101,3 +101,16 @@ func test_run_twice_writes_identical_files() -> void:
 	DesignerLibraryImport.run(LIBRARY_PATH, MAPS_DIR, OUT_PATH)
 
 	assert_str(FileAccess.get_file_as_string(OUT_PATH)).is_equal(first)
+
+
+func test_the_library_records_a_hash_of_its_source_json() -> void:
+	DesignerLibraryImport.run(LIBRARY_PATH, MAPS_DIR, OUT_PATH)
+
+	var saved: TerrainLibraryDef = ResourceLoader.load(
+		OUT_PATH, "", ResourceLoader.CACHE_MODE_IGNORE
+	)
+	var expected := FileAccess.get_file_as_bytes(LIBRARY_PATH)
+	var hashing := HashingContext.new()
+	hashing.start(HashingContext.HASH_SHA256)
+	hashing.update(expected)
+	assert_str(saved.source_hash).is_equal(hashing.finish().hex_encode())

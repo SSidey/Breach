@@ -12,6 +12,9 @@ const TerrainFeatureDef = preload("res://content/definitions/terrain_feature_def
 @export var features: Array[TerrainFeatureDef] = []
 ## Multiplies a terrain's move_cost on a cell with a road.
 @export var road_move_multiplier: float = 0.5
+## sha256 of the terrain.json this was imported from; the designer's server compares it
+## with the current file to know whether the library needs re-importing.
+@export var source_hash: String = ""
 
 
 func terrain(terrain_id: String) -> TerrainDef:

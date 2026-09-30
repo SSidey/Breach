@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -212,9 +213,9 @@ class TerrainLibraryImportTest(RepoTestCase):
         runner = FakeRunner()
         repo = DesignerRepo(self.root, "godot", runner)
         repo.save_library("factions", [])
-        self._library_tres().parent.mkdir(parents=True)
-        self._library_tres().write_text("x", encoding="utf-8")
         repo.write_library("terrain", {"terrains": []})
+        source = (self.root / "content/designer/terrain.json").read_bytes()
+        self._write_library_tres(hashlib.sha256(source).hexdigest())
         runner.commands.clear()
 
         result = repo.save_library("terrain", {"terrains": []})
@@ -242,17 +243,34 @@ class TerrainLibraryImportTest(RepoTestCase):
         self.assertIn("res://tools/import_designer_map.gd", runner.commands[1])
         self.assertTrue(result["library_import"]["ok"])
 
-    def test_saving_a_map_with_a_fresh_library_skips_the_library_import(self):
+    def _write_library_tres(self, source_hash):
+        self._library_tres().parent.mkdir(parents=True, exist_ok=True)
+        self._library_tres().write_text(
+            f'[resource]\nsource_hash = "{source_hash}"\n', encoding="utf-8"
+        )
+
+    def test_saving_a_map_with_a_current_library_skips_the_library_import(self):
         runner = FakeRunner(stdout="wrote x\n")
         repo = DesignerRepo(self.root, "godot", runner)
         repo.write_library("terrain", {"terrains": []})
-        self._library_tres().parent.mkdir(parents=True)
-        self._library_tres().write_text("x", encoding="utf-8")  # newer than terrain.json
+        source = (self.root / "content/designer/terrain.json").read_bytes()
+        self._write_library_tres(hashlib.sha256(source).hexdigest())
 
         result = repo.save_map("m", MAP)
 
         self.assertEqual(len(runner.commands), 1)
         self.assertIsNone(result["library_import"])
+
+    def test_a_library_built_from_different_json_is_stale_even_if_newer(self):
+        runner = FakeRunner(stdout="wrote x\n")
+        repo = DesignerRepo(self.root, "godot", runner)
+        repo.write_library("terrain", {"terrains": []})
+        self._write_library_tres("0" * 64)  # written after terrain.json, from other content
+
+        result = repo.save_map("m", MAP)
+
+        self.assertIn("res://tools/import_designer_library.gd", runner.commands[0])
+        self.assertIsNotNone(result["library_import"])
 
 
 class ImportOutputTest(unittest.TestCase):

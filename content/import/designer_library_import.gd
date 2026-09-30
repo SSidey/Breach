@@ -28,6 +28,10 @@ static func run(
 		)
 	if not result.errors.is_empty():
 		return result
+	var hashing := HashingContext.new()
+	hashing.start(HashingContext.HASH_SHA256)
+	hashing.update(FileAccess.get_file_as_bytes(source_json_path))
+	result.library.source_hash = hashing.finish().hex_encode()
 	for terrain in result.library.terrains:
 		terrain.resource_scene_unique_id = _safe_id("Terrain", terrain.id)
 	for feature in result.library.features:
