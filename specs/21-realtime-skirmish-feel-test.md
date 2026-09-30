@@ -153,7 +153,7 @@ Scenario: Pause on wave full is a player option
   (the combat addendum).
 - One route and one lane. Multiple lanes, junctions and the unit-AI priority stack are
   later.
-- **Crowding (open question):** every unit that reaches a fight joins it. A wave of three
+- **Crowding (superseded by Decision 40 and `specs/22-formation-feel-test.md`):** every unit that reaches a fight joins it. A wave of three
   piles onto one militia, and there is no front line with others queuing behind. The
   view fans stacked units out sideways so a wave reads as a group; the rules are
   unchanged. Whether only the front unit, or a limited frontage, can fight is a rules
