@@ -416,6 +416,17 @@ progress. Open question: in the real build, is a bridge a tile-level structure, 
 Not designed. It sits alongside the Combatant/structure unification (Decision 24's
 non-goal) and the spatial-placement pass (Decision 4's Option 2).
 
+### Roads as built upgrades (future)
+
+Raised 2026-09-30. Roads are drawn today as a ground layer, but they are better
+understood as a **tile upgrade that is built**. Workers first prepare the tile, then spend
+resources to lay the road. A road could have a **quality** (a dirt track through to
+paved), which sets its movement bonus and its durability, and which depends on the effort
+put into it. Roads authored in the designer would be the map's pre-existing roads; roads
+the player builds come later. This fits the earlier note that a player could reroute by
+sending workers and resources to add a road. Schema impact when it lands: roads gain a
+quality or kind (and possibly hp), and road building becomes a worker task. Not built.
+
 ## Future direction: multi-tile and linked structures
 
 Raised with the drawbridge idea (tile designer prototype v11). A structure is anchored to
@@ -1911,3 +1922,67 @@ replaces the "firing position" type that was proposed there.
   derived firing positions.
 - Whether height, such as a battlement or a flat roof, adds reach to a unit firing from
   it is left open.
+
+### Decision 38 — Real-time with pause on a live deterministic sim; production and dispatch replace wave turns; structures render from a shared parts library
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** The user wants the player to be able to **intervene mid-combat**, not only
+plan between triggered occurrences. Stopping every "turn" came from conventional tower
+defence (waves with a break between them for player action), not from a need of this
+game.
+
+**Time model: real-time with pause.**
+- The simulation runs **live**, on short fixed ticks with interpolation between them.
+  It is not pre-computed and then replayed as animation.
+- The player can pause at any moment, or give orders live. An order takes effect on the
+  next tick and directly changes what the simulation does.
+- It stays deterministic, so a choice has a reproducible outcome ("choices must
+  matter"). Fidelity comes from the simulation's rules, not from continuous physics.
+
+**Forces: production and dispatch instead of waves.**
+- Units are produced on build orders until a group is full.
+- Per lane, the player either sets a **manual departure** or lets a group **leave
+  whenever it's full**.
+
+**Presentation** (with Decision 36):
+- Units are 2D sprites.
+- On the overland board, a structure is a sprite, chosen in one of two ways, still to
+  be decided:
+  - a miniature derived from the structure's actual shape, or
+  - a size-class sprite picked from the structure's height × width.
+- The detail view (Inspector Viewport) is **data-driven**. The side-on structure is
+  assembled from a **shared library of parts**: wall sections by material, doors,
+  portcullis, floors, roofs, stairs and emplacements. Each part has intact, damaged and
+  destroyed states. Every authored structure then renders with no bespoke art, and
+  damage shows per part.
+- Full 3D structures and units are not the direction.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Turn/wave pauses as in tower defence | The player could only act between waves; the user wants live agency. |
+| Pre-simulate, then replay the result as animation | Orders couldn't change the outcome mid-fight. |
+| Continuous physics simulation | Costly to build, debug and balance; short fixed ticks give the same agency. |
+| A bespoke painted image per fort | Doesn't scale with authored content; a parts library does. |
+
+**Consequences:**
+- The existing P-f-F-c slice (1.5 s ticks, one node per tick, scripted waves) stays as
+  it is. A **real-time feel test** is the next item, built as an isolated skirmish on a
+  minimal P-c map:
+  - one player unit and one kingdom unit fighting in melee
+  - the enemy fort immune
+  - pause-anytime and live orders
+- **Open for spec 20, the fort perimeter.** One side view has only two ends (LEFT/RIGHT),
+  but a fort can be approached from any side on the map. Proposed:
+  - Give each structure **overland faces** (N/E/S/W) that are gates or solid wall.
+  - Map each gate to a side-view end.
+  - An approach from a gateless face either paths round to a gate (the dual viewports
+    stay split until the forces meet) or is an explicit order to assault the wall.
+  - Optionally, mark end columns as a curtain wall.
+  To be settled with spec 20.
+- The high-ground range bonus is still open. A formula bonus (tapering with height, with
+  an optional penalty for firing upward) was proposed; real projectiles would be limited
+  to tactical fights, if used at all.
