@@ -473,19 +473,23 @@ designed.
   - A full moon on a fixed calendar date.
   - Weather as zones, either blanketing whole cells or shaped (a moving tornado).
   All of this is derived from the round counter, so the board reads it and never
-  simulates it. Per Decisions 34–35, time of day is an N-hour clock, and it is shown on
-  the 2D board through lighting and tint (e.g. `CanvasModulate` and 2D lights following
-  the sun and moon), not a 3D light. `breach-addendum-unit-ai-and-tactical-space.md` adds the other half: a
+  simulates it. Per Decisions 34–36, time of day is an N-hour clock. In the 3D scene it
+  can drive a real cycling sun and moon (a directional light) that lights the terrain and
+  sprites. `breach-addendum-unit-ai-and-tactical-space.md` adds the other half: a
   fight opens its own continuous local space, and a ranged fight shows two linked
   viewports that merge as the forces close.
 
 Implications for the Godot build:
 - **Keep the viewer's layer split.** Terrain → features → roads/bridges → structures →
-  units → overlays, with drawing driven by a view model. The board is 2D (Decision 35):
-  each layer moves from code-drawn shapes to art without touching the others. Depth comes
-  from layered, y-sorted sprites (a forest's trees overlapping the cells around them), not
-  3D geometry. Side-on views of structures and fights appear only in the Inspector
-  Viewport.
+  units → overlays, with drawing driven by a view model. Per Decision 36, the play board
+  is a **3D scene**:
+  - the terrain starts as flat tiles, with 3D terrain geometry as a stretch goal
+  - forts, units and props (a forest's trees) are **2D sprites** standing in that scene,
+    which gives real depth without 3D models
+  - the Inspector Viewport shows a structure's detailed side-on sprite
+
+  What carries over from the 2D viewer is its data and view models; its 2D drawing stays
+  as the authoring and debug view.
 - **The art set grows variants.** It needs art per terrain and corruption stage,
   depletion states, structure condition (intact/damaged/ruined), faction flags, and prop
   sets per terrain. Code-drawn fallbacks remain for anything without art.
@@ -1778,6 +1782,10 @@ view. What carries over to the 3D board is the renderer-agnostic data: `MapDef`,
 
 ### Decision 35 — The board is 2D, with side-on views only in the Inspector Viewport; seasons and time per tick are per-map settings
 
+> Superseded in part by Decision 36 on 2026-09-30: the scene is **3D**. Structures and units
+> are 2D sprites within it; only the "the board is 2D" parts are replaced. No camera zoom
+> into cutaways, per-map seasons and per-map hours per tick all stand.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-09-30
 
@@ -1818,3 +1826,50 @@ The user also set two calendar settings:
   - hour bands
   - `moon_cycle_days`, `days_until_full_moon`, `moon_paused`
 - `breach-addendum-inspector-viewport.md` carries a note at its top pointing here.
+
+### Decision 36 — A 3D scene with 2D sprites for structures and units; the detail view is a side-on sprite in the Inspector Viewport
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** The user clarified that Decision 35 over-corrected. The game still uses a
+**3D scene**. What is 2D is the art *in* it: **forts and other structures are 2D sprites,
+like the units.** When a detail view is wanted (a structure selected, or a fight), the
+**Inspector Viewport** shows the structure's **detailed side-on sprite**, if it has one.
+The main camera doesn't zoom into cutaways (Decision 35 stands on that). The **base
+terrain** starts as flat tiles. Giving it 3D geometry is a **stretch goal**.
+
+This matches `breach-addendum-inspector-viewport.md` more closely than Decision 35
+suggested:
+- the main camera has no yaw, so fixed-facing sprites work without per-frame billboard
+  rotation
+- the viewport's camera is fixed, so a painted side-on sprite is correct by construction
+
+The difference from the addendum is that structures are sprites rather than low-poly
+geometry. The addendum's reasoning about "the same model seen by two cameras" therefore
+applies only if 3D structures ever return.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A fully 2D board (Decision 35) | Not what the user intends; the scene is 3D. |
+| Low-poly 3D structures (the addendum's recommended default) | The user chose 2D sprites for structures, as for units. |
+| 3D terrain from the start | Deferred as a stretch goal; flat tiles first. |
+
+**Consequences:**
+- The play board is a 3D scene. Terrain is flat tiles first, with 3D terrain a stretch
+  goal. Structures, units and props are 2D sprites (e.g. `Sprite3D`) facing a camera
+  that doesn't rotate.
+- Depth comes from sprites standing in 3D space, such as a forest's trees and a fort's
+  flag.
+- The Inspector Viewport renders the detailed side-on sprite. A 2D `SubViewport` is
+  enough for a sprite; the render-layer approach is kept for if structures ever become
+  3D.
+- Time of day can use a real cycling sun and moon (a directional light), lighting the
+  terrain and sprites. This restores Decision 34's point.
+- The 2D map viewer (specs/18–19) stays as the authoring and debug view. What the play
+  board reuses is its data and renderer-agnostic view models (`MapDef`, `MapLayoutDef`,
+  the shared terrain library, `MapViewModel`, `MapLayoutView`). The art set's texture
+  slots map naturally onto sprite textures.
+- Seasons and hours per tick stay per-map settings (Decision 35).

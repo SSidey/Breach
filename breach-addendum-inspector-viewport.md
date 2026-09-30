@@ -1,9 +1,9 @@
 # Breach — Design Addendum: The Inspector Viewport Pattern
 
-> **Read with Decision 35 (2026-09-30):** the game is 2D. The pattern here stands (a separate
-> viewport with its own fixed camera, pointed at the selection), built as a 2D `SubViewport` with
-> a `Camera2D`. The main camera does not zoom into cutaways. The `Camera3D` / 3D-geometry detail
-> below records earlier 3D thinking.
+> **Read with Decision 36 (2026-09-30):** the main scene is 3D, but structures are 2D sprites
+> like the units (not low-poly geometry); the Inspector Viewport shows a structure's detailed
+> side-on sprite. The main camera does not zoom into cutaways. Base terrain starts flat; 3D
+> terrain is a stretch goal.
 
 *Addendum to the base spec and "Unit AI and Tactical Space" (which references this pattern for dual-viewport ranged engagements). Consolidates a pattern discussed across the art/camera conversation but never previously written down on its own.*
 
