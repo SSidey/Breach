@@ -2189,3 +2189,42 @@ brute to lead. The user's direction:
   now, with fold and bank".
 - The detail view's requirements now include: showing flank wraps and step-up as
   visible movement.
+
+### Decision 43 — The wave painter faces the direction of travel, clicks toggle, slots are shared implicitly, and presets and hotkeys speed up painting
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** From painting waves in the formation feel test (Decision 42):
+- **The front of the formation is on the right**, matching the direction of travel. The
+  painter shows ranks running right to left (the front rank rightmost) and formation
+  columns top to bottom. It used to have the front at the top.
+- **Clicking an occupied cell erases it.** A drag that starts on an occupied cell erases
+  as it goes; one that starts on an empty cell paints. The separate erase click is no
+  longer needed, though right-click still erases.
+- **No per-lane share to set.** The slot pool is a single total. Each lane simply uses
+  the cells it paints, and erasing frees those slots for any lane immediately. The
+  per-lane −/+ share controls go. This refines Decision 40's pool: the split across
+  lanes is still the player's choice, made by painting. It also makes Decision 42's
+  "trim when a share drops" unnecessary.
+- **Presets and hotkeys.**
+  - Built-in squad shapes can be placed in one step: Line, Two ranks, Column, Brute
+    spearhead, Brute wall. Each is fitted to the lane's width and the free slots.
+  - The player can save the current shape as a preset, kept between sessions.
+  - Brushes have hotkeys: 1 grem, 2 brute, E erase. One brush applies to both lanes.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Front at the top | Doesn't match the direction of travel. |
+| Explicit per-lane shares (−/+) | An extra step; the user wants erased slots available to any lane at once. |
+| A separate brush per lane | More UI for no gain; one brush with hotkeys is quicker. |
+
+**Consequences:**
+- `WaveTemplate` clamps a footprint's anchor so it fits the grid, and can report whether
+  a cell is occupied.
+- A `WavePresets` module builds the built-in shapes and saves and loads custom ones (as
+  JSON in the player's user data for the feel test).
+- The scene keeps the pool's per-lane figures equal to what each lane has painted. A
+  lane may paint up to its own cells plus whatever is free.
