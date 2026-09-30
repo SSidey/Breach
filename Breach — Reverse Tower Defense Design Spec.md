@@ -479,9 +479,11 @@ designed.
 
 Implications for the Godot build:
 - **Keep the viewer's layer split.** Terrain → features → roads/bridges → structures →
-  units → overlays, with drawing driven by a view model. Each layer can then move from
-  code-drawn shapes to art (e.g. a `TileMapLayer` for terrain, y-sorted prop sprites for
-  depth) without touching the others.
+  units → overlays, with drawing driven by a view model. The play board is 3D (Decision
+  34): terrain meshes, low-poly structures, forest props with real height, side-on unit
+  sprites, and a clock-driven sun and moon. The renderer-agnostic view models
+  (`MapViewModel`, `MapLayoutView`) are what carry over from the 2D viewer; the 2D
+  viewer's drawing does not.
 - **The art set grows variants.** It needs art per terrain and corruption stage,
   depletion states, structure condition (intact/damaged/ruined), faction flags, and prop
   sets per terrain. Code-drawn fallbacks remain for anything without art.
@@ -1669,3 +1671,100 @@ is built, so a later item doesn't re-derive it.
 - The living-board direction links the calendar and weather presentation to them.
 - Spec 20 (structures) should include emplacement `engage_range`.
 - The two open questions stay open until the user answers.
+
+### Decision 34 — Calendar is an N-hour clock with static seasons and a configurable moon; zones are placed on grid cells; weapon range is shared by units and emplacements; the play board is 3D
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** This answers Decision 33's two open questions and revises parts of
+`breach-addendum-calendar-weather.md`, per the user.
+
+**Zones are placed on grid cells.** Blanket zones name grid cells, not node ids. A static
+effect over a fort is placed on the fort's cell(s), so it is anchored by the grid rather
+than by the node.
+
+**The Inspector Viewport is recorded** in `breach-addendum-inspector-viewport.md`, now
+tracked. It is one reusable component: a `SubViewport` camera on an isolated render layer,
+pointed at a selection. It gives:
+- side-on views of a structure or of combat
+- unit focus
+- scouted Hero Party composition
+- for a ranged Encounter between distant parties, two viewports that collapse into one
+  as the parties meet
+
+**Time is a clock, not four named phases.** This supersedes the addendum's
+Dawn/Day/Dusk/Night ticks and its season cycling.
+- A day is **N hours** (authored per map, default 24).
+- Ticks advance the clock by an authored number of hours per tick. The pace is still
+  open; see Consequences.
+- Named periods such as dawn, day, dusk and night are **bands of hours**, for rules
+  ("vampires weak by day") and for presentation. They are derived from the clock and can
+  be retuned or subdivided without changing the model.
+- The clock can be **paused** at an authored hour. "Eternal night" is a map whose clock
+  is paused at night. This replaces the addendum's "pinned" mode for time of day; a start
+  hour replaces "offset".
+- Because the board is 3D, time of day is shown by a **real cycling sun and moon**: a
+  directional light driven by the clock, not a colour toggle.
+
+**Seasons are static per map for now.** A map names its season, and it does not change
+during the map. The season drives the board's **colour grading and which art variants
+are used** (more variants per season). Cross-map persistence stays deferred, as the
+addendum already said.
+
+**The moon has its own cycle.** A map sets:
+- `moon_cycle_days`: the length of a full cycle
+- `days_until_full_moon`: at map start
+- `moon_paused`: e.g. a permanent full moon
+
+"Full moon" is a derived state (the full-moon day's night hours) that rules can gate on,
+such as the werewolf bonus.
+
+**Weapon range is not detection, and it isn't emplacement-specific.** The user asked
+whether `engage_range` is detection or weapon reach, and whether it belongs lower down,
+shared between units and emplacements. Recorded model:
+- **Detection** is how far a combatant can see. Night, torches and weather change it,
+  per the calendar addendum; it also gates targeting and feeds suspicion.
+- **`engage_range`** is how far a weapon reaches.
+- A ranged attack fires only on a target that is both **detected** and **within reach**.
+- Weapon stats live in one **shared attack profile**, used by units and by static
+  defenses alike. This is consistent with the combat addendum's single Combatant shape,
+  where a structure is a Combatant with `mobile: false`. Static defenses reuse the unit
+  implementation rather than a parallel one.
+- Proposed refinement, to be confirmed with spec 20: **a weapon emplacement** (ballista,
+  oil cauldron) carries its own attack profile, and its crew operates it. **A firing
+  position** (arrow slit, battlement) has no weapon of its own; it modifies the crew's
+  weapon, for example with cover, or with extra reach from elevation.
+
+**The play board is 3D.** The inspector-viewport addendum assumes:
+- an iso main camera (`Camera3D`) with no yaw
+- real, even low-poly, geometry for structures
+- side-on unit sprites
+
+The map viewer (specs/18–19) is a 2D top-down view. It stays as the authoring and debug
+view. What carries over to the 3D board is the renderer-agnostic data: `MapDef`,
+`MapLayoutDef`, the shared terrain library, and the view models. The 2D drawing
+(`MapView`, `MapLayoutPainter`) does not carry over.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep four named phases per day | The user wants to subdivide time freely; hour bands over a clock give the same rule hooks with finer control. |
+| Seasons cycle within a map | Not wanted yet; a static season per map is simpler and still drives art and colour. |
+| `engage_range` per emplacement type only | It would duplicate unit weapon stats in a parallel system; one attack profile serves both. |
+| Treat the 2D viewer as the play scene's renderer | The game is 3D per the inspector-viewport addendum; the viewer is kept for authoring and debugging. |
+
+**Consequences:**
+- Map calendar settings are future schema with a designer UI:
+  - `hours_per_day`, `hours_per_tick`, `start_hour`, `clock_paused`
+  - hour bands
+  - `season`
+  - `moon_cycle_days`, `days_until_full_moon`, `moon_paused`
+- Map Script zones use grid cells or shapes.
+- **Open:** the default `hours_per_tick`, which sets the game's pace. At 1 hour per tick
+  and the current 1.5 s tick, a day lasts 36 s.
+- Spec 20's emplacement schema uses the shared attack-profile model. The weapon
+  emplacement vs firing position split still needs the user's confirmation there.
+- `breach-addendum-calendar-weather.md` carries a note at its top pointing here, so the
+  superseded parts aren't implemented as written.

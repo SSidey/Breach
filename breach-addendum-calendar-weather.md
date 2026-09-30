@@ -1,5 +1,10 @@
 # Breach — Design Addendum: Calendar, Weather, and World Modifiers
 
+> **Revised by Decision 34 (2026-09-30):** time of day is an N-hour clock (default 24, can be
+> paused) with hour bands instead of four named phases; seasons are static per map and drive
+> colour and art variants; the moon has its own cycle (length, days until full, pausable);
+> blanket zones name grid cells, not node ids. Read this addendum with that decision.
+
 *Addendum to the base spec, "Unified Combat Resolution," and "Unit AI and Tactical Space." Assumes the Combatant/Encounter model, node grid coordinates, and the continuous cluster-path model from the latter.*
 
 ## Tick = round, calendar derived, not simulated
