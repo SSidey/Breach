@@ -10,6 +10,8 @@ extends Node2D
 
 const MapViewModel = preload("res://presentation/map_view_model.gd")
 const MapArtSet = preload("res://presentation/map_art_set.gd")
+const MapLayoutPainter = preload("res://presentation/map_layout_painter.gd")
+const MapLayoutView = preload("res://presentation/map_layout_view.gd")
 const NodeDef = preload("res://content/definitions/node_def.gd")
 
 const NODE_SIZE := 40.0
@@ -35,6 +37,12 @@ const LABEL_FONT_SIZE := 12
 var selected_id: String = "":
 	set(value):
 		selected_id = value
+		queue_redraw()
+
+## Outlined when the viewer shows a cell's tile details (specs/19).
+var selected_cell: Vector2i = Vector2i(-1, -1):
+	set(value):
+		selected_cell = value
 		queue_redraw()
 
 var model: MapViewModel
@@ -109,9 +117,14 @@ func _draw() -> void:
 		return
 	var art := _art()
 	draw_rect(model.bounds, art.background_color)
+	if model.layout_view != null:
+		MapLayoutPainter.paint(self, model.layout_view, art)
 	_draw_grid(art)
+	if model.layout_view != null and selected_cell != MapLayoutView.NO_CELL:
+		MapLayoutPainter.paint_selected_cell(self, model.layout_view, selected_cell, art)
 	for segment in model.edge_segments:
-		draw_dashed_line(segment[0], segment[1], art.edge_color, 2.0, 8.0)
+		for i in range(1, segment.size()):
+			draw_dashed_line(segment[i - 1], segment[i], art.edge_color, 2.0, 8.0)
 	for i in range(model.lane_paths.size()):
 		var color := art.lane_colors[i % art.lane_colors.size()]
 		for run in model.lane_paths[i].runs:
@@ -152,6 +165,8 @@ func _draw_marker(marker: MapViewModel.Marker, art: MapArtSet) -> void:
 	_draw_label(marker, size, art)
 	if marker.hidden_badge:
 		_draw_hidden_badge(marker.position + Vector2(size, -size) * 0.45, art)
+	if marker.critical:
+		_draw_critical_badge(marker.position + Vector2(-size, -size) * 0.45, art)
 
 
 func _draw_label(marker: MapViewModel.Marker, size: float, art: MapArtSet) -> void:
@@ -179,3 +194,12 @@ func _draw_hidden_badge(center: Vector2, art: MapArtSet) -> void:
 		return
 	draw_circle(center, BADGE_SIZE * 0.5, art.label_color)
 	draw_line(center - half * 0.6, center + half * 0.6, Color("#e06b5a"), 3.0, true)
+
+
+func _draw_critical_badge(center: Vector2, art: MapArtSet) -> void:
+	var half := Vector2(BADGE_SIZE, BADGE_SIZE) * 0.5
+	if art.critical_badge != null:
+		draw_texture_rect(art.critical_badge, Rect2(center - half, half * 2.0), false)
+		return
+	draw_circle(center, BADGE_SIZE * 0.5, art.label_color)
+	draw_circle(center, BADGE_SIZE * 0.3, Color("#d99a3d"))

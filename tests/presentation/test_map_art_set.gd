@@ -21,4 +21,5 @@ func test_the_committed_placeholder_art_covers_every_node_type() -> void:
 	for node_type in NodeDef.NodeType.values():
 		assert_object(art.texture_for(node_type)).is_not_null()
 	assert_object(art.hidden_badge).is_not_null()
+	assert_object(art.critical_badge).is_not_null()
 	assert_bool(art.faction_palette.is_empty()).is_false()

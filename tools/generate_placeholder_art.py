@@ -58,6 +58,12 @@ SHAPES = {
     ),
     # A waypoint: a small dot.
     "waypoint": _svg(_shape('circle cx="32" cy="32" r="12"')),
+    # Critical-asset badge (specs/19): a crown on a dark disc.
+    "critical_badge": _svg(
+        '  <circle cx="32" cy="32" r="29" fill="#211d15"/>\n'
+        '  <polygon points="12,44 12,22 22,32 32,16 42,32 52,22 52,44" fill="#d99a3d" '
+        'stroke="#f2ecdf" stroke-width="3" stroke-linejoin="round"/>'
+    ),
     # Hidden-from-some-faction badge: an eye with a slash.
     "hidden_badge": _svg(
         f'  <circle cx="32" cy="32" r="29" fill="#211d15"/>\n'

@@ -44,8 +44,8 @@ func validate(node_ids: Array) -> PackedStringArray:
 	if terrain_library == null:
 		errors.append("layout has no terrain_library")
 		return errors
-	var base = terrain_library.terrain(default_terrain_id)
-	if base == null or not base.can_be_base:
+	var default_terrain = terrain_library.terrain(default_terrain_id)
+	if default_terrain == null or not default_terrain.can_be_base:
 		errors.append(
 			(
 				"default_terrain_id '%s' must be a can_be_base terrain in the library"

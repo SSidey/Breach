@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" path="res://assets/placeholder/map/neutral.svg" id="5_neutral"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/map/waypoint.svg" id="6_waypoint"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/map/hidden_badge.svg" id="7_hidden"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/map/critical_badge.svg" id="8_critical"]
 
 [resource]
 script = ExtResource("1_art")
@@ -16,3 +17,4 @@ fort_texture = ExtResource("4_fort")
 neutral_texture = ExtResource("5_neutral")
 waypoint_texture = ExtResource("6_waypoint")
 hidden_badge = ExtResource("7_hidden")
+critical_badge = ExtResource("8_critical")
