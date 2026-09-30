@@ -2010,3 +2010,70 @@ before the fight.
 - The simulation emits a `wave_full` event per lane and never pauses itself. Pausing is
   the presentation layer's reaction to that event, per the player's setting.
 - The feel test (`specs/21-realtime-skirmish-feel-test.md`) implements this first.
+
+### Decision 40 — Waves are formations on a slot grid: unit footprints, front-rank combat with flank wrap, and a shared pool of slots assigned across lanes
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** From the first real-time playtest (`specs/21-realtime-skirmish-feel-test.md`):
+with every unit that reached a fight joining in, a wave just piled onto one enemy. The
+user's direction replaces that with formations.
+
+- **Footprints.** Every unit occupies a slot footprint written **depth × width** (the
+  user's axis choice):
+  - a grem or a person is 1×1
+  - cavalry is 2×1 (two ranks deep, one slot wide)
+  - a grem brute is 2×2
+  - large creatures are 4×4
+  - 8×8 is the most, for a dragon
+- **Formations.** Each lane has a **formation grid**: frontline width × ranks. A wave
+  builds into the layout the player set. Only the **front rank** fights; when a
+  front-rank unit dies or retreats, the one behind steps up. Wide units hold more of the
+  front.
+- **Flanking wraps around.** When one frontline is wider than the other, its extra
+  slots wrap onto the enemy line's ends. A size or composition advantage then lets a
+  force flank. A unit engaged by several foes, or attacked from the side or rear, suffers
+  for it. That directional effect is to be tuned, and ties to morale in the combat
+  addendum.
+- **Slots are a shared pool across lanes.** The player's unlocked slots are divided
+  among the map's lanes as they choose. For example, with 4 slots and 2 lanes: 4/0,
+  3/1, 2/2, 1/3 or 0/4. Giving a lane nothing is a real choice to ignore that avenue.
+- **Slots come from long-scale upgrades.** Nodes captured on a map become part of the
+  player's **domain** (the Lair meta-layer). Domain nodes plus currency build upgrades:
+  - more slots overall
+  - unit access (for example, a *Font of Malice* needed for grems)
+  - build speed
+  Total slots, available units and build speed are therefore meta-progression, not
+  per-map.
+
+**Proposed, for the user to confirm:**
+- Slots can be **reassigned between lanes mid-map**, but a change applies to each lane's
+  **next** wave; the wave already building keeps its layout. Reacting (shifting weight to
+  the lane that's breaking through) stays possible, but costs time, so the split still
+  matters.
+- Pool slots rather than a fixed number per lane. Equal per lane would remove the
+  decision of where to commit.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Every unit in reach fights (feel test v1) | A wave piles onto one enemy, and width and depth don't matter. |
+| Only directly opposed slots fight | Wider lines would give no advantage; the user wants flanking and wrap-around. |
+| The same number of slots on every lane | Removes the choice of which avenues to push or ignore. |
+| Formation set automatically from unit sizes | The user wants the player to arrange lanes and formations. |
+
+**Consequences:**
+- The feel test's next step is formations:
+  - footprints
+  - a per-lane formation grid drawn from a slot pool
+  - front-rank combat with rank step-up
+  - flank wrap
+  Its crowding note in spec 21 is superseded by this.
+- Each lane needs a **maximum frontline width**, possibly set by terrain or road later;
+  maps will need to author it.
+- The designer's garrison and unit data will need footprints (a schema change, so the
+  designer is updated in the same pass when it lands).
+- Domain upgrades (slot count, unit gates such as the Font of Malice, build speed)
+  belong to the Lair meta-layer, which is not designed in detail yet.
