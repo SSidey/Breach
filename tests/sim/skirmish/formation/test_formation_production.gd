@@ -6,6 +6,7 @@ extends GdUnitTestSuite
 const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const WaveTemplate = preload("res://sim/skirmish/formation/wave_template.gd")
+const WavePresets = preload("res://sim/skirmish/formation/wave_presets.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
 const TICK := 0.1
@@ -48,7 +49,7 @@ func _count(events: Array, kind: String) -> int:
 
 
 func test_units_are_built_front_first_one_per_build_time() -> void:
-	var production := _production(WaveTemplate.default_line(_grem, 5, 5))
+	var production := _production(WavePresets.line(_grem, 5, 5))
 	var sim := FormationSimulation.new(9.0, TICK)
 
 	_run(production, sim, 10)
@@ -62,11 +63,11 @@ func test_units_are_built_front_first_one_per_build_time() -> void:
 
 
 func test_a_new_template_takes_effect_at_once_and_folds_built_units_in() -> void:
-	var production := _production(WaveTemplate.default_line(_grem, 5, 5))
+	var production := _production(WavePresets.line(_grem, 5, 5))
 	var sim := FormationSimulation.new(9.0, TICK)
 	_run(production, sim, 20)  # 4 grems built
 
-	var events := production.set_template(WaveTemplate.default_line(_grem, 3, 3))
+	var events := production.set_template(WavePresets.line(_grem, 3, 3))
 
 	assert_int(production.built()).is_equal(3)
 	assert_int(production.reserve_count()).is_equal(1)
@@ -75,7 +76,7 @@ func test_a_new_template_takes_effect_at_once_and_folds_built_units_in() -> void
 
 
 func test_units_of_a_type_the_new_shape_lacks_are_all_banked() -> void:
-	var production := _production(WaveTemplate.default_line(_grem, 4, 4))
+	var production := _production(WavePresets.line(_grem, 4, 4))
 	var sim := FormationSimulation.new(9.0, TICK)
 	_run(production, sim, 10)  # 2 grems built
 	var brute_only := WaveTemplate.new(4, 8)
@@ -88,10 +89,10 @@ func test_units_of_a_type_the_new_shape_lacks_are_all_banked() -> void:
 
 
 func test_the_reserve_fills_matching_places_before_anything_is_built() -> void:
-	var production := _production(WaveTemplate.default_line(_grem, 4, 4))
+	var production := _production(WavePresets.line(_grem, 4, 4))
 	var sim := FormationSimulation.new(9.0, TICK)
 	_run(production, sim, 20)  # 4 grems built
-	production.set_template(WaveTemplate.default_line(_grem, 1, 4))  # 3 banked
+	production.set_template(WavePresets.line(_grem, 1, 4))  # 3 banked
 	production.send(sim)
 
 	var events := _run(production, sim, 1)
@@ -102,7 +103,7 @@ func test_the_reserve_fills_matching_places_before_anything_is_built() -> void:
 
 
 func test_a_full_wave_is_announced_once() -> void:
-	var production := _production(WaveTemplate.default_line(_grem, 3, 3))
+	var production := _production(WavePresets.line(_grem, 3, 3))
 	var sim := FormationSimulation.new(9.0, TICK)
 
 	var events := _run(production, sim, 60)
@@ -130,7 +131,7 @@ func test_send_deploys_the_painted_layout_and_restarts_the_same_template() -> vo
 
 
 func test_auto_departure_sends_the_wave_when_it_fills() -> void:
-	var production := _production(WaveTemplate.default_line(_grem, 3, 3))
+	var production := _production(WavePresets.line(_grem, 3, 3))
 	production.departure = FormationProduction.Departure.AUTO_WHEN_FULL
 	var sim := FormationSimulation.new(9.0, TICK)
 

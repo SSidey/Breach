@@ -2207,10 +2207,12 @@ brute to lead. The user's direction:
   per-lane −/+ share controls go. This refines Decision 40's pool: the split across
   lanes is still the player's choice, made by painting. It also makes Decision 42's
   "trim when a share drops" unnecessary.
-- **Presets and hotkeys.**
-  - Built-in squad shapes can be placed in one step: Line, Two ranks, Column, Brute
-    spearhead, Brute wall. Each is fitted to the lane's width and the free slots.
-  - The player can save the current shape as a preset, kept between sessions.
+- **Player presets and hotkeys.**
+  - Presets are **the player's own**; the game ships no designer-authored shapes. The
+    player saves a lane's current shape as a named preset and can apply any saved preset
+    to any lane in one step. It is fitted to that lane's width and the free slots, and
+    anything that no longer fits is dropped.
+  - Presets are kept between sessions.
   - Brushes have hotkeys: 1 grem, 2 brute, E erase. One brush applies to both lanes.
 
 **Alternatives:**
@@ -2220,11 +2222,14 @@ brute to lead. The user's direction:
 | Front at the top | Doesn't match the direction of travel. |
 | Explicit per-lane shares (−/+) | An extra step; the user wants erased slots available to any lane at once. |
 | A separate brush per lane | More UI for no gain; one brush with hotkeys is quicker. |
+| Built-in squad shapes | The user wants presets to be player-assigned, not supplied by the game or the designer. |
 
 **Consequences:**
 - `WaveTemplate` clamps a footprint's anchor so it fits the grid, and can report whether
   a cell is occupied.
-- A `WavePresets` module builds the built-in shapes and saves and loads custom ones (as
-  JSON in the player's user data for the feel test).
+- A `WavePresets` module turns a lane's shape into plain data and back, fitted to the
+  lane it is applied to; the feel test keeps presets as JSON in the player's user data.
+  The only shape it builds itself is the lane's starting wave, a plain line, which isn't
+  offered as a preset.
 - The scene keeps the pool's per-lane figures equal to what each lane has painted. A
   lane may paint up to its own cells plus whatever is free.

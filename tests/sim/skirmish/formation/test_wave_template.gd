@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 
 const WaveTemplate = preload("res://sim/skirmish/formation/wave_template.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
+const WavePresets = preload("res://sim/skirmish/formation/wave_presets.gd")
 
 
 func _def(depth: int = 1, width: int = 1) -> UnitDef:
@@ -66,7 +67,7 @@ func test_erasing_removes_the_unit_covering_a_cell() -> void:
 
 func test_trimming_removes_from_the_back_and_returns_what_was_removed() -> void:
 	var grem := _def()
-	var template := WaveTemplate.default_line(grem, 6, 3)  # two ranks of three
+	var template := WavePresets.line(grem, 6, 3)  # two ranks of three
 
 	var removed := template.trim_to(4)
 
@@ -85,8 +86,24 @@ func test_layout_normalises_columns_to_start_at_zero() -> void:
 	assert_array(layout[1].map(func(p): return p[1])).is_equal([Vector2i(0, 0), Vector2i(0, 2)])
 
 
+func test_a_footprint_overhanging_the_grid_is_pulled_back_inside() -> void:
+	var template := WaveTemplate.new(5, 8)
+
+	assert_bool(template.paint(_def(2, 2), Vector2i(3, 4))).is_true()
+
+	assert_array(_places(template)).is_equal([Vector2i(2, 3)])
+
+
+func test_occupied_reports_any_cell_a_unit_covers() -> void:
+	var template := WaveTemplate.new(5, 8)
+	template.paint(_def(2, 2), Vector2i(0, 1))
+
+	assert_bool(template.occupied(Vector2i(1, 2))).is_true()
+	assert_bool(template.occupied(Vector2i(0, 0))).is_false()
+
+
 func test_the_default_line_is_as_wide_as_allowed_then_deeper() -> void:
-	var template := WaveTemplate.default_line(_def(), 7, 5)
+	var template := WavePresets.line(_def(), 7, 5)
 
 	assert_array(_places(template)).is_equal(
 		[
@@ -102,7 +119,7 @@ func test_the_default_line_is_as_wide_as_allowed_then_deeper() -> void:
 
 
 func test_a_copy_is_independent() -> void:
-	var template := WaveTemplate.default_line(_def(), 2, 4)
+	var template := WavePresets.line(_def(), 2, 4)
 	var edited := template.copy()
 
 	edited.erase(Vector2i(0, 0))

@@ -25,14 +25,39 @@ func test_the_scene_builds_a_simulation_per_lane_from_the_map() -> void:
 	assert_float(scene.simulation("k").route_length).is_greater(9.0)
 
 
-func test_the_pool_starts_split_and_clamps_reassignment() -> void:
+func test_the_pool_counts_what_each_lane_has_painted() -> void:
 	var scene := _scene()
 
-	assert_int(scene.pool().assigned("c") + scene.pool().assigned("k")).is_equal(scene.pool().total)
-	scene.assign_slots("c", 99)
-	assert_int(scene.pool().assigned("c") + scene.pool().assigned("k")).is_less_equal(
-		scene.pool().total
-	)
+	assert_int(scene.pool().assigned("c")).is_equal(5)
+	assert_int(scene.pool().assigned("k")).is_equal(3)
+	assert_int(scene.pool().free_slots()).is_equal(0)
+
+
+func test_erasing_in_one_lane_frees_slots_for_the_other_at_once() -> void:
+	var scene := _scene()
+	scene._choose_brush(0)  # grem
+	scene._paint_cell("k", Vector2i(0, 0), true)
+	scene._paint_cell("k", Vector2i(0, 1), true)
+
+	scene._paint_cell("c", Vector2i(1, 0))
+	scene._paint_cell("c", Vector2i(1, 1))
+
+	assert_int(scene.pool().assigned("c")).is_equal(7)
+	assert_int(scene.pool().assigned("k")).is_equal(1)
+	assert_int(scene.pool().free_slots()).is_equal(0)
+
+
+func test_a_saved_preset_applies_to_another_lane_fitted_to_its_slots() -> void:
+	var scene := _scene()
+	scene.presets_path = ""  # never touch the presets saved on this machine
+	scene._presets = []
+	scene._save_preset("c")  # lane c's 5-wide line
+
+	scene._apply_preset("k", 0)  # lane k holds only its own 3 slots (none free)
+
+	assert_int(scene._presets.size()).is_equal(1)
+	assert_int(scene.pool().assigned("k")).is_equal(3)
+	assert_int(scene.pool().free_slots()).is_equal(0)
 
 
 func test_a_full_wave_pauses_and_sending_it_resumes() -> void:
@@ -80,29 +105,16 @@ func test_units_in_different_lanes_with_the_same_id_stay_apart() -> void:
 	)
 
 
-# --- Decision 42: painted templates, applied at once -----------------------------
+# --- Decision 42/43: painted templates, applied at once ---------------------------
 
 
 func test_painting_a_brute_changes_the_lanes_template_at_once() -> void:
 	var scene := _scene()
-	scene._choose_brush("c", 1)  # Brute 2x2
-	scene.assign_slots("k", 0)
-	scene.assign_slots("c", 8)
+	for column in range(3):
+		scene._paint_cell("k", Vector2i(0, column), true)  # free lane k's 3 slots
+	scene._choose_brush(1)  # brute
 
 	scene._paint_cell("c", Vector2i(0, 1))
 
 	var places: Array = scene._lanes["c"].production.preview()
 	assert_bool(places.any(func(p): return p[2] == 2 and p[3] == 2 and p[0] == 0)).is_true()
-
-
-func test_lowering_a_lanes_share_trims_its_template_and_banks_built_units() -> void:
-	var scene := _scene()
-	var production = scene._lanes["c"].production
-	for i in range(110):  # a grem takes 2 s (20 ticks): lane c's 5-grem line
-		production.step(scene.simulation("c"))
-	assert_int(production.built()).is_equal(5)
-
-	scene.assign_slots("c", 2)
-
-	assert_int(production.preview().size()).is_equal(2)
-	assert_int(production.reserve_count()).is_equal(3)

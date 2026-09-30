@@ -15,7 +15,7 @@ static func status(seconds: float, speed: float, paused: bool) -> String:
 
 static func pool(slot_pool: SkirmishSlotPool) -> String:
 	return (
-		"Slot pool %d: c %d · k %d · free %d (applies now; displaced units are banked)"
+		"Slot pool %d: c %d · k %d · free %d (erase in one lane to paint in another)"
 		% [
 			slot_pool.total,
 			slot_pool.assigned("c"),
@@ -26,7 +26,7 @@ static func pool(slot_pool: SkirmishSlotPool) -> String:
 
 
 ## [summary text, build share 0..1, template places] for one lane.
-static func lane(production: FormationProduction, slot_share: int) -> Array:
+static func lane(production: FormationProduction, allowance: int) -> Array:
 	var places := production.preview()
 	var used := 0
 	for place in places:
@@ -34,19 +34,22 @@ static func lane(production: FormationProduction, slot_share: int) -> Array:
 	var state := "ready - send it" if production.is_full() else "building"
 	var text := (
 		"cells %d/%d · built %d/%d · reserve %d · %s"
-		% [used, slot_share, production.built(), places.size(), production.reserve_count(), state]
+		% [used, allowance, production.built(), places.size(), production.reserve_count(), state]
 	)
 	var share := 1.0 if production.is_full() else production.progress
 	return [text, share, places]
 
 
-static func selected(lane_key: String, squad: SkirmishSquad) -> String:
+## chosen: [lane key, squad id], or empty when nothing is selected.
+static func selected(chosen: Array, squad: SkirmishSquad) -> String:
+	if chosen.is_empty():
+		return "Click a squad (or Tab) to select it"
 	if squad == null or squad.is_destroyed():
 		return "Selected squad is gone"
 	return (
 		"Lane %s squad #%d: %d alive · %s · %s"
 		% [
-			lane_key,
+			chosen[0],
 			squad.id,
 			squad.living().size(),
 			SkirmishUnit.Order.keys()[squad.order],

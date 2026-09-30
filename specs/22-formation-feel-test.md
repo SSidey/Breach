@@ -168,6 +168,33 @@ A scripted run showed each step:
    brute (reserve 1).
 3. After sending, painting a brute again filled it instantly from the reserve.
 
+## Round 3: painting to the direction of travel (Decision 43)
+
+From painting waves in round 2:
+- **`WavePainter`** faces the direction of travel: the front rank is the right-hand
+  column and formation columns run top to bottom (4 wide × 8 tall).
+  - Pressing an empty cell paints with the brush, pressing a filled one erases it; a drag
+    keeps doing whichever the press started. Right click still erases.
+- **No per-lane share.** The pool records what each lane has painted. A lane may paint
+  into its own cells plus any free slot, so erasing in one lane frees slots for the other
+  at once. The pool −/+ and `trim_to`-on-share-change are gone from the scene.
+- **One brush** for both lanes, with hotkeys **1** grem, **2** brute, **E** erase.
+- **Player presets** (`WavePresets`, `WavePresetStore`):
+  - "Save shape" stores the lane's shape as "Preset N"; the game ships none.
+  - "Apply" puts a saved preset on any lane, front-first, dropping what no longer fits
+    the lane's width or the slots it can reach.
+  - Presets are kept in `user://formation_presets.json` between sessions.
+- `WaveTemplate` pulls an overhanging footprint back inside the grid (a brute clicked on
+  the last column lands one column in) and reports whether a cell is occupied;
+  `WavePresets.line` replaces `default_line`.
+
+A scripted run with real painter clicks, one per frame:
+1. Two clicks on lane k's line erased two grems and freed 2 slots.
+2. Lane c was cleared, then painted as a brute at the front centre, grems behind it and
+   one on the flank, using the freed slots (c 7 · k 1 · free 0).
+3. That shape was saved as Preset 1 and applied to lane k, which kept only what its one
+   slot and 4-wide lane allow: a single grem.
+
 ## Notes / open questions
 
 - Orders are per wave. Pulling back a single unit is left out for now.

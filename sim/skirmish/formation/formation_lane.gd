@@ -8,6 +8,7 @@ extends RefCounted
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
 const WaveTemplate = preload("res://sim/skirmish/formation/wave_template.gd")
+const WavePresets = preload("res://sim/skirmish/formation/wave_presets.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
 var key: String
@@ -36,7 +37,7 @@ func _init(
 	kingdom = FormationProduction.new("the_kingdom", false)
 	kingdom.build_seconds = kingdom_unit_seconds
 	kingdom.departure = FormationProduction.Departure.AUTO_WHEN_FULL
-	kingdom.set_template(WaveTemplate.default_line(kingdom_unit, kingdom_line, kingdom_line))
+	kingdom.set_template(WavePresets.line(kingdom_unit, kingdom_line, kingdom_line))
 	template = WaveTemplate.new(width, 0)
 
 
@@ -55,19 +56,30 @@ func apply(new_template: WaveTemplate) -> int:
 	return production.set_template(new_template)[0]["banked"]
 
 
-## Paints the brush at a cell (or erases with no brush / erase); returns the units banked,
-## or -1 when the template didn't change.
-func paint(cell: Vector2i, erase: bool = false) -> int:
+## Paints the brush at a cell (or erases, with erase or no brush), allowing the template up
+## to `allowance` cells (its own plus the pool's free slots). Returns the units banked, or
+## -1 when nothing changed.
+func paint(cell: Vector2i, allowance: int, erase: bool = false) -> int:
 	var edited := template.copy()
+	edited.slot_limit = allowance
 	var changed := edited.erase(cell) if erase or brush == null else edited.paint(brush, cell)
 	return apply(edited) if changed else -1
 
 
-## A new pool share: the template is trimmed from the back to fit; returns units banked.
-func retrim(slots: int) -> int:
-	var edited := template.copy()
-	edited.trim_to(slots)
-	return apply(edited)
+func cells_used() -> int:
+	var total := 0
+	for placement in template.ordered():
+		total += placement[0].footprint_depth * placement[0].footprint_width
+	return total
+
+
+## Sends the player's wave on its own once full (true) or waits for Send (false).
+func set_auto_departure(automatic: bool) -> void:
+	production.departure = (
+		FormationProduction.Departure.AUTO_WHEN_FULL
+		if automatic
+		else FormationProduction.Departure.MANUAL
+	)
 
 
 func spawn_kingdom_line(unit_def: UnitDef, count: int) -> void:

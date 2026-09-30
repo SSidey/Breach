@@ -1,9 +1,10 @@
 class_name FormationSkirmishScene
 extends Node2D
-## The formation feel test (specs/22-formation-feel-test.md, Decisions 39-42): two lanes
-## from P (a FormationLane each), stepped by one SkirmishClock; a shared slot pool split
-## across them; each lane's wave painted and applied at once (fold + bank); kingdom
-## militia lines; wave-level orders. Engine glue - the rules live in sim/skirmish/formation/.
+## The formation feel test (specs/22-formation-feel-test.md, Decisions 39-43): two lanes
+## from P (a FormationLane each), stepped by one SkirmishClock; a shared slot pool that
+## each lane draws on as it paints (erasing frees slots for any lane); each lane's wave
+## applied at once (fold + bank); the player's saved presets; kingdom militia lines;
+## wave-level orders. Engine glue - the rules live in sim/skirmish/formation/.
 ##
 ##   godot --path . res://presentation/skirmish/formation/formation_skirmish.tscn
 
@@ -12,10 +13,12 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SkirmishSlotPool = preload("res://sim/skirmish/formation/skirmish_slot_pool.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
-const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
 const FormationLane = preload("res://sim/skirmish/formation/formation_lane.gd")
 const WaveTemplate = preload("res://sim/skirmish/formation/wave_template.gd")
+const WavePresets = preload("res://sim/skirmish/formation/wave_presets.gd")
+const WavePresetStore = preload("res://presentation/skirmish/formation/wave_preset_store.gd")
 const SkirmishRoute = preload("res://presentation/skirmish/skirmish_route.gd")
+const SkirmishCamera = preload("res://presentation/skirmish/skirmish_camera.gd")
 const FormationSkirmishHud = preload(
 	"res://presentation/skirmish/formation/formation_skirmish_hud.gd"
 )
@@ -35,9 +38,13 @@ const LANE_WIDTHS := {"c": 5, "k": 4}
 const START_SLOTS := {"c": 5, "k": 3}
 const KINGDOM_LINE := 3
 const KINGDOM_UNIT_SECONDS := 5.0  # a 3-wide militia line every 15 s when auto is on
+## Brushes in HUD order (hotkeys 1, 2, E); null erases.
+const BRUSHES := [GREM, BRUTE, null]
 
 ## Decision 39: a full wave pauses the game (true) or only notifies (false).
 var pause_on_wave_full := true
+## Where the player's presets are kept; empty keeps them in memory only.
+var presets_path := "user://formation_presets.json"
 
 var _clock := SkirmishClock.new()
 var _pool: SkirmishSlotPool
@@ -45,6 +52,8 @@ var _lanes := {}  # lane key -> FormationLane
 var _kingdom_auto := false
 var _paused_for_wave := false
 var _hud: FormationSkirmishHud
+var _brush := 0
+var _presets := []  # WavePresets dictionaries, the player's own
 
 
 func lane_keys() -> Array:
@@ -76,12 +85,15 @@ func _ready() -> void:
 		)
 	for key in START_SLOTS:
 		_pool.assign(key, START_SLOTS[key])
-		_lanes[key].apply(WaveTemplate.default_line(GREM, START_SLOTS[key], LANE_WIDTHS[key]))
+		_lanes[key].apply(WavePresets.line(GREM, START_SLOTS[key], LANE_WIDTHS[key]))
+	_presets = WavePresetStore.load_presets(presets_path)
 	_hud = FormationSkirmishHud.new()
 	add_child(_hud)
 	_hud.build(lane_keys())
+	_hud.set_tools(_brush, WavePresetStore.names(_presets))
 	_connect_hud()
-	_frame_camera()
+	var panel := FormationSkirmishHud.PANEL_WIDTH + 30.0
+	SkirmishCamera.frame($Camera, $MapView.model.bounds, get_viewport_rect().size, panel)
 	_refresh_hud()
 
 
@@ -137,19 +149,37 @@ func send_wave(lane_key: String) -> void:
 		_clock.resume()
 
 
-## Moves slots in the pool. Takes effect at once (Decision 42): a lane whose share drops
-## has its template trimmed from the back, and trimmed built units are banked.
-func assign_slots(lane_key: String, slot_count: int) -> void:
-	_pool.assign(lane_key, slot_count)
-	for key in _lanes:
-		_log_banked(key, _lanes[key].retrim(_pool.assigned(key)))
-
-
+## Paints (or erases) one cell of a lane's wave. The lane may grow into any free slot of
+## the pool, and the pool then records what it uses - so erasing frees slots for any lane
+## at once (Decision 43).
 func _paint_cell(lane_key: String, cell: Vector2i, erase: bool = false) -> void:
-	_log_banked(lane_key, _lanes[lane_key].paint(cell, erase))
+	_reshaped(lane_key, _lanes[lane_key].paint(cell, _allowance(lane_key), erase))
 
 
-func _log_banked(lane_key: String, banked: int) -> void:
+func _save_preset(lane_key: String) -> void:
+	var preset_name := "Preset %d" % (_presets.size() + 1)
+	_presets.append(WavePresets.to_dict(_lanes[lane_key].template, preset_name, GREM))
+	WavePresetStore.save_presets(presets_path, _presets)
+	if _hud != null:
+		_hud.set_tools(_brush, WavePresetStore.names(_presets))
+	_log(lane_key, {"faction": "player"}, "saved the shape as %s" % preset_name)
+
+
+## Applies a saved preset, fitted to the lane's width and the slots it can reach.
+func _apply_preset(lane_key: String, index: int) -> void:
+	var width: int = LANE_WIDTHS[lane_key]
+	var fitted := WavePresets.from_dict(_presets[index], GREM, BRUTE, width, _allowance(lane_key))
+	_reshaped(lane_key, _lanes[lane_key].apply(fitted))
+
+
+## The cells a lane may paint: its own plus whatever the pool has free.
+func _allowance(lane_key: String) -> int:
+	return _pool.assigned(lane_key) + _pool.free_slots()
+
+
+## After a template change: the pool records the lane's cells and the log notes any bank.
+func _reshaped(lane_key: String, banked: int) -> void:
+	_pool.assign(lane_key, _lanes[lane_key].cells_used())
 	if banked > 0:
 		var at := {"tick": simulation(lane_key).tick_number(), "faction": "player"}
 		_log(lane_key, at, "reshaped: %d banked in the reserve" % banked)
@@ -179,6 +209,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_order(SkirmishUnit.Order.RETREAT)
 			KEY_TAB:
 				_cycle_selection()
+			KEY_1, KEY_2, KEY_E:
+				_choose_brush({KEY_1: 0, KEY_2: 1, KEY_E: 2}[event.keycode])
 	elif (
 		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
 	):
@@ -191,30 +223,24 @@ func _connect_hud() -> void:
 	_hud.pause_on_full_toggled.connect(func(on): pause_on_wave_full = on)
 	_hud.kingdom_auto_toggled.connect(func(on): _kingdom_auto = on)
 	_hud.order_chosen.connect(_order)
-	_hud.slots_changed.connect(func(key, delta): assign_slots(key, _pool.assigned(key) + delta))
 	_hud.brush_chosen.connect(_choose_brush)
+	_hud.preset_saved.connect(_save_preset)
+	_hud.preset_applied.connect(_apply_preset)
 	_hud.cell_painted.connect(func(key, cell): _paint_cell(key, cell))
 	_hud.cell_erased.connect(func(key, cell): _paint_cell(key, cell, true))
 	_hud.send_wave_pressed.connect(send_wave)
-	_hud.auto_departure_toggled.connect(_set_departure)
-	_hud.spawn_kingdom_pressed.connect(_spawn_kingdom_line)
-
-
-func _choose_brush(lane_key: String, brush: int) -> void:
-	_lanes[lane_key].brush = [GREM, BRUTE, null][brush]
-
-
-func _set_departure(lane_key: String, automatic: bool) -> void:
-	var departure := (
-		FormationProduction.Departure.AUTO_WHEN_FULL
-		if automatic
-		else FormationProduction.Departure.MANUAL
+	_hud.auto_departure_toggled.connect(func(key, on): _lanes[key].set_auto_departure(on))
+	_hud.spawn_kingdom_pressed.connect(
+		func(key): _lanes[key].spawn_kingdom_line(MILITIA, KINGDOM_LINE)
 	)
-	_lanes[lane_key].production.departure = departure
 
 
-func _spawn_kingdom_line(lane_key: String) -> void:
-	_lanes[lane_key].spawn_kingdom_line(MILITIA, KINGDOM_LINE)
+func _choose_brush(brush: int) -> void:
+	_brush = brush
+	for key in _lanes:
+		_lanes[key].brush = BRUSHES[brush]
+	if _hud != null:
+		_hud.set_tools(_brush, WavePresetStore.names(_presets))
 
 
 func _toggle_pause() -> void:
@@ -246,20 +272,14 @@ func _refresh_hud() -> void:
 		return
 	var seconds := simulation(lane_keys()[0]).tick_number() * _clock.tick_seconds
 	var paused := _clock.is_paused()
-	_hud.set_status(
-		FormationSkirmishReadout.status(seconds, _clock.speed_multiplier, paused), paused
-	)
-	_hud.set_pool(FormationSkirmishReadout.pool(_pool))
+	var status := FormationSkirmishReadout.status(seconds, _clock.speed_multiplier, paused)
+	_hud.set_status(status, FormationSkirmishReadout.pool(_pool), paused)
 	for key in _lanes:
-		var line := FormationSkirmishReadout.lane(_lanes[key].production, _pool.assigned(key))
+		var line := FormationSkirmishReadout.lane(_lanes[key].production, _allowance(key))
 		_hud.set_lane(key, line[0], line[1], line[2], LANE_WIDTHS[key])
 	var chosen: Array = $Squads.selected
-	if chosen.is_empty():
-		_hud.set_selected("Click a squad (or Tab) to select it")
-	else:
-		_hud.set_selected(
-			FormationSkirmishReadout.selected(chosen[0], _lanes[chosen[0]].sim.squad(chosen[1]))
-		)
+	var squad = null if chosen.is_empty() else _lanes[chosen[0]].sim.squad(chosen[1])
+	_hud.set_selected(FormationSkirmishReadout.selected(chosen, squad))
 
 
 func _log(lane_key: String, event: Dictionary, text: String) -> void:
@@ -272,18 +292,3 @@ func _log(lane_key: String, event: Dictionary, text: String) -> void:
 func _banner(text: String) -> void:
 	if _hud != null:
 		_hud.show_banner(text)
-
-
-func _frame_camera() -> void:
-	var view: MapView = $MapView
-	var bounds: Rect2 = view.model.bounds
-	var viewport_size := get_viewport_rect().size
-	var usable := Vector2(
-		maxf(viewport_size.x - FormationSkirmishHud.PANEL_WIDTH - 30.0, 1.0), viewport_size.y
-	)
-	var fit := minf(usable.x / bounds.size.x, usable.y / bounds.size.y) * 0.92
-	var camera: Camera2D = $Camera
-	camera.zoom = Vector2(fit, fit)
-	camera.position = (
-		bounds.get_center() - Vector2((FormationSkirmishHud.PANEL_WIDTH + 30.0) * 0.5, 0.0) / fit
-	)

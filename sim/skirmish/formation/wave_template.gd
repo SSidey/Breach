@@ -20,33 +20,33 @@ func _init(width: int, slots: int) -> void:
 	slot_limit = maxi(slots, 0)
 
 
-## The starting template: `count` units of one kind, as wide as allowed, then deeper.
-static func default_line(unit_def: UnitDef, count: int, width: int) -> WaveTemplate:
-	var template := WaveTemplate.new(width, count)
-	for index in range(count):
-		template.paint(unit_def, Vector2i(index / template.max_width, index % template.max_width))
-	return template
-
-
 func copy() -> WaveTemplate:
 	var twin := WaveTemplate.new(max_width, slot_limit)
 	twin._placements = _placements.duplicate()
 	return twin
 
 
-## Places a unit with its top-left footprint cell at `cell` (rank, column), replacing any
-## units it overlaps. Refused (false, nothing changed) if it leaves the grid or the slots.
+## Places a unit anchored at `cell` (its front-most rank, left-most column), replacing any
+## units it overlaps. A footprint that would overhang the grid is pulled back inside.
+## Refused (false, nothing changed) if `cell` is off the grid or the slots run out.
 func paint(unit_def: UnitDef, cell: Vector2i) -> bool:
 	var depth := unit_def.footprint_depth
 	var width := unit_def.footprint_width
-	if cell.x < 0 or cell.y < 0 or cell.x + depth > MAX_RANKS or cell.y + width > max_width:
+	if cell.x < 0 or cell.y < 0 or cell.x >= MAX_RANKS or cell.y >= max_width:
 		return false
+	if depth > MAX_RANKS or width > max_width:
+		return false
+	cell = Vector2i(mini(cell.x, MAX_RANKS - depth), mini(cell.y, max_width - width))
 	var kept := _placements.filter(func(p): return not _overlaps(p, cell, depth, width))
 	if _cells(kept) + depth * width > slot_limit:
 		return false
 	kept.append([unit_def, cell])
 	_placements = kept
 	return true
+
+
+func occupied(cell: Vector2i) -> bool:
+	return _placements.any(func(p): return _overlaps(p, cell, 1, 1))
 
 
 ## Removes the unit covering `cell`; false if there is none.

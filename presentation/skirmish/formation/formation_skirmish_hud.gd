@@ -1,17 +1,18 @@
 class_name FormationSkirmishHud
 extends CanvasLayer
 ## Controls and readouts for the formation feel test (specs/22-formation-feel-test.md):
-## time, the shared slot pool, each lane's formation (slots, width, composition, a live
-## preview of the wave being built, send, auto departure), the kingdom, orders for the
-## selected squad, and a log. Builds its widgets in code and only emits signals.
+## time, the shared slot pool, one brush for every lane (hotkeys 1 / 2 / E), each lane's
+## wave painter with its saved presets, send and auto departure (Decision 43), the kingdom,
+## orders for the selected squad, and a log. Builds its widgets in code, only emits signals.
 
 signal pause_toggled
 signal speed_chosen(multiplier: float)
 signal pause_on_full_toggled(enabled: bool)
 signal kingdom_auto_toggled(enabled: bool)
 signal order_chosen(order: int)
-signal slots_changed(lane_key: String, delta: int)
-signal brush_chosen(lane_key: String, brush: int)
+signal brush_chosen(brush: int)
+signal preset_saved(lane_key: String)
+signal preset_applied(lane_key: String, index: int)
 signal cell_painted(lane_key: String, cell: Vector2i)
 signal cell_erased(lane_key: String, cell: Vector2i)
 signal send_wave_pressed(lane_key: String)
@@ -24,8 +25,9 @@ const WavePainter = preload("res://presentation/skirmish/formation/wave_painter.
 const PANEL_WIDTH := 330.0
 const LOG_LINES := 9
 const BANNER_SECONDS := 3.0
-## Brush choices, in order (the scene maps them to unit types; the last erases).
-const BRUSHES := ["Grem 1×1", "Brute 2×2", "Erase"]
+## Brush choices, in order, with their hotkeys (the scene maps them to unit types; the last
+## erases).
+const BRUSHES := ["Grem [1]", "Brute [2]", "Erase [E]"]
 
 var _status: Label
 var _pool: Label
@@ -33,7 +35,8 @@ var _pause_button: Button
 var _selected: Label
 var _log: RichTextLabel
 var _banner: Label
-var _lanes := {}  # lane key -> {"label": Label, "painter": WavePainter}
+var _brushes := []  # Button per brush, in BRUSHES order
+var _lanes := {}  # lane key -> {"label", "painter", "presets": OptionButton}
 var _lines: PackedStringArray = []
 var _banner_left := 0.0
 
@@ -64,6 +67,7 @@ func build(lane_keys: Array) -> void:
 		func(on): pause_on_full_toggled.emit(on)
 	)
 	_pool = _label(box, "")
+	_build_brushes(box)
 	for lane_key in lane_keys:
 		_build_lane(box, lane_key)
 	_build_kingdom_and_orders(box, lane_keys)
@@ -80,13 +84,24 @@ func _process(delta: float) -> void:
 			_banner.text = ""
 
 
-func set_status(text: String, paused: bool) -> void:
+func set_status(text: String, pool_text: String, paused: bool) -> void:
 	_status.text = text
+	_pool.text = pool_text
 	_pause_button.text = "Resume (Space)" if paused else "Pause (Space)"
 
 
-func set_pool(text: String) -> void:
-	_pool.text = text
+## Shows the chosen brush and lists the player's saved presets in every lane.
+func set_tools(brush: int, preset_names: Array) -> void:
+	for index in range(_brushes.size()):
+		_brushes[index].set_pressed_no_signal(index == brush)
+	for lane_key in _lanes:
+		var picker: OptionButton = _lanes[lane_key]["presets"]
+		var keep := picker.selected
+		picker.clear()
+		for preset_name in preset_names:
+			picker.add_item(preset_name)
+		if picker.item_count > 0:
+			picker.select(clampi(keep, 0, picker.item_count - 1))
 
 
 ## text: the lane's summary; share: build progress; places: FormationProduction.preview().
@@ -115,27 +130,45 @@ func show_banner(text: String) -> void:
 	_banner_left = BANNER_SECONDS
 
 
+func _build_brushes(box: VBoxContainer) -> void:
+	var row := _row(box)
+	var group := ButtonGroup.new()
+	for index in range(BRUSHES.size()):
+		var brush := _button(row, BRUSHES[index], func(): brush_chosen.emit(index))
+		brush.toggle_mode = true
+		brush.button_group = group
+		_brushes.append(brush)
+	_brushes[0].set_pressed_no_signal(true)
+
+
 func _build_lane(box: VBoxContainer, lane_key: String) -> void:
 	var title := "Lane P → %s  (Send: %s)" % [lane_key, "S" if lane_key == "c" else "Shift+S"]
 	_label(box, title)
 	var row := _row(box)
-	_button(row, "slots −", func(): slots_changed.emit(lane_key, -1))
-	_button(row, "+", func(): slots_changed.emit(lane_key, 1))
-	var brushes := OptionButton.new()
-	brushes.focus_mode = Control.FOCUS_NONE
-	for name in BRUSHES:
-		brushes.add_item(name)
-	brushes.item_selected.connect(func(index): brush_chosen.emit(lane_key, index))
-	row.add_child(brushes)
 	var painter := WavePainter.new()
 	painter.painted.connect(func(cell): cell_painted.emit(lane_key, cell))
 	painter.erased.connect(func(cell): cell_erased.emit(lane_key, cell))
-	box.add_child(painter)
-	var label := _label(box, "")
-	var send_row := _row(box)
-	_button(send_row, "Send wave", func(): send_wave_pressed.emit(lane_key))
-	_toggle(send_row, "Auto depart", false, func(on): auto_departure_toggled.emit(lane_key, on))
-	_lanes[lane_key] = {"label": label, "painter": painter}
+	row.add_child(painter)
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(PANEL_WIDTH - 150.0, 0)
+	row.add_child(side)
+	var label := _label(side, "")
+	label.custom_minimum_size = Vector2(PANEL_WIDTH - 150.0, 0)
+	var presets := OptionButton.new()
+	presets.focus_mode = Control.FOCUS_NONE
+	side.add_child(presets)
+	var preset_row := _row(side)
+	_button(preset_row, "Apply", func(): _apply_chosen(lane_key))
+	_button(preset_row, "Save shape", func(): preset_saved.emit(lane_key))
+	_button(side, "Send wave", func(): send_wave_pressed.emit(lane_key))
+	_toggle(side, "Auto depart", false, func(on): auto_departure_toggled.emit(lane_key, on))
+	_lanes[lane_key] = {"label": label, "painter": painter, "presets": presets}
+
+
+func _apply_chosen(lane_key: String) -> void:
+	var picker: OptionButton = _lanes[lane_key]["presets"]
+	if picker.selected >= 0:
+		preset_applied.emit(lane_key, picker.selected)
 
 
 func _build_kingdom_and_orders(box: VBoxContainer, lane_keys: Array) -> void:
