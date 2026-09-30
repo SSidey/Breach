@@ -118,9 +118,21 @@ Scenario: The spec 21 duel still holds
 8. Manual: the user plays it and reports on frontline width, flanking, step-up and pool
    splitting.
 
-## Outcome (filled in after the user plays it)
+## Outcome
 
-_Pending._
+**Playtest 1 (2026-10-01), the user's verdict:**
+1. **Wide versus deep is a real choice.** That came through the flanking, and through
+   watching grems die alongside a brute that tanked two enemies for far longer.
+2. **Flanking wasn't noticeable on the board.** It should be evident in the detail view
+   (Inspector Viewport), where units would visibly move round the flank.
+3. **Step-up wasn't visible either.** Ranks are 0.3 cells apart, so it's a shuffle; it
+   also belongs in the detail view.
+4. **The pool and wave-building controls were hard to read and clunky.** Adjusting
+   width meant waiting for the current wave to fill its old shape. "Brute front +
+   grems" put a grem beside the brute when the brute was expected to lead.
+   - The fix is **Decision 42**: paint the wave template per lane; a change takes
+     effect immediately, built units fold in, and leftovers are banked in a reserve.
+   - The oversized debug units should later stay within their tile (fine for now).
 
 ## Notes / open questions
 

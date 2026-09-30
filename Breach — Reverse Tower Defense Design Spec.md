@@ -2013,6 +2013,10 @@ before the fight.
 
 ### Decision 40 — Waves are formations on a slot grid: unit footprints, front-rank combat with flank wrap, and a shared pool of slots assigned across lanes
 
+> Superseded in part by Decision 42 on 2026-10-01: a lane's wave is a painted template, and a
+> change takes effect **immediately** (built units fold in, leftovers are banked), rather than
+> applying from the next wave.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-09-30
 
@@ -2135,3 +2139,53 @@ defences and upgrades that fit its faction.
   once they have a view) gain a "faction / universal" field and a tech requirement. By
   the sync rule, this is updated when the schema lands.
 - The feel test stays player-versus-kingdom with fixed rosters.
+
+### Decision 42 — Waves are painted templates; a change takes effect immediately, built units fold in, and leftovers are banked
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** From the formation feel test's first playtest
+(`specs/22-formation-feel-test.md`): adjusting width with −/+ and then waiting for the
+current wave to fill in its old shape felt clunky, and was hard to read. A "Brute front +
+grems" preset put a grem *beside* the brute in the front rank when the user expected the
+brute to lead. The user's direction:
+- **Draw the wave.** Each lane has a **wave template**: a grid up to the lane's width
+  (at most 8) by up to 4 ranks. The player paints units into it with brushes (a 1×1
+  grem, a 2×2 brute, an eraser). The painted units *are* the shape, so "front" means
+  exactly what was drawn. This replaces width −/+ and the composition presets. The
+  template can't use more cells than the lane's share of the slot pool.
+- **The template is edited separately from the wave being built**, and a change **takes
+  effect immediately**:
+  - The part-built wave switches to the new shape at once.
+  - Units already built **fold in**: each is re-slotted into a matching place (same
+    unit type) in the new template, front first.
+  - Building carries on toward whatever is still unfilled.
+- **Leftovers are banked.** Built units with no matching place in the new shape go to a
+  **reserve** at that lane's origin, shown in the HUD. The reserve fills matching places
+  (instantly) before anything new is built. Nothing is wasted, so reshaping is cheap to
+  experiment with.
+- If the lane's pool share drops below the template's size, the template is trimmed
+  from the back, and any trimmed built units are banked the same way.
+- **The board isn't where flanking and step-up read.** On the overland board they're
+  barely visible, so they belong in the **detail view** (Inspector Viewport, Decision
+  36): there you should *see* the line wrap round and the rank behind close up. The
+  debug board's oversized units should later be kept within their tile.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep width −/+ and composition presets | Clunky, and the presets can't express intent (who leads). |
+| A new shape applies after the current wave is sent (Decision 40) | The user found waiting for the old shape to fill clunky. |
+| Deploy leftovers at once as a partial wave | A surprise departure; the user chose banking. |
+| Consume leftovers | Makes experimenting with shapes costly; the user chose banking. |
+
+**Consequences:**
+- The formation feel test gets a per-lane **wave painter** (brushes, an eraser, the
+  built units and banked reserve shown in place). Production builds toward the template
+  and folds and banks on every change.
+- Decision 40's "a pool change applies to the next wave" is replaced by "takes effect
+  now, with fold and bank".
+- The detail view's requirements now include: showing flank wraps and step-up as
+  visible movement.
