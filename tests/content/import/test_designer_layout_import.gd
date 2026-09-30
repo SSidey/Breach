@@ -107,13 +107,15 @@ func test_only_structure_sections_are_still_not_imported() -> void:
 
 func test_a_terrain_missing_from_the_shared_library_is_an_error() -> void:
 	var export_data := _export()
-	export_data["tiles"][0]["terrain"] = "HILLY"
+	export_data["tiles"][0]["terrain"] = "NOT_A_TERRAIN"
 
 	var errors: PackedStringArray = _import(export_data).errors
 
 	(
 		assert_bool(
-			_any(errors, "tile (2, 3): terrain 'HILLY' is not in the shared terrain library")
+			_any(
+				errors, "tile (2, 3): terrain 'NOT_A_TERRAIN' is not in the shared terrain library"
+			)
 		)
 		. is_true()
 	)
