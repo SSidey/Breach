@@ -465,8 +465,17 @@ designed.
 - **Depth, not flat tiles.** A forest should look like a forest, with trees that have
   height and overlap the cells around them, not a green square. The same goes for
   mountains, water and structures.
-- **Weather and day/night** add further dynamism. The user has addenda to add; they will
-  be linked here when recorded.
+- **Weather and day/night** add further dynamism, per
+  `breach-addendum-calendar-weather.md`. Points that matter for presentation:
+  - Four named phases a day (Dawn / Day / Dusk / Night), giving dawn and dusk transitions
+    rather than a hard toggle.
+  - An authored season per map.
+  - A full moon on a fixed calendar date.
+  - Weather as zones, either blanketing whole cells or shaped (a moving tornado).
+  All of this is derived from the round counter, so the board reads it and never
+  simulates it. `breach-addendum-unit-ai-and-tactical-space.md` adds the other half: a
+  fight opens its own continuous local space, and a ranged fight shows two linked
+  viewports that merge as the forces close.
 
 Implications for the Godot build:
 - **Keep the viewer's layer split.** Terrain → features → roads/bridges → structures →
@@ -1598,3 +1607,65 @@ Two safeguards make the shared library safe:
   details.
 - Nothing in `sim/` reads movement costs, capacity, bridges or loss groups yet; that is
   milestone 2.
+
+### Decision 33 — Calendar/weather and unit-AI/tactical-space addenda are tracked design, read against the built map model
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** The user added two addenda alongside `breach-addendum-unified-combat.md`:
+- `breach-addendum-calendar-weather.md`: tick = round, with the calendar derived from it;
+  derived/offset/pinned calendar overrides; `WorldContext`; a per-map Map Script of
+  `{trigger, action}` events; weather and effect zones.
+- `breach-addendum-unit-ai-and-tactical-space.md`: a hard-gated priority stack of orders;
+  an event queue within a round; a discrete strategic graph with a continuous tactical
+  space per Encounter; spatial range on a shared grid, tested against a unit's actual
+  path.
+
+They are tracked in version control as real design content, like the combat addendum
+(Decision 22). Both were written against the earlier "lanes on alternating rows" picture
+of the map. Since then the map has become a designer grid with freely placed nodes and
+pathfound routes (Decisions 26, 29, 32). So this Decision records where they meet what
+is built, so a later item doesn't re-derive it.
+
+**Where the addenda meet the current model:**
+- **Grid coordinates already exist.** Every node's `position` is the centre of its
+  designer grid cell, and `MapLayoutDef` carries the grid. The "(row, column) for every
+  node" the tactical addendum asks for is `floor(position / cell_size)`, with no new
+  field needed. The rows 1/3/5 lanes with spacer rows 2/4 example is illustrative only;
+  lanes follow authored routes across any cells.
+- **A moving cluster's path is its link's route, not a straight segment.** The addendum
+  interpolates between the start and end nodes' coordinates. On the built model, a
+  cluster between two nodes travels along that link's `RouteDef` cells. "Entered threat
+  radius" therefore becomes a polyline-vs-range-area test (one segment per route step),
+  which is still cheap, ordinary geometry.
+- **Structure fights already have a tactical space.** Decision 27's side-on 2D plane per
+  structure is the continuous local space for Encounters at or inside a structure.
+  Open-field Encounters get their own local space in the same way: spun up for the fight,
+  then collapsed back to a node-level result.
+- **Emplacement range belongs with the structure schema (spec 20).** Emplacements need an
+  `engage_range` (Chebyshev distance on the grid by default) and the v1 single-target
+  rule, so a ballista can reach across lanes.
+- **Calendar config and the Map Script are map-authoring data.** They are a future schema
+  item with a designer UI (map settings, plus a timeline of triggered events). Nothing in
+  this Decision builds them.
+
+**Open questions (need the user):**
+- The calendar addendum's blanket zone form is written `tiles: [node ids]`. On the built
+  model, tiles (grid cells) and nodes are different things. Should blanket zones name
+  cells, nodes, or either?
+- The tactical addendum refers to "the Inspector Viewport pattern from the art
+  discussion". That pattern isn't recorded anywhere in the repo yet.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Rewrite the addenda to match the current model | They are the user's documents; noting how they map onto what's built keeps them intact and records the reconciliation in one place. |
+| Leave them untracked until implemented | Decision 22's precedent: real design content is tracked, so later work builds on it instead of rediscovering it. |
+
+**Consequences:**
+- Both files are tracked at the repo root.
+- The living-board direction links the calendar and weather presentation to them.
+- Spec 20 (structures) should include emplacement `engage_range`.
+- The two open questions stay open until the user answers.
