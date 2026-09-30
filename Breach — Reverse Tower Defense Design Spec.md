@@ -1986,3 +1986,27 @@ game.
 - The high-ground range bonus is still open. A formula bonus (tapering with height, with
   an optional penalty for firing upward) was proposed; real projectiles would be limited
   to tactical fights, if used at all.
+
+### Decision 39 — When a lane's wave finishes building, the player chooses to pause or be notified
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** Under real-time with pause (Decision 38), waves build up on each lane
+while the game runs. The user wants a player option for the moment a lane's wave build
+completes: **pause the game**, or **just notify**. This is separate from departure, which
+stays per lane: a manual send, or automatic when full. With automatic departure and
+Pause both set, the game pauses as the wave leaves, so the player can still intervene
+before the fight.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Always pause on a full wave | Interrupts players who prefer to keep playing; the user wants it optional. |
+| Never pause, notify only | Loses the tower-defence-style moment for planning that some players want. |
+
+**Consequences:**
+- The simulation emits a `wave_full` event per lane and never pauses itself. Pausing is
+  the presentation layer's reaction to that event, per the player's setting.
+- The feel test (`specs/21-realtime-skirmish-feel-test.md`) implements this first.
