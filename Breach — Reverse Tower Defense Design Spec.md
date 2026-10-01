@@ -1510,3 +1510,52 @@ empty slot falls back to the same shape drawn in code.
 - Owner colours follow `MapDef.factions` order. A stored `FactionDef.color`, which would
   match the designer exactly, remains an open choice.
 - The Python pre-commit hook now also covers `tools/` (the placeholder generator).
+
+### Decision 32 — One shared terrain library that maps reference; layout and loss groups become real map data
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** Every designer layer except structures now has schema
+(`specs/19-map-layout-and-objectives.md`): the grid, tiles (terrain, feature,
+bridge/drawbridge, capacity overrides, upgrades), roads, each link's route geometry,
+critical assets and loss groups.
+
+The user chose to keep terrain and feature definitions in **one shared Godot resource**,
+`content/terrain/terrain_library.tres`, generated from the designer's
+`content/designer/terrain.json`. Each map's `MapLayoutDef` *references* it rather than
+copying it, so editing a terrain in the designer reaches every map without re-saving them.
+This was verified by changing a colour in the library alone and seeing the map pick it up.
+
+Two safeguards make the shared library safe:
+- **An in-use guard.** The library import refuses to write a library that drops a terrain
+  or feature any saved map (`content/maps_src/*.designer.json`) still uses, and names those
+  maps.
+- **Automatic re-import.** The designer's server re-imports the library whenever it's
+  saved, and before any map import if the library is stale. The library records a sha256
+  of its source JSON (`TerrainLibraryDef.source_hash`); staleness is judged by content,
+  not file times.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Embed the terrain entries each map uses in its own `.tres` | Self-contained, but a terrain edit would only reach a map when that map is re-saved; the user preferred edits to propagate. |
+| Maps reference terrains by id only, looked up at runtime from a hard-coded path | Loses typed, validated references and makes every consumer know the path; an external resource reference is typed and loads automatically. |
+| Judge staleness by file modification time | Misses a `.tres` that is newer than a local `terrain.json` edit (e.g. after a checkout), which would have failed every map that uses a locally added terrain. |
+
+**Consequences:**
+- New definitions:
+  - `TerrainDef`, `TerrainFeatureDef` and `TerrainLibraryDef`
+  - `MapLayoutDef`, `TileDef`, `BridgeDef`, `RoadSegmentDef` and `RouteDef`
+  - `LossGroupDef` and `NodeDef.is_critical_asset`
+- `MapDef` gains `layout`, which is optional so hand-authored maps stay valid, and
+  `loss_groups`.
+- Tile capacity overrides use -1 to mean "use the terrain default". Upgrade ids stay
+  strings until an upgrade library exists.
+- The import's "not imported yet" warning now covers structures only (spec 20).
+- The map viewer draws the whole designer grid: terrain colours from the library,
+  features, roads, bridges and drawbridges, routes, critical-asset badges and tile
+  details.
+- Nothing in `sim/` reads movement costs, capacity, bridges or loss groups yet; that is
+  milestone 2.

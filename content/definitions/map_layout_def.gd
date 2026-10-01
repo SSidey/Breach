@@ -1,0 +1,117 @@
+class_name MapLayoutDef
+extends Resource
+## A map's spatial layer, per specs/19-map-layout-and-objectives.md: the designer grid,
+## its explicitly authored tiles, roads and each link's route geometry. Terrain and
+## feature ids resolve against terrain_library - an external reference to the one
+## shared content/terrain/terrain_library.tres (Decision 32), never a per-map copy.
+
+const TerrainLibraryDef = preload("res://content/definitions/terrain_library_def.gd")
+const TileDef = preload("res://content/definitions/tile_def.gd")
+const RoadSegmentDef = preload("res://content/definitions/road_segment_def.gd")
+const RouteDef = preload("res://content/definitions/route_def.gd")
+
+@export var cols: int = 0
+@export var rows: int = 0
+## Pixels per cell; node positions are cell centres at this size.
+@export var cell_size: int = 64
+@export var default_terrain_id: String = ""
+@export var terrain_library: TerrainLibraryDef
+@export var tiles: Array[TileDef] = []
+@export var roads: Array[RoadSegmentDef] = []
+@export var routes: Array[RouteDef] = []
+
+
+func tile_at(cell: Vector2i) -> TileDef:
+	for tile in tiles:
+		if tile.cell == cell:
+			return tile
+	return null
+
+
+func terrain_id_at(cell: Vector2i) -> String:
+	var tile := tile_at(cell)
+	return tile.terrain_id if tile != null and tile.terrain_id else default_terrain_id
+
+
+func contains(cell: Vector2i) -> bool:
+	return cell.x >= 0 and cell.y >= 0 and cell.x < cols and cell.y < rows
+
+
+func validate(node_ids: Array) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if cols <= 0 or rows <= 0:
+		errors.append("layout cols and rows must be > 0, got %dx%d" % [cols, rows])
+	if terrain_library == null:
+		errors.append("layout has no terrain_library")
+		return errors
+	var default_terrain = terrain_library.terrain(default_terrain_id)
+	if default_terrain == null or not default_terrain.can_be_base:
+		errors.append(
+			(
+				"default_terrain_id '%s' must be a can_be_base terrain in the library"
+				% default_terrain_id
+			)
+		)
+	errors.append_array(_validate_tiles(node_ids))
+	errors.append_array(_validate_roads())
+	errors.append_array(_validate_routes(node_ids))
+	return errors
+
+
+func _validate_tiles(node_ids: Array) -> PackedStringArray:
+	var errors := PackedStringArray()
+	var seen := {}
+	for tile in tiles:
+		if not contains(tile.cell):
+			errors.append("tile %s is outside the %dx%d grid" % [tile.cell, cols, rows])
+		if seen.has(tile.cell):
+			errors.append("duplicate tile at %s" % tile.cell)
+		seen[tile.cell] = true
+		errors.append_array(tile.validate())
+		errors.append_array(_validate_tile_references(tile, node_ids))
+	return errors
+
+
+func _validate_tile_references(tile: TileDef, node_ids: Array) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if tile.terrain_id and terrain_library.terrain(tile.terrain_id) == null:
+		errors.append("tile %s: unknown terrain '%s'" % [tile.cell, tile.terrain_id])
+	if tile.feature_id and terrain_library.feature(tile.feature_id) == null:
+		errors.append("tile %s: unknown feature '%s'" % [tile.cell, tile.feature_id])
+	if tile.bridge != null:
+		var terrain = terrain_library.terrain(terrain_id_at(tile.cell))
+		if terrain != null and not terrain.needs_bridge:
+			errors.append("bridge at %s: '%s' doesn't need a bridge" % [tile.cell, terrain.id])
+		var controller := tile.bridge.drawbridge_node_id
+		if controller and not node_ids.has(controller):
+			errors.append("bridge at %s: unknown drawbridge_node_id '%s'" % [tile.cell, controller])
+	return errors
+
+
+func _validate_roads() -> PackedStringArray:
+	var errors := PackedStringArray()
+	var seen := {}
+	for road in roads:
+		var label := "%s-%s" % [road.a, road.b]
+		if not contains(road.a) or not contains(road.b):
+			errors.append("road %s leaves the grid" % label)
+		if not road.is_between_neighbours():
+			errors.append("road %s must join neighbouring cells" % label)
+		if seen.has(road.key()):
+			errors.append("duplicate road %s" % label)
+		seen[road.key()] = true
+	return errors
+
+
+func _validate_routes(node_ids: Array) -> PackedStringArray:
+	var errors := PackedStringArray()
+	for route in routes:
+		for node_id in [route.node_a_id, route.node_b_id]:
+			if not node_ids.has(node_id):
+				errors.append("route %s: unknown node '%s'" % [route.label(), node_id])
+		if route.cells.any(func(c): return not contains(c)):
+			errors.append("route %s leaves the grid" % route.label())
+		var gap := route.gap()
+		if not gap.is_empty():
+			errors.append("route %s has a gap between %s and %s" % [route.label(), gap[0], gap[1]])
+	return errors

@@ -57,6 +57,7 @@ static func _build_node(
 		errors.append("node '%s': unknown node_type '%s'" % [node.id, type_name])
 	node.owning_faction_id = text(entry.get("owning_faction_id"))
 	node.hidden_from_faction_ids = strings(entry.get("hidden_from_faction_ids", []))
+	node.is_critical_asset = bool(entry.get("is_critical_asset", false))
 	var cell_pos: Dictionary = entry.get("grid_position", {})
 	node.position = Vector2(
 		(float(cell_pos.get("col", 0)) + 0.5) * cell, (float(cell_pos.get("row", 0)) + 0.5) * cell

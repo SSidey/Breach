@@ -1,0 +1,1347 @@
+{
+  "format": "breach-designer-map",
+  "format_version": 1,
+  "cell_size": 64,
+  "map_name": "P-f-F-c (branch test) 2",
+  "grid": {
+    "cols": 12,
+    "rows": 5
+  },
+  "default_terrain": "FIELDS",
+  "factions": [
+    {
+      "id": "player",
+      "display_name": "Player"
+    },
+    {
+      "id": "the_kingdom",
+      "display_name": "The Kingdom"
+    }
+  ],
+  "faction_relations": [
+    {
+      "a": "the_kingdom",
+      "b": "player",
+      "stance": "HOSTILE"
+    }
+  ],
+  "loss_criteria": [
+    {
+      "faction_id": "player",
+      "name": "Home",
+      "rule": "ANY",
+      "node_ids": [
+        "p"
+      ]
+    },
+    {
+      "faction_id": "the_kingdom",
+      "name": "Group 1",
+      "rule": "ANY",
+      "node_ids": [
+        "c"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "p",
+      "node_type": "ORIGIN",
+      "is_critical_asset": true,
+      "owning_faction_id": "player",
+      "hidden_from_faction_ids": [],
+      "grid_position": {
+        "row": 2,
+        "col": 1
+      },
+      "structure": {
+        "archetype": "WATCHTOWER",
+        "requirements": {
+          "stability": 2,
+          "height": 2,
+          "width": 1,
+          "dig_depth": 0
+        },
+        "approaches": [
+          {
+            "from_node": "f",
+            "side": "RIGHT"
+          },
+          {
+            "from_node": "s2",
+            "side": "RIGHT"
+          }
+        ],
+        "segments": [
+          {
+            "col": 0,
+            "level": 0,
+            "label": null,
+            "features": [],
+            "emplacements": []
+          },
+          {
+            "col": 0,
+            "level": 1,
+            "label": "Lookout",
+            "features": [],
+            "emplacements": []
+          }
+        ],
+        "boundaries": [
+          {
+            "kind": "WALL",
+            "col": 0,
+            "level": 0,
+            "exterior_side": "LEFT",
+            "outside": "LEFT",
+            "preset": "DOOR",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "WALL",
+            "col": 1,
+            "level": 0,
+            "exterior_side": "RIGHT",
+            "outside": "RIGHT",
+            "preset": "SOLID_WALL",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "FLOOR",
+            "col": 0,
+            "level": 0,
+            "exterior_side": null,
+            "outside": "BELOW",
+            "preset": "STAIRS",
+            "blocks_movement_from": [],
+            "blocks_projectiles_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_sight_from": [],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "WALL",
+            "col": 0,
+            "level": 1,
+            "exterior_side": "LEFT",
+            "outside": "LEFT",
+            "preset": "SOLID_WALL",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "WALL",
+            "col": 1,
+            "level": 1,
+            "exterior_side": "RIGHT",
+            "outside": "RIGHT",
+            "preset": "SOLID_WALL",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "ROOF_ACCESS",
+            "col": 0,
+            "level": 1,
+            "exterior_side": "ABOVE",
+            "outside": "ABOVE",
+            "preset": "ROOF_SOLID",
+            "blocks_movement_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_projectiles_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_sight_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "fortification": "NONE"
+          }
+        ],
+        "roofs": [
+          {
+            "col": 0,
+            "top_level": 1,
+            "type": "FLAT",
+            "emplacements": []
+          }
+        ],
+        "ranged_positions": 0,
+        "manning": {},
+        "unreachable_segments": []
+      },
+      "fields": {
+        "capture_reward": ""
+      },
+      "garrison_count": 0,
+      "garrison_units": []
+    },
+    {
+      "id": "f",
+      "node_type": "RESOURCE",
+      "is_critical_asset": false,
+      "owning_faction_id": "the_kingdom",
+      "hidden_from_faction_ids": [],
+      "grid_position": {
+        "row": 2,
+        "col": 4
+      },
+      "structure": {
+        "archetype": "NONE",
+        "requirements": {
+          "stability": 0,
+          "height": 0,
+          "width": 0,
+          "dig_depth": 0
+        },
+        "approaches": [
+          {
+            "from_node": "p",
+            "side": "LEFT"
+          },
+          {
+            "from_node": "F",
+            "side": "RIGHT"
+          }
+        ],
+        "segments": [],
+        "boundaries": [],
+        "roofs": [],
+        "ranged_positions": 0,
+        "manning": {},
+        "unreachable_segments": []
+      },
+      "fields": {
+        "yield_food_per_tick": 6,
+        "decay_interval_ticks": 5,
+        "decay_floor_food": 2,
+        "ravage_yield_food": 40,
+        "resource_type": "FOOD",
+        "is_inexhaustible": true,
+        "total_reserves": 0
+      },
+      "garrison_count": 0,
+      "garrison_units": []
+    },
+    {
+      "id": "F",
+      "node_type": "FORT",
+      "is_critical_asset": false,
+      "owning_faction_id": "the_kingdom",
+      "hidden_from_faction_ids": [],
+      "grid_position": {
+        "row": 2,
+        "col": 6
+      },
+      "structure": {
+        "archetype": "FORT",
+        "requirements": {
+          "stability": 2,
+          "height": 1,
+          "width": 2,
+          "dig_depth": 0
+        },
+        "approaches": [
+          {
+            "from_node": "f",
+            "side": "LEFT"
+          },
+          {
+            "from_node": "c",
+            "side": "RIGHT"
+          },
+          {
+            "from_node": "w1",
+            "side": "LEFT"
+          }
+        ],
+        "segments": [
+          {
+            "col": 0,
+            "level": 0,
+            "label": null,
+            "features": [],
+            "emplacements": []
+          },
+          {
+            "col": 1,
+            "level": 0,
+            "label": null,
+            "features": [],
+            "emplacements": []
+          }
+        ],
+        "boundaries": [
+          {
+            "kind": "WALL",
+            "col": 0,
+            "level": 0,
+            "exterior_side": "LEFT",
+            "outside": "LEFT",
+            "preset": "DOOR",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "WALL",
+            "col": 1,
+            "level": 0,
+            "exterior_side": null,
+            "outside": "LEFT",
+            "preset": "DOOR",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "ROOF_ACCESS",
+            "col": 0,
+            "level": 0,
+            "exterior_side": "ABOVE",
+            "outside": "ABOVE",
+            "preset": "ROOF_SOLID",
+            "blocks_movement_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_projectiles_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_sight_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "WALL",
+            "col": 2,
+            "level": 0,
+            "exterior_side": "RIGHT",
+            "outside": "RIGHT",
+            "preset": "SOLID_WALL",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "ROOF_ACCESS",
+            "col": 1,
+            "level": 0,
+            "exterior_side": "ABOVE",
+            "outside": "ABOVE",
+            "preset": "ROOF_SOLID",
+            "blocks_movement_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_projectiles_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_sight_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "fortification": "NONE"
+          }
+        ],
+        "roofs": [
+          {
+            "col": 0,
+            "top_level": 0,
+            "type": "FLAT",
+            "emplacements": []
+          },
+          {
+            "col": 1,
+            "top_level": 0,
+            "type": "FLAT",
+            "emplacements": []
+          }
+        ],
+        "ranged_positions": 0,
+        "manning": {},
+        "unreachable_segments": []
+      },
+      "fields": {
+        "garrison_hp": 26,
+        "garrison_dmg": 6,
+        "dismantle_wood_yield": 8,
+        "dismantle_stone_yield": 5,
+        "fortify_wood_cost": 10,
+        "fortify_stone_cost": 6,
+        "capture_reward": ""
+      },
+      "garrison_count": 2,
+      "garrison_units": [
+        {
+          "_display_label": "Guard",
+          "faction_id": "",
+          "can_sortie": false,
+          "patrol_route": [
+            "s2"
+          ],
+          "delivery_target_id": ""
+        },
+        {
+          "_display_label": "Guard",
+          "faction_id": "",
+          "can_sortie": false,
+          "patrol_route": [],
+          "delivery_target_id": ""
+        }
+      ]
+    },
+    {
+      "id": "c",
+      "node_type": "ORIGIN",
+      "is_critical_asset": true,
+      "owning_faction_id": "the_kingdom",
+      "hidden_from_faction_ids": [],
+      "grid_position": {
+        "row": 2,
+        "col": 9
+      },
+      "structure": {
+        "archetype": "NONE",
+        "requirements": {
+          "stability": 0,
+          "height": 0,
+          "width": 0,
+          "dig_depth": 0
+        },
+        "approaches": [
+          {
+            "from_node": "F",
+            "side": "LEFT"
+          }
+        ],
+        "segments": [],
+        "boundaries": [],
+        "roofs": [],
+        "ranged_positions": 0,
+        "manning": {},
+        "unreachable_segments": []
+      },
+      "fields": {},
+      "garrison_count": 0,
+      "garrison_units": []
+    },
+    {
+      "id": "s2",
+      "node_type": "FORT",
+      "is_critical_asset": false,
+      "owning_faction_id": "the_kingdom",
+      "hidden_from_faction_ids": [],
+      "grid_position": {
+        "row": 0,
+        "col": 3
+      },
+      "structure": {
+        "archetype": "FORT",
+        "requirements": {
+          "stability": 4,
+          "height": 2,
+          "width": 2,
+          "dig_depth": 0
+        },
+        "approaches": [
+          {
+            "from_node": "p",
+            "side": "LEFT"
+          },
+          {
+            "from_node": "w1",
+            "side": "RIGHT"
+          }
+        ],
+        "segments": [
+          {
+            "col": 0,
+            "level": 0,
+            "label": "Barracks",
+            "features": [
+              "BUNKS",
+              "BUNKS",
+              "BUNKS",
+              "BUNKS",
+              "BUNKS"
+            ],
+            "emplacements": []
+          },
+          {
+            "col": 0,
+            "level": 1,
+            "label": null,
+            "features": [],
+            "emplacements": []
+          },
+          {
+            "col": 1,
+            "level": 0,
+            "label": "Storeroom",
+            "features": [
+              "STORAGE_RACKS",
+              "STORAGE_RACKS",
+              "STORAGE_RACKS",
+              "STORAGE_RACKS",
+              "STORAGE_RACKS"
+            ],
+            "emplacements": []
+          },
+          {
+            "col": 1,
+            "level": 1,
+            "label": null,
+            "features": [],
+            "emplacements": []
+          }
+        ],
+        "boundaries": [
+          {
+            "kind": "WALL",
+            "col": 0,
+            "level": 0,
+            "exterior_side": "LEFT",
+            "outside": "LEFT",
+            "preset": "DOOR",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "WALL",
+            "col": 1,
+            "level": 0,
+            "exterior_side": null,
+            "outside": "LEFT",
+            "preset": "DOOR",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "FLOOR",
+            "col": 0,
+            "level": 0,
+            "exterior_side": null,
+            "outside": "BELOW",
+            "preset": "STAIRS",
+            "blocks_movement_from": [],
+            "blocks_projectiles_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_sight_from": [],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "WALL",
+            "col": 0,
+            "level": 1,
+            "exterior_side": "LEFT",
+            "outside": "LEFT",
+            "preset": "ARROW_SLIT",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT"
+            ],
+            "blocks_sight_from": [
+              "LEFT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "WALL",
+            "col": 1,
+            "level": 1,
+            "exterior_side": null,
+            "outside": "LEFT",
+            "preset": "SOLID_WALL",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "ROOF_ACCESS",
+            "col": 0,
+            "level": 1,
+            "exterior_side": "ABOVE",
+            "outside": "ABOVE",
+            "preset": "ROOF_SOLID",
+            "blocks_movement_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_projectiles_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_sight_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "WALL",
+            "col": 2,
+            "level": 0,
+            "exterior_side": "RIGHT",
+            "outside": "RIGHT",
+            "preset": "SOLID_WALL",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_projectiles_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "FLOOR",
+            "col": 1,
+            "level": 0,
+            "exterior_side": null,
+            "outside": "BELOW",
+            "preset": "STAIRS",
+            "blocks_movement_from": [],
+            "blocks_projectiles_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_sight_from": [],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "WALL",
+            "col": 2,
+            "level": 1,
+            "exterior_side": "RIGHT",
+            "outside": "RIGHT",
+            "preset": "ARROW_SLIT",
+            "material": "TIMBER",
+            "blocks_movement_from": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "blocks_projectiles_from": [
+              "RIGHT"
+            ],
+            "blocks_sight_from": [
+              "RIGHT"
+            ],
+            "fortification": "NONE"
+          },
+          {
+            "kind": "ROOF_ACCESS",
+            "col": 1,
+            "level": 1,
+            "exterior_side": "ABOVE",
+            "outside": "ABOVE",
+            "preset": "ROOF_SOLID",
+            "blocks_movement_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_projectiles_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "blocks_sight_from": [
+              "ABOVE",
+              "BELOW"
+            ],
+            "fortification": "NONE"
+          }
+        ],
+        "roofs": [
+          {
+            "col": 0,
+            "top_level": 1,
+            "type": "FLAT",
+            "emplacements": []
+          },
+          {
+            "col": 1,
+            "top_level": 1,
+            "type": "FLAT",
+            "emplacements": []
+          }
+        ],
+        "ranged_positions": 2,
+        "manning": {},
+        "unreachable_segments": []
+      },
+      "fields": {
+        "garrison_hp": 60,
+        "garrison_dmg": 14,
+        "dismantle_wood_yield": 16,
+        "dismantle_stone_yield": 12,
+        "fortify_wood_cost": 20,
+        "fortify_stone_cost": 14,
+        "capture_reward": ""
+      },
+      "garrison_count": 3,
+      "garrison_units": [
+        {
+          "_display_label": "Knight",
+          "faction_id": "",
+          "can_sortie": true,
+          "patrol_route": [
+            "F"
+          ],
+          "delivery_target_id": ""
+        },
+        {
+          "_display_label": "Archer",
+          "faction_id": "",
+          "can_sortie": false,
+          "patrol_route": [],
+          "delivery_target_id": ""
+        },
+        {
+          "_display_label": "Archer",
+          "faction_id": "",
+          "can_sortie": false,
+          "patrol_route": [],
+          "delivery_target_id": ""
+        }
+      ]
+    },
+    {
+      "id": "w1",
+      "node_type": "WAYPOINT",
+      "is_critical_asset": false,
+      "owning_faction_id": null,
+      "hidden_from_faction_ids": [],
+      "grid_position": {
+        "row": 0,
+        "col": 6
+      },
+      "structure": {
+        "archetype": "NONE",
+        "requirements": {
+          "stability": 0,
+          "height": 0,
+          "width": 0,
+          "dig_depth": 0
+        },
+        "approaches": [
+          {
+            "from_node": "s2",
+            "side": "LEFT"
+          },
+          {
+            "from_node": "F",
+            "side": "RIGHT"
+          }
+        ],
+        "segments": [],
+        "boundaries": [],
+        "roofs": [],
+        "ranged_positions": 0,
+        "manning": {},
+        "unreachable_segments": []
+      },
+      "fields": {
+        "capture_reward": ""
+      },
+      "garrison_count": 0,
+      "garrison_units": []
+    }
+  ],
+  "tiles": [
+    {
+      "grid_position": {
+        "row": 3,
+        "col": 2
+      },
+      "terrain": "FOREST",
+      "terrain_is_base": false,
+      "feature": null,
+      "bridge": null,
+      "stability_override": null,
+      "max_height_override": null,
+      "max_width_override": null,
+      "dig_depth_override": null,
+      "effective_capacity": {
+        "stability": 2,
+        "max_height": 2,
+        "max_width": 1,
+        "max_length": 1,
+        "max_depth": 1
+      },
+      "upgrade_slots": 0,
+      "upgrades": []
+    },
+    {
+      "grid_position": {
+        "row": 2,
+        "col": 6
+      },
+      "terrain": "ROCKY",
+      "terrain_is_base": false,
+      "feature": null,
+      "bridge": null,
+      "stability_override": null,
+      "max_height_override": null,
+      "max_width_override": null,
+      "dig_depth_override": null,
+      "effective_capacity": {
+        "stability": 6,
+        "max_height": 3,
+        "max_width": 2,
+        "max_length": 2,
+        "max_depth": 2
+      },
+      "upgrade_slots": 0,
+      "upgrades": []
+    },
+    {
+      "grid_position": {
+        "row": 4,
+        "col": 9
+      },
+      "terrain": "MOUNTAIN",
+      "terrain_is_base": false,
+      "feature": "ORE_VEIN",
+      "bridge": null,
+      "stability_override": null,
+      "max_height_override": null,
+      "max_width_override": null,
+      "dig_depth_override": null,
+      "effective_capacity": {
+        "stability": 4,
+        "max_height": 4,
+        "max_width": 1,
+        "max_length": 1,
+        "max_depth": 3
+      },
+      "upgrade_slots": 0,
+      "upgrades": []
+    },
+    {
+      "grid_position": {
+        "row": 3,
+        "col": 7
+      },
+      "terrain": "WATER",
+      "terrain_is_base": false,
+      "feature": null,
+      "bridge": {
+        "owning_faction_id": "",
+        "hp": 40,
+        "demolishable_by_owner": false
+      },
+      "stability_override": null,
+      "max_height_override": null,
+      "max_width_override": null,
+      "dig_depth_override": null,
+      "effective_capacity": {
+        "stability": 0,
+        "max_height": 0,
+        "max_width": 0,
+        "max_length": 0,
+        "max_depth": 0
+      },
+      "upgrade_slots": 0,
+      "upgrades": []
+    },
+    {
+      "grid_position": {
+        "row": 4,
+        "col": 7
+      },
+      "terrain": "WATER",
+      "terrain_is_base": false,
+      "feature": null,
+      "bridge": null,
+      "stability_override": null,
+      "max_height_override": null,
+      "max_width_override": null,
+      "dig_depth_override": null,
+      "effective_capacity": {
+        "stability": 0,
+        "max_height": 0,
+        "max_width": 0,
+        "max_length": 0,
+        "max_depth": 0
+      },
+      "upgrade_slots": 0,
+      "upgrades": []
+    },
+    {
+      "grid_position": {
+        "row": 2,
+        "col": 4
+      },
+      "terrain": "FIELDS",
+      "terrain_is_base": true,
+      "feature": "ARABLE",
+      "bridge": null,
+      "stability_override": null,
+      "max_height_override": null,
+      "max_width_override": null,
+      "dig_depth_override": null,
+      "effective_capacity": {
+        "stability": 4,
+        "max_height": 2,
+        "max_width": 3,
+        "max_length": 3,
+        "max_depth": 1
+      },
+      "upgrade_slots": 1,
+      "upgrades": [
+        "GUARD_BARRACKS"
+      ]
+    }
+  ],
+  "roads": [
+    {
+      "a": {
+        "row": 2,
+        "col": 1
+      },
+      "b": {
+        "row": 2,
+        "col": 2
+      }
+    },
+    {
+      "a": {
+        "row": 2,
+        "col": 2
+      },
+      "b": {
+        "row": 2,
+        "col": 3
+      }
+    },
+    {
+      "a": {
+        "row": 2,
+        "col": 3
+      },
+      "b": {
+        "row": 2,
+        "col": 4
+      }
+    },
+    {
+      "a": {
+        "row": 2,
+        "col": 1
+      },
+      "b": {
+        "row": 1,
+        "col": 2
+      }
+    },
+    {
+      "a": {
+        "row": 1,
+        "col": 2
+      },
+      "b": {
+        "row": 0,
+        "col": 3
+      }
+    },
+    {
+      "a": {
+        "row": 3,
+        "col": 6
+      },
+      "b": {
+        "row": 3,
+        "col": 7
+      }
+    },
+    {
+      "a": {
+        "row": 3,
+        "col": 7
+      },
+      "b": {
+        "row": 3,
+        "col": 8
+      }
+    }
+  ],
+  "links": [
+    {
+      "a": "p",
+      "b": "f",
+      "route_found": true,
+      "route_cost": 1.5,
+      "route": [
+        {
+          "row": 2,
+          "col": 1
+        },
+        {
+          "row": 2,
+          "col": 2
+        },
+        {
+          "row": 2,
+          "col": 3
+        },
+        {
+          "row": 2,
+          "col": 4
+        }
+      ]
+    },
+    {
+      "a": "f",
+      "b": "F",
+      "route_found": true,
+      "route_cost": 2.5,
+      "route": [
+        {
+          "row": 2,
+          "col": 4
+        },
+        {
+          "row": 2,
+          "col": 5
+        },
+        {
+          "row": 2,
+          "col": 6
+        }
+      ]
+    },
+    {
+      "a": "F",
+      "b": "c",
+      "route_found": true,
+      "route_cost": 3,
+      "route": [
+        {
+          "row": 2,
+          "col": 6
+        },
+        {
+          "row": 2,
+          "col": 7
+        },
+        {
+          "row": 2,
+          "col": 8
+        },
+        {
+          "row": 2,
+          "col": 9
+        }
+      ]
+    },
+    {
+      "a": "p",
+      "b": "s2",
+      "route_found": true,
+      "route_cost": 1.41,
+      "route": [
+        {
+          "row": 2,
+          "col": 1
+        },
+        {
+          "row": 1,
+          "col": 2
+        },
+        {
+          "row": 0,
+          "col": 3
+        }
+      ]
+    },
+    {
+      "a": "s2",
+      "b": "w1",
+      "route_found": true,
+      "route_cost": 3,
+      "route": [
+        {
+          "row": 0,
+          "col": 3
+        },
+        {
+          "row": 0,
+          "col": 4
+        },
+        {
+          "row": 0,
+          "col": 5
+        },
+        {
+          "row": 0,
+          "col": 6
+        }
+      ]
+    },
+    {
+      "a": "w1",
+      "b": "F",
+      "route_found": true,
+      "route_cost": 2.5,
+      "route": [
+        {
+          "row": 0,
+          "col": 6
+        },
+        {
+          "row": 1,
+          "col": 6
+        },
+        {
+          "row": 2,
+          "col": 6
+        }
+      ]
+    }
+  ],
+  "terrain_library": [
+    {
+      "id": "FIELDS",
+      "label": "Fields",
+      "glyph": "\"",
+      "color": "#8f9a4f",
+      "can_be_base": true,
+      "needs_bridge": false,
+      "move_cost": 1,
+      "blocks_unit_classes": "",
+      "default_stability": 4,
+      "default_max_height": 2,
+      "default_max_width": 3,
+      "default_max_length": 3,
+      "default_max_depth": 1
+    },
+    {
+      "id": "ROCKY",
+      "label": "Rocky",
+      "glyph": "◦",
+      "color": "#857d6e",
+      "can_be_base": true,
+      "needs_bridge": false,
+      "move_cost": 1.5,
+      "blocks_unit_classes": "",
+      "default_stability": 6,
+      "default_max_height": 3,
+      "default_max_width": 2,
+      "default_max_length": 2,
+      "default_max_depth": 2
+    },
+    {
+      "id": "WATER",
+      "label": "Water",
+      "glyph": "≈",
+      "color": "#3a6ea5",
+      "can_be_base": false,
+      "needs_bridge": true,
+      "move_cost": 99,
+      "blocks_unit_classes": "infantry, cavalry, siege",
+      "default_stability": 0,
+      "default_max_height": 0,
+      "default_max_width": 0,
+      "default_max_length": 0,
+      "default_max_depth": 0
+    },
+    {
+      "id": "FOREST",
+      "label": "Forest",
+      "glyph": "♣",
+      "color": "#2f6b3a",
+      "can_be_base": false,
+      "needs_bridge": false,
+      "move_cost": 2,
+      "blocks_unit_classes": "siege",
+      "default_stability": 2,
+      "default_max_height": 2,
+      "default_max_width": 1,
+      "default_max_length": 1,
+      "default_max_depth": 1
+    },
+    {
+      "id": "MOUNTAIN",
+      "label": "Mountain",
+      "glyph": "▲",
+      "color": "#7a6a5a",
+      "can_be_base": false,
+      "needs_bridge": false,
+      "move_cost": 4,
+      "blocks_unit_classes": "cavalry, siege",
+      "default_stability": 4,
+      "default_max_height": 4,
+      "default_max_width": 1,
+      "default_max_length": 1,
+      "default_max_depth": 3
+    }
+  ],
+  "feature_library": [
+    {
+      "id": "ORE_VEIN",
+      "label": "Ore vein",
+      "glyph": "◆",
+      "stub_effect": "metal/stone deposit - a mine could be built here"
+    },
+    {
+      "id": "ARABLE",
+      "label": "Arable land",
+      "glyph": "≡",
+      "stub_effect": "supports farming"
+    }
+  ],
+  "road_move_multiplier": 0.5,
+  "static_defense_library": [],
+  "structure_feature_library": [
+    {
+      "id": "BUNKS",
+      "label": "Bunks",
+      "cost": 1,
+      "effect": "rest 4 units"
+    },
+    {
+      "id": "STORAGE_RACKS",
+      "label": "Storage racks",
+      "cost": 1,
+      "effect": "+10 siege supply"
+    }
+  ],
+  "feature_points_per_segment": 5,
+  "validation_warnings": [],
+  "note": "hidden_from_faction_ids is real NodeDef schema (Decision 28, specs/15): factions that do not know the node exists at map start. links are the authored, intended routes (Decision 26): only linked pairs connect. Each link's route is its initial geometry, pathfound across terrain cost (cheaper on roads, impassable water without a bridge, other nodes not enterable); unlinked pairs never get a route. WAYPOINT is a real NodeType (specs/16); nodes on no lane are imported as MapDef.off_lane_nodes; structure_slots no longer exists (Decision 25). PROTOTYPE-ONLY (no Godot schema yet, design notes on file): is_critical_asset, loss_criteria (groups OR'd; each group ANY/ALL of its nodes), the tiles layer stack (terrain, feature, bridge, stability/max_height/max_width capacity, upgrades), roads (explicit 8-neighbour cell pairs; movement modifier, not topology), node structure (Decision 27, Godot-shaped for a future StructureDef: a 2D side-on plane; approaches say which end (LEFT/RIGHT) each linked route enters; segments -> SegmentDef {col, level (negative = basement), label, features, emplacements}; boundaries -> BoundaryDef {kind WALL/FLOOR/ROOF_ACCESS, col, level, exterior_side, outside, preset, blocks_movement_from, blocks_projectiles_from, blocks_sight_from (sides LEFT/RIGHT/ABOVE/BELOW), fortification, material}; roofs -> RoofDef {col, type, emplacements}; ranged_positions = firing positions any ranged unit can use; manning = emplacement crews from the garrison; archetype is art only; stability = total segment budget), terrain_library/feature_library/road_move_multiplier (stubs). tiles lists only cells with at least one explicit layer; any other cell is plain default_terrain. garrison_count is derived from garrison_units.length. _display_label is prototype-only. factions is this map's roster only; library default relations are not exported."
+}

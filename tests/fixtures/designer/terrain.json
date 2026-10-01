@@ -1,0 +1,172 @@
+{
+  "terrains": [
+    {
+      "id": "FIELDS",
+      "label": "Fields",
+      "glyph": "\"",
+      "color": "#8f9a4f",
+      "can_be_base": true,
+      "needs_bridge": false,
+      "move_cost": 1,
+      "blocks_unit_classes": "",
+      "default_stability": 4,
+      "default_max_height": 2,
+      "default_max_width": 3,
+      "default_max_length": 3,
+      "default_max_depth": 1
+    },
+    {
+      "id": "ROCKY",
+      "label": "Rocky",
+      "glyph": "◦",
+      "color": "#857d6e",
+      "can_be_base": true,
+      "needs_bridge": false,
+      "move_cost": 1.5,
+      "blocks_unit_classes": "",
+      "default_stability": 6,
+      "default_max_height": 3,
+      "default_max_width": 2,
+      "default_max_length": 2,
+      "default_max_depth": 2
+    },
+    {
+      "id": "SNOW",
+      "label": "Snow",
+      "glyph": "*",
+      "color": "#8fa3b0",
+      "can_be_base": true,
+      "needs_bridge": false,
+      "move_cost": 2,
+      "blocks_unit_classes": "",
+      "default_stability": 2,
+      "default_max_height": 1,
+      "default_max_width": 2,
+      "default_max_length": 2,
+      "default_max_depth": 0
+    },
+    {
+      "id": "DESERT",
+      "label": "Desert",
+      "glyph": "∴",
+      "color": "#c29b52",
+      "can_be_base": true,
+      "needs_bridge": false,
+      "move_cost": 1.5,
+      "blocks_unit_classes": "",
+      "default_stability": 3,
+      "default_max_height": 1,
+      "default_max_width": 3,
+      "default_max_length": 3,
+      "default_max_depth": 1
+    },
+    {
+      "id": "SWAMP",
+      "label": "Swamp",
+      "glyph": "~",
+      "color": "#5d6b4a",
+      "can_be_base": true,
+      "needs_bridge": false,
+      "move_cost": 3,
+      "blocks_unit_classes": "siege",
+      "default_stability": 1,
+      "default_max_height": 1,
+      "default_max_width": 1,
+      "default_max_length": 1,
+      "default_max_depth": 0
+    },
+    {
+      "id": "WATER",
+      "label": "Water",
+      "glyph": "≈",
+      "color": "#3a6ea5",
+      "can_be_base": false,
+      "needs_bridge": true,
+      "move_cost": 99,
+      "blocks_unit_classes": "infantry, cavalry, siege",
+      "default_stability": 0,
+      "default_max_height": 0,
+      "default_max_width": 0,
+      "default_max_length": 0,
+      "default_max_depth": 0
+    },
+    {
+      "id": "FOREST",
+      "label": "Forest",
+      "glyph": "♣",
+      "color": "#2f6b3a",
+      "can_be_base": false,
+      "needs_bridge": false,
+      "move_cost": 2,
+      "blocks_unit_classes": "siege",
+      "default_stability": 2,
+      "default_max_height": 2,
+      "default_max_width": 1,
+      "default_max_length": 1,
+      "default_max_depth": 1
+    },
+    {
+      "id": "MOUNTAIN",
+      "label": "Mountain",
+      "glyph": "▲",
+      "color": "#7a6a5a",
+      "can_be_base": false,
+      "needs_bridge": false,
+      "move_cost": 4,
+      "blocks_unit_classes": "cavalry, siege",
+      "default_stability": 4,
+      "default_max_height": 4,
+      "default_max_width": 1,
+      "default_max_length": 1,
+      "default_max_depth": 3
+    },
+    {
+      "id": "RAVINE",
+      "label": "Ravine",
+      "glyph": "∷",
+      "color": "#4a3a2a",
+      "can_be_base": false,
+      "needs_bridge": true,
+      "move_cost": 99,
+      "blocks_unit_classes": "all",
+      "default_stability": 0,
+      "default_max_height": 0,
+      "default_max_width": 0,
+      "default_max_length": 0,
+      "default_max_depth": 0
+    }
+  ],
+  "features": [
+    {
+      "id": "ORE_VEIN",
+      "label": "Ore vein",
+      "glyph": "◆",
+      "stub_effect": "metal/stone deposit - a mine could be built here"
+    },
+    {
+      "id": "ARABLE",
+      "label": "Arable land",
+      "glyph": "≡",
+      "stub_effect": "supports farming"
+    },
+    {
+      "id": "SPRING",
+      "label": "Spring",
+      "glyph": "○",
+      "stub_effect": "fresh water"
+    },
+    {
+      "id": "TIMBER",
+      "label": "Timber stand",
+      "glyph": "♠",
+      "stub_effect": "harvestable wood"
+    },
+    {
+      "id": "QUARRY",
+      "label": "Quarry face",
+      "glyph": "▣",
+      "stub_effect": "exposed stone"
+    }
+  ],
+  "road_move_multiplier": 0.5
+}

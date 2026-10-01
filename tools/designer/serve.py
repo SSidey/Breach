@@ -14,7 +14,8 @@ API:
     PUT  /api/maps/<name>             save + import -> {saved, import:{ran, ok, warnings, errors, output_path}}
     POST /api/maps/<name>/view        open content/maps/<name>.tres in the Godot map viewer
     GET  /api/libraries/<library>     content/designer/<library>.json (null if absent)
-    PUT  /api/libraries/<library>     write it -> {changed}
+    PUT  /api/libraries/<library>     write it -> {changed, import}; saving "terrain" also
+                                      regenerates content/terrain/terrain_library.tres
 """
 
 from __future__ import annotations
@@ -45,7 +46,7 @@ STATIC_FILES = {
 MAX_BODY_BYTES = 16 * 1024 * 1024
 ## Bumped whenever the API gains or changes an endpoint; repo.js compares it with its own
 ## REQUIRED_API so a server started before an update says "restart serve.py".
-API_VERSION = 2
+API_VERSION = 3
 
 
 def make_handler(repo: DesignerRepo, static_dir: Path = DESIGNER_DIR, log_requests: bool = True):
@@ -122,7 +123,7 @@ def make_handler(repo: DesignerRepo, static_dir: Path = DESIGNER_DIR, log_reques
                 return
             body = self._read_body()
             with write_lock:
-                self._send_json({"changed": repo.write_library(library, body)})
+                self._send_json(repo.save_library(library, body))
 
         def _local_request(self) -> bool:
             """Blocks DNS-rebinding and cross-site writes: only this machine's own pages."""

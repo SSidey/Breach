@@ -1,0 +1,161 @@
+[gd_resource type="Resource" script_class="TerrainLibraryDef" format=3]
+
+[ext_resource type="Script" path="res://content/definitions/terrain_feature_def.gd" id="1_241a3"]
+[ext_resource type="Script" path="res://content/definitions/terrain_library_def.gd" id="2_alum2"]
+[ext_resource type="Script" path="res://content/definitions/terrain_def.gd" id="3_ni26j"]
+
+[sub_resource type="Resource" id="Feature_ORE_VEIN"]
+script = ExtResource("1_241a3")
+id = "ORE_VEIN"
+display_name = "Ore vein"
+glyph = "◆"
+effect_notes = "metal/stone deposit - a mine could be built here"
+
+[sub_resource type="Resource" id="Feature_ARABLE"]
+script = ExtResource("1_241a3")
+id = "ARABLE"
+display_name = "Arable land"
+glyph = "≡"
+effect_notes = "supports farming"
+
+[sub_resource type="Resource" id="Feature_SPRING"]
+script = ExtResource("1_241a3")
+id = "SPRING"
+display_name = "Spring"
+glyph = "○"
+effect_notes = "fresh water"
+
+[sub_resource type="Resource" id="Feature_TIMBER"]
+script = ExtResource("1_241a3")
+id = "TIMBER"
+display_name = "Timber stand"
+glyph = "♠"
+effect_notes = "harvestable wood"
+
+[sub_resource type="Resource" id="Feature_QUARRY"]
+script = ExtResource("1_241a3")
+id = "QUARRY"
+display_name = "Quarry face"
+glyph = "▣"
+effect_notes = "exposed stone"
+
+[sub_resource type="Resource" id="Terrain_FIELDS"]
+script = ExtResource("3_ni26j")
+id = "FIELDS"
+display_name = "Fields"
+glyph = "\""
+color = Color(0.56078434, 0.6039216, 0.30980393, 1)
+default_stability = 4
+default_max_height = 2
+default_max_width = 3
+default_max_length = 3
+default_max_depth = 1
+
+[sub_resource type="Resource" id="Terrain_ROCKY"]
+script = ExtResource("3_ni26j")
+id = "ROCKY"
+display_name = "Rocky"
+glyph = "◦"
+color = Color(0.52156866, 0.49019608, 0.43137255, 1)
+move_cost = 1.5
+default_stability = 6
+default_max_height = 3
+default_max_width = 2
+default_max_length = 2
+default_max_depth = 2
+
+[sub_resource type="Resource" id="Terrain_SNOW"]
+script = ExtResource("3_ni26j")
+id = "SNOW"
+display_name = "Snow"
+glyph = "*"
+color = Color(0.56078434, 0.6392157, 0.6901961, 1)
+move_cost = 2.0
+default_stability = 2
+default_max_height = 1
+default_max_width = 2
+default_max_length = 2
+
+[sub_resource type="Resource" id="Terrain_DESERT"]
+script = ExtResource("3_ni26j")
+id = "DESERT"
+display_name = "Desert"
+glyph = "∴"
+color = Color(0.7607843, 0.60784316, 0.32156864, 1)
+move_cost = 1.5
+default_stability = 3
+default_max_height = 1
+default_max_width = 3
+default_max_length = 3
+default_max_depth = 1
+
+[sub_resource type="Resource" id="Terrain_SWAMP"]
+script = ExtResource("3_ni26j")
+id = "SWAMP"
+display_name = "Swamp"
+glyph = "~"
+color = Color(0.3647059, 0.41960785, 0.2901961, 1)
+move_cost = 3.0
+blocks_unit_classes = Array[String](["siege"])
+default_stability = 1
+default_max_height = 1
+default_max_width = 1
+default_max_length = 1
+
+[sub_resource type="Resource" id="Terrain_WATER"]
+script = ExtResource("3_ni26j")
+id = "WATER"
+display_name = "Water"
+glyph = "≈"
+color = Color(0.22745098, 0.43137255, 0.64705884, 1)
+can_be_base = false
+needs_bridge = true
+move_cost = 99.0
+blocks_unit_classes = Array[String](["infantry", "cavalry", "siege"])
+
+[sub_resource type="Resource" id="Terrain_FOREST"]
+script = ExtResource("3_ni26j")
+id = "FOREST"
+display_name = "Forest"
+glyph = "♣"
+color = Color(0.18431373, 0.41960785, 0.22745098, 1)
+can_be_base = false
+move_cost = 2.0
+blocks_unit_classes = Array[String](["siege"])
+default_stability = 2
+default_max_height = 2
+default_max_width = 1
+default_max_length = 1
+default_max_depth = 1
+
+[sub_resource type="Resource" id="Terrain_MOUNTAIN"]
+script = ExtResource("3_ni26j")
+id = "MOUNTAIN"
+display_name = "Mountain"
+glyph = "▲"
+color = Color(0.47843137, 0.41568628, 0.3529412, 1)
+can_be_base = false
+move_cost = 4.0
+blocks_unit_classes = Array[String](["cavalry", "siege"])
+default_stability = 4
+default_max_height = 4
+default_max_width = 1
+default_max_length = 1
+default_max_depth = 3
+
+[sub_resource type="Resource" id="Terrain_RAVINE"]
+script = ExtResource("3_ni26j")
+id = "RAVINE"
+display_name = "Ravine"
+glyph = "∷"
+color = Color(0.2901961, 0.22745098, 0.16470589, 1)
+can_be_base = false
+needs_bridge = true
+move_cost = 99.0
+blocks_unit_classes = Array[String](["all"])
+
+[resource]
+script = ExtResource("2_alum2")
+terrains = Array[ExtResource("3_ni26j")]([SubResource("Terrain_FIELDS"), SubResource("Terrain_ROCKY"), SubResource("Terrain_SNOW"), SubResource("Terrain_DESERT"), SubResource("Terrain_SWAMP"), SubResource("Terrain_WATER"), SubResource("Terrain_FOREST"), SubResource("Terrain_MOUNTAIN"), SubResource("Terrain_RAVINE")])
+features = Array[ExtResource("1_241a3")]([SubResource("Feature_ORE_VEIN"), SubResource("Feature_ARABLE"), SubResource("Feature_SPRING"), SubResource("Feature_TIMBER"), SubResource("Feature_QUARRY")])
+source_hash = "55362995f5f2d19b017df786b8062b05f9b13f6effc43531f6951f844a6706ee"

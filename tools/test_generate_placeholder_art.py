@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generate_placeholder_art import SHAPES, write_all  # noqa: E402
 
 # Every file assets/placeholder/map/map_art_set.tres references.
-EXPECTED = {"origin", "resource", "fort", "neutral", "waypoint", "hidden_badge"}
+EXPECTED = {"origin", "resource", "fort", "neutral", "waypoint", "hidden_badge", "critical_badge"}
 
 
 class PlaceholderArtTest(unittest.TestCase):

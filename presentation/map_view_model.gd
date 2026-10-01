@@ -11,6 +11,7 @@ extends RefCounted
 
 const MapDef = preload("res://content/definitions/map_def.gd")
 const NodeDef = preload("res://content/definitions/node_def.gd")
+const MapLayoutView = preload("res://presentation/map_layout_view.gd")
 
 ## One designer cell; bounds are grown by this so edge nodes aren't drawn at the frame.
 const CELL := 64.0
@@ -26,6 +27,7 @@ class Marker:
 	var hidden_from: Array[String]
 	var on_lane: bool
 	var hidden_badge: bool
+	var critical: bool
 
 
 class LanePath:
@@ -37,6 +39,8 @@ var markers: Array[Marker] = []
 var lane_paths: Array[LanePath] = []
 var edge_segments: Array[PackedVector2Array] = []
 var bounds: Rect2 = DEFAULT_BOUNDS
+## Grid, terrain, roads, bridges and routes (specs/19); null for a map with no layout.
+var layout_view: MapLayoutView
 
 var _faction_ids: Array[String] = []
 
@@ -53,16 +57,20 @@ static func build(map_def: MapDef, view_as_faction_id: String = "") -> MapViewMo
 		var marker := _marker(node, entry[1], view_as_faction_id)
 		model.markers.append(marker)
 		visible_by_id[node.id] = marker
+	if map_def.layout != null:
+		model.layout_view = MapLayoutView.build(map_def.layout)
 	for lane in map_def.lanes:
-		model.lane_paths.append(_lane_path(lane, visible_by_id))
+		model.lane_paths.append(model._lane_path(lane, visible_by_id))
 	for edge in map_def.edges:
 		if visible_by_id.has(edge.node_a_id) and visible_by_id.has(edge.node_b_id):
 			model.edge_segments.append(
-				PackedVector2Array(
-					[visible_by_id[edge.node_a_id].position, visible_by_id[edge.node_b_id].position]
-				)
+				model._step_points(edge.node_a_id, edge.node_b_id, visible_by_id)
 			)
-	model.bounds = _bounds(model.markers)
+	model.bounds = (
+		model.layout_view.grid_rect.grow(CELL)
+		if model.layout_view != null
+		else _bounds(model.markers)
+	)
 	return model
 
 
@@ -92,22 +100,8 @@ static func _marker(node: NodeDef, on_lane: bool, view_as_faction_id: String) ->
 	marker.hidden_from = node.hidden_from_faction_ids.duplicate()
 	marker.on_lane = on_lane
 	marker.hidden_badge = view_as_faction_id == "" and not marker.hidden_from.is_empty()
+	marker.critical = node.is_critical_asset
 	return marker
-
-
-static func _lane_path(lane, visible_by_id: Dictionary) -> LanePath:
-	var path := LanePath.new()
-	path.id = lane.id
-	var run := PackedVector2Array()
-	for node in lane.nodes:
-		if visible_by_id.has(node.id):
-			run.append(visible_by_id[node.id].position)
-		elif not run.is_empty():
-			path.runs.append(run)
-			run = PackedVector2Array()
-	if not run.is_empty():
-		path.runs.append(run)
-	return path
 
 
 static func _bounds(all_markers: Array[Marker]) -> Rect2:
@@ -141,3 +135,41 @@ func node_at(point: Vector2, radius: float) -> String:
 			best = marker.id
 			best_distance = distance
 	return best
+
+
+## The grid cell under a point, or MapLayoutView.NO_CELL (no layout, or outside the grid).
+func cell_at(point: Vector2) -> Vector2i:
+	return layout_view.cell_at(point) if layout_view != null else MapLayoutView.NO_CELL
+
+
+## A lane as runs of points: each visible step follows its link's route when there is one
+## (specs/19), else a straight line; a hidden node ends the run.
+func _lane_path(lane, visible_by_id: Dictionary) -> LanePath:
+	var path := LanePath.new()
+	path.id = lane.id
+	var run := PackedVector2Array()
+	var previous_id := ""
+	for node in lane.nodes:
+		if not visible_by_id.has(node.id):
+			if not run.is_empty():
+				path.runs.append(run)
+			run = PackedVector2Array()
+			previous_id = ""
+			continue
+		if previous_id == "":
+			run.append(visible_by_id[node.id].position)
+		else:
+			var step := _step_points(previous_id, node.id, visible_by_id)
+			run.append_array(step.slice(1))  # the step's first point ends the run already
+		previous_id = node.id
+	if not run.is_empty():
+		path.runs.append(run)
+	return path
+
+
+func _step_points(a_id: String, b_id: String, visible_by_id: Dictionary) -> PackedVector2Array:
+	if layout_view != null:
+		var route := layout_view.route_points(a_id, b_id)
+		if route.size() >= 2:
+			return route
+	return PackedVector2Array([visible_by_id[a_id].position, visible_by_id[b_id].position])

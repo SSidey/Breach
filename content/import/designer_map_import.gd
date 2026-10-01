@@ -62,6 +62,24 @@ static func _assign_stable_ids(map_def: MapDef) -> void:
 		faction.resource_scene_unique_id = _safe_id("Faction", faction.id)
 	for i in range(map_def.faction_relations.size()):
 		map_def.faction_relations[i].resource_scene_unique_id = _safe_id("Relation", str(i))
+	for i in range(map_def.loss_groups.size()):
+		map_def.loss_groups[i].resource_scene_unique_id = _safe_id("Loss", str(i))
+	if map_def.layout != null:
+		_assign_layout_ids(map_def.layout)
+
+
+## The terrain library is an external resource, so only the layout's own parts get ids.
+static func _assign_layout_ids(layout) -> void:
+	layout.resource_scene_unique_id = "Layout"
+	for tile in layout.tiles:
+		var cell_id := "%d_%d" % [tile.cell.x, tile.cell.y]
+		tile.resource_scene_unique_id = _safe_id("Tile", cell_id)
+		if tile.bridge != null:
+			tile.bridge.resource_scene_unique_id = _safe_id("Bridge", cell_id)
+	for i in range(layout.roads.size()):
+		layout.roads[i].resource_scene_unique_id = _safe_id("Road", str(i))
+	for i in range(layout.routes.size()):
+		layout.routes[i].resource_scene_unique_id = _safe_id("Route", str(i))
 
 
 ## Scene-unique ids allow letters, digits and underscores only; ids like "F" and "f"

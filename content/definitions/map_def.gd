@@ -31,6 +31,13 @@ extends Resource
 ## special case.
 @export var factions: Array[FactionDef] = []
 
+## Grid, tiles, roads and link routes, per specs/19-map-layout-and-objectives.md. Null
+## for maps authored without the designer (p_f_F_c), which stay valid.
+@export var layout: MapLayoutDef
+
+## Each faction's loss conditions (groups of critical assets), per specs/19.
+@export var loss_groups: Array[LossGroupDef] = []
+
 @export var tick_duration_seconds: float = 0.0
 
 ## Ascending thresholds for Wary/Alarmed/Mobilized/Full Alert (Decision 5).
@@ -53,6 +60,7 @@ func validate() -> PackedStringArray:
 	errors.append_array(_validate_edges(node_ids))
 	errors.append_array(_validate_node_references(node_ids, faction_ids))
 	errors.append_array(_validate_faction_relations(faction_ids))
+	errors.append_array(_validate_layout_and_objectives(node_ids, faction_ids))
 
 	return errors
 
@@ -181,6 +189,21 @@ func _validate_faction_relations(faction_ids: Dictionary) -> PackedStringArray:
 
 ## Every node on the map: lane nodes (a node shared by several lanes appears once per
 ## lane) followed by off_lane_nodes.
+func _validate_layout_and_objectives(
+	node_ids: Dictionary, faction_ids: Dictionary
+) -> PackedStringArray:
+	var errors := PackedStringArray()
+	if layout != null:
+		errors.append_array(layout.validate(node_ids.keys()))
+	var critical_ids := {}
+	for node in _all_nodes():
+		if node.is_critical_asset:
+			critical_ids[node.id] = true
+	for group in loss_groups:
+		errors.append_array(group.validate(node_ids, faction_ids, critical_ids))
+	return errors
+
+
 func _all_nodes() -> Array[NodeDef]:
 	var nodes: Array[NodeDef] = []
 	for lane in lanes:

@@ -18,6 +18,8 @@ const NodeDef = preload("res://content/definitions/node_def.gd")
 @export var waypoint_texture: Texture2D
 ## Drawn beside a node that is hidden from some faction (designer view only).
 @export var hidden_badge: Texture2D
+## Drawn on a critical asset (a member of a loss group), per specs/19.
+@export var critical_badge: Texture2D
 
 ## Owner colours, indexed by the faction's position in MapDef.factions (wrapping).
 @export var faction_palette: Array[Color] = [
@@ -33,6 +35,10 @@ const NodeDef = preload("res://content/definitions/node_def.gd")
 ## Lane paths, one colour per lane (wrapping).
 @export var lane_colors: Array[Color] = [Color("#4c6b78"), Color("#7a5a3a"), Color("#4c7a52")]
 @export var edge_color: Color = Color("#9a927e")
+## Layout layers (specs/19). Terrain colours come from the shared terrain library.
+@export var road_color: Color = Color("#b08d57")
+@export var bridge_color: Color = Color("#7a5a3a")
+@export var feature_glyph_color: Color = Color(0.13, 0.11, 0.08, 0.85)
 @export var background_color: Color = Color("#f2ecdf")
 @export var grid_color: Color = Color(0.43, 0.4, 0.33, 0.12)
 @export var label_color: Color = Color("#211d15")

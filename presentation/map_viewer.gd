@@ -11,6 +11,7 @@ extends Node2D
 
 const MapView = preload("res://presentation/map_view.gd")
 const MapDetails = preload("res://presentation/map_details.gd")
+const MapLayoutView = preload("res://presentation/map_layout_view.gd")
 
 const MAPS_DIR := "res://content/maps"
 const MAP_ARG := "--map="
@@ -121,6 +122,7 @@ func _select_map(index: int) -> void:
 	var map := ResourceLoader.load(_map_paths[index], "", ResourceLoader.CACHE_MODE_REPLACE)
 	map_view().map = map
 	map_view().selected_id = ""
+	map_view().selected_cell = MapLayoutView.NO_CELL
 	_view_as_picker.clear()
 	_view_as_picker.add_item("Designer (everything)")
 	for faction in map.factions:
@@ -171,7 +173,16 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _click(world_point: Vector2) -> void:
-	var id := map_view().node_at(world_point)
-	map_view().selected_id = id
-	var map := map_view().map
-	_info.text = MapDetails.node_details(map, id) if id != "" else MapDetails.summary(map)
+	var view := map_view()
+	var id := view.node_at(world_point)
+	view.selected_id = id
+	var cell := (
+		view.model.cell_at(view.to_local(world_point)) if id == "" else MapLayoutView.NO_CELL
+	)
+	view.selected_cell = cell
+	if id != "":
+		_info.text = MapDetails.node_details(view.map, id)
+	elif cell != MapLayoutView.NO_CELL:
+		_info.text = MapDetails.tile_details(view.map, cell)
+	else:
+		_info.text = MapDetails.summary(view.map)
