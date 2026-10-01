@@ -416,6 +416,17 @@ progress. Open question: in the real build, is a bridge a tile-level structure, 
 Not designed. It sits alongside the Combatant/structure unification (Decision 24's
 non-goal) and the spatial-placement pass (Decision 4's Option 2).
 
+### Roads as built upgrades (future)
+
+Raised 2026-09-30. Roads are drawn today as a ground layer, but they are better
+understood as a **tile upgrade that is built**. Workers first prepare the tile, then spend
+resources to lay the road. A road could have a **quality** (a dirt track through to
+paved), which sets its movement bonus and its durability, and which depends on the effort
+put into it. Roads authored in the designer would be the map's pre-existing roads; roads
+the player builds come later. This fits the earlier note that a player could reroute by
+sending workers and resources to add a road. Schema impact when it lands: roads gain a
+quality or kind (and possibly hp), and road building becomes a worker task. Not built.
+
 ## Future direction: multi-tile and linked structures
 
 Raised with the drawbridge idea (tile designer prototype v11). A structure is anchored to
@@ -441,6 +452,62 @@ surface plane. Two further planes are recorded as a direction, not designed:
 Open questions: whether planes are separate route graphs or layers of one graph, how
 units move between planes (entrances, landing zones), and how the lane/tick model
 represents them.
+
+## Future direction: a living board (reactive map presentation)
+
+Raised with the map viewer (specs/18, specs/19). The board the player sees is not a
+static picture of the authored map. The underlying terrain stays recognisable, but the
+world visibly reacts to what happens on it. This is recorded as a direction, not
+designed.
+
+- **Corruption spreads with control.** As the player controls more of the map, the
+  terrain appears increasingly corrupted. Open questions:
+  - Whether this belongs to one player faction or is shared by every player overlord.
+  - Whether it is driven locally (tiles near controlled nodes) or globally (the share of
+    the map controlled).
+  - How many visual stages it has.
+- **Assets react to state.** A forest cut down for wood shows as felled or cleared. A
+  quarry or ore vein that's been worked out looks exhausted. A destroyed fort appears as a
+  ruin, and a damaged one looks damaged.
+- **Control is shown in the world, not as icons.** The small in-tile icons (owner ring,
+  critical-asset crown, hidden badge) are the accepted interim. Eventually control should
+  read thematically: forts fly the controlling faction's flag, and banners or other
+  markers appear on held ground. The icons stay for the designer and debug views.
+- **Depth, not flat tiles.** A forest should look like a forest, with trees that have
+  height and overlap the cells around them, not a green square. The same goes for
+  mountains, water and structures.
+- **Weather and day/night** add further dynamism, per
+  `breach-addendum-calendar-weather.md`. Points that matter for presentation:
+  - Four named phases a day (Dawn / Day / Dusk / Night), giving dawn and dusk transitions
+    rather than a hard toggle.
+  - An authored season per map.
+  - A full moon on a fixed calendar date.
+  - Weather as zones, either blanketing whole cells or shaped (a moving tornado).
+  All of this is derived from the round counter, so the board reads it and never
+  simulates it. Per Decisions 34–36, time of day is an N-hour clock. In the 3D scene it
+  can drive a real cycling sun and moon (a directional light) that lights the terrain and
+  sprites. `breach-addendum-unit-ai-and-tactical-space.md` adds the other half: a
+  fight opens its own continuous local space, and a ranged fight shows two linked
+  viewports that merge as the forces close.
+
+Implications for the Godot build:
+- **Keep the viewer's layer split.** Terrain → features → roads/bridges → structures →
+  units → overlays, with drawing driven by a view model. Per Decision 36, the play board
+  is a **3D scene**:
+  - the terrain starts as flat tiles, with 3D terrain geometry as a stretch goal
+  - forts, units and props (a forest's trees) are **2D sprites** standing in that scene,
+    which gives real depth without 3D models
+  - the Inspector Viewport shows a structure's detailed side-on sprite
+
+  What carries over from the 2D viewer is its data and view models; its 2D drawing stays
+  as the authoring and debug view.
+- **The art set grows variants.** It needs art per terrain and corruption stage,
+  depletion states, structure condition (intact/damaged/ruined), faction flags, and prop
+  sets per terrain. Code-drawn fallbacks remain for anything without art.
+- **The board needs runtime state.** Reserves remaining, structure condition, and
+  control/corruption per tile or node come from the simulation in milestone 2. `MapDef`
+  stays the authored starting state; the play scene's view model combines it with live
+  state.
 
 ## Notes for the implementing agent (Godot)
 
@@ -1559,3 +1626,363 @@ Two safeguards make the shared library safe:
   details.
 - Nothing in `sim/` reads movement costs, capacity, bridges or loss groups yet; that is
   milestone 2.
+
+### Decision 33 — Calendar/weather and unit-AI/tactical-space addenda are tracked design, read against the built map model
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** The user added two addenda alongside `breach-addendum-unified-combat.md`:
+- `breach-addendum-calendar-weather.md`: tick = round, with the calendar derived from it;
+  derived/offset/pinned calendar overrides; `WorldContext`; a per-map Map Script of
+  `{trigger, action}` events; weather and effect zones.
+- `breach-addendum-unit-ai-and-tactical-space.md`: a hard-gated priority stack of orders;
+  an event queue within a round; a discrete strategic graph with a continuous tactical
+  space per Encounter; spatial range on a shared grid, tested against a unit's actual
+  path.
+
+They are tracked in version control as real design content, like the combat addendum
+(Decision 22). Both were written against the earlier "lanes on alternating rows" picture
+of the map. Since then the map has become a designer grid with freely placed nodes and
+pathfound routes (Decisions 26, 29, 32). So this Decision records where they meet what
+is built, so a later item doesn't re-derive it.
+
+**Where the addenda meet the current model:**
+- **Grid coordinates already exist.** Every node's `position` is the centre of its
+  designer grid cell, and `MapLayoutDef` carries the grid. The "(row, column) for every
+  node" the tactical addendum asks for is `floor(position / cell_size)`, with no new
+  field needed. The rows 1/3/5 lanes with spacer rows 2/4 example is illustrative only;
+  lanes follow authored routes across any cells.
+- **A moving cluster's path is its link's route, not a straight segment.** The addendum
+  interpolates between the start and end nodes' coordinates. On the built model, a
+  cluster between two nodes travels along that link's `RouteDef` cells. "Entered threat
+  radius" therefore becomes a polyline-vs-range-area test (one segment per route step),
+  which is still cheap, ordinary geometry.
+- **Structure fights already have a tactical space.** Decision 27's side-on 2D plane per
+  structure is the continuous local space for Encounters at or inside a structure.
+  Open-field Encounters get their own local space in the same way: spun up for the fight,
+  then collapsed back to a node-level result.
+- **Emplacement range belongs with the structure schema (spec 20).** Emplacements need an
+  `engage_range` (Chebyshev distance on the grid by default) and the v1 single-target
+  rule, so a ballista can reach across lanes.
+- **Calendar config and the Map Script are map-authoring data.** They are a future schema
+  item with a designer UI (map settings, plus a timeline of triggered events). Nothing in
+  this Decision builds them.
+
+**Open questions (need the user):**
+- The calendar addendum's blanket zone form is written `tiles: [node ids]`. On the built
+  model, tiles (grid cells) and nodes are different things. Should blanket zones name
+  cells, nodes, or either?
+- The tactical addendum refers to "the Inspector Viewport pattern from the art
+  discussion". That pattern isn't recorded anywhere in the repo yet.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Rewrite the addenda to match the current model | They are the user's documents; noting how they map onto what's built keeps them intact and records the reconciliation in one place. |
+| Leave them untracked until implemented | Decision 22's precedent: real design content is tracked, so later work builds on it instead of rediscovering it. |
+
+**Consequences:**
+- Both files are tracked at the repo root.
+- The living-board direction links the calendar and weather presentation to them.
+- Spec 20 (structures) should include emplacement `engage_range`.
+- The two open questions stay open until the user answers.
+
+### Decision 34 — Calendar is an N-hour clock with static seasons and a configurable moon; zones are placed on grid cells; weapon range is shared by units and emplacements; the play board is 3D
+
+> Superseded in part by Decision 35 on 2026-09-30: the board is **2D**, not 3D (the side-on
+> view lives only in the Inspector Viewport); seasons can advance every N ticks or stay static,
+> per map; hours per tick is a per-map setting. The zone, clock, moon and weapon-range parts
+> stand.
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** This answers Decision 33's two open questions and revises parts of
+`breach-addendum-calendar-weather.md`, per the user.
+
+**Zones are placed on grid cells.** Blanket zones name grid cells, not node ids. A static
+effect over a fort is placed on the fort's cell(s), so it is anchored by the grid rather
+than by the node.
+
+**The Inspector Viewport is recorded** in `breach-addendum-inspector-viewport.md`, now
+tracked. It is one reusable component: a `SubViewport` camera on an isolated render layer,
+pointed at a selection. It gives:
+- side-on views of a structure or of combat
+- unit focus
+- scouted Hero Party composition
+- for a ranged Encounter between distant parties, two viewports that collapse into one
+  as the parties meet
+
+**Time is a clock, not four named phases.** This supersedes the addendum's
+Dawn/Day/Dusk/Night ticks and its season cycling.
+- A day is **N hours** (authored per map, default 24).
+- Ticks advance the clock by an authored number of hours per tick. The pace is still
+  open; see Consequences.
+- Named periods such as dawn, day, dusk and night are **bands of hours**, for rules
+  ("vampires weak by day") and for presentation. They are derived from the clock and can
+  be retuned or subdivided without changing the model.
+- The clock can be **paused** at an authored hour. "Eternal night" is a map whose clock
+  is paused at night. This replaces the addendum's "pinned" mode for time of day; a start
+  hour replaces "offset".
+- Because the board is 3D, time of day is shown by a **real cycling sun and moon**: a
+  directional light driven by the clock, not a colour toggle.
+
+**Seasons are static per map for now.** A map names its season, and it does not change
+during the map. The season drives the board's **colour grading and which art variants
+are used** (more variants per season). Cross-map persistence stays deferred, as the
+addendum already said.
+
+**The moon has its own cycle.** A map sets:
+- `moon_cycle_days`: the length of a full cycle
+- `days_until_full_moon`: at map start
+- `moon_paused`: e.g. a permanent full moon
+
+"Full moon" is a derived state (the full-moon day's night hours) that rules can gate on,
+such as the werewolf bonus.
+
+**Weapon range is not detection, and it isn't emplacement-specific.** The user asked
+whether `engage_range` is detection or weapon reach, and whether it belongs lower down,
+shared between units and emplacements. Recorded model:
+- **Detection** is how far a combatant can see. Night, torches and weather change it,
+  per the calendar addendum; it also gates targeting and feeds suspicion.
+- **`engage_range`** is how far a weapon reaches.
+- A ranged attack fires only on a target that is both **detected** and **within reach**.
+- Weapon stats live in one **shared attack profile**, used by units and by static
+  defenses alike. This is consistent with the combat addendum's single Combatant shape,
+  where a structure is a Combatant with `mobile: false`. Static defenses reuse the unit
+  implementation rather than a parallel one.
+- Proposed refinement, to be confirmed with spec 20: **a weapon emplacement** (ballista,
+  oil cauldron) carries its own attack profile, and its crew operates it. **A firing
+  position** (arrow slit, battlement) has no weapon of its own; it modifies the crew's
+  weapon, for example with cover, or with extra reach from elevation.
+
+**The play board is 3D.** The inspector-viewport addendum assumes:
+- an iso main camera (`Camera3D`) with no yaw
+- real, even low-poly, geometry for structures
+- side-on unit sprites
+
+The map viewer (specs/18–19) is a 2D top-down view. It stays as the authoring and debug
+view. What carries over to the 3D board is the renderer-agnostic data: `MapDef`,
+`MapLayoutDef`, the shared terrain library, and the view models. The 2D drawing
+(`MapView`, `MapLayoutPainter`) does not carry over.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep four named phases per day | The user wants to subdivide time freely; hour bands over a clock give the same rule hooks with finer control. |
+| Seasons cycle within a map | Not wanted yet; a static season per map is simpler and still drives art and colour. |
+| `engage_range` per emplacement type only | It would duplicate unit weapon stats in a parallel system; one attack profile serves both. |
+| Treat the 2D viewer as the play scene's renderer | The game is 3D per the inspector-viewport addendum; the viewer is kept for authoring and debugging. |
+
+**Consequences:**
+- Map calendar settings are future schema with a designer UI:
+  - `hours_per_day`, `hours_per_tick`, `start_hour`, `clock_paused`
+  - hour bands
+  - `season`
+  - `moon_cycle_days`, `days_until_full_moon`, `moon_paused`
+- Map Script zones use grid cells or shapes.
+- **Open:** the default `hours_per_tick`, which sets the game's pace. At 1 hour per tick
+  and the current 1.5 s tick, a day lasts 36 s.
+- Spec 20's emplacement schema uses the shared attack-profile model. The weapon
+  emplacement vs firing position split still needs the user's confirmation there.
+- `breach-addendum-calendar-weather.md` carries a note at its top pointing here, so the
+  superseded parts aren't implemented as written.
+
+### Decision 35 — The board is 2D, with side-on views only in the Inspector Viewport; seasons and time per tick are per-map settings
+
+> Superseded in part by Decision 36 on 2026-09-30: the scene is **3D**. Structures and units
+> are 2D sprites within it; only the "the board is 2D" parts are replaced. No camera zoom
+> into cutaways, per-map seasons and per-map hours per tick all stand.
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** The user corrected Decision 34. The game had already settled on **2D**; 3D
+was abandoned for now. The side-on view of a structure or a fight appears **only in the
+Inspector Viewport**, opened when a structure is selected or as part of a combat. The
+main camera **no longer zooms or arcs to open a cutaway**.
+`breach-addendum-inspector-viewport.md` keeps its pattern, a separate viewport with its
+own fixed camera pointed at the selection, but in 2D (a `SubViewport` with a `Camera2D`
+and its own canvas layers). Its `Camera3D` and 3D-geometry wording records the earlier
+3D thinking; it does not describe the current direction.
+
+The user also set two calendar settings:
+- **Seasons are configurable per map.** A map either stays in one season or advances to
+  the next every N ticks, in an authored order. This refines Decision 34's "static for
+  now".
+- **Time passing per tick is configurable per map** (`hours_per_tick`), which answers
+  Decision 34's open question about pace. Each map chooses; a default is picked when the
+  schema lands.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A 3D board (Decision 34, as first recorded) | Not the settled direction; the user abandoned 3D for now. |
+| The main camera zooming into a cutaway | Abandoned in favour of the Inspector Viewport, which keeps the main view's angle uncompromised. |
+| One fixed game-wide pace or season behaviour | The user wants each map to choose. |
+
+**Consequences:**
+- The 2D map viewer's approach carries forward: its layers and view models are the
+  basis for the play board, with real art replacing code-drawn shapes. This restores
+  what Decision 34 had withdrawn.
+- The sun and moon are shown through 2D lighting and tint driven by the clock.
+- Future map calendar schema:
+  - `season` plus `season_mode` (static, or advance every `season_ticks` through an
+    authored order)
+  - `hours_per_day`, `hours_per_tick`, `start_hour`, `clock_paused`
+  - hour bands
+  - `moon_cycle_days`, `days_until_full_moon`, `moon_paused`
+- `breach-addendum-inspector-viewport.md` carries a note at its top pointing here.
+
+### Decision 36 — A 3D scene with 2D sprites for structures and units; the detail view is a side-on sprite in the Inspector Viewport
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** The user clarified that Decision 35 over-corrected. The game still uses a
+**3D scene**. What is 2D is the art *in* it: **forts and other structures are 2D sprites,
+like the units.** When a detail view is wanted (a structure selected, or a fight), the
+**Inspector Viewport** shows the structure's **detailed side-on sprite**, if it has one.
+The main camera doesn't zoom into cutaways (Decision 35 stands on that). The **base
+terrain** starts as flat tiles. Giving it 3D geometry is a **stretch goal**.
+
+This matches `breach-addendum-inspector-viewport.md` more closely than Decision 35
+suggested:
+- the main camera has no yaw, so fixed-facing sprites work without per-frame billboard
+  rotation
+- the viewport's camera is fixed, so a painted side-on sprite is correct by construction
+
+The difference from the addendum is that structures are sprites rather than low-poly
+geometry. The addendum's reasoning about "the same model seen by two cameras" therefore
+applies only if 3D structures ever return.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A fully 2D board (Decision 35) | Not what the user intends; the scene is 3D. |
+| Low-poly 3D structures (the addendum's recommended default) | The user chose 2D sprites for structures, as for units. |
+| 3D terrain from the start | Deferred as a stretch goal; flat tiles first. |
+
+**Consequences:**
+- The play board is a 3D scene. Terrain is flat tiles first, with 3D terrain a stretch
+  goal. Structures, units and props are 2D sprites (e.g. `Sprite3D`) facing a camera
+  that doesn't rotate.
+- Depth comes from sprites standing in 3D space, such as a forest's trees and a fort's
+  flag.
+- The Inspector Viewport renders the detailed side-on sprite. A 2D `SubViewport` is
+  enough for a sprite; the render-layer approach is kept for if structures ever become
+  3D.
+- Time of day can use a real cycling sun and moon (a directional light), lighting the
+  terrain and sprites. This restores Decision 34's point.
+- The 2D map viewer (specs/18–19) stays as the authoring and debug view. What the play
+  board reuses is its data and renderer-agnostic view models (`MapDef`, `MapLayoutDef`,
+  the shared terrain library, `MapViewModel`, `MapLayoutView`). The art set's texture
+  slots map naturally onto sprite textures.
+- Seasons and hours per tick stay per-map settings (Decision 35).
+
+### Decision 37 — Arrow slits and battlements are wall properties; only crewed weapons (ballista, oil cauldron) are emplacements
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** This settles the refinement Decision 34 left for spec 20. The user's model
+replaces the "firing position" type that was proposed there.
+- **Arrow slits and battlements are wall properties, not emplacements or fixed firing
+  positions.** They are Decision 27's boundary presets. Each boundary blocks movement,
+  projectiles and sight from given sides. A ranged unit in a room shoots out through a
+  wall whose projectiles aren't blocked from the inside. The wall decides *whether* a
+  shot can pass; the unit's own weapon (shared attack profile, Decision 34) decides reach
+  and damage. The designer already derives firing positions this way from boundaries
+  (`firingPositions`): exterior walls that let projectiles out, reachable flat roofs, and
+  murder-hole floors.
+- **Emplacements are crewed weapons.** A ballista, trebuchet or oil cauldron has its own
+  attack profile, including `engage_range`, and needs a crew from the garrison to fire.
+  The designer's Static defenses library already records a crew (`manned_by_unit`,
+  `firing_points`) and placeholder `stub_damage` / `stub_range`.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A separate "firing position" type that modifies the crew's weapon (proposed in Decision 34) | Duplicates what boundary presets already express with their per-side projectile flags. |
+| Arrow slits as emplacements with their own range | An arrow slit has no weapon; the archer behind it does. |
+
+**Consequences for spec 20 (structures schema):**
+- Boundaries import with their movement, projectile and sight flags, which determine
+  where ranged units can fire from. There is no firing-position resource.
+- An emplacement definition references a shared attack profile, the same shape units
+  use. The designer's `stub_range` / `stub_damage` become `engage_range` / damage there.
+  The emplacement also has a crew requirement, which the designer calls `firing_points`.
+  Spec 20 should name this `crew` in the Godot schema, so it isn't confused with the
+  derived firing positions.
+- Whether height, such as a battlement or a flat roof, adds reach to a unit firing from
+  it is left open.
+
+### Decision 38 — Real-time with pause on a live deterministic sim; production and dispatch replace wave turns; structures render from a shared parts library
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** The user wants the player to be able to **intervene mid-combat**, not only
+plan between triggered occurrences. Stopping every "turn" came from conventional tower
+defence (waves with a break between them for player action), not from a need of this
+game.
+
+**Time model: real-time with pause.**
+- The simulation runs **live**, on short fixed ticks with interpolation between them.
+  It is not pre-computed and then replayed as animation.
+- The player can pause at any moment, or give orders live. An order takes effect on the
+  next tick and directly changes what the simulation does.
+- It stays deterministic, so a choice has a reproducible outcome ("choices must
+  matter"). Fidelity comes from the simulation's rules, not from continuous physics.
+
+**Forces: production and dispatch instead of waves.**
+- Units are produced on build orders until a group is full.
+- Per lane, the player either sets a **manual departure** or lets a group **leave
+  whenever it's full**.
+
+**Presentation** (with Decision 36):
+- Units are 2D sprites.
+- On the overland board, a structure is a sprite, chosen in one of two ways, still to
+  be decided:
+  - a miniature derived from the structure's actual shape, or
+  - a size-class sprite picked from the structure's height × width.
+- The detail view (Inspector Viewport) is **data-driven**. The side-on structure is
+  assembled from a **shared library of parts**: wall sections by material, doors,
+  portcullis, floors, roofs, stairs and emplacements. Each part has intact, damaged and
+  destroyed states. Every authored structure then renders with no bespoke art, and
+  damage shows per part.
+- Full 3D structures and units are not the direction.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Turn/wave pauses as in tower defence | The player could only act between waves; the user wants live agency. |
+| Pre-simulate, then replay the result as animation | Orders couldn't change the outcome mid-fight. |
+| Continuous physics simulation | Costly to build, debug and balance; short fixed ticks give the same agency. |
+| A bespoke painted image per fort | Doesn't scale with authored content; a parts library does. |
+
+**Consequences:**
+- The existing P-f-F-c slice (1.5 s ticks, one node per tick, scripted waves) stays as
+  it is. A **real-time feel test** is the next item, built as an isolated skirmish on a
+  minimal P-c map:
+  - one player unit and one kingdom unit fighting in melee
+  - the enemy fort immune
+  - pause-anytime and live orders
+- **Open for spec 20, the fort perimeter.** One side view has only two ends (LEFT/RIGHT),
+  but a fort can be approached from any side on the map. Proposed:
+  - Give each structure **overland faces** (N/E/S/W) that are gates or solid wall.
+  - Map each gate to a side-view end.
+  - An approach from a gateless face either paths round to a gate (the dual viewports
+    stay split until the forces meet) or is an explicit order to assault the wall.
+  - Optionally, mark end columns as a curtain wall.
+  To be settled with spec 20.
+- The high-ground range bonus is still open. A formula bonus (tapering with height, with
+  an optional penalty for firing upward) was proposed; real projectiles would be limited
+  to tactical fights, if used at all.
