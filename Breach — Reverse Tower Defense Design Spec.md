@@ -2852,3 +2852,61 @@ climb and squeeze through, building on Decisions 52 and 53.
   below ground.
 - The map schema gains site links between nodes on neighbouring tiles.
 
+### Decision 55 — Interiors are spaces furnished with placed elements on four layers, under placement rules; items are natural or equipment; passages carry traits
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** The user's points on interior detail: a partial build, like a gatehouse
+stair inside a wall with no full room, and positioning upgrade elements rather than a
+"5/5" budget.
+- **A partial build is just a small space.** No full room is needed: a stair drawn into
+  a thick wall's cells is a stair space, and one hollowed cell is a space too. The 5/5
+  budget is already gone (Decision 53).
+- **Elements.** Everything placed in a structure is an **element**, with a footprint in
+  cells, a height and a facing (90° steps). It sits on one of four **layers**, so things
+  can share a cell:
+  - **floor:** trapdoors, grates, rugs, spike pits
+  - **object:** bunks, tables, hearths, barrels, a ballista; at most one per cell
+  - **face:** on a wall or opening (door, slit, portcullis, torch bracket); the boundary
+    presets of Decisions 37 and 52
+  - **ceiling:** murder holes, hatches up, hanging lights; the face above, seen from below
+- **Placement rules are data on each element type**, checked alike by the designer and
+  the game:
+  - **Needs:** clear height above (a bunk needs 2), a flue to the outside (a hearth), a
+    crew space (a ballista), water beneath (a well).
+  - **Must touch:** for example, a portcullis winch beside the gate passage it raises.
+  - **No "must connect" for elements.** A stair may lead nowhere: a future floor, a dead
+    end, a feint.
+  - **Spaces must be accessible.** A space nobody can reach from the node's entrances,
+    counting secret doors and defender-only doors, is flagged.
+- **Building in play.** The player can place any element in play if they **control the
+  area**, **pay the cost** and nothing **restricts** it (the tech tree, Decision 41, or a
+  designer lock, such as a ruin that can't be rebuilt). The same elements are placed in
+  the designer as part of a map's plan.
+- **Items are natural or equipment.** Both use the same item shape (Decision 54), but a
+  unit holds them in two lists:
+  - **Natural:** part of the body (spit, claws, bite, a brute's fists with siege 1).
+    Always present, never dropped, looted or handed over.
+  - **Equipment:** carried things (a sword, a shovel, a pickaxe). They can be equipped,
+    swapped, dropped and looted. Slots and encumbrance come later.
+- **Passages carry traits matching unit traits.** A unit has **tiny**; a grate, drain,
+  rat hole or burrow has **tiny gap**, letting tiny units through and blocking everyone
+  else. A face can carry several passage traits, e.g. a grate passes water as well.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A feature-point budget per room | Replaced by what physically fits (Decision 53). |
+| Free placement limited only by cost | Rules (height, flue, adjacency) keep interiors plausible; the user agreed they're a good start. |
+| Stairs must connect two spaces | The user: stairs needn't reach anywhere; only rooms must be accessible. |
+| One list of items per unit | Innate weapons (a spitter's spit) must never be dropped or looted, unlike a sword. |
+
+**Consequences:**
+- Element types with footprints, heights, layers and placement rules join the libraries
+  that the designer and Godot share. **The designer gains layer-aware placement, with
+  rotation and rule checks**, per the standing sync rule.
+- `UnitDef` holds `natural` and `equipment` item lists, replacing `weapons`.
+- Faces and spaces carry passage traits; units carry size traits such as tiny.
+
