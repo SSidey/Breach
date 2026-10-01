@@ -2381,4 +2381,10 @@ behind grems should not stay behind them, and ranged units belong at the back.
   load.
 - **Open:** terrain modifiers on swap speed; whether units re-form after deaths as well
   as after a reinforcement; and the rank-to-cell scale for the detail view.
+- **A broad change, on purpose.** It opens 12 existing files, one over the
+  `ocp-shotgun-surgery` heuristic's 11. A new unit capability (position, range) runs from
+  the data definition through its sim mirror, combat, the simulation, presets and the
+  view, and there is no extension point yet that one new case could plug into. The new
+  rules themselves sit in new files: `FormationShuffle`, and the ranged half of
+  `FormationCombat`.
 
