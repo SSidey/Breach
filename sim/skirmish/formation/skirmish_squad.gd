@@ -29,6 +29,16 @@ var wait_ticks: int = 0
 var reforming := false
 var swaps := []
 var units: Array[SkirmishUnit] = []
+## The lane's combat width: how wide joined units may spread the line in a fight (Decision
+## 51); 0 keeps them within the squad's own columns.
+var combat_width := 0
+## Units that joined as reinforcements: only they spread beyond the painted columns.
+var joined: Array[SkirmishUnit] = []
+## Whether this wave merges into a friendly squad it catches up with on the march.
+var merges := false
+## How far the squad's columns sit off the lane's centre, so widening on one side moves no
+## one on screen.
+var centre_shift := 0.0
 
 
 func _init(
@@ -70,13 +80,13 @@ func unit_distance(unit: SkirmishUnit) -> float:
 	return front_distance - direction * unit.rank * RANK_DEPTH
 
 
-## The unit's columns as a lateral span, centred on the lane. The squad facing the other
-## way is mirrored, so both sides share one lateral axis.
+## The unit's columns as a lateral span, centred on the lane (less any centre_shift). The
+## squad facing the other way is mirrored, so both sides share one lateral axis.
 func lateral_span(unit: SkirmishUnit) -> Vector2:
-	var half := width / 2.0
+	var left := unit.column - width / 2.0 + centre_shift
 	if direction > 0:
-		return Vector2(unit.column - half, unit.column + unit.footprint_width - half)
-	return Vector2(half - unit.column - unit.footprint_width, half - unit.column)
+		return Vector2(left, left + unit.footprint_width)
+	return Vector2(-left - unit.footprint_width, -left)
 
 
 ## The front rank, left to right: only it fights in melee (Decision 47). A column whose

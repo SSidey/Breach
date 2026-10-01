@@ -63,10 +63,39 @@ func test_a_saved_preset_applies_to_another_lane_fitted_to_its_slots() -> void:
 func test_a_full_wave_pauses_and_sending_it_resumes() -> void:
 	var scene := _scene()
 	scene.pause_on_wave_full = true
+	scene._battle.lane("c").set_auto_departure(false)
 
 	scene.handle_events("c", [{"type": "wave_full", "tick": 1, "faction": "player", "built": 5}])
 	assert_bool(scene.clock().is_paused()).is_true()
 	scene.send_wave("c")
+
+	assert_bool(scene.clock().is_paused()).is_false()
+
+
+func test_lanes_start_departing_on_their_own_and_sharing_round_robin() -> void:
+	var scene := _scene()
+
+	var production = scene._battle.lane("c").production
+	assert_int(production.departure).is_equal(production.Departure.AUTO_WHEN_FULL)
+	assert_int(scene._battle.player.distribution).is_equal(
+		scene._battle.player.Distribution.ROUND_ROBIN
+	)
+	assert_int(scene.simulation("c").combat_width).is_equal(5)
+
+
+func test_auto_merge_marks_the_waves_a_lane_sends() -> void:
+	var scene := _scene()
+	scene._hud.auto_merge_toggled.emit("c", true)
+	scene._battle.lane("c").production.fill(scene.GREM)
+
+	assert_bool(scene._battle.lane("c").production.send(scene.simulation("c")).merges).is_true()
+
+
+func test_a_lane_that_departs_on_its_own_never_pauses() -> void:
+	var scene := _scene()
+	scene.pause_on_wave_full = true
+
+	scene.handle_events("c", [{"type": "wave_full", "tick": 1, "faction": "player", "built": 5}])
 
 	assert_bool(scene.clock().is_paused()).is_false()
 
