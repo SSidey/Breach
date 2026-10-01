@@ -6,7 +6,8 @@ extends RefCounted
 ## - where an advancing squad must stop: at reach of a hostile front, or behind the back
 ##   rank of a friendly squad ahead (squads never pass through their own side)
 ## - how a wave that reaches a friendly squad in combat joins it from the back, as rear
-##   ranks that step up as the front falls
+##   ranks that step up as the front falls; a wave that merges (Decision 51) joins a
+##   friendly squad on the march the same way
 ## - when a squad without front units holds to skirmish (Decision 47)
 ## Pure over the squads it is given; FormationSimulation calls it each tick.
 
@@ -76,13 +77,14 @@ static func skirmishing(mover: SkirmishSquad, squads: Array) -> bool:
 	return false
 
 
-## The friendly squad in combat whose back rank `mover` has reached, or null.
+## The friendly squad whose back rank `mover` has reached and may join, or null: one in
+## combat, or - when `mover` merges - one on the march that isn't retreating.
 static func joinable(mover: SkirmishSquad, squads: Array) -> SkirmishSquad:
 	for other in squads:
 		if (
 			other == mover
 			or other.faction_id != mover.faction_id
-			or other.state != SkirmishSquad.State.FIGHTING
+			or not _accepts(mover, other)
 			or not _ahead(mover, other)
 		):
 			continue
@@ -92,21 +94,35 @@ static func joinable(mover: SkirmishSquad, squads: Array) -> SkirmishSquad:
 
 
 ## Moves the joining squad's living units in behind the leader's back rank, both lines
-## centred on the wider of the two, and steps them up. Returns the units that moved up.
+## centred on the wider of the two, and steps them up. They are the leader's joined units,
+## free to spread in a fight (Decision 51). Returns the units that moved up.
 static func reinforce(leader: SkirmishSquad, joining: SkirmishSquad) -> Array[SkirmishUnit]:
 	var width := maxi(leader.width, joining.width)
 	var back := _back_rows(leader)
+	var shift := (width - leader.width) / 2
 	for unit in leader.units:
-		unit.column += (width - leader.width) / 2
+		unit.column += shift
 	for unit in joining.living():
 		unit.column += (width - joining.width) / 2
 		unit.rank += back
 		unit.squad_id = leader.id
 		unit.attack_cooldown = 1
 		leader.units.append(unit)
+		leader.joined.append(unit)
+	leader.centre_shift += (width - leader.width) / 2.0 - shift  # the leader stays put
 	leader.width = width
 	joining.units.clear()
 	return leader.compact()
+
+
+static func _accepts(mover: SkirmishSquad, leader: SkirmishSquad) -> bool:
+	if leader.state == SkirmishSquad.State.FIGHTING:
+		return true
+	return (
+		mover.merges
+		and leader.state in [SkirmishSquad.State.MOVING, SkirmishSquad.State.HOLDING]
+		and leader.order != SkirmishUnit.Order.RETREAT
+	)
 
 
 static func _ahead(mover: SkirmishSquad, other: SkirmishSquad) -> bool:

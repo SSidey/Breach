@@ -12,6 +12,7 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SkirmishSlotPool = preload("res://sim/skirmish/formation/skirmish_slot_pool.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationBattle = preload("res://sim/skirmish/formation/formation_battle.gd")
+const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
 const WavePresets = preload("res://sim/skirmish/formation/wave_presets.gd")
 const WavePresetStore = preload("res://presentation/skirmish/formation/wave_preset_store.gd")
 const SkirmishRoute = preload("res://presentation/skirmish/skirmish_route.gd")
@@ -82,6 +83,7 @@ func _ready() -> void:
 	)
 	for index in range(BUILDER_TYPES.size()):
 		_battle.player.set_builders(BUILDER_TYPES[index], START_BUILDERS[index])
+	_battle.player.prefer("")  # round robin by default (Decision 51)
 	for route in MAP.layout.routes:
 		var points := view.model.layout_view.route_points(route.node_a_id, route.node_b_id)
 		_add_lane(route.node_b_id, points)
@@ -100,9 +102,12 @@ func _add_lane(lane_key: String, points: PackedVector2Array) -> void:
 	var length := SkirmishRoute.length_cells(points, MAP.layout.cell_size)
 	var start := WavePresets.line(GREM, START_SLOTS[lane_key], LANE_WIDTHS[lane_key])
 	_battle.add_lane(lane_key, length, start)
-	_battle.lane(lane_key).brush = GREM
+	var lane := _battle.lane(lane_key)
+	lane.brush = GREM
+	lane.set_auto_departure(true)  # the defaults of Decision 51
+	lane.sim.combat_width = LANE_WIDTHS[lane_key]
 	$Squads.cell_size = MAP.layout.cell_size
-	$Squads.add_lane(lane_key, _battle.lane(lane_key).sim, points)
+	$Squads.add_lane(lane_key, lane.sim, points)
 
 
 func _process(delta: float) -> void:
@@ -131,7 +136,7 @@ func handle_events(lane_key: String, events: Array) -> void:
 					_log(lane_key, event, "flank hit on #%d (%d)" % [event["target"], event["dmg"]])
 			"spat":
 				$Squads.spit(lane_key, event["unit"], event["target"])
-			"engaged", "destroyed", "stepped_up", "arrived", "departed", "returned", "reinforced":
+			"engaged", "destroyed", "stepped_up", "arrived", "departed", "returned", "reinforced", "merged":
 				_log(lane_key, event, event["type"].replace("_", " "))
 
 
@@ -182,12 +187,16 @@ func _choose_distribution(index: int) -> void:
 	_battle.player.prefer(lane_keys()[index] if index < lane_keys().size() else "")
 
 
+## Only a lane that waits for Send pauses; one that departs on its own says so (Decision 51).
 func _on_wave_full(lane_key: String) -> void:
-	var pausing := pause_on_wave_full and not _clock.is_paused()
+	var departure := _battle.lane(lane_key).production.departure
+	var waits := departure == FormationProduction.Departure.MANUAL
+	var pausing := waits and pause_on_wave_full and not _clock.is_paused()
 	if pausing:
 		_clock.pause()
 		_paused_for_wave = true
-	_banner("Lane %s: wave ready%s" % [lane_key, " - paused. Send it to go" if pausing else ""])
+	var note := " - paused. Send it to go" if pausing else ""
+	_banner("Lane %s: wave %s%s" % [lane_key, "ready" if waits else "departed", note])
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -204,7 +213,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_R:
 				_order(SkirmishUnit.Order.RETREAT)
 			KEY_TAB:
-				_cycle_selection()
+				$Squads.cycle_selection("player")
 			KEY_1, KEY_2, KEY_3, KEY_E:
 				_choose_brush({KEY_1: 0, KEY_2: 1, KEY_3: 2, KEY_E: 3}[event.keycode])
 	elif (
@@ -228,6 +237,7 @@ func _connect_hud() -> void:
 	_hud.cell_erased.connect(func(key, cell): _paint_cell(key, cell, true))
 	_hud.send_wave_pressed.connect(send_wave)
 	_hud.auto_departure_toggled.connect(func(key, on): _battle.lane(key).set_auto_departure(on))
+	_hud.auto_merge_toggled.connect(func(key, on): _battle.lane(key).production.auto_merge = on)
 	_hud.spawn_kingdom_pressed.connect(
 		func(key): _battle.lane(key).spawn_kingdom_line(MILITIA, KINGDOM_LINE)
 	)
@@ -253,16 +263,6 @@ func _order(new_order: int) -> void:
 	var selected: Array = $Squads.selected
 	if not selected.is_empty():
 		simulation(selected[0]).order(selected[1], new_order)
-
-
-func _cycle_selection() -> void:
-	var options := []
-	for key in lane_keys():
-		for squad in simulation(key).squads():
-			if squad.faction_id == "player" and not squad.is_destroyed():
-				options.append([key, squad.id])
-	var at := options.find($Squads.selected)
-	$Squads.selected = [] if options.is_empty() else options[(at + 1) % options.size()]
 
 
 func _refresh_hud() -> void:

@@ -5,7 +5,9 @@ extends RefCounted
 ## (fill, front-first); a new template takes effect at once - filled units fold into
 ## matching places (same unit type, front-first) and the rest are handed back for the
 ## domain reserve. "wave_full" is emitted once when every place is filled; the wave
-## departs as one squad, manually (send()) or automatically. Never pauses itself.
+## departs as one squad, manually (send()) or automatically. Never pauses itself. With
+## auto_merge, the squads it sends merge into friendly squads they catch up with (Decision
+## 51).
 
 enum Departure { MANUAL, AUTO_WHEN_FULL }
 
@@ -17,6 +19,7 @@ const UnitDef = preload("res://content/definitions/unit_def.gd")
 var faction_id: String
 var at_player_end: bool
 var departure: Departure = Departure.MANUAL
+var auto_merge := false
 
 var _template := WaveTemplate.new(1, 0)
 var _filled := []  # one bool per _template.ordered() place
@@ -94,6 +97,7 @@ func send(sim: FormationSimulation) -> SkirmishSquad:
 		if _filled[index]:
 			placements.append(layout[1][index])
 	var squad := sim.spawn_squad(layout[0], placements, faction_id, at_player_end)
+	squad.merges = auto_merge
 	_filled.fill(false)
 	_announced = false
 	return squad

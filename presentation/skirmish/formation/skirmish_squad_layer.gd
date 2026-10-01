@@ -75,6 +75,17 @@ func squad_at(point: Vector2) -> Array:
 	return []
 
 
+## Selects the next of a faction's squads across the lanes (Tab); none if it has none.
+func cycle_selection(faction_id: String) -> void:
+	var options := []
+	for lane_key in _lanes:
+		for squad in _lanes[lane_key]["sim"].squads():
+			if squad.faction_id == faction_id and not squad.is_destroyed():
+				options.append([lane_key, squad.id])
+	var at := options.find(selected)
+	selected = [] if options.is_empty() else options[(at + 1) % options.size()]
+
+
 func _process(delta: float) -> void:
 	for unit_key in _flashes.keys():
 		_flashes[unit_key] -= delta

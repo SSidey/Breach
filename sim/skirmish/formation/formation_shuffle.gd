@@ -3,7 +3,9 @@ extends RefCounted
 ## Re-forming (Decisions 46 and 49, specs/22-formation-feel-test.md): after a reinforcement
 ## or a death, units move toward the places their band prefers.
 ## - **Into free space first.** A front-preferring unit behind the front takes the nearest
-##   free place in the front rank, moving sideways or diagonally if need be.
+##   free place in the front rank, moving sideways or diagonally if need be. In a fight, a
+##   unit that joined as a reinforcement may take one beyond the squad's columns, widening
+##   the line up to the combat width (Decision 51).
 ## - **Otherwise through.** A unit with a stronger claim (its band further forward, or the
 ##   same band and a higher priority) moves forward a rank past the units directly ahead in
 ##   its columns. Passed units that fit take its back row; any too wide or too deep move
@@ -52,10 +54,15 @@ static func step(
 			unit.rank = swap["to"][unit].x
 			unit.column = swap["to"][unit].y
 		squad.swaps.remove_at(index)
+		_widen_to_fit(squad)
 		var ids: Array = swap["passed"].map(func(u): return u.id)
 		events.append(
 			FormationEvents.unit_event("swapped", tick, squad, swap["mover"], {"passed": ids})
 		)
+		for moved in squad.compact():  # close the gaps the move left
+			events.append(
+				FormationEvents.unit_event("stepped_up", tick, squad, moved, {"rank": moved.rank})
+			)
 	if squad.reforming and not _start_moves(squad, tick_seconds, travel_scale):
 		squad.reforming = not squad.swaps.is_empty()
 	return events
@@ -116,14 +123,64 @@ static func _into_free_front(
 	if unit.preferred_position != 0:
 		return {}
 	var best := {}
-	for column in range(squad.width - unit.footprint_width + 1):
+	var spreading := (
+		squad.state == SkirmishSquad.State.FIGHTING
+		and squad.joined.has(unit)
+		and squad.combat_width > 0
+	)
+	var reach := squad.combat_width if spreading else unit.footprint_width
+	for column in range(-reach, squad.width + reach - unit.footprint_width + 1):
 		var place := Vector2i(0, column)
+		var inside := column >= 0 and column + unit.footprint_width <= squad.width
+		if not inside and not _within_combat_width(squad, column, unit, claimed):
+			continue
 		if not _free(squad, place, unit, [unit], claimed):
 			continue
 		var distance := maxi(unit.rank, absi(column - unit.column))
 		if best.is_empty() or distance < best["distance"]:
 			best = {"mover": unit, "passed": [], "to": {unit: place}, "distance": distance}
 	return best
+
+
+## True if `unit` at `column` keeps the line, planned moves included, within the combat
+## width, and no more than half a column past either edge of the lane (Decision 51).
+static func _within_combat_width(
+	squad: SkirmishSquad, column: int, unit: SkirmishUnit, claimed: Dictionary
+) -> bool:
+	if squad.combat_width <= 0:
+		return false
+	var left := mini(0, column)
+	var right := maxi(squad.width, column + unit.footprint_width)
+	for cell in claimed:
+		left = mini(left, cell.y)
+		right = maxi(right, cell.y + 1)
+	var edge := squad.combat_width / 2.0 + 0.5
+	var lateral := column - squad.width / 2.0 + squad.centre_shift
+	return (
+		right - left <= squad.combat_width
+		and lateral >= -edge - EPSILON
+		and lateral + unit.footprint_width <= edge + EPSILON
+	)
+
+
+## Takes in any columns units now stand in outside 0..width (a spread, Decision 51):
+## renumbers every column, swaps under way included, and shifts the centre to match.
+static func _widen_to_fit(squad: SkirmishSquad) -> void:
+	var left := 0
+	var right := squad.width
+	for unit in squad.living():
+		left = mini(left, unit.column)
+		right = maxi(right, unit.column + unit.footprint_width)
+	if left == 0 and right == squad.width:
+		return
+	squad.centre_shift += left + (right - left - squad.width) / 2.0
+	for unit in squad.units:
+		unit.column -= left
+	for swap in squad.swaps:
+		for key in ["from", "to"]:
+			for unit in swap[key]:
+				swap[key][unit] -= Vector2i(0, left)
+	squad.width = right - left
 
 
 ## Moving forward a rank past weaker units ahead; {} if it can't (Decision 49).

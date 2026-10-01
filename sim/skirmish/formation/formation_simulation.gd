@@ -10,7 +10,8 @@ extends RefCounted
 ##   3. move    - free squads move as a block at their slowest unit's speed (one with no
 ##                front units holds once an enemy is in its ranged reach), stopping at
 ##                contact or behind a friendly squad; one that reaches a friendly squad
-##                in combat joins it from the back (Decision 44); reaching the enemy end
+##                in combat joins it from the back (Decision 44), as does one that merges
+##                into a friendly squad on the march (Decision 51); reaching the enemy end
 ##                is arrival (the fort is immune)
 ##   4. combat  - each squad's front-rank fighters strike: the enemy fighter they overlap
 ##                laterally, or - past the end of a narrower enemy line - the nearest end
@@ -19,8 +20,9 @@ extends RefCounted
 ##                nearest enemy in range from anywhere in their squad (Decision 46)
 ##   5. deaths  - the fallen die, the ranks behind step up, and a squad with no one left
 ##                is destroyed, freeing whoever fought it
-##   6. re-form - a reinforced squad's units swap toward their preferred places
-##                (FormationShuffle, Decision 46)
+##   6. re-form - a reinforced squad's units swap toward their preferred places, and in a
+##                fight its joined units spread across the combat width (FormationShuffle,
+##                Decisions 46 and 51)
 ## Timing constants match the spec 21 SkirmishSimulation, so a 1v1 plays out the same.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -39,6 +41,9 @@ const EPSILON := 0.000001
 
 var route_length: float
 var tick_seconds: float
+## The lane's width, which squads spawned from now on may spread to (Decision 51); 0 keeps
+## each squad within its own columns.
+var combat_width := 0
 
 var _squads: Array[SkirmishSquad] = []
 var _next_squad_id := 1
@@ -67,6 +72,7 @@ func spawn_squad(
 	var squad := SkirmishSquad.new(_next_squad_id, faction_id, direction, home, width, members)
 	_next_squad_id += 1
 	squad.wait_ticks = wait_ticks
+	squad.combat_width = combat_width
 	_squads.append(squad)
 	_sync_unit_distances()
 	return squad
@@ -140,6 +146,8 @@ func _engage(events: Array) -> void:
 func _lock(squad_entry: SkirmishSquad, foe: SkirmishSquad) -> void:
 	squad_entry.engaged_with = foe.id
 	squad_entry.state = SkirmishSquad.State.FIGHTING
+	if not squad_entry.joined.is_empty():
+		squad_entry.reforming = true  # units merged on the march may now spread
 	for unit in squad_entry.living():
 		unit.attack_cooldown = 1  # the first blows land this tick
 
@@ -173,9 +181,11 @@ func _move(events: Array) -> void:
 		_join(pair[0], pair[1], events)
 
 
-## A wave reaching a friendly squad in combat becomes its rear ranks (Decision 44).
+## A wave reaching a friendly squad in combat becomes its rear ranks (Decision 44); one
+## merging on the march does the same (Decision 51).
 func _join(leader: SkirmishSquad, joining: SkirmishSquad, events: Array) -> void:
-	events.append(FormationEvents.squad_event("reinforced", _tick, joining, {"into": leader.id}))
+	var kind := "reinforced" if leader.state == SkirmishSquad.State.FIGHTING else "merged"
+	events.append(FormationEvents.squad_event(kind, _tick, joining, {"into": leader.id}))
 	for moved in FormationContact.reinforce(leader, joining):
 		events.append(
 			FormationEvents.unit_event("stepped_up", _tick, leader, moved, {"rank": moved.rank})

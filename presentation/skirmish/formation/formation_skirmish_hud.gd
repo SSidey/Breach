@@ -20,6 +20,7 @@ signal cell_painted(lane_key: String, cell: Vector2i)
 signal cell_erased(lane_key: String, cell: Vector2i)
 signal send_wave_pressed(lane_key: String)
 signal auto_departure_toggled(lane_key: String, enabled: bool)
+signal auto_merge_toggled(lane_key: String, enabled: bool)
 signal spawn_kingdom_pressed(lane_key: String)
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -155,6 +156,7 @@ func _build_domain(box: VBoxContainer, lane_keys: Array, builder_names: Array) -
 	for lane_key in lane_keys:
 		picker.add_item("%s first" % lane_key)
 	picker.add_item("Round robin")
+	picker.select(lane_keys.size())  # round robin by default (Decision 51)
 	picker.item_selected.connect(func(index): distribution_chosen.emit(index))
 	share_row.add_child(picker)
 
@@ -190,7 +192,8 @@ func _build_lane(box: VBoxContainer, lane_key: String) -> void:
 	_button(preset_row, "Apply", func(): _apply_chosen(lane_key))
 	_button(preset_row, "Save shape", func(): preset_saved.emit(lane_key))
 	_button(side, "Send wave", func(): send_wave_pressed.emit(lane_key))
-	_toggle(side, "Auto depart", false, func(on): auto_departure_toggled.emit(lane_key, on))
+	_toggle(side, "Auto depart", true, func(on): auto_departure_toggled.emit(lane_key, on))
+	_toggle(side, "Auto merge", false, func(on): auto_merge_toggled.emit(lane_key, on))
 	_lanes[lane_key] = {"label": label, "painter": painter, "presets": presets}
 
 
