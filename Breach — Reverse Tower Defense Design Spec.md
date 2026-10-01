@@ -2233,3 +2233,43 @@ brute to lead. The user's direction:
   offered as a preset.
 - The scene keeps the pool's per-lane figures equal to what each lane has painted. A
   lane may paint up to its own cells plus whatever is free.
+
+### Decision 44 — Reinforcements join a fight from the back, and build progress is never thrown away
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** From playing the wave painter (Decisions 42 and 43):
+- **A wave reaching a fight reinforces it from the back.** A squad never passes through
+  its own side.
+  - A wave that catches up with a friendly squad in combat stops at that squad's back
+    rank and joins it as rear ranks. Its units step up as the front falls, as the
+    squad's own ranks do.
+  - Before this, a second wave walked through the first and fought beside it at the
+    front.
+  - A wave that catches up with a friendly squad that isn't fighting (holding or slower)
+    queues behind it.
+  - If the reinforcement is wider, both lines centre on the wider width. Its outer
+    columns then have no one ahead of them, so they step up beside the line and extend
+    it.
+- **Partial build progress is kept.** Progress on a partly built unit is kept per unit
+  type. It survives a partial send (it carries on into the next wave) and a template
+  edit that makes something else build first (it resumes when that type's turn comes
+  back). Before this, both reset the unit underway.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Reinforcements fight beside the front line | Not what a column arriving from behind can do; the user wants it to reinforce from the back. |
+| Reinforcements join a friendly squad that isn't fighting | Two waves on the march would silently become one, which removes the player's choice to keep them separate. |
+| Reset progress on send or reshape | Throws away work and punishes reacting to the fight. |
+
+**Consequences:**
+- A new `FormationContact` holds the contact rules between squads: who can fight, where
+  an advancing squad stops (at reach of a hostile front, or behind a friendly back rank),
+  and joining.
+- `FormationSimulation` emits `reinforced` (with `into`) when a wave joins, and the
+  joining squad leaves the lane's squad list.
+- `FormationProduction` keeps partial build ticks per unit type.
+
