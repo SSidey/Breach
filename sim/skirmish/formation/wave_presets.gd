@@ -9,6 +9,9 @@ extends RefCounted
 const WaveTemplate = preload("res://sim/skirmish/formation/wave_template.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
+## Presets saved before units had kind names (Decision 43) used these.
+const LEGACY_KINDS := {"light": "grem", "heavy": "brute"}
+
 
 ## A lane's starting wave: `count` units of one kind, as wide as allowed, then deeper.
 static func line(unit_def: UnitDef, count: int, width: int) -> WaveTemplate:
@@ -19,21 +22,26 @@ static func line(unit_def: UnitDef, count: int, width: int) -> WaveTemplate:
 
 
 ## {"name", "units": [{"kind", "rank", "column"}]} - plain data, safe to store as JSON.
-## Units other than `light` are stored as heavy.
-static func to_dict(template: WaveTemplate, preset_name: String, light: UnitDef) -> Dictionary:
+## kinds: {kind name: UnitDef}, e.g. {"grem": ..., "brute": ..., "spitter": ...}.
+static func to_dict(template: WaveTemplate, preset_name: String, kinds: Dictionary) -> Dictionary:
 	var units := []
 	for placement in template.ordered():
-		var kind := "light" if placement[0] == light else "heavy"
-		units.append({"kind": kind, "rank": placement[1].x, "column": placement[1].y})
+		var kind = kinds.find_key(placement[0])
+		if kind != null:
+			units.append({"kind": kind, "rank": placement[1].x, "column": placement[1].y})
 	return {"name": preset_name, "units": units}
 
 
-## Builds the preset for a lane `width` wide with `allowance` slots, front-first.
+## Builds the preset for a lane `width` wide with `allowance` slots, front-first. Kinds it
+## doesn't know are skipped.
 static func from_dict(
-	preset: Dictionary, light: UnitDef, heavy: UnitDef, width: int, allowance: int
+	preset: Dictionary, kinds: Dictionary, width: int, allowance: int
 ) -> WaveTemplate:
 	var template := WaveTemplate.new(width, allowance)
 	for unit in preset.get("units", []):
-		var unit_def := heavy if unit.get("kind") == "heavy" else light
-		template.paint(unit_def, Vector2i(int(unit.get("rank", 0)), int(unit.get("column", 0))))
+		var kind: String = LEGACY_KINDS.get(unit.get("kind"), unit.get("kind", ""))
+		if kinds.has(kind):
+			template.paint(
+				kinds[kind], Vector2i(int(unit.get("rank", 0)), int(unit.get("column", 0)))
+			)
 	return template

@@ -2,7 +2,7 @@ class_name FormationSkirmishHud
 extends CanvasLayer
 ## Controls and readouts for the formation feel test (specs/22-formation-feel-test.md):
 ## time, the shared slot pool and domain reserve, the domain's builders and how their units
-## are shared out (Decision 45), one brush for every lane (hotkeys 1 / 2 / E), each lane's
+## are shared out (Decision 45), one brush for every lane (hotkeys 1 / 2 / 3 / E), each lane's
 ## wave painter with its saved presets, send and auto departure (Decision 43), the kingdom,
 ## orders for the selected squad, and a log. Builds its widgets in code, only emits signals.
 
@@ -30,7 +30,7 @@ const LOG_LINES := 9
 const BANNER_SECONDS := 3.0
 ## Brush choices, in order, with their hotkeys (the scene maps them to unit types; the last
 ## erases).
-const BRUSHES := ["Grem [1]", "Brute [2]", "Erase [E]"]
+const BRUSHES := ["Grem [1]", "Brute [2]", "Spitter [3]", "Erase [E]"]
 
 var _status: Label
 var _pool: Label

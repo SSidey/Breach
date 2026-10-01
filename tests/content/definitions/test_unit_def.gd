@@ -60,3 +60,21 @@ func test_a_unit_takes_a_positive_time_to_build() -> void:
 		assert_bool(Array(errors).any(func(message): return message.contains("build_seconds")))
 		. is_true()
 	)
+
+
+func test_a_unit_prefers_the_front_by_default_and_fights_in_melee() -> void:
+	var unit := UnitDef.new()
+
+	assert_int(unit.preferred_position).is_equal(UnitDef.Position.FRONT)
+	assert_int(unit.attack_range).is_equal(0)
+
+
+func test_negative_priority_and_range_are_invalid() -> void:
+	var unit := UnitDef.new()
+	unit.position_priority = -1
+	unit.attack_range = -2
+
+	var errors := Array(unit.validate())
+
+	assert_bool(errors.any(func(message): return message.contains("position_priority"))).is_true()
+	assert_bool(errors.any(func(message): return message.contains("attack_range"))).is_true()

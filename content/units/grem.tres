@@ -9,3 +9,4 @@ hp = 20
 dmg = 6
 speed = 1.0
 build_seconds = 2.0
+position_priority = 1

@@ -27,6 +27,7 @@ const FormationSkirmishReadout = preload(
 const MAP := preload("res://content/maps/skirmish_two_lanes.tres")
 const GREM := preload("res://content/units/grem.tres")
 const BRUTE := preload("res://content/units/grem_brute.tres")
+const SPITTER := preload("res://content/units/grem_spitter.tres")
 const MILITIA := preload("res://content/units/kingdom_militia.tres")
 
 const POOL_TOTAL := 8
@@ -34,12 +35,14 @@ const POOL_TOTAL := 8
 const LANE_WIDTHS := {"c": 5, "k": 4}
 const START_SLOTS := {"c": 5, "k": 3}
 const KINGDOM_LINE := 3
-## Brushes in HUD order (hotkeys 1, 2, E); null erases.
-const BRUSHES := [GREM, BRUTE, null]
+## Brushes in HUD order (hotkeys 1, 2, 3, E); null erases.
+const BRUSHES := [GREM, BRUTE, SPITTER, null]
 ## The builder types in HUD order, their names and starting counts (Decision 45).
-const BUILDER_TYPES := [GREM, BRUTE]
-const BUILDER_NAMES := ["Grem", "Brute"]
-const START_BUILDERS := [2, 1]
+const BUILDER_TYPES := [GREM, BRUTE, SPITTER]
+const BUILDER_NAMES := ["Grem", "Brute", "Spitter"]
+const START_BUILDERS := [2, 1, 1]
+## Unit kinds by name, for saved presets.
+const KINDS := {"grem": GREM, "brute": BRUTE, "spitter": SPITTER}
 
 ## Decision 39: a full wave pauses the game (true) or only notifies (false).
 var pause_on_wave_full := true
@@ -126,6 +129,8 @@ func handle_events(lane_key: String, events: Array) -> void:
 				if event["flank"]:
 					$Squads.flash(lane_key, event["target"])
 					_log(lane_key, event, "flank hit on #%d (%d)" % [event["target"], event["dmg"]])
+			"spat":
+				$Squads.spit(lane_key, event["unit"], event["target"])
 			"engaged", "destroyed", "stepped_up", "arrived", "departed", "returned", "reinforced":
 				_log(lane_key, event, event["type"].replace("_", " "))
 
@@ -146,7 +151,7 @@ func _paint_cell(lane_key: String, cell: Vector2i, erase: bool = false) -> void:
 
 func _save_preset(lane_key: String) -> void:
 	var preset_name := "Preset %d" % (_presets.size() + 1)
-	_presets.append(WavePresets.to_dict(_battle.lane(lane_key).template, preset_name, GREM))
+	_presets.append(WavePresets.to_dict(_battle.lane(lane_key).template, preset_name, KINDS))
 	WavePresetStore.save_presets(presets_path, _presets)
 	if _hud != null:
 		_hud.set_tools(_brush, WavePresetStore.names(_presets))
@@ -156,9 +161,7 @@ func _save_preset(lane_key: String) -> void:
 ## Applies a saved preset, fitted to the lane's width and the slots it can reach.
 func _apply_preset(lane_key: String, index: int) -> void:
 	var allowance := _battle.allowance(lane_key)
-	var fitted := WavePresets.from_dict(
-		_presets[index], GREM, BRUTE, LANE_WIDTHS[lane_key], allowance
-	)
+	var fitted := WavePresets.from_dict(_presets[index], KINDS, LANE_WIDTHS[lane_key], allowance)
 	_log_banked(lane_key, _battle.apply(lane_key, fitted))
 
 
@@ -180,12 +183,11 @@ func _choose_distribution(index: int) -> void:
 
 
 func _on_wave_full(lane_key: String) -> void:
-	if pause_on_wave_full and not _clock.is_paused():
+	var pausing := pause_on_wave_full and not _clock.is_paused()
+	if pausing:
 		_clock.pause()
 		_paused_for_wave = true
-		_banner("Lane %s: wave ready - paused. Send it to go" % lane_key)
-	else:
-		_banner("Lane %s: wave ready" % lane_key)
+	_banner("Lane %s: wave ready%s" % [lane_key, " - paused. Send it to go" if pausing else ""])
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -203,8 +205,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_order(SkirmishUnit.Order.RETREAT)
 			KEY_TAB:
 				_cycle_selection()
-			KEY_1, KEY_2, KEY_E:
-				_choose_brush({KEY_1: 0, KEY_2: 1, KEY_E: 2}[event.keycode])
+			KEY_1, KEY_2, KEY_3, KEY_E:
+				_choose_brush({KEY_1: 0, KEY_2: 1, KEY_3: 2, KEY_E: 3}[event.keycode])
 	elif (
 		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
 	):

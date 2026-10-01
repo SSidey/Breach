@@ -6,6 +6,11 @@ extends RefCounted
 ## A fighter strikes the enemy fighter it overlaps most laterally (a frontal attack). With
 ## no overlap - it stands past the end of a narrower enemy line - it wraps onto the nearest
 ## enemy end fighter instead, as a flank attack worth FLANK_BONUS.
+##
+## Ranged units (Decision 46) strike from anywhere in their squad, moving or fighting: the
+## nearest enemy unit within attack_range ranks, preferring one they overlap laterally,
+## with no flank bonus. A ranged unit in the front rank of an engaged squad fights in
+## melee instead.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -38,5 +43,54 @@ static func pick_target(
 	return [] if nearest == null else [nearest, true]
 
 
+## This tick's ranged strikes: [[shooter, target, damage, shooter's squad], ...]. Updates
+## each shooter's target and cooldown, like melee fighters.
+static func ranged_blows(squads: Array, interval_ticks: int) -> Array:
+	var blows := []
+	for own in squads:
+		if own.is_destroyed() or own.state == SkirmishSquad.State.ARRIVED:
+			continue
+		var melee: Array = own.fighters() if own.state == SkirmishSquad.State.FIGHTING else []
+		for shooter in own.living():
+			if shooter.attack_range <= 0 or melee.has(shooter):
+				continue
+			var target := _in_range(own, shooter, squads)
+			if target == null:
+				continue
+			shooter.target_id = target.id
+			shooter.attack_cooldown -= 1
+			if shooter.attack_cooldown <= 0:
+				shooter.attack_cooldown = interval_ticks
+				blows.append([shooter, target, shooter.dmg, own])
+	return blows
+
+
 static func damage(fighter: SkirmishUnit, is_flank: bool) -> int:
 	return roundi(fighter.dmg * (FLANK_BONUS if is_flank else 1.0))
+
+
+## The nearest enemy unit within the shooter's range (ties: one it overlaps laterally).
+static func _in_range(own: SkirmishSquad, shooter: SkirmishUnit, squads: Array) -> SkirmishUnit:
+	var reach := shooter.attack_range * SkirmishSquad.RANK_DEPTH + EPSILON
+	var here := own.unit_distance(shooter)
+	var span := own.lateral_span(shooter)
+	var best: SkirmishUnit = null
+	var best_key := Vector2(INF, INF)
+	for other in squads:
+		if (
+			other.faction_id == own.faction_id
+			or other.is_destroyed()
+			or other.state == SkirmishSquad.State.ARRIVED
+		):
+			continue
+		for unit in other.living():
+			var gap: float = absf(other.unit_distance(unit) - here)
+			var target_span: Vector2 = other.lateral_span(unit)
+			var overlap := minf(span.y, target_span.y) - maxf(span.x, target_span.x)
+			var key := Vector2(gap, 0.0 if overlap > EPSILON else 1.0)
+			var nearer := key.x < best_key.x - EPSILON
+			var level := absf(key.x - best_key.x) <= EPSILON and key.y < best_key.y
+			if gap <= reach and (nearer or level):
+				best = unit
+				best_key = key
+	return best

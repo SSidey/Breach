@@ -39,6 +39,10 @@ var column: int = 0
 ## Slots it occupies, depth (ranks) x width (columns) - Decision 40.
 var footprint_depth: int = 1
 var footprint_width: int = 1
+## UnitDef.Position band and claim within it, and reach in ranks (0 = melee) - Decision 46.
+var preferred_position: int = 0
+var position_priority: int = 0
+var attack_range: int = 0
 
 
 func is_alive() -> bool:

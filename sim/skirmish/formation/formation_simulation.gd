@@ -14,9 +14,12 @@ extends RefCounted
 ##   4. combat  - each squad's front-rank fighters strike: the enemy fighter they overlap
 ##                laterally, or - past the end of a narrower enemy line - the nearest end
 ##                fighter as a flank attack (x FLANK_BONUS). A unit struck by several foes
-##                takes every blow but strikes back at only one.
+##                takes every blow but strikes back at only one. Ranged units strike the
+##                nearest enemy in range from anywhere in their squad (Decision 46)
 ##   5. deaths  - the fallen die, the ranks behind step up, and a squad with no one left
 ##                is destroyed, freeing whoever fought it
+##   6. re-form - a reinforced squad's units swap toward their preferred places
+##                (FormationShuffle, Decision 46)
 ## Timing constants match the spec 21 SkirmishSimulation, so a 1v1 plays out the same.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -25,6 +28,7 @@ const UnitDef = preload("res://content/definitions/unit_def.gd")
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationContact = preload("res://sim/skirmish/formation/formation_contact.gd")
+const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle.gd")
 
 const MELEE_REACH := FormationContact.MELEE_REACH
 const ATTACK_INTERVAL_SECONDS := 1.0
@@ -91,6 +95,8 @@ func step() -> Array:
 	_move(events)
 	_fight(events)
 	_bury(events)
+	for entry in _squads:
+		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
 	_sync_unit_distances()
 	return events
 
@@ -106,6 +112,9 @@ func _unit(unit_def: UnitDef, place: Vector2i, faction_id: String, direction: in
 	unit.speed = unit_def.speed
 	unit.footprint_depth = unit_def.footprint_depth
 	unit.footprint_width = unit_def.footprint_width
+	unit.preferred_position = unit_def.preferred_position
+	unit.position_priority = unit_def.position_priority
+	unit.attack_range = unit_def.attack_range
 	unit.rank = place.x
 	unit.column = place.y
 	unit.advance_direction = direction
@@ -187,6 +196,7 @@ func _join(leader: SkirmishSquad, joining: SkirmishSquad, events: Array) -> void
 			FormationEvents.unit_event("stepped_up", _tick, leader, moved, {"rank": moved.rank})
 		)
 	_squads.erase(joining)
+	leader.reforming = true
 
 
 func _fight(events: Array) -> void:
@@ -211,6 +221,11 @@ func _fight(events: Array) -> void:
 				fighter.attack_cooldown = _attack_interval_ticks()
 				var damage := FormationCombat.damage(fighter, pick[1])
 				blows.append([fighter, pick[0], damage, pick[1]])
+	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks())
+	for shot in shots:
+		shot[1].hp -= shot[2]
+		var spat := {"target": shot[1].id, "dmg": shot[2]}
+		events.append(FormationEvents.unit_event("spat", _tick, shot[3], shot[0], spat))
 	for blow in blows:
 		blow[1].hp -= blow[2]
 		events.append(FormationEvents.hit(_tick, blow))
@@ -269,11 +284,13 @@ func _check_ends(mover: SkirmishSquad, events: Array) -> void:
 		events.append(FormationEvents.squad_event("returned", _tick, mover))
 
 
-## Units mirror their squad's placement so views can read unit.distance.
+## Units mirror their squad's placement - including any swap under way - so views can
+## read unit.distance.
 func _sync_unit_distances() -> void:
 	for entry in _squads:
 		for unit in entry.units:
-			unit.distance = entry.unit_distance(unit)
+			var swapping := FormationShuffle.offset(entry, unit) * SkirmishSquad.RANK_DEPTH
+			unit.distance = entry.unit_distance(unit) + entry.direction * swapping
 
 
 func _attack_interval_ticks() -> int:

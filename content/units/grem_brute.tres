@@ -11,3 +11,4 @@ speed = 0.7
 footprint_depth = 2
 footprint_width = 2
 build_seconds = 4.0
+position_priority = 2

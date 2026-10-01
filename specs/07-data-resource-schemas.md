@@ -26,6 +26,8 @@ these shapes, so they need to exist and be validated first.
   - `footprint_depth` / `footprint_width` (1..8, default 1), from Decision 40
   - `build_seconds` (> 0, default 1), the time one domain builder takes, from
     Decision 45
+  - `preferred_position` (FRONT / MID / BACK, default FRONT), `position_priority`
+    (>= 0) and `attack_range` in ranks (>= 0; 0 is melee), from Decision 46
 - `NodeDef` (`content/definitions/node_def.gd`) — `node_type: NodeType` (enum:
   `ORIGIN`, `RESOURCE`, `FORT`), `garrison: int`, and resource-node-only fields
   (`yield_food_per_tick: int`, `decay_interval_ticks: int`, `decay_floor_food: int`) that
