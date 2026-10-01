@@ -2547,3 +2547,67 @@ through (past each other) until they reach unoccupied space".
 - Detection could be fooled by a stray remote branch sitting on HEAD's history, so CI
   never relies on it; locally, an explicit argument always wins.
 
+
+### Decision 51 — Lanes depart automatically and share in turn by default; reinforcements spread across the combat width; waves can merge on the march
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** From playing round 5c of the formation feel test:
+- **Defaults.** The user: "Autodepart feels like the best default" and "Round robin feels
+  like the best default". The player's lanes start on automatic departure, and the
+  domain starts sharing units round robin. Both remain player settings (Decisions 39
+  and 45).
+  - "Pause when a wave is full" now pauses only for a lane that waits for Send. A lane
+    that departs on its own just announces the departure.
+- **Reinforcements spread across the combat width.** The user: two 2×2 grem waves
+  meeting in a fight make "a clump of 4 deep × 2 grems". They asked whether the
+  newcomers should "move up to reach the first column and be in melee" when the
+  combat width has space left.
+  - The **combat width** is the lane's width (at most 8, Decision 41).
+  - A front-preferring unit that joined a fight as a reinforcement may take a free
+    front place outside the squad's current columns, sideways or diagonally. The line
+    widens, but its span never exceeds the combat width, and it stays on the lane: it
+    may overhang the lane's edge by at most half a column, which an odd line on an even
+    lane needs.
+  - The front rank already in place doesn't move. The moves take time like any other
+    re-forming move (Decision 49).
+  - **Only a reinforcement starts a spread.** A wave on its own keeps its painted shape,
+    so wide versus deep stays the player's choice (playtest 1's verdict). Once a
+    reinforced line is wider, any front-preferring unit behind it may fill its gaps
+    (Decision 49).
+  - On lane c (5 wide), the two 2×2 waves become a front of 5 with 3 grems behind. On an
+    8-wide lane, all eight grems reach the front. The outer grems strike a narrower enemy
+    line from the flank.
+- **Merging on the march is a player setting.** The user suggested "a setting for
+  automerge". Each lane gets an **Auto merge** toggle, **off by default**.
+  - With it on, a wave that catches up with a friendly squad that isn't fighting
+    (moving more slowly, or holding) merges into it, as it would join a fight
+    (Decision 44): it becomes the squad's rear ranks and follows that squad's orders.
+    Once that squad fights, the merged units spread as reinforcements do.
+  - With it off, a wave queues behind, as before. A squad that is retreating is never
+    merged into.
+  - Waves that meet in a fight already become one squad (Decision 44). Spreading is
+    what turns them into one line rather than a stack.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Any squad spreads in a fight | A deep painted wave would flatten on contact, removing the wide-or-deep choice the user valued. |
+| Spread past the lane's width | The combat width is the lane's; Decision 41 caps it at 8. |
+| Merge on the march by default | Decision 44 rejected silent merging because it takes away the player's choice; as a setting the player opts in. |
+| Keep manual departure and priority sharing as defaults | The user prefers automatic departure and round robin. |
+
+**Consequences:**
+- `FormationSimulation` and its squads carry the lane's combat width. A squad tracks
+  which units joined it, and a lateral centre shift, so that widening on one side moves
+  no one on screen.
+- `FormationShuffle` widens the squad when a move into a new column completes.
+- `FormationContact.joinable` also accepts a non-fighting friendly squad when the
+  arriving wave merges; the simulation emits `merged` rather than `reinforced` then.
+- `FormationProduction` gains `auto_merge`, which marks the squads it sends.
+- The defaults are the feel-test scene's set-up: it starts each lane on automatic
+  departure, with the lane's width as its combat width, and the domain on round robin.
+  `FormationLane` and `FormationBattle` keep their neutral defaults (manual, priority,
+  no spreading) for other callers.

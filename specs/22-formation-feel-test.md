@@ -300,6 +300,47 @@ line:
    forward).
 3. The militia advanced to them, and they fought with claws and bites.
 
+## Round 6: defaults, spreading and merging (Decision 51)
+
+From playing round 5c:
+- **Defaults:** the player's lanes depart automatically, and the domain shares units round
+  robin. "Pause when a wave is full" pauses only for a lane that waits for Send.
+- **Reinforcements spread across the combat width** (the lane's width).
+  - In a fight, a front-preferring unit that joined as a reinforcement may take a free
+    front place outside the squad's columns. The line widens up to the combat width,
+    overhanging the lane by at most half a column.
+  - The squad's lateral centre shifts as it widens, so units already in place don't move
+    on screen. Once the line is wider, any front-preferring unit behind may fill its gaps.
+  - A wave on its own never spreads, so wide versus deep is still the player's choice.
+- **Auto merge**, a per-lane toggle that is off by default. A wave catching up with a
+  friendly squad that isn't fighting merges into it as rear ranks (`merged`), rather
+  than queueing behind it. A retreating squad is never merged into.
+
+```
+Scenario: Reinforcements spread into free combat width
+  Given a 2x2 grem wave fighting a militia line on a 5-wide lane
+  When a second 2x2 grem wave joins it
+  Then grems move into the front beside the line until it is 5 wide
+  And the first wave's front rank stays where it is
+
+Scenario: A painted deep wave stays deep
+  Given a 1-wide, 3-deep grem wave fighting on a 5-wide lane
+  Then it stays 1 wide
+
+Scenario: Auto merge joins a wave on the march
+  Given a holding grem squad, and auto merge on for the wave behind it
+  When that wave reaches its back rank
+  Then it merges into the holding squad, which then has both waves' units
+  And with auto merge off it queues behind instead
+```
+
+A scripted run of the user's example: a 2×2 grem wave and a second 2×2 sent just behind
+it, against the kingdom's 3-militia line:
+1. On lane c (5 wide), the second wave joined as the fight began and spread over about
+   1.2 s. The front was 5 grems, with 3 behind (ranks 1, 1, 2).
+2. On an 8-wide lane, all 8 grems reached the front, and the outer ones flanked the
+   militia.
+
 ## Notes / open questions
 
 - Orders are per wave. Pulling back a single unit is left out for now.
