@@ -1,12 +1,14 @@
-[gd_resource type="Resource" script_class="UnitDef" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitDef" format=3]
 
 [ext_resource type="Script" path="res://content/definitions/unit_def.gd" id="1_unit"]
+[ext_resource type="Script" path="res://content/definitions/weapon_def.gd" id="2_ary88"]
+[ext_resource type="Resource" path="res://content/weapons/militia_spear.tres" id="3_5ht27"]
 
 [resource]
 script = ExtResource("1_unit")
-cost_food = 0
 hp = 26
 dmg = 5
 speed = 0.8
 build_seconds = 5.0
 position_priority = 1
+weapons = Array[ExtResource("2_ary88")]([ExtResource("3_5ht27")])

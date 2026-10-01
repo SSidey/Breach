@@ -142,3 +142,18 @@ func test_the_sharing_picker_sets_lane_priority_or_round_robin() -> void:
 	scene._choose_distribution(2)  # "Round robin"
 
 	assert_int(domain.distribution).is_equal(domain.Distribution.ROUND_ROBIN)
+
+
+# --- Decision 48: small units, so the camera zooms and pans ------------------------
+
+
+func test_the_camera_zooms_toward_a_point_within_limits() -> void:
+	var scene := _scene()
+	var camera = scene.get_node("Camera")
+
+	camera.zoom_by(1000.0, Vector2.ZERO)
+	var closest: float = camera.zoom.x
+	camera.zoom_by(0.0001, Vector2.ZERO)
+
+	assert_float(closest).is_equal_approx(camera.MAX_ZOOM, 0.0001)
+	assert_float(camera.zoom.x).is_equal_approx(camera.MIN_ZOOM, 0.0001)

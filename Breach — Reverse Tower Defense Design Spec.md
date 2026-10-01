@@ -2329,6 +2329,11 @@ grem builders, two grems are built at once.
 
 ### Decision 46 — Units prefer a position in the formation, reinforcements shuffle into place without ceding ground, and the spitter fights at range
 
+> Superseded in part by Decision 47 on 2026-10-01: a unit's damage and range come from its
+> **weapons**, not from `dmg`/`attack_range` on the unit (the spitter's spit is 4 acid at
+> range 5; its claw and bite are its melee). Units no longer step up into an unpreferred
+> band. The positions, priorities, re-forming and swap rules stand.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
 
@@ -2387,4 +2392,158 @@ behind grems should not stay behind them, and ranged units belong at the back.
   view, and there is no extension point yet that one new case could plug into. The new
   rules themselves sit in new files: `FormationShuffle`, and the ranged half of
   `FormationCombat`.
+
+### Decision 47 — Units fight with weapons, and hold their preferred band instead of stepping into it
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** From reviewing Decision 46:
+- **Units hold their band.**
+  - A unit that prefers the middle or back never steps up into the front rank, so it
+    never makes a "last stand": an archer doesn't run into melee.
+  - Melee happens only at the front rank. An enemy facing an empty front cell has
+    nothing in front of it, so it **wraps** onto the nearest front unit, with the flank
+    bonus.
+  - When the whole front has fallen, the squad's foremost rank becomes its front. The
+    lock between the squads is released, so the enemy has to **advance** to reach the
+    units behind.
+  - A squad with no front-preferring units **holds** once an enemy is within its ranged
+    reach, rather than marching into melee. Only when the enemy closes do those units
+    fight hand to hand.
+- **Damage comes from weapons, not from stats on the creature.**
+  - A `WeaponDef` has a name, a damage amount, a damage type (acid, piercing, slashing,
+    bludgeoning), a range in ranks (0 = melee) and traits.
+  - Each attack interval, a unit in melee strikes with all its melee weapons together.
+    A ranged unit behind the front uses its best ranged weapon.
+  - Units:
+    - grem: bite 3 + claw 3
+    - brute: fists 7 (bludgeoning, **siege 1**, for attacking structures later) + bite 3
+    - spitter: spit 4 acid at range 5, with a claw 1 + bite 1 that make a weak melee
+    - militia: spear 5
+  - Damage types and traits have no effect yet; resistances and siege come with
+    structures.
+- **Weapons can be shared with emplacements.** `WeaponDef` is the natural home for the
+  attack profile Decision 34 says units and emplacements share. Decision 48 fixes a rank
+  at 1/16-ish of a cell (0.06), so ranges in ranks convert to cells.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A last stand: back units step up when no front units remain | The user: a ranged unit wouldn't run into melee; the enemy must come to it. |
+| Separate melee and ranged damage stats on the unit | The user wants damage tied to weapons, so units differ by what they carry. |
+
+**Consequences:**
+- A new `WeaponDef`; `UnitDef.weapons` replaces `UnitDef.attack_range`. `UnitDef.dmg`
+  stays as the single-attack damage used by the spec 21 and lane sims and by units
+  without weapons.
+- `SkirmishSquad.fighters()` is the front rank only.
+- `compact()` keeps units in their bands.
+- A squad whose front is gone re-anchors on its foremost rank.
+
+### Decision 48 — Formation units are a fifth of their former size, and moving within a fight is slowed
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:**
+- **Scale.** Units shrink to 1/5 of their size, so even a large clash fits on a tile
+  with space in front and behind:
+  - one rank is 0.06 map cells (was 0.3)
+  - melee reach is 0.07 (was 0.35)
+  - two 4-rank waves in contact span about 0.55 of a cell, and two 8-deep forces about
+    1.0
+  - Reinforcements already stack behind without limit (Decision 44); only the lane's
+    length bounds them.
+- **Movement in a fight is slowed by the crowding.** Swaps in a fighting squad move at a
+  fifth of marching speed. That keeps swap times at about 0.6 s for grems and 0.86 s
+  with a brute, while terrain remains a later factor.
+- **Representation.** Small units are fine as long as they read clearly.
+  - The feel test's camera zooms (mouse wheel) and pans (middle drag) to inspect a
+    fight.
+  - **Later, not built:** selecting a squad for the side-on detail view (Decision 36),
+    drag-selecting units into formations, and a formations list elsewhere in the UI.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep 0.3 cells per rank | A full-depth fight overflows a tile, leaving no room for reinforcements or approach. |
+| Swaps at marching speed | At the new scale they'd be near-instant (about 0.12 s); a crowded fight should slow them. |
+
+**Consequences:**
+- `SkirmishSquad.RANK_DEPTH` becomes 0.06, and `MELEE_REACH` becomes 0.07.
+- `FormationShuffle` gains a crowding factor of 0.2.
+- The squad layer draws units at the new size, and the feel-test camera gains zoom and
+  pan.
+
+### Decision 49 — Re-forming moves units into free space sideways, or through one another, never leaving them stuck
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** Decision 46 only let a unit trade places with units one rank deep and
+within its columns, so a grem behind a wider or deeper back unit (a future spit-cart) was
+stuck. The user, from the [Formation Swaps](https://claude.ai/artifact/QdDMgECbicnFT4TByNtYsL)
+diagram: "if a unit has space it should move laterally, and if not … allow them to move
+through (past each other) until they reach unoccupied space".
+- **Free space first.** A front-preferring unit behind the front takes the nearest free
+  place in the front rank, sideways or diagonally if need be.
+- **Otherwise through.** It moves forward past the weaker units directly ahead. Those
+  that fit take its back row, as before. Any that are too wide or too deep move back,
+  through the formation, to the nearest free space that fits them; the formation may
+  grow deeper.
+- **Time follows distance.** A move takes as long as the furthest unit travels, at the
+  slowest involved unit's speed, slowed by crowding in a fight (Decision 48). Nothing
+  changes place until it completes, and a death cancels it.
+- **Deaths also start re-forming.** When a front unit falls, front-preferring units can
+  close the gap sideways. Back units still never step into the front (Decision 47).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Leave wide or deep units blocking (Decision 46) | Strands stronger units behind weaker ones. |
+| Teleport units into place | Moves must take the time units need to pass one another. |
+
+**Consequences:**
+- `FormationShuffle` plans moves rather than fixed swaps, and its offsets carry a sideways
+  part, so the view slides units across as well as along.
+- Mid-preferring units moving into free second-rank space is left for when a mid unit
+  exists.
+
+### Decision 50 — Diff-scoped checks compare a stacked PR with the PR below it
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:**
+- **The problem.** `ocp-shotgun-surgery` and `context-locality` diffed against
+  `origin/main` by default. On a stack of PRs, every branch above one with a justified
+  broad change (Decision 46's 12 files) then failed on every `.gd` commit, because the
+  lower PR's files were counted again. That blocked round 5c entirely.
+- **The fix, chosen by the user over skipping the hook.** The base is resolved by
+  `ci/godot/scripts/base_ref.py`:
+  1. an explicit argument
+  2. else `BASE_REF`, which CI sets to the pull request's base branch
+  3. else the branch HEAD is stacked on: the closest remote branch whose tip is an
+     ancestor of HEAD, other than its own
+  4. else `origin/main`
+
+  Each PR is then judged on its own changes.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Skip the hook for stacked commits | Hides the check exactly where it matters; the user chose a fix instead. |
+| Wait for the lower PRs to merge | Stalls stacked work, which this project relies on. |
+
+**Consequences:**
+- `base_ref.py` comes with unit tests, which the `tools-python-tests` hook now runs.
+- CI exports `BASE_REF` for pull requests, because a PR checkout is a detached merge
+  commit and detection would find the PR's own branch.
+- Detection could be fooled by a stray remote branch sitting on HEAD's history, so CI
+  never relies on it; locally, an explicit argument always wins.
 

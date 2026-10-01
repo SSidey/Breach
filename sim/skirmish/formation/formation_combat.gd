@@ -7,10 +7,10 @@ extends RefCounted
 ## no overlap - it stands past the end of a narrower enemy line - it wraps onto the nearest
 ## enemy end fighter instead, as a flank attack worth FLANK_BONUS.
 ##
-## Ranged units (Decision 46) strike from anywhere in their squad, moving or fighting: the
-## nearest enemy unit within attack_range ranks, preferring one they overlap laterally,
-## with no flank bonus. A ranged unit in the front rank of an engaged squad fights in
-## melee instead.
+## Ranged units (Decisions 46-47) strike with their best ranged weapon from anywhere in
+## their squad, moving or fighting: the nearest enemy unit within its range in ranks,
+## preferring one they overlap laterally, with no flank bonus. A ranged unit in the front
+## rank of an engaged squad strikes with its melee weapons instead.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -61,7 +61,7 @@ static func ranged_blows(squads: Array, interval_ticks: int) -> Array:
 			shooter.attack_cooldown -= 1
 			if shooter.attack_cooldown <= 0:
 				shooter.attack_cooldown = interval_ticks
-				blows.append([shooter, target, shooter.dmg, own])
+				blows.append([shooter, target, shooter.ranged_dmg, own])
 	return blows
 
 

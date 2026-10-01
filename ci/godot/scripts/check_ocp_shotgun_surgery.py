@@ -22,6 +22,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import base_ref as base_ref_module  # noqa: E402
+
 REPO_ROOT = Path(
     subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
 )
@@ -60,7 +63,7 @@ def modified_preexisting_files(base_ref: str):
 
 
 def main() -> int:
-    base_ref = sys.argv[1] if len(sys.argv) > 1 else "origin/main"
+    base_ref = base_ref_module.resolve(sys.argv)  # Decision 50: a stacked PR's own base
     max_touched = read_threshold("max_touched_files_per_new_case", 3)
 
     try:

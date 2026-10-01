@@ -74,6 +74,11 @@ real, not an oversight.
   acting as an interface for multiple implementers, since GDScript has no formal
   interface keyword to detect that distinction
   mechanically — treat a hit as a prompt to check which case it is.
+- `base_ref.py` (Decision 50) — picks the base the diff-scoped checks compare against.
+  A stacked branch compares with the branch below it, so changes the lower PR already
+  justified aren't counted twice. Detection is "the closest remote branch whose tip is an
+  ancestor of HEAD", which can be fooled by a stray remote branch sitting on HEAD's
+  history; CI therefore passes the PR's real base in `BASE_REF`.
 - `check_ocp_shotgun_surgery.py` — counts pre-existing files modified in a diff; it
   cannot distinguish "one new case forced N files open" from any other reason N files
   changed together (e.g. a deliberate, justified refactor). Only meaningful with a real
@@ -175,8 +180,11 @@ pre-commit run --all-files
 # Test run only
 bash ci/godot/scripts/run_tests.sh
 
-# OCP shotgun-surgery (diff-scoped; CI-only, but runnable locally against a real ref)
-python3 ci/godot/scripts/check_ocp_shotgun_surgery.py origin/main
+# OCP shotgun-surgery (diff-scoped). With no argument it compares against BASE_REF if set,
+# else the branch this one is stacked on (e.g. the PR below it), else origin/main -
+# see ci/godot/scripts/base_ref.py and Decision 50.
+python3 ci/godot/scripts/check_ocp_shotgun_surgery.py
+python3 ci/godot/scripts/check_ocp_shotgun_surgery.py origin/main   # an explicit base
 
 # Context-locality (diff-scoped, informational; CI-only, but runnable locally too)
 python3 ci/godot/scripts/check_context_locality.py origin/main

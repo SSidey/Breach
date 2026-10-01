@@ -11,11 +11,16 @@ const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SkirmishRoute = preload("res://presentation/skirmish/skirmish_route.gd")
 const TickInterpolation = preload("res://presentation/tick_interpolation.gd")
+const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle.gd")
 
-## Pixels per formation column across the route, and per rank along it.
-const COLUMN_PX := 17.0
+## Pixels per formation column across the route, and per rank along it (Decision 48: a
+## fifth of the size they were).
+const COLUMN_PX := 17.0 * 0.2
 const RANK_PX := SkirmishSquad.RANK_DEPTH * 64.0 * 1.3
 const FLASH_SECONDS := 0.35
+## One formation cell's smaller side on screen: outlines, bars and markers scale with it,
+## so they stay in proportion to the (small) units at any zoom.
+const CELL_PX := minf(RANK_PX, COLUMN_PX) * 0.85
 
 var cell_size := 64.0
 var faction_colors := {"player": Color("#b3761d"), "the_kingdom": Color("#a3372a")}
@@ -95,7 +100,7 @@ func _draw() -> void:
 				_centre(shot[0], ends[0][0], ends[0][1]),
 				_centre(shot[0], ends[1][0], ends[1][1]),
 				tint,
-				2.0
+				CELL_PX * 0.2
 			)
 
 
@@ -114,20 +119,24 @@ func _draw_unit(lane_key: String, squad: SkirmishSquad, unit: SkirmishUnit, chos
 		color.a = 0.45
 	draw_set_transform(centre, along.angle())
 	if chosen:
-		draw_rect(body.grow(3.0), Color.WHITE, false, 2.0)
+		draw_rect(body.grow(CELL_PX * 0.4), Color.WHITE, false, CELL_PX * 0.25)
 	draw_rect(body, color)
-	draw_rect(body, Color("#211d15"), false, 1.5)
+	draw_rect(body, Color("#211d15"), false, CELL_PX * 0.12)
 	var share := clampf(float(unit.hp) / float(maxi(unit.max_hp, 1)), 0.0, 1.0)
-	draw_rect(Rect2(body.position, Vector2(body.size.x * share, 3.0)), Color("#7fbf88"))
+	var bar := Vector2(body.size.x * share, CELL_PX * 0.22)
+	draw_rect(Rect2(body.position, bar), Color("#7fbf88"))
 	var unit_key := _key(lane_key, unit.id)
 	if _flashes.has(unit_key):
 		draw_rect(
-			body.grow(2.0), Color(1.0, 0.95, 0.4, _flashes[unit_key] / FLASH_SECONDS), false, 3.0
+			body.grow(CELL_PX * 0.3),
+			Color(1.0, 0.95, 0.4, _flashes[unit_key] / FLASH_SECONDS),
+			false,
+			CELL_PX * 0.3
 		)
 	if unit.attack_range > 0:
-		draw_circle(Vector2.ZERO, 3.0, Color("#d8f0c0"))
+		draw_circle(Vector2.ZERO, CELL_PX * 0.22, Color("#d8f0c0"))
 	if unit.target_id != 0:
-		draw_circle(Vector2(size.x * 0.5 * squad.direction, 0), 2.5, Color.WHITE)
+		draw_circle(Vector2(size.x * 0.5 * squad.direction, 0), CELL_PX * 0.15, Color.WHITE)
 	draw_set_transform(Vector2.ZERO, 0.0)
 
 
@@ -144,7 +153,8 @@ func _centre(lane_key: String, squad: SkirmishSquad, unit: SkirmishUnit) -> Vect
 	var depth_back := (unit.footprint_depth - 1) * SkirmishSquad.RANK_DEPTH * 0.5
 	var distance := _distance(lane_key, unit) - squad.direction * depth_back
 	var span := squad.lateral_span(unit)
-	var lateral := (span.x + span.y) * 0.5 * COLUMN_PX
+	var moving := FormationShuffle.offset(squad, unit).y * squad.direction
+	var lateral := ((span.x + span.y) * 0.5 + moving) * COLUMN_PX
 	return (
 		SkirmishRoute.point_at(points, distance, cell_size)
 		+ SkirmishRoute.normal_at(points, distance, cell_size) * lateral

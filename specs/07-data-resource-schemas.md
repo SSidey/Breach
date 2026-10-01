@@ -26,8 +26,15 @@ these shapes, so they need to exist and be validated first.
   - `footprint_depth` / `footprint_width` (1..8, default 1), from Decision 40
   - `build_seconds` (> 0, default 1), the time one domain builder takes, from
     Decision 45
-  - `preferred_position` (FRONT / MID / BACK, default FRONT), `position_priority`
-    (>= 0) and `attack_range` in ranks (>= 0; 0 is melee), from Decision 46
+  - `preferred_position` (FRONT / MID / BACK, default FRONT) and `position_priority`
+    (>= 0), from Decision 46
+  - `weapons: Array[WeaponDef]`, from Decision 47. A unit in melee strikes with all its
+    melee weapons; without weapons it strikes once for `dmg`, which the spec 21 and lane
+    sims still use.
+- `WeaponDef` (`content/definitions/weapon_def.gd`, Decision 47): `weapon_name`,
+  `damage` (>= 0), `damage_type` (no effect yet), `attack_range` in ranks (>= 0; 0 is
+  melee; a rank is 0.06 map cells, per Decision 48) and `traits` (e.g. `{"siege": 1}`).
+  Instances live in `content/weapons/`.
 - `NodeDef` (`content/definitions/node_def.gd`) — `node_type: NodeType` (enum:
   `ORIGIN`, `RESOURCE`, `FORT`), `garrison: int`, and resource-node-only fields
   (`yield_food_per_tick: int`, `decay_interval_ticks: int`, `decay_floor_food: int`) that

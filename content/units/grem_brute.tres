@@ -1,10 +1,12 @@
-[gd_resource type="Resource" script_class="UnitDef" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitDef" format=3]
 
 [ext_resource type="Script" path="res://content/definitions/unit_def.gd" id="1_unit"]
+[ext_resource type="Script" path="res://content/definitions/weapon_def.gd" id="2_k78dx"]
+[ext_resource type="Resource" path="res://content/weapons/brute_fists.tres" id="3_3k071"]
+[ext_resource type="Resource" path="res://content/weapons/brute_bite.tres" id="4_fyq4l"]
 
 [resource]
 script = ExtResource("1_unit")
-cost_food = 0
 hp = 60
 dmg = 10
 speed = 0.7
@@ -12,3 +14,4 @@ footprint_depth = 2
 footprint_width = 2
 build_seconds = 4.0
 position_priority = 2
+weapons = Array[ExtResource("2_k78dx")]([ExtResource("3_3k071"), ExtResource("4_fyq4l")])

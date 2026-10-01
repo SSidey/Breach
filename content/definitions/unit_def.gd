@@ -21,8 +21,8 @@ const MAX_FOOTPRINT := 8
 ## forward place first). Reinforcements re-form by these (Decision 46).
 @export var preferred_position: Position = Position.FRONT
 @export var position_priority: int = 0
-## Reach in ranks (formation cells); 0 fights in melee only (Decision 46).
-@export var attack_range: int = 0
+## What it fights with (Decision 47). Without weapons it strikes once for `dmg`.
+@export var weapons: Array[WeaponDef] = []
 
 
 func validate() -> PackedStringArray:
@@ -38,9 +38,33 @@ func validate() -> PackedStringArray:
 	for field in ["footprint_depth", "footprint_width"]:
 		if get(field) < 1 or get(field) > MAX_FOOTPRINT:
 			errors.append("%s must be 1..%d, got %d" % [field, MAX_FOOTPRINT, get(field)])
-	for field in ["position_priority", "attack_range"]:
-		if get(field) < 0:
-			errors.append("%s must be >= 0, got %d" % [field, get(field)])
+	if position_priority < 0:
+		errors.append("position_priority must be >= 0, got %d" % position_priority)
+	for weapon in weapons:
+		if weapon == null:
+			errors.append("weapons must not contain an empty entry")
+		else:
+			errors.append_array(weapon.validate())
 	if build_seconds <= 0.0:
 		errors.append("build_seconds must be > 0, got %f" % build_seconds)
 	return errors
+
+
+## The damage of one melee strike: every melee weapon together, or `dmg` without weapons.
+func melee_damage() -> int:
+	if weapons.is_empty():
+		return dmg
+	var total := 0
+	for weapon in weapons:
+		if weapon.is_melee():
+			total += weapon.damage
+	return total
+
+
+## The hardest-hitting ranged weapon, or null for a melee-only unit.
+func ranged_weapon() -> WeaponDef:
+	var best: WeaponDef = null
+	for weapon in weapons:
+		if not weapon.is_melee() and (best == null or weapon.damage > best.damage):
+			best = weapon
+	return best

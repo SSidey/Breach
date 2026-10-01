@@ -39,10 +39,14 @@ var column: int = 0
 ## Slots it occupies, depth (ranks) x width (columns) - Decision 40.
 var footprint_depth: int = 1
 var footprint_width: int = 1
-## UnitDef.Position band and claim within it, and reach in ranks (0 = melee) - Decision 46.
+## UnitDef.Position band and claim within it (Decision 46).
 var preferred_position: int = 0
 var position_priority: int = 0
+## From its best ranged weapon (Decision 47): reach in ranks (0 = melee only), damage, type.
+## `dmg` is the unit's melee strike - all its melee weapons together.
 var attack_range: int = 0
+var ranged_dmg: int = 0
+var damage_type: String = ""
 
 
 func is_alive() -> bool:

@@ -58,6 +58,9 @@ jobs:
       - name: Run baseline checks (gdlint, gdformat, custom scripts, tests)
         env:
           GODOT_BIN: /opt/godot/godot
+          # Decision 50: diff-scoped checks compare a PR with its own base branch (a
+          # stacked PR's is the PR below it). Empty on pushes, which then detect it.
+          BASE_REF: ${{ github.event.pull_request.base.ref && format('origin/{0}', github.event.pull_request.base.ref) || '' }}
         run: pre-commit run --all-files --show-diff-on-failure
 
       - name: Check commit messages (commit-message-conforms)
