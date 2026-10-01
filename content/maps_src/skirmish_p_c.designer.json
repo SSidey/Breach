@@ -1,0 +1,223 @@
+{
+  "format": "breach-designer-map",
+  "format_version": 1,
+  "cell_size": 64,
+  "map_name": "Skirmish P-c (feel test)",
+  "grid": {
+    "cols": 12,
+    "rows": 3
+  },
+  "default_terrain": "FIELDS",
+  "factions": [
+    {
+      "id": "player",
+      "display_name": "Player"
+    },
+    {
+      "id": "the_kingdom",
+      "display_name": "The Kingdom"
+    }
+  ],
+  "faction_relations": [
+    {
+      "a": "player",
+      "b": "the_kingdom",
+      "stance": "HOSTILE"
+    }
+  ],
+  "loss_criteria": [
+    {
+      "faction_id": "player",
+      "name": "Home",
+      "rule": "ANY",
+      "node_ids": [
+        "P"
+      ]
+    },
+    {
+      "faction_id": "the_kingdom",
+      "name": "Keep",
+      "rule": "ANY",
+      "node_ids": [
+        "c"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "P",
+      "node_type": "ORIGIN",
+      "is_critical_asset": true,
+      "owning_faction_id": "player",
+      "hidden_from_faction_ids": [],
+      "grid_position": {
+        "row": 1,
+        "col": 1
+      },
+      "fields": {},
+      "garrison_count": 0,
+      "garrison_units": []
+    },
+    {
+      "id": "c",
+      "node_type": "ORIGIN",
+      "is_critical_asset": true,
+      "owning_faction_id": "the_kingdom",
+      "hidden_from_faction_ids": [],
+      "grid_position": {
+        "row": 1,
+        "col": 10
+      },
+      "fields": {},
+      "garrison_count": 0,
+      "garrison_units": []
+    }
+  ],
+  "tiles": [],
+  "roads": [
+    {
+      "a": {
+        "row": 1,
+        "col": 1
+      },
+      "b": {
+        "row": 1,
+        "col": 2
+      }
+    },
+    {
+      "a": {
+        "row": 1,
+        "col": 2
+      },
+      "b": {
+        "row": 1,
+        "col": 3
+      }
+    },
+    {
+      "a": {
+        "row": 1,
+        "col": 3
+      },
+      "b": {
+        "row": 1,
+        "col": 4
+      }
+    },
+    {
+      "a": {
+        "row": 1,
+        "col": 4
+      },
+      "b": {
+        "row": 1,
+        "col": 5
+      }
+    },
+    {
+      "a": {
+        "row": 1,
+        "col": 5
+      },
+      "b": {
+        "row": 1,
+        "col": 6
+      }
+    },
+    {
+      "a": {
+        "row": 1,
+        "col": 6
+      },
+      "b": {
+        "row": 1,
+        "col": 7
+      }
+    },
+    {
+      "a": {
+        "row": 1,
+        "col": 7
+      },
+      "b": {
+        "row": 1,
+        "col": 8
+      }
+    },
+    {
+      "a": {
+        "row": 1,
+        "col": 8
+      },
+      "b": {
+        "row": 1,
+        "col": 9
+      }
+    },
+    {
+      "a": {
+        "row": 1,
+        "col": 9
+      },
+      "b": {
+        "row": 1,
+        "col": 10
+      }
+    }
+  ],
+  "links": [
+    {
+      "a": "P",
+      "b": "c",
+      "route_found": true,
+      "route_cost": 4.5,
+      "route": [
+        {
+          "row": 1,
+          "col": 1
+        },
+        {
+          "row": 1,
+          "col": 2
+        },
+        {
+          "row": 1,
+          "col": 3
+        },
+        {
+          "row": 1,
+          "col": 4
+        },
+        {
+          "row": 1,
+          "col": 5
+        },
+        {
+          "row": 1,
+          "col": 6
+        },
+        {
+          "row": 1,
+          "col": 7
+        },
+        {
+          "row": 1,
+          "col": 8
+        },
+        {
+          "row": 1,
+          "col": 9
+        },
+        {
+          "row": 1,
+          "col": 10
+        }
+      ]
+    }
+  ],
+  "terrain_library": [],
+  "feature_library": [],
+  "validation_warnings": [],
+  "note": "Real-time skirmish feel test (specs/21): one lane from the player origin P to the kingdom origin c; the kingdom's fort is immune in the feel test."
+}

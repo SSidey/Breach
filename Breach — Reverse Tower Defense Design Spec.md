@@ -1986,3 +1986,152 @@ game.
 - The high-ground range bonus is still open. A formula bonus (tapering with height, with
   an optional penalty for firing upward) was proposed; real projectiles would be limited
   to tactical fights, if used at all.
+
+### Decision 39 — When a lane's wave finishes building, the player chooses to pause or be notified
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** Under real-time with pause (Decision 38), waves build up on each lane
+while the game runs. The user wants a player option for the moment a lane's wave build
+completes: **pause the game**, or **just notify**. This is separate from departure, which
+stays per lane: a manual send, or automatic when full. With automatic departure and
+Pause both set, the game pauses as the wave leaves, so the player can still intervene
+before the fight.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Always pause on a full wave | Interrupts players who prefer to keep playing; the user wants it optional. |
+| Never pause, notify only | Loses the tower-defence-style moment for planning that some players want. |
+
+**Consequences:**
+- The simulation emits a `wave_full` event per lane and never pauses itself. Pausing is
+  the presentation layer's reaction to that event, per the player's setting.
+- The feel test (`specs/21-realtime-skirmish-feel-test.md`) implements this first.
+
+### Decision 40 — Waves are formations on a slot grid: unit footprints, front-rank combat with flank wrap, and a shared pool of slots assigned across lanes
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** From the first real-time playtest (`specs/21-realtime-skirmish-feel-test.md`):
+with every unit that reached a fight joining in, a wave just piled onto one enemy. The
+user's direction replaces that with formations.
+
+- **Footprints.** Every unit occupies a slot footprint written **depth × width** (the
+  user's axis choice):
+  - a grem or a person is 1×1
+  - cavalry is 2×1 (two ranks deep, one slot wide)
+  - a grem brute is 2×2
+  - large creatures are 4×4
+  - 8×8 is the most, for a dragon
+- **Formations.** Each lane has a **formation grid**: frontline width × ranks. A wave
+  builds into the layout the player set. Only the **front rank** fights; when a
+  front-rank unit dies or retreats, the one behind steps up. Wide units hold more of the
+  front.
+- **Flanking wraps around.** When one frontline is wider than the other, its extra
+  slots wrap onto the enemy line's ends. A size or composition advantage then lets a
+  force flank. A unit engaged by several foes, or attacked from the side or rear, suffers
+  for it. That directional effect is to be tuned, and ties to morale in the combat
+  addendum.
+- **Slots are a shared pool across lanes.** The player's unlocked slots are divided
+  among the map's lanes as they choose. For example, with 4 slots and 2 lanes: 4/0,
+  3/1, 2/2, 1/3 or 0/4. Giving a lane nothing is a real choice to ignore that avenue.
+- **Slots come from long-scale upgrades.** Nodes captured on a map become part of the
+  player's **domain** (the Lair meta-layer). Domain nodes plus currency build upgrades:
+  - more slots overall
+  - unit access (for example, a *Font of Malice* needed for grems)
+  - build speed
+  Total slots, available units and build speed are therefore meta-progression, not
+  per-map.
+
+**Proposed, for the user to confirm:**
+- Slots can be **reassigned between lanes mid-map**, but a change applies to each lane's
+  **next** wave; the wave already building keeps its layout. Reacting (shifting weight to
+  the lane that's breaking through) stays possible, but costs time, so the split still
+  matters.
+- Pool slots rather than a fixed number per lane. Equal per lane would remove the
+  decision of where to commit.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Every unit in reach fights (feel test v1) | A wave piles onto one enemy, and width and depth don't matter. |
+| Only directly opposed slots fight | Wider lines would give no advantage; the user wants flanking and wrap-around. |
+| The same number of slots on every lane | Removes the choice of which avenues to push or ignore. |
+| Formation set automatically from unit sizes | The user wants the player to arrange lanes and formations. |
+
+**Consequences:**
+- The feel test's next step is formations:
+  - footprints
+  - a per-lane formation grid drawn from a slot pool
+  - front-rank combat with rank step-up
+  - flank wrap
+  Its crowding note in spec 21 is superseded by this.
+- Each lane needs a **maximum frontline width**, possibly set by terrain or road later;
+  maps will need to author it.
+- The designer's garrison and unit data will need footprints (a schema change, so the
+  designer is updated in the same pass when it lands).
+- Domain upgrades (slot count, unit gates such as the Font of Malice, build speed)
+  belong to the Lair meta-layer, which is not designed in detail yet.
+
+### Decision 41 — Everything buildable belongs to a faction's tech tree; the player's overlord and each enemy field their own forces; lane width is at most 8
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-09-30
+
+**Rationale:** The user wants progression and faction ties across units, upgrades,
+static defences and structure parts. This is implicit today (the player fields grems,
+the kingdom its own units); it should become explicit and general. The player picks an
+**overlord**. Each **enemy** fields its own forces, and each side uses the units,
+defences and upgrades that fit its faction.
+
+**Model:**
+- **Every buildable has a faction tie.**
+  - This covers unit types, emplacements (static defences), tile and structure upgrades,
+    room features and boundary presets.
+  - Each is either **faction-exclusive** (knights and ballistae belong to the kingdom)
+    or **universal** (an arrow slit).
+- **Using what's already on the map is open to anyone who holds it and has the means.**
+  A pre-placed structure or emplacement can be used by any faction that holds it, if it
+  has the traits or weapons the thing needs. For example, a ballista needs crew able to
+  operate it.
+- **Building needs tech.** Building an upgrade, structure part or unit mid-map requires
+  that tech to be unlocked. By default a faction has only **its own faction's tech
+  tree**.
+- **The player can branch out:** finding tomes or capturing people (among other means)
+  unlocks tech from other factions' trees.
+- **Enemies get access by authoring.** Either:
+  - a map grants an enemy extra unlocks, or
+  - an **assignable unlock event**, e.g. the kingdom allies with another faction, after
+    which it has access to both factions' tech. This persists in that player's campaign
+    from then on.
+- **Lane width is at most 8 slots.** This matches the largest footprint (8×8, a dragon).
+  Each lane authors its own frontline width, at or under 8; terrain may narrow it later.
+- **Decision 40's proposals are confirmed** by the user: slots are a shared pool across
+  lanes, and a reassignment applies to each lane's next wave.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| One shared roster for every faction | Loses faction identity; the user wants exclusives such as knights and ballistae for the kingdom. |
+| Only faction-exclusive content | Some things, such as arrow slits, are naturally universal. |
+| Captured structures unusable by their new owner | The user wants whoever holds a structure to use it, given the means. |
+
+**Consequences (future schema; nothing built here):**
+- `FactionDef` gains a **tech tree**. Unit, emplacement, upgrade, room-feature and
+  boundary-preset definitions gain a **faction tie** (exclusive to certain factions, or
+  universal) and a **tech requirement**.
+- Operating a structure or emplacement checks the holder's traits or weapons (e.g.
+  ballista crew), not its faction.
+- Maps author **enemy unlocks**. The Map Script (calendar addendum) gains an
+  unlock/alliance action for mid-campaign events. Unlocks can persist across a player's
+  campaign, which ties into the Lair meta-layer.
+- The designer's libraries (static defences, room features, prefabs, upgrades, and units
+  once they have a view) gain a "faction / universal" field and a tech requirement. By
+  the sync rule, this is updated when the schema lands.
+- The feel test stays player-versus-kingdom with fixed rosters.
