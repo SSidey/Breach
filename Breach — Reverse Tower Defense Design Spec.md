@@ -1388,6 +1388,11 @@ chose a pathfinding model with one important constraint:
 
 ### Decision 27 — Structure combat is a 2D side-on plane; boundaries carry defenses; routes are designer defaults the player can change
 
+> Superseded by Decision 52 on 2026-10-01: a structure is a 3D grid of cells over its
+> site (levels above ground, dug levels below), attacked from any side; the side-on plane
+> survives only as a presentation (the detail view's section). The boundary-property model
+> (what a wall, floor or hatch blocks, per direction) and player rerouting stand.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-09-28
 
@@ -2395,6 +2400,10 @@ behind grems should not stay behind them, and ranged units belong at the back.
 
 ### Decision 47 — Units fight with weapons, and hold their preferred band instead of stepping into it
 
+> Superseded in part by Decision 54 on 2026-10-01: `WeaponDef` generalises into **items**:
+> weapons deal damage, tools grant trait levels (a shovel gives burrower 1). The weapon
+> loadouts and the band rules stand.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
 
@@ -2611,3 +2620,293 @@ through (past each other) until they reach unoccupied space".
   departure, with the lane's width as its combat width, and the domain on round robin.
   `FormationLane` and `FormationBattle` keep their neutral defaults (manual, priority,
   no spreading) for other callers.
+
+### Decision 52 — Structures are 3D cell grids over their site, built from 3D parts; fights are the same indoors and out; squads hold formation by discipline
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** From discussing structures after the formation feel test. The user wants
+forts that can be brought down by more than a massive force: a rat faction tunnelling
+nearby, spreading disease to the stores, coming in through a basement or up a well. The
+user also wants height to affect sight and range, and attackers to come "from any angle
+realistically". Decision 27's single side-on plane can't express width, facing or
+underground ingress. The formation sim, meanwhile, is a top-down slice with no height.
+- **A structure is a grid of cells over its site.**
+  - Cells span the tile in plan, stacked in levels above ground and in **dug levels**
+    below it, down to the tile's dig depth.
+  - Each cell is open, solid ground, or part of a **space**: room, corridor, stair,
+    shaft, wall walk.
+  - Each face between cells is a **boundary** carrying the existing properties: what it
+    blocks (movement, projectiles, sight) in each direction, its material and HP. Doors,
+    gates, slits and murder holes stay boundary presets (Decision 37).
+- **Attacks come from any side.**
+  - Attackers reach whichever exterior faces their approach meets.
+  - The face a wave is expected to hit is **highlighted**, and the player can redirect
+    the wave to another.
+  - Destroying a wall face makes a new opening as wide as the damage.
+  - Tunnels are dug cell by cell through ground. A well is a shaft down to water, and so
+    a way in. Breaking into a basement is a breach underground.
+- **Height matters.** Standing higher extends sight and missile range and favours shots
+  downward. Floors and walls block sight.
+- **Fights are the same indoors and out.**
+  - Squads are positioned on a 2D cell grid, with a facing, and a fight can have several
+    contact fronts (two doors, a flank, the rear).
+  - An opening's width is the combat width through it, so gates and corridors are
+    chokepoints.
+  - Today's lane fight is the special case: a corridor of cells the combat width wide,
+    with one front.
+- **Squads try to keep formation.** A squad squeezes to fit an opening (5 wide becomes 2
+  wide and deeper through a 2-wide gate) and re-spreads beyond it, holding its bands
+  (Decisions 47–51).
+  - A unit's **discipline** sets how reliably it stays in formation and follows its
+    orders. A poorly disciplined unit may break off to chase an enemy.
+  - **Morale** is the related measure that can make units rout.
+  - Neither is built yet: both are recorded here as the intended model.
+- **Presentation: structures in 3D, units as 2D sprites.**
+  - Structures are assembled in Godot from **3D modular parts** (grey-box placeholders
+    first) over the cell grid.
+  - Units stay 2D sprites standing in that scene (Decision 36).
+  - An isometric-style camera with a **cutaway** (hide everything above level N) shows
+    interiors and, cut lower, the underground.
+  - A side **section** remains the detail view.
+  - The comparison that led here is the [Fort Views](https://claude.ai/artifact/2EGdCc44FG8ojF2CjFv1uB)
+    mock-up.
+- **The designer stays 2D and asset-free.** The user authors a structure as plans: pick a
+  level, draw areas, assign space types, and set boundary presets. Nothing in the
+  designer depends on the 3D parts. Godot builds the 3D view from the plan and a parts
+  library, so the parts can change without touching any map.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep the side-on plane (Decision 27), adding opening widths | Two entrances at most, breaches only at the ends, no facing, and underground ingress can't be placed. |
+| Top-down floor plans only | Loses height, which the user wants to affect sight and range. |
+| 2D isometric sprites for structures | Needs hand-drawn art for every block, corner and edge combination. 3D parts give the same view from any camera angle. |
+| Units dissolve inside buildings and re-form on order | The painted shape should mean something indoors too, and discipline gives a principled way for formations to break. |
+
+**Consequences:**
+- Supersedes Decision 27. Decisions 35 and 36 hold for units and the detail view, but
+  structures are now 3D parts.
+- The structure schema to come (`StructureDef` and friends) is a cell grid with spaces
+  and boundaries, replacing the side-on segment profile. Subject 2 (scale and ground)
+  decides the cell size, and therefore the parts' dimensions.
+- The formation sim's next step is 2D positioning with facing and several fronts, with
+  the lane as the one-front case.
+- Rest, food, warmth and disease become properties of spaces and their contents. This is
+  recorded for its own design pass, not decided here.
+- Assets: a parts library (wall, corner, gate, floor, stair, crenel, shaft) with
+  generated grey-box defaults, replaceable by free CC0 kits or hand-made Blender parts at
+  the agreed cell size.
+
+### Decision 53 — One cell is one grem (1/16 of a tile); a storey is 2 cells; ground bearing, foundations and material weight replace the segment budget; capacity comes from furnishings that fit
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** Decision 52 made structures cell grids; this sets the cell's size and what
+the ground allows.
+- **One cell is one grem**, which the user intends as 1:1 with a human. A structure cell
+  is the same as a formation cell, **exactly 1/16 of a tile**: the formation rank
+  becomes 0.0625 cells, rounded from Decision 48's 0.06.
+  - Openings are measured in grems: a 2-wide gate lets two through abreast, and an
+    opening's width is the combat width through it.
+  - A tile is a 16 × 16 plan per level.
+- **A storey is 2 cells high.** Height feeds sight and missile range (Decision 52), so
+  levels need a height in the same units. A wall walk one level up stands 2 cells above
+  the field.
+- **The ground bears weight.**
+  - Each cell has a **bearing**: the load its column can carry. It's a terrain baseline
+    (placeholders to tune: marsh 2, field 4, rock 8).
+  - **Foundations** are an upgrade that raises bearing at the cells they're laid under,
+    up to a terrain maximum (e.g. marsh piles to 4, rock footings to 12).
+  - **Material weight counts now.** Each level of construction in a column adds its
+    material's weight (placeholders: timber 1, stone 2, reinforced stone 3), and the
+    total must stay within the bearing. Max height follows from bearing and material,
+    rather than being a separate number.
+  - Max width becomes the site's buildable area. Dig depth stays a terrain value.
+- **Capacity comes from what fits.** Furnishings (bunks, stores, hearths) are objects
+  with footprints in cells, placed in rooms.
+  - The old segment feature budget ("5/5") goes.
+  - For example, a 2 × 2 bunk block sleeps 4. A barracks for 20 is five blocks plus
+    aisles, a room of about 5 × 6 cells.
+  - Furnishings are also obstacles and cover in a fight.
+  - How placement works is subject 4. Shifts (more garrison than bunks, resting in turns)
+    belong to the needs pass.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Coarser structure cells (2 × 2 grems) | Openings and rooms would no longer measure in grems, and combat width through a gate would need converting. |
+| Keep a segment/stability budget | It belongs to the side-on profile Decision 52 replaced; bearing per cell expresses the same limit on the grid. |
+| Stability as a plain max height | Ignores what the structure is made of; the user wants material weight to count. |
+| A feature-point budget per room | Capacity should follow the room the player draws and what physically fits in it. |
+
+**Consequences:**
+- The formation sim's `RANK_DEPTH` moves to 0.0625 (a tiny change from 0.06) when the 2D
+  formation work starts.
+- Terrain library entries gain bearing, a foundation maximum, and dig depth; the old
+  stability / max height / max width trio is replaced. **The designer's terrain and
+  structure views must change with it**, per the standing rule that schema changes keep
+  the designer in sync.
+- 3D parts are built to a cell of one grem and a storey of 2 cells.
+
+### Decision 54 — Nodes stay on one tile and link into sites; the underground is generated strata dug by rated traits; one 3D scene shows it all
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** Settling multi-tile structures, the underground, and how units dig,
+climb and squeeze through, building on Decisions 52 and 53.
+
+- **Vocabulary**, used everywhere from now on:
+  - **map:** the board, a grid of tiles with nodes and links
+  - **tile:** one square of the map, with its terrain and strata, made of cells
+  - **node:** a map-level place that routes and captures run between; it sits on one
+    tile
+  - **subnode:** a part within a node's tile that can be fought over on its own
+    (gatehouse, bailey, keep)
+  - **cell:** 1 × 1 × 1, a grem's size
+  - **space:** a drawn area of cells that does one job (room, corridor, stair, shaft),
+    belonging to a subnode
+- **A node never crosses a tile edge.** A castle bigger than a tile is a **site**:
+  several nodes on neighbouring tiles joined by **site links**. A site link is a direct,
+  cell-to-cell join where their cells meet at the shared edge (a wall walk, a gate
+  passage, a tunnel), unlike a route across open country.
+  - A site is grouped for ownership and display, but each node can fall separately,
+    which gives sieges stages.
+  - Town walls are structures built within the site's tiles, not a separate feature.
+- **The underground is generated strata.**
+  - Each tile has a column of strata, **one material per level**: soil, clay, rock and
+    so on. These are seeded from the terrain type's ranges, and reproducible from the
+    map's seed. The designer can lock or re-roll.
+  - **Placements imply what is beneath.** A **well** guarantees a water table its shaft
+    reaches, unless it is marked dry. An **ore vein** feature guarantees veins in that
+    tile's strata, reachable from the surface and likely extending under neighbouring
+    tiles at decreasing odds.
+  - Caverns and other special cells can be painted as exceptions.
+- **Water is static for now.** A dug cell below the water table is flooded. Spreading
+  floods (filling connected dug cells over a few ticks) are a later option.
+- **Excavation is work on cells:** dig out, shore up, fill in.
+  - The **bore follows the diggers**: the face is the front rank's footprint (three grems
+    abreast dig 3 wide; a mixed rank's tallest unit sets the height).
+  - Only the face digs, as only the front rank fights. The ranks behind haul and shore
+    up. A wider rank can enlarge a tunnel later.
+- **Rated traits against difficulties:**
+  - **Digging.** Each material has a dig difficulty (soil 1, clay 2, stone 3, ore 3+;
+    to tune). A unit has **burrower N** and a separate **dig rate** (cells cleared per
+    tick). One level short of the difficulty halves the rate; two or more short, it can't
+    dig that material at all.
+  - **Climbing.** Faces and shafts have a climb difficulty. Rough stone with handholds is
+    0 (anyone); a smooth shaft at 1 needs **climber 1**. Shafts are climbed slowly, one
+    unit at a time.
+  - **Tools grant traits** (a shovel gives burrower 1, a pickaxe burrower 3). A unit's
+    level is the higher of its own and its best item's.
+- **Items.** Weapons and tools are both **items**: weapons deal damage (Decision 47),
+  tools grant trait levels.
+- **Sizes.**
+  - Grem and human: 1 × 1 × 1.
+  - Rat swarm: 1 × 1 × 1, several rats as one cell-sized unit, with **tiny** and
+    **burrower 1**.
+  - Brute: 2 × 2 × 2.
+  - A storey stays 2 cells by default, but a space can be drawn at any height. A unit
+    can't enter a space lower than itself.
+- **Burrows.**
+  - A burrow is a passage only **tiny** units can use: drains, rat holes, gaps under
+    foundations.
+  - A tiny burrower digs a burrow by default (cheap, and useless to an army), or a full
+    tunnel when ordered.
+  - A **grate** is a face preset that passes water and tiny units only. An open well can
+    be climbed by anyone who fits; a grated one admits only the rats.
+- **One 3D scene, zoomed and cut away.**
+  - Structures are 3D parts. The underground is generated strata meshes in the same
+    scene, built as merged chunks rather than per cell, with dug cells simply absent.
+  - One isometric-style camera zooms and pans, with a **cutaway** that hides everything
+    above level N. Cutting below ground shows the strata cut open with the tunnels in
+    them.
+  - Detail follows zoom: far out, structures as simple shapes and squads as tokens;
+    close in, full parts, unit sprites and furnishings.
+  - The side section is a clipping plane in the same scene.
+  - The 2D map viewer stays an authoring and debugging tool.
+  - Units remain 2D sprites (Decision 36).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A node spanning several tiles | Keeps the map graph simpler if each node has one tile; site links express the larger whole. |
+| A finer grid for small units | Halving the cell multiplies the grid eightfold; swarms and the tiny/burrow traits give rats their rules instead. |
+| Grems 2 cells tall | The user prefers 1 × 1 × 1. What separates rats from grems is the tiny trait, not height. |
+| Fixed bore sizes chosen on the order | The bore should follow whoever digs. |
+| A last-resort dig at any skill level | Missing levels slow digging, and a large gap stops it, so tools matter. |
+| Separate 2D and 3D views | One scene with zoom and cutaway serves the board, interiors and underground. |
+
+**Consequences:**
+- `WeaponDef` becomes an item type alongside tools that grant traits.
+- Units gain traits with levels, a dig rate, and a size in cells.
+- Terrain library entries gain strata ranges, a water table range, dig difficulties and
+  climb difficulties. **The designer must follow**, per the standing rule, and must
+  gain the well's dry switch, the ore vein feature's effect on strata, and painting
+  below ground.
+- The map schema gains site links between nodes on neighbouring tiles.
+
+### Decision 55 — Interiors are spaces furnished with placed elements on four layers, under placement rules; items are natural or equipment; passages carry traits
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** The user's points on interior detail: a partial build, like a gatehouse
+stair inside a wall with no full room, and positioning upgrade elements rather than a
+"5/5" budget.
+- **A partial build is just a small space.** No full room is needed: a stair drawn into
+  a thick wall's cells is a stair space, and one hollowed cell is a space too. The 5/5
+  budget is already gone (Decision 53).
+- **Elements.** Everything placed in a structure is an **element**, with a footprint in
+  cells, a height and a facing (90° steps). It sits on one of four **layers**, so things
+  can share a cell:
+  - **floor:** trapdoors, grates, rugs, spike pits
+  - **object:** bunks, tables, hearths, barrels, a ballista; at most one per cell
+  - **face:** on a wall or opening (door, slit, portcullis, torch bracket); the boundary
+    presets of Decisions 37 and 52
+  - **ceiling:** murder holes, hatches up, hanging lights; the face above, seen from below
+- **Placement rules are data on each element type**, checked alike by the designer and
+  the game:
+  - **Needs:** clear height above (a bunk needs 2), a flue to the outside (a hearth), a
+    crew space (a ballista), water beneath (a well).
+  - **Must touch:** for example, a portcullis winch beside the gate passage it raises.
+  - **No "must connect" for elements.** A stair may lead nowhere: a future floor, a dead
+    end, a feint.
+  - **Spaces must be accessible.** A space nobody can reach from the node's entrances,
+    counting secret doors and defender-only doors, is flagged.
+- **Building in play.** The player can place any element in play if they **control the
+  area**, **pay the cost** and nothing **restricts** it (the tech tree, Decision 41, or a
+  designer lock, such as a ruin that can't be rebuilt). The same elements are placed in
+  the designer as part of a map's plan.
+- **Items are natural or equipment.** Both use the same item shape (Decision 54), but a
+  unit holds them in two lists:
+  - **Natural:** part of the body (spit, claws, bite, a brute's fists with siege 1).
+    Always present, never dropped, looted or handed over.
+  - **Equipment:** carried things (a sword, a shovel, a pickaxe). They can be equipped,
+    swapped, dropped and looted. Slots and encumbrance come later.
+- **Passages carry traits matching unit traits.** A unit has **tiny**; a grate, drain,
+  rat hole or burrow has **tiny gap**, letting tiny units through and blocking everyone
+  else. A face can carry several passage traits, e.g. a grate passes water as well.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A feature-point budget per room | Replaced by what physically fits (Decision 53). |
+| Free placement limited only by cost | Rules (height, flue, adjacency) keep interiors plausible; the user agreed they're a good start. |
+| Stairs must connect two spaces | The user: stairs needn't reach anywhere; only rooms must be accessible. |
+| One list of items per unit | Innate weapons (a spitter's spit) must never be dropped or looted, unlike a sword. |
+
+**Consequences:**
+- Element types with footprints, heights, layers and placement rules join the libraries
+  that the designer and Godot share. **The designer gains layer-aware placement, with
+  rotation and rule checks**, per the standing sync rule.
+- `UnitDef` holds `natural` and `equipment` item lists, replacing `weapons`.
+- Faces and spaces carry passage traits; units carry size traits such as tiny.
+
