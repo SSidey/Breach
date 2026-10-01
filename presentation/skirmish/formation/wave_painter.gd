@@ -3,7 +3,8 @@ extends Control
 ## Paints a lane's wave template (Decisions 42-43, specs/22-formation-feel-test.md). The
 ## grid faces the direction of travel: the front rank is the right-hand column, formation
 ## columns run top to bottom, and rows past the lane's width are shaded. Template places
-## are outlined; built ones are filled, the one being built fills with its progress.
+## are outlined; built ones are filled, and each place a builder is working toward fills
+## with that build's progress (Decision 45).
 ## Pressing an empty cell paints with the brush, pressing a filled one erases it (a drag
 ## keeps doing whichever the press started); right click always erases. The scene applies
 ## each change at once (built units fold in, leftovers are banked).
@@ -18,9 +19,9 @@ const RANKS := 4
 
 ## Formation columns this lane allows (the rest are shaded).
 var lane_width := COLUMNS
-## [[rank, column, depth, width, filled], ...] from FormationProduction.preview().
+## [[rank, column, depth, width, filled, UnitDef, progress], ...] from
+## FormationSkirmishReadout.lane().
 var places := []
-var progress := 0.0
 var fill_color := Color("#b3761d")
 
 var _last_cell := Vector2i(-1, -1)
@@ -87,13 +88,12 @@ func _draw() -> void:
 			var usable := column < lane_width
 			var shade := Color(1, 1, 1, 0.12) if usable else Color(0, 0, 0, 0.35)
 			draw_rect(_rect(rank, column, 1, 1).grow(-1.0), shade)
-	var in_progress := places.find_custom(func(p): return not p[4])
-	for index in range(places.size()):
-		var place: Array = places[index]
+	for place in places:
 		var body := _rect(place[0], place[1], place[2], place[3]).grow(-2.0)
+		var progress: float = place[6] if place.size() > 6 else 0.0
 		if place[4]:
 			draw_rect(body, fill_color)
-		elif index == in_progress:  # builds from the back of the body towards the front
+		elif progress > 0.0:  # builds from the back of the body towards the front
 			draw_rect(
 				Rect2(body.position, Vector2(body.size.x * progress, body.size.y)),
 				fill_color.darkened(0.3)
