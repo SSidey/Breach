@@ -2696,3 +2696,56 @@ underground ingress. The formation sim, meanwhile, is a top-down slice with no h
   generated grey-box defaults, replaceable by free CC0 kits or hand-made Blender parts at
   the agreed cell size.
 
+### Decision 53 — One cell is one grem (1/16 of a tile); a storey is 2 cells; ground bearing, foundations and material weight replace the segment budget; capacity comes from furnishings that fit
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** Decision 52 made structures cell grids; this sets the cell's size and what
+the ground allows.
+- **One cell is one grem**, which the user intends as 1:1 with a human. A structure cell
+  is the same as a formation cell, **exactly 1/16 of a tile**: the formation rank
+  becomes 0.0625 cells, rounded from Decision 48's 0.06.
+  - Openings are measured in grems: a 2-wide gate lets two through abreast, and an
+    opening's width is the combat width through it.
+  - A tile is a 16 × 16 plan per level.
+- **A storey is 2 cells high.** Height feeds sight and missile range (Decision 52), so
+  levels need a height in the same units. A wall walk one level up stands 2 cells above
+  the field.
+- **The ground bears weight.**
+  - Each cell has a **bearing**: the load its column can carry. It's a terrain baseline
+    (placeholders to tune: marsh 2, field 4, rock 8).
+  - **Foundations** are an upgrade that raises bearing at the cells they're laid under,
+    up to a terrain maximum (e.g. marsh piles to 4, rock footings to 12).
+  - **Material weight counts now.** Each level of construction in a column adds its
+    material's weight (placeholders: timber 1, stone 2, reinforced stone 3), and the
+    total must stay within the bearing. Max height follows from bearing and material,
+    rather than being a separate number.
+  - Max width becomes the site's buildable area. Dig depth stays a terrain value.
+- **Capacity comes from what fits.** Furnishings (bunks, stores, hearths) are objects
+  with footprints in cells, placed in rooms.
+  - The old segment feature budget ("5/5") goes.
+  - For example, a 2 × 2 bunk block sleeps 4. A barracks for 20 is five blocks plus
+    aisles, a room of about 5 × 6 cells.
+  - Furnishings are also obstacles and cover in a fight.
+  - How placement works is subject 4. Shifts (more garrison than bunks, resting in turns)
+    belong to the needs pass.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Coarser structure cells (2 × 2 grems) | Openings and rooms would no longer measure in grems, and combat width through a gate would need converting. |
+| Keep a segment/stability budget | It belongs to the side-on profile Decision 52 replaced; bearing per cell expresses the same limit on the grid. |
+| Stability as a plain max height | Ignores what the structure is made of; the user wants material weight to count. |
+| A feature-point budget per room | Capacity should follow the room the player draws and what physically fits in it. |
+
+**Consequences:**
+- The formation sim's `RANK_DEPTH` moves to 0.0625 (a tiny change from 0.06) when the 2D
+  formation work starts.
+- Terrain library entries gain bearing, a foundation maximum, and dig depth; the old
+  stability / max height / max width trio is replaced. **The designer's terrain and
+  structure views must change with it**, per the standing rule that schema changes keep
+  the designer in sync.
+- 3D parts are built to a cell of one grem and a storey of 2 cells.
+
