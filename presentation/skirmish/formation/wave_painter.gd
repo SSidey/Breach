@@ -22,7 +22,8 @@ var lane_width := COLUMNS
 ## [[rank, column, depth, width, filled, UnitDef, progress], ...] from
 ## FormationSkirmishReadout.lane().
 var places := []
-var fill_color := Color("#b3761d")
+## Fill colour by the unit's preferred band (UnitDef.Position): front, mid, back.
+var band_colors := [Color("#b3761d"), Color("#8a6fb3"), Color("#3f8f86")]
 
 var _last_cell := Vector2i(-1, -1)
 var _erasing := false
@@ -91,6 +92,7 @@ func _draw() -> void:
 	for place in places:
 		var body := _rect(place[0], place[1], place[2], place[3]).grow(-2.0)
 		var progress: float = place[6] if place.size() > 6 else 0.0
+		var fill_color: Color = band_colors[place[5].preferred_position]
 		if place[4]:
 			draw_rect(body, fill_color)
 		elif progress > 0.0:  # builds from the back of the body towards the front

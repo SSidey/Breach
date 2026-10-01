@@ -2327,3 +2327,64 @@ grem builders, two grems are built at once.
     reserve before merging
   - domain upgrades between maps
 
+### Decision 46 — Units prefer a position in the formation, reinforcements shuffle into place without ceding ground, and the spitter fights at range
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** Once reinforcements join from the back (Decision 44), a brute arriving
+behind grems should not stay behind them, and ranged units belong at the back.
+- **Preferred positions.** Every unit type has a preferred band (front, mid or back)
+  and a priority within it. A unit has the stronger claim to a forward place if its
+  band is further forward, or, in the same band, if its priority is higher.
+  - brute: front, priority 2
+  - grem: front, priority 1
+  - militia: front, priority 1
+  - spitter: back
+- **Shuffling on reinforcement.** After a wave joins a squad in combat, the squad
+  re-forms. A unit steps forward one rank past the units directly ahead of it in its
+  columns, provided:
+  - it has a stronger claim than each of them
+  - each is one rank deep and lies within its columns (passing an overhanging
+    footprint is a later refinement)
+  The passed units take its back row, and this repeats until nothing more can move.
+- **Never ceding ground.** A swap is an exchange, so every cell stays held. The units
+  being passed keep fighting in their old places until it completes, and a death on
+  either side cancels it.
+- **Swaps take time** as the units move past one another: one rank at the slowest
+  involved unit's speed, modified by terrain. That is 0.6 s for grems and about 0.86 s
+  with a brute. Terrain is a factor of 1 for now, because the feel-test route has none.
+- **The spitter is the first ranged unit.**
+  - Its range is **5 ranks**, counted in formation cells so the detail view can draw it
+    as five cells. From the back of a 4-rank squad it reaches the enemy's front ranks.
+  - It strikes the nearest enemy unit in range, preferring one it overlaps laterally,
+    with no flank bonus, while moving or fighting.
+  - A spitter in the front rank of an engaged squad fights as melee.
+  - Stats: hp 12, dmg 4, speed 1.0, 1×1, built in 3 s.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Instant re-forming | The user wants the swap to take the time the units need to move past one another. |
+| Reinforcements keep their arrival order | Leaves a reinforcing brute behind grems and spitters in front. |
+| Range in map cells | Ranks are what the formation and the detail view show. Converting to map cells, for emplacements' `engage_range` (Decisions 33/37), is left open. |
+
+**Consequences:**
+- `UnitDef` gains `preferred_position`, `position_priority` and `attack_range`, and
+  `SkirmishUnit` mirrors them.
+- A new `grem_spitter` unit.
+- A new `FormationShuffle` handles re-forming. Squads carry their active swaps, and
+  units' route distances include swap progress, so views slide them.
+- `FormationCombat` adds ranged strikes, emitting `spat`.
+- Wave presets key units by kind (grem, brute, spitter); older light/heavy presets still
+  load.
+- **Open:** terrain modifiers on swap speed; whether units re-form after deaths as well
+  as after a reinforcement; and the rank-to-cell scale for the detail view.
+- **A broad change, on purpose.** It opens 12 existing files, one over the
+  `ocp-shotgun-surgery` heuristic's 11. A new unit capability (position, range) runs from
+  the data definition through its sim mirror, combat, the simulation, presets and the
+  view, and there is no extension point yet that one new case could plug into. The new
+  rules themselves sit in new files: `FormationShuffle`, and the ranged half of
+  `FormationCombat`.
+

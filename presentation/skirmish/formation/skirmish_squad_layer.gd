@@ -3,7 +3,8 @@ extends Node2D
 ## Draws the formation feel test's squads, per specs/22-formation-feel-test.md: every unit
 ## as a footprint-sized block (width across the route, depth along it), each lane's
 ## formation laid across its route (SkirmishRoute.normal_at), positions interpolated
-## between ticks, a flash on flank hits, and a ring around the selected squad. Read-only.
+## between ticks, a flash on flank hits, a dot on ranged units and a line for each spit
+## (Decision 46), and a ring around the selected squad. Read-only.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -27,6 +28,7 @@ var _lanes := {}  # lane key -> {"sim": FormationSimulation, "points": PackedVec
 var _previous := {}  # "lane:id" -> distance at the previous tick
 var _current := {}
 var _flashes := {}  # "lane:id" -> seconds left
+var _spits := []  # [lane key, shooter id, target id, seconds left]
 
 
 func add_lane(lane_key: String, sim: FormationSimulation, points: PackedVector2Array) -> void:
@@ -50,6 +52,11 @@ func flash(lane_key: String, unit_id: int) -> void:
 	_flashes[_key(lane_key, unit_id)] = FLASH_SECONDS
 
 
+## A ranged strike, drawn briefly as a line from the shooter to its target.
+func spit(lane_key: String, shooter_id: int, target_id: int) -> void:
+	_spits.append([lane_key, shooter_id, target_id, FLASH_SECONDS])
+
+
 ## [lane key, squad id] of the squad whose unit is under a point, or [].
 func squad_at(point: Vector2) -> Array:
 	for lane_key in _lanes:
@@ -68,6 +75,9 @@ func _process(delta: float) -> void:
 		_flashes[unit_key] -= delta
 		if _flashes[unit_key] <= 0.0:
 			_flashes.erase(unit_key)
+	for shot in _spits:
+		shot[3] -= delta
+	_spits = _spits.filter(func(shot): return shot[3] > 0.0)
 	queue_redraw()
 
 
@@ -77,6 +87,16 @@ func _draw() -> void:
 			var chosen: bool = selected == [lane_key, squad.id]
 			for unit in squad.living():
 				_draw_unit(lane_key, squad, unit, chosen)
+	for shot in _spits:
+		var ends := [_find(shot[0], shot[1]), _find(shot[0], shot[2])]
+		if not ends.has(null):
+			var tint := Color(0.55, 0.95, 0.6, shot[3] / FLASH_SECONDS)
+			draw_line(
+				_centre(shot[0], ends[0][0], ends[0][1]),
+				_centre(shot[0], ends[1][0], ends[1][1]),
+				tint,
+				2.0
+			)
 
 
 func _draw_unit(lane_key: String, squad: SkirmishSquad, unit: SkirmishUnit, chosen: bool) -> void:
@@ -104,6 +124,8 @@ func _draw_unit(lane_key: String, squad: SkirmishSquad, unit: SkirmishUnit, chos
 		draw_rect(
 			body.grow(2.0), Color(1.0, 0.95, 0.4, _flashes[unit_key] / FLASH_SECONDS), false, 3.0
 		)
+	if unit.attack_range > 0:
+		draw_circle(Vector2.ZERO, 3.0, Color("#d8f0c0"))
 	if unit.target_id != 0:
 		draw_circle(Vector2(size.x * 0.5 * squad.direction, 0), 2.5, Color.WHITE)
 	draw_set_transform(Vector2.ZERO, 0.0)
@@ -127,6 +149,15 @@ func _centre(lane_key: String, squad: SkirmishSquad, unit: SkirmishUnit) -> Vect
 		SkirmishRoute.point_at(points, distance, cell_size)
 		+ SkirmishRoute.normal_at(points, distance, cell_size) * lateral
 	)
+
+
+## [squad, unit] for a living unit id in a lane, or null.
+func _find(lane_key: String, unit_id: int) -> Variant:
+	for squad in _lanes[lane_key]["sim"].squads():
+		for unit in squad.living():
+			if unit.id == unit_id:
+				return [squad, unit]
+	return null
 
 
 func _key(lane_key: String, unit_id: int) -> String:

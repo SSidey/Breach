@@ -5,8 +5,10 @@
 [resource]
 script = ExtResource("1_unit")
 cost_food = 0
-hp = 26
-dmg = 5
-speed = 0.8
-build_seconds = 5.0
+hp = 12
+dmg = 4
+speed = 1.0
+build_seconds = 3.0
+preferred_position = 2
 position_priority = 1
+attack_range = 5

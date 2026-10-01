@@ -24,6 +24,10 @@ var state: State = State.MOVING
 ## The squad this one is fighting; 0 = none.
 var engaged_with: int = 0
 var wait_ticks: int = 0
+## Re-forming after a reinforcement, and the swaps under way (Decision 46, FormationShuffle):
+## [[mover, passed units, ticks left, ticks in all], ...].
+var reforming := false
+var swaps := []
 var units: Array[SkirmishUnit] = []
 
 

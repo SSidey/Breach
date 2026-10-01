@@ -238,6 +238,36 @@ A scripted run under round robin:
 2. Clearing both templates banked their grems. The builds under way finished into the
    reserve (8, over the cap of 6), and then no new builds started.
 
+## Round 5b: positions, the spitter and re-forming (Decision 46)
+
+- **Preferred positions.** `UnitDef.preferred_position` (front, mid or back) and
+  `position_priority` set a unit's claim to a forward place: brute front 2, grem front
+  1, militia front 1, spitter back 1.
+- **Re-forming** (`FormationShuffle`).
+  - After a wave joins a fight, a unit with a stronger claim steps forward one rank past
+    the one-deep units directly ahead in its columns. Those units take its back row.
+  - A swap takes one rank at the slowest involved unit's speed: 0.6 s for grems, 0.9 s
+    with a brute. Terrain factor is 1 for now.
+  - Until a swap completes the passed units keep their places and keep fighting, so the
+    front is never given up. A death cancels the swap.
+  - Units' route distances include swap progress, so the view slides them.
+- **The spitter** (`grem_spitter`) is the first ranged unit: hp 12, dmg 4, range 5
+  ranks, built in 3 s.
+  - It strikes the nearest enemy in range from anywhere in its squad, moving or
+    fighting, with no flank bonus, and emits `spat`.
+  - In the front rank of an engaged squad it fights as melee.
+- **Presets** key units by kind (grem, brute, spitter); older light/heavy presets still
+  load.
+- **HUD:**
+  - Brush 3 paints a spitter, and there is a spitter builder.
+  - The painter colours places by band: amber front, teal back.
+  - The squad layer marks ranged units with a dot and draws each spit as a line.
+
+A scripted run against a durable militia line:
+1. A brute and two spitters joined a 3-grem fight.
+2. The brute swapped past the two grems in its columns over about 0.9 s and now leads.
+3. The spitters stayed in the back rank, spitting at the militia front.
+
 ## Notes / open questions
 
 - Orders are per wave. Pulling back a single unit is left out for now.
