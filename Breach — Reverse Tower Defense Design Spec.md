@@ -2400,6 +2400,10 @@ behind grems should not stay behind them, and ranged units belong at the back.
 
 ### Decision 47 — Units fight with weapons, and hold their preferred band instead of stepping into it
 
+> Superseded in part by Decision 54 on 2026-10-01: `WeaponDef` generalises into **items**:
+> weapons deal damage, tools grant trait levels (a shovel gives burrower 1). The weapon
+> loadouts and the band rules stand.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
 
@@ -2748,4 +2752,103 @@ the ground allows.
   structure views must change with it**, per the standing rule that schema changes keep
   the designer in sync.
 - 3D parts are built to a cell of one grem and a storey of 2 cells.
+
+### Decision 54 — Nodes stay on one tile and link into sites; the underground is generated strata dug by rated traits; one 3D scene shows it all
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** Settling multi-tile structures, the underground, and how units dig,
+climb and squeeze through, building on Decisions 52 and 53.
+
+- **Vocabulary**, used everywhere from now on:
+  - **map:** the board, a grid of tiles with nodes and links
+  - **tile:** one square of the map, with its terrain and strata, made of cells
+  - **node:** a map-level place that routes and captures run between; it sits on one
+    tile
+  - **subnode:** a part within a node's tile that can be fought over on its own
+    (gatehouse, bailey, keep)
+  - **cell:** 1 × 1 × 1, a grem's size
+  - **space:** a drawn area of cells that does one job (room, corridor, stair, shaft),
+    belonging to a subnode
+- **A node never crosses a tile edge.** A castle bigger than a tile is a **site**:
+  several nodes on neighbouring tiles joined by **site links**. A site link is a direct,
+  cell-to-cell join where their cells meet at the shared edge (a wall walk, a gate
+  passage, a tunnel), unlike a route across open country.
+  - A site is grouped for ownership and display, but each node can fall separately,
+    which gives sieges stages.
+  - Town walls are structures built within the site's tiles, not a separate feature.
+- **The underground is generated strata.**
+  - Each tile has a column of strata, **one material per level**: soil, clay, rock and
+    so on. These are seeded from the terrain type's ranges, and reproducible from the
+    map's seed. The designer can lock or re-roll.
+  - **Placements imply what is beneath.** A **well** guarantees a water table its shaft
+    reaches, unless it is marked dry. An **ore vein** feature guarantees veins in that
+    tile's strata, reachable from the surface and likely extending under neighbouring
+    tiles at decreasing odds.
+  - Caverns and other special cells can be painted as exceptions.
+- **Water is static for now.** A dug cell below the water table is flooded. Spreading
+  floods (filling connected dug cells over a few ticks) are a later option.
+- **Excavation is work on cells:** dig out, shore up, fill in.
+  - The **bore follows the diggers**: the face is the front rank's footprint (three grems
+    abreast dig 3 wide; a mixed rank's tallest unit sets the height).
+  - Only the face digs, as only the front rank fights. The ranks behind haul and shore
+    up. A wider rank can enlarge a tunnel later.
+- **Rated traits against difficulties:**
+  - **Digging.** Each material has a dig difficulty (soil 1, clay 2, stone 3, ore 3+;
+    to tune). A unit has **burrower N** and a separate **dig rate** (cells cleared per
+    tick). One level short of the difficulty halves the rate; two or more short, it can't
+    dig that material at all.
+  - **Climbing.** Faces and shafts have a climb difficulty. Rough stone with handholds is
+    0 (anyone); a smooth shaft at 1 needs **climber 1**. Shafts are climbed slowly, one
+    unit at a time.
+  - **Tools grant traits** (a shovel gives burrower 1, a pickaxe burrower 3). A unit's
+    level is the higher of its own and its best item's.
+- **Items.** Weapons and tools are both **items**: weapons deal damage (Decision 47),
+  tools grant trait levels.
+- **Sizes.**
+  - Grem and human: 1 × 1 × 1.
+  - Rat swarm: 1 × 1 × 1, several rats as one cell-sized unit, with **tiny** and
+    **burrower 1**.
+  - Brute: 2 × 2 × 2.
+  - A storey stays 2 cells by default, but a space can be drawn at any height. A unit
+    can't enter a space lower than itself.
+- **Burrows.**
+  - A burrow is a passage only **tiny** units can use: drains, rat holes, gaps under
+    foundations.
+  - A tiny burrower digs a burrow by default (cheap, and useless to an army), or a full
+    tunnel when ordered.
+  - A **grate** is a face preset that passes water and tiny units only. An open well can
+    be climbed by anyone who fits; a grated one admits only the rats.
+- **One 3D scene, zoomed and cut away.**
+  - Structures are 3D parts. The underground is generated strata meshes in the same
+    scene, built as merged chunks rather than per cell, with dug cells simply absent.
+  - One isometric-style camera zooms and pans, with a **cutaway** that hides everything
+    above level N. Cutting below ground shows the strata cut open with the tunnels in
+    them.
+  - Detail follows zoom: far out, structures as simple shapes and squads as tokens;
+    close in, full parts, unit sprites and furnishings.
+  - The side section is a clipping plane in the same scene.
+  - The 2D map viewer stays an authoring and debugging tool.
+  - Units remain 2D sprites (Decision 36).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A node spanning several tiles | Keeps the map graph simpler if each node has one tile; site links express the larger whole. |
+| A finer grid for small units | Halving the cell multiplies the grid eightfold; swarms and the tiny/burrow traits give rats their rules instead. |
+| Grems 2 cells tall | The user prefers 1 × 1 × 1. What separates rats from grems is the tiny trait, not height. |
+| Fixed bore sizes chosen on the order | The bore should follow whoever digs. |
+| A last-resort dig at any skill level | Missing levels slow digging, and a large gap stops it, so tools matter. |
+| Separate 2D and 3D views | One scene with zoom and cutaway serves the board, interiors and underground. |
+
+**Consequences:**
+- `WeaponDef` becomes an item type alongside tools that grant traits.
+- Units gain traits with levels, a dig rate, and a size in cells.
+- Terrain library entries gain strata ranges, a water table range, dig difficulties and
+  climb difficulties. **The designer must follow**, per the standing rule, and must
+  gain the well's dry switch, the ore vein feature's effect on strata, and painting
+  below ground.
+- The map schema gains site links between nodes on neighbouring tiles.
 
