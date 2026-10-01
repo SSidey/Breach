@@ -8,7 +8,9 @@ extends RefCounted
 ##   1. orders  - queued wave orders apply (a retreat disengages at once)
 ##   2. engage  - hostile squads whose fronts are within MELEE_REACH lock together
 ##   3. move    - free squads move as a block at their slowest unit's speed, stopping at
-##                contact; reaching the enemy end is arrival (the fort is immune)
+##                contact or behind a friendly squad; one that reaches a friendly squad
+##                in combat joins it from the back (Decision 44); reaching the enemy end
+##                is arrival (the fort is immune)
 ##   4. combat  - each squad's front-rank fighters strike: the enemy fighter they overlap
 ##                laterally, or - past the end of a narrower enemy line - the nearest end
 ##                fighter as a flank attack (x FLANK_BONUS). A unit struck by several foes
@@ -22,8 +24,9 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
+const FormationContact = preload("res://sim/skirmish/formation/formation_contact.gd")
 
-const MELEE_REACH := 0.35
+const MELEE_REACH := FormationContact.MELEE_REACH
 const ATTACK_INTERVAL_SECONDS := 1.0
 const TRAVEL_SCALE := 0.5
 const EPSILON := 0.000001
@@ -129,9 +132,9 @@ func _apply_orders(events: Array) -> void:
 
 func _engage(events: Array) -> void:
 	for attacker in _squads:
-		if not _can_engage(attacker) or attacker.engaged_with != 0:
+		if not FormationContact.can_engage(attacker) or attacker.engaged_with != 0:
 			continue
-		var foe := _nearest_engageable_hostile(attacker)
+		var foe := FormationContact.nearest_hostile(attacker, _squads)
 		if foe == null:
 			continue
 		_lock(attacker, foe)
@@ -148,15 +151,11 @@ func _lock(squad_entry: SkirmishSquad, foe: SkirmishSquad) -> void:
 
 
 func _move(events: Array) -> void:
+	var joins := []  # [leader, joining]
 	for mover in _squads:
-		if (
-			mover.state
-			in [
-				SkirmishSquad.State.DESTROYED,
-				SkirmishSquad.State.FIGHTING,
-				SkirmishSquad.State.ARRIVED
-			]
-		):
+		if mover.state in [SkirmishSquad.State.DESTROYED, SkirmishSquad.State.FIGHTING]:
+			continue
+		if mover.state == SkirmishSquad.State.ARRIVED:
 			continue
 		if mover.wait_ticks > 0:
 			mover.wait_ticks -= 1
@@ -170,9 +169,24 @@ func _move(events: Array) -> void:
 		var step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		var next := clampf(mover.front_distance + direction * step, 0.0, route_length)
 		if advancing:
-			next = _stop_at_contact(mover, next)
+			next = FormationContact.limit(mover, _squads, next)
 		mover.front_distance = next
+		var leader := FormationContact.joinable(mover, _squads) if advancing else null
+		if leader != null:
+			joins.append([leader, mover])
 		_check_ends(mover, events)
+	for pair in joins:
+		_join(pair[0], pair[1], events)
+
+
+## A wave reaching a friendly squad in combat becomes its rear ranks (Decision 44).
+func _join(leader: SkirmishSquad, joining: SkirmishSquad, events: Array) -> void:
+	events.append(FormationEvents.squad_event("reinforced", _tick, joining, {"into": leader.id}))
+	for moved in FormationContact.reinforce(leader, joining):
+		events.append(
+			FormationEvents.unit_event("stepped_up", _tick, leader, moved, {"rank": moved.rank})
+		)
+	_squads.erase(joining)
 
 
 func _fight(events: Array) -> void:
@@ -234,39 +248,6 @@ func _release(released: SkirmishSquad) -> void:
 			other.engaged_with = 0
 			if other.state != SkirmishSquad.State.DESTROYED:
 				other.state = SkirmishSquad.State.MOVING
-
-
-func _can_engage(candidate: SkirmishSquad) -> bool:
-	return (
-		candidate.state != SkirmishSquad.State.DESTROYED
-		and candidate.state != SkirmishSquad.State.ARRIVED
-		and candidate.order != SkirmishUnit.Order.RETREAT
-		and candidate.wait_ticks == 0
-	)
-
-
-func _nearest_engageable_hostile(from: SkirmishSquad) -> SkirmishSquad:
-	var best: SkirmishSquad = null
-	var best_gap := INF
-	for other in _squads:
-		if other.faction_id == from.faction_id or not _can_engage(other):
-			continue
-		var gap := absf(other.front_distance - from.front_distance)
-		if gap <= MELEE_REACH + EPSILON and gap < best_gap:
-			best = other
-			best_gap = gap
-	return best
-
-
-func _stop_at_contact(mover: SkirmishSquad, next: float) -> float:
-	for other in _squads:
-		if other.faction_id == mover.faction_id or not _can_engage(other):
-			continue
-		if (other.front_distance - mover.front_distance) * mover.direction <= 0.0:
-			continue
-		var limit := other.front_distance - mover.direction * MELEE_REACH
-		next = minf(next, limit) if mover.direction > 0 else maxf(next, limit)
-	return next
 
 
 func _check_ends(mover: SkirmishSquad, events: Array) -> void:

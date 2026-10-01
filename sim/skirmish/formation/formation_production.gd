@@ -25,8 +25,9 @@ var progress: float = 0.0
 var _template := WaveTemplate.new(1, 0)
 var _filled := []  # one bool per _template.ordered() place
 var _reserve: Array[UnitDef] = []
-var _ticks := 0
-var _building: UnitDef
+## Build ticks so far on a partly built unit, per unit type: kept through template edits
+## and partial sends, so switching what is built never throws work away (Decision 44).
+var _partial := {}  # UnitDef -> ticks
 var _announced := false
 
 
@@ -91,8 +92,6 @@ func send(sim: FormationSimulation) -> SkirmishSquad:
 			placements.append(layout[1][index])
 	var squad := sim.spawn_squad(layout[0], placements, faction_id, at_player_end)
 	_filled.fill(false)
-	_ticks = 0
-	progress = 0.0
 	_announced = false
 	return squad
 
@@ -121,16 +120,14 @@ func preview() -> Array:
 
 
 func _build_toward(unit_def: UnitDef, index: int, sim: FormationSimulation, events: Array) -> void:
-	if _building != unit_def:
-		_building = unit_def
-		_ticks = 0
-	_ticks += 1
+	var ticks: int = _partial.get(unit_def, 0) + 1
 	var area := unit_def.footprint_depth * unit_def.footprint_width
 	var needed := maxi(1, roundi(build_seconds * (2.0 if area > 1 else 1.0) / sim.tick_seconds))
-	progress = float(_ticks) / float(needed)
-	if _ticks < needed:
+	progress = float(ticks) / float(needed)
+	_partial[unit_def] = ticks
+	if ticks < needed:
 		return
-	_ticks = 0
+	_partial.erase(unit_def)
 	progress = 0.0
 	_filled[index] = true
 	events.append(_event("built", sim, {"built": built()}))

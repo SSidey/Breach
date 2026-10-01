@@ -195,6 +195,24 @@ A scripted run with real painter clicks, one per frame:
 3. That shape was saved as Preset 1 and applied to lane k, which kept only what its one
    slot and 4-wide lane allow: a single grem.
 
+## Round 4: reinforcement and kept progress (Decision 44)
+
+From playing round 3:
+- **Reinforcements join a fight from the back** (`FormationContact`).
+  - A wave that reaches a friendly squad in combat stops at its back rank and joins it as
+    rear ranks, which step up as the front falls. It never engages the enemy on its own.
+  - A wave reaching a friendly squad that isn't fighting queues behind it; squads never
+    pass through their own side.
+  - A wider reinforcement centres on the same line, and its outer columns step up to
+    extend the front.
+- **Build progress is kept per unit type.** A partial send or a reshape no longer resets
+  the unit underway.
+
+A scripted run against a durable militia line showed it working:
+1. A five-grem wave locked with the militia.
+2. A second wave of three, sent part-built, arrived behind it and joined as a rear rank:
+   8 units, ranks `[0,0,0,0,0,1,1,1]`, still 5 fighters.
+
 ## Notes / open questions
 
 - Orders are per wave. Pulling back a single unit is left out for now.

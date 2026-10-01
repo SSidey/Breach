@@ -150,3 +150,30 @@ func test_an_empty_template_builds_nothing() -> void:
 
 	assert_int(_count(events, "built")).is_equal(0)
 	assert_object(production.send(sim)).is_null()
+
+
+func test_sending_a_partial_wave_keeps_the_progress_on_the_unit_underway() -> void:
+	var sim := FormationSimulation.new(9.0, TICK)
+	var production := _production(WavePresets.line(_grem, 5, 5))
+	_run(production, sim, 8)  # one grem built, the next 3 of its 5 ticks in
+
+	production.send(sim)
+
+	assert_float(production.progress).is_equal_approx(0.6, 0.001)
+	_run(production, sim, 2)
+	assert_int(production.built()).is_equal(1)
+
+
+func test_switching_unit_type_keeps_the_partly_built_unit() -> void:
+	var sim := FormationSimulation.new(9.0, TICK)
+	var production := _production(WavePresets.line(_grem, 3, 3))
+	_run(production, sim, 3)  # a grem 3 of its 5 ticks in
+	var reshaped := WaveTemplate.new(3, 8)
+	reshaped.paint(_brute, Vector2i(0, 0))  # a brute now leads, so it builds first
+	reshaped.paint(_grem, Vector2i(2, 0))
+	production.set_template(reshaped)
+
+	_run(production, sim, 10)  # the brute
+	_run(production, sim, 2)  # the grem resumes where it left off
+
+	assert_int(production.built()).is_equal(2)
