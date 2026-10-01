@@ -2013,6 +2013,10 @@ before the fight.
 
 ### Decision 40 — Waves are formations on a slot grid: unit footprints, front-rank combat with flank wrap, and a shared pool of slots assigned across lanes
 
+> Superseded in part by Decision 42 on 2026-10-01: a lane's wave is a painted template, and a
+> change takes effect **immediately** (built units fold in, leftovers are banked), rather than
+> applying from the next wave.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-09-30
 
@@ -2135,3 +2139,137 @@ defences and upgrades that fit its faction.
   once they have a view) gain a "faction / universal" field and a tech requirement. By
   the sync rule, this is updated when the schema lands.
 - The feel test stays player-versus-kingdom with fixed rosters.
+
+### Decision 42 — Waves are painted templates; a change takes effect immediately, built units fold in, and leftovers are banked
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** From the formation feel test's first playtest
+(`specs/22-formation-feel-test.md`): adjusting width with −/+ and then waiting for the
+current wave to fill in its old shape felt clunky, and was hard to read. A "Brute front +
+grems" preset put a grem *beside* the brute in the front rank when the user expected the
+brute to lead. The user's direction:
+- **Draw the wave.** Each lane has a **wave template**: a grid up to the lane's width
+  (at most 8) by up to 4 ranks. The player paints units into it with brushes (a 1×1
+  grem, a 2×2 brute, an eraser). The painted units *are* the shape, so "front" means
+  exactly what was drawn. This replaces width −/+ and the composition presets. The
+  template can't use more cells than the lane's share of the slot pool.
+- **The template is edited separately from the wave being built**, and a change **takes
+  effect immediately**:
+  - The part-built wave switches to the new shape at once.
+  - Units already built **fold in**: each is re-slotted into a matching place (same
+    unit type) in the new template, front first.
+  - Building carries on toward whatever is still unfilled.
+- **Leftovers are banked.** Built units with no matching place in the new shape go to a
+  **reserve** at that lane's origin, shown in the HUD. The reserve fills matching places
+  (instantly) before anything new is built. Nothing is wasted, so reshaping is cheap to
+  experiment with.
+- If the lane's pool share drops below the template's size, the template is trimmed
+  from the back, and any trimmed built units are banked the same way.
+- **The board isn't where flanking and step-up read.** On the overland board they're
+  barely visible, so they belong in the **detail view** (Inspector Viewport, Decision
+  36): there you should *see* the line wrap round and the rank behind close up. The
+  debug board's oversized units should later be kept within their tile.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep width −/+ and composition presets | Clunky, and the presets can't express intent (who leads). |
+| A new shape applies after the current wave is sent (Decision 40) | The user found waiting for the old shape to fill clunky. |
+| Deploy leftovers at once as a partial wave | A surprise departure; the user chose banking. |
+| Consume leftovers | Makes experimenting with shapes costly; the user chose banking. |
+
+**Consequences:**
+- The formation feel test gets a per-lane **wave painter** (brushes, an eraser, the
+  built units and banked reserve shown in place). Production builds toward the template
+  and folds and banks on every change.
+- Decision 40's "a pool change applies to the next wave" is replaced by "takes effect
+  now, with fold and bank".
+- The detail view's requirements now include: showing flank wraps and step-up as
+  visible movement.
+
+### Decision 43 — The wave painter faces the direction of travel, clicks toggle, slots are shared implicitly, and presets and hotkeys speed up painting
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** From painting waves in the formation feel test (Decision 42):
+- **The front of the formation is on the right**, matching the direction of travel. The
+  painter shows ranks running right to left (the front rank rightmost) and formation
+  columns top to bottom. It used to have the front at the top.
+- **Clicking an occupied cell erases it.** A drag that starts on an occupied cell erases
+  as it goes; one that starts on an empty cell paints. The separate erase click is no
+  longer needed, though right-click still erases.
+- **No per-lane share to set.** The slot pool is a single total. Each lane simply uses
+  the cells it paints, and erasing frees those slots for any lane immediately. The
+  per-lane −/+ share controls go. This refines Decision 40's pool: the split across
+  lanes is still the player's choice, made by painting. It also makes Decision 42's
+  "trim when a share drops" unnecessary.
+- **Player presets and hotkeys.**
+  - Presets are **the player's own**; the game ships no designer-authored shapes. The
+    player saves a lane's current shape as a named preset and can apply any saved preset
+    to any lane in one step. It is fitted to that lane's width and the free slots, and
+    anything that no longer fits is dropped.
+  - Presets are kept between sessions.
+  - Brushes have hotkeys: 1 grem, 2 brute, E erase. One brush applies to both lanes.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Front at the top | Doesn't match the direction of travel. |
+| Explicit per-lane shares (−/+) | An extra step; the user wants erased slots available to any lane at once. |
+| A separate brush per lane | More UI for no gain; one brush with hotkeys is quicker. |
+| Built-in squad shapes | The user wants presets to be player-assigned, not supplied by the game or the designer. |
+
+**Consequences:**
+- `WaveTemplate` clamps a footprint's anchor so it fits the grid, and can report whether
+  a cell is occupied.
+- A `WavePresets` module turns a lane's shape into plain data and back, fitted to the
+  lane it is applied to; the feel test keeps presets as JSON in the player's user data.
+  The only shape it builds itself is the lane's starting wave, a plain line, which isn't
+  offered as a preset.
+- The scene keeps the pool's per-lane figures equal to what each lane has painted. A
+  lane may paint up to its own cells plus whatever is free.
+
+### Decision 44 — Reinforcements join a fight from the back, and build progress is never thrown away
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** From playing the wave painter (Decisions 42 and 43):
+- **A wave reaching a fight reinforces it from the back.** A squad never passes through
+  its own side.
+  - A wave that catches up with a friendly squad in combat stops at that squad's back
+    rank and joins it as rear ranks. Its units step up as the front falls, as the
+    squad's own ranks do.
+  - Before this, a second wave walked through the first and fought beside it at the
+    front.
+  - A wave that catches up with a friendly squad that isn't fighting (holding or slower)
+    queues behind it.
+  - If the reinforcement is wider, both lines centre on the wider width. Its outer
+    columns then have no one ahead of them, so they step up beside the line and extend
+    it.
+- **Partial build progress is kept.** Progress on a partly built unit is kept per unit
+  type. It survives a partial send (it carries on into the next wave) and a template
+  edit that makes something else build first (it resumes when that type's turn comes
+  back). Before this, both reset the unit underway.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Reinforcements fight beside the front line | Not what a column arriving from behind can do; the user wants it to reinforce from the back. |
+| Reinforcements join a friendly squad that isn't fighting | Two waves on the march would silently become one, which removes the player's choice to keep them separate. |
+| Reset progress on send or reshape | Throws away work and punishes reacting to the fight. |
+
+**Consequences:**
+- A new `FormationContact` holds the contact rules between squads: who can fight, where
+  an advancing squad stops (at reach of a hostile front, or behind a friendly back rank),
+  and joining.
+- `FormationSimulation` emits `reinforced` (with `into`) when a wave joins, and the
+  joining squad leaves the lane's squad list.
+- `FormationProduction` keeps partial build ticks per unit type.
+

@@ -29,6 +29,17 @@ var attack_cooldown: int = 0
 ## Ticks to stand still after spawning, so a wave leaves as a staggered group.
 var wait_ticks: int = 0
 
+# Formation fields (specs/22-formation-feel-test.md); unused by the spec 21 SkirmishSimulation.
+## The squad (wave) this unit marches in; 0 = none.
+var squad_id: int = 0
+## Row in its squad's formation, 0 = the front rank.
+var rank: int = 0
+## Leftmost formation column it covers.
+var column: int = 0
+## Slots it occupies, depth (ranks) x width (columns) - Decision 40.
+var footprint_depth: int = 1
+var footprint_width: int = 1
+
 
 func is_alive() -> bool:
 	return state != State.DEAD

@@ -1,0 +1,87 @@
+extends GdUnitTestSuite
+## SkirmishSquad, per specs/22-formation-feel-test.md: a wave in the field - ranks spaced
+## behind its front, moving as a block, front-rank fighters and step-up.
+
+const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
+const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+
+
+func _unit(
+	unit_id: int, rank: int, column: int, depth: int = 1, width: int = 1, speed: float = 1.0
+) -> SkirmishUnit:
+	var unit := SkirmishUnit.new()
+	unit.id = unit_id
+	unit.rank = rank
+	unit.column = column
+	unit.footprint_depth = depth
+	unit.footprint_width = width
+	unit.speed = speed
+	unit.hp = 10
+	return unit
+
+
+func _squad(width: int, units: Array, direction: int = 1) -> SkirmishSquad:
+	var members: Array[SkirmishUnit] = []
+	members.assign(units)
+	return SkirmishSquad.new(1, "player", direction, 0.0, width, members)
+
+
+func test_ranks_sit_behind_the_front_in_the_travel_direction() -> void:
+	var squad := _squad(1, [_unit(1, 0, 0), _unit(2, 1, 0)])
+	squad.front_distance = 5.0
+
+	assert_float(squad.unit_distance(squad.units[1])).is_equal_approx(
+		5.0 - SkirmishSquad.RANK_DEPTH, 0.0001
+	)
+	var facing_back := _squad(1, [_unit(3, 1, 0)], -1)
+	facing_back.front_distance = 5.0
+	assert_float(facing_back.unit_distance(facing_back.units[0])).is_equal_approx(
+		5.0 + SkirmishSquad.RANK_DEPTH, 0.0001
+	)
+
+
+func test_a_squad_moves_at_its_slowest_living_units_speed() -> void:
+	var slow := _unit(2, 1, 0, 1, 1, 0.5)
+	var squad := _squad(1, [_unit(1, 0, 0), slow])
+
+	assert_float(squad.speed()).is_equal(0.5)
+	slow.state = SkirmishUnit.State.DEAD
+	assert_float(squad.speed()).is_equal(1.0)
+
+
+func test_fighters_are_the_foremost_living_unit_of_each_column() -> void:
+	var brute := _unit(1, 0, 1, 2, 2)
+	var squad := _squad(4, [_unit(2, 0, 0), brute, _unit(3, 1, 0), _unit(4, 0, 3), _unit(5, 1, 3)])
+
+	var ids := squad.fighters().map(func(u): return u.id)
+
+	assert_array(ids).contains_exactly_in_any_order([2, 1, 4])
+
+
+func test_step_up_closes_the_column_after_a_front_death() -> void:
+	var front := _unit(1, 0, 0)
+	var squad := _squad(1, [front, _unit(2, 1, 0), _unit(3, 2, 0)])
+	front.state = SkirmishUnit.State.DEAD
+
+	var moved := squad.compact()
+
+	assert_array(moved.map(func(u): return u.id)).contains_exactly_in_any_order([2, 3])
+	assert_int(squad.units[1].rank).is_equal(0)
+	assert_int(squad.units[2].rank).is_equal(1)
+	assert_array(squad.fighters().map(func(u): return u.id)).is_equal([2])
+
+
+func test_a_wide_unit_only_steps_up_when_its_whole_footprint_is_clear() -> void:
+	var blocker := _unit(1, 0, 0)
+	var squad := _squad(2, [blocker, _unit(2, 0, 1), _unit(3, 1, 0, 1, 2)])
+	squad.units[1].state = SkirmishUnit.State.DEAD
+
+	assert_array(squad.compact()).is_empty()  # column 0 is still held at rank 0
+
+
+func test_lateral_spans_are_centred_and_mirrored_for_the_other_facing() -> void:
+	var squad := _squad(4, [_unit(1, 0, 0)])
+	var mirrored := _squad(4, [_unit(2, 0, 0)], -1)
+
+	assert_object(squad.lateral_span(squad.units[0])).is_equal(Vector2(-2.0, -1.0))
+	assert_object(mirrored.lateral_span(mirrored.units[0])).is_equal(Vector2(1.0, 2.0))
