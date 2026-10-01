@@ -7,12 +7,13 @@ extends RefCounted
 ##   rank of a friendly squad ahead (squads never pass through their own side)
 ## - how a wave that reaches a friendly squad in combat joins it from the back, as rear
 ##   ranks that step up as the front falls
+## - when a squad without front units holds to skirmish (Decision 47)
 ## Pure over the squads it is given; FormationSimulation calls it each tick.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 
-const MELEE_REACH := 0.35
+const MELEE_REACH := 0.07
 const EPSILON := 0.000001
 
 
@@ -53,6 +54,26 @@ static func limit(mover: SkirmishSquad, squads: Array, next: float) -> float:
 		)
 		next = minf(next, reachable) if mover.direction > 0 else maxf(next, reachable)
 	return next
+
+
+## True if an advancing squad with no front-preferring units has an enemy within its
+## ranged reach: it holds there, skirmishing, rather than marching into melee (Decision 47).
+static func skirmishing(mover: SkirmishSquad, squads: Array) -> bool:
+	var living := mover.living()
+	if (
+		mover.order != SkirmishUnit.Order.ADVANCE
+		or living.any(func(u): return u.preferred_position == 0)
+	):
+		return false
+	var reach: int = living.reduce(func(most, u): return maxi(most, u.attack_range), 0)
+	if reach == 0:
+		return false
+	for other in squads:
+		if other.faction_id != mover.faction_id and can_engage(other) and not other.is_destroyed():
+			var gap := absf(other.front_distance - mover.front_distance)
+			if gap <= reach * SkirmishSquad.RANK_DEPTH + EPSILON:
+				return true
+	return false
 
 
 ## The friendly squad in combat whose back rank `mover` has reached, or null.

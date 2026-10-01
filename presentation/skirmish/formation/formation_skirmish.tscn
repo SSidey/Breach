@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://presentation/skirmish/formation/formation_skirmish_scene.gd" id="1_scene"]
 [ext_resource type="Script" path="res://presentation/map_view.gd" id="2_view"]
 [ext_resource type="Resource" path="res://assets/placeholder/map/map_art_set.tres" id="3_art"]
 [ext_resource type="Script" path="res://presentation/skirmish/formation/skirmish_squad_layer.gd" id="4_squads"]
+[ext_resource type="Script" path="res://presentation/skirmish/skirmish_camera_rig.gd" id="5_camera"]
 
 [node name="FormationSkirmish" type="Node2D"]
 script = ExtResource("1_scene")
@@ -16,3 +17,4 @@ art_set = ExtResource("3_art")
 script = ExtResource("4_squads")
 
 [node name="Camera" type="Camera2D" parent="."]
+script = ExtResource("5_camera")

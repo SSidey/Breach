@@ -1,6 +1,7 @@
 extends GdUnitTestSuite
 
 const UnitDef = preload("res://content/definitions/unit_def.gd")
+const WeaponDef = preload("res://content/definitions/weapon_def.gd")
 
 
 func test_valid_unit_def_has_no_errors() -> void:
@@ -62,19 +63,51 @@ func test_a_unit_takes_a_positive_time_to_build() -> void:
 	)
 
 
-func test_a_unit_prefers_the_front_by_default_and_fights_in_melee() -> void:
+func test_a_unit_prefers_the_front_by_default() -> void:
 	var unit := UnitDef.new()
 
 	assert_int(unit.preferred_position).is_equal(UnitDef.Position.FRONT)
-	assert_int(unit.attack_range).is_equal(0)
 
 
-func test_negative_priority_and_range_are_invalid() -> void:
+func test_negative_priority_is_invalid() -> void:
 	var unit := UnitDef.new()
 	unit.position_priority = -1
-	unit.attack_range = -2
 
 	var errors := Array(unit.validate())
 
 	assert_bool(errors.any(func(message): return message.contains("position_priority"))).is_true()
-	assert_bool(errors.any(func(message): return message.contains("attack_range"))).is_true()
+
+
+func test_melee_damage_is_the_sum_of_its_melee_weapons() -> void:
+	var unit := UnitDef.new()
+	unit.dmg = 9
+	unit.weapons = [_weapon("bite", 3, 0), _weapon("claw", 3, 0), _weapon("spit", 4, 5)]
+
+	assert_int(unit.melee_damage()).is_equal(6)
+	assert_str(unit.ranged_weapon().weapon_name).is_equal("spit")
+
+
+func test_a_unit_without_weapons_strikes_with_dmg() -> void:
+	var unit := UnitDef.new()
+	unit.dmg = 9
+
+	assert_int(unit.melee_damage()).is_equal(9)
+	assert_object(unit.ranged_weapon()).is_null()
+
+
+func test_an_invalid_weapon_makes_the_unit_invalid() -> void:
+	var unit := UnitDef.new()
+	unit.weapons = [_weapon("claw", -1, 0)]
+
+	(
+		assert_bool(Array(unit.validate()).any(func(message): return message.contains("claw")))
+		. is_true()
+	)
+
+
+func _weapon(weapon_name: String, damage: int, attack_range: int) -> WeaponDef:
+	var weapon := WeaponDef.new()
+	weapon.weapon_name = weapon_name
+	weapon.damage = damage
+	weapon.attack_range = attack_range
+	return weapon

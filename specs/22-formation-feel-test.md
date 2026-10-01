@@ -268,6 +268,38 @@ A scripted run against a durable militia line:
 2. The brute swapped past the two grems in its columns over about 0.9 s and now leads.
 3. The spitters stayed in the back rank, spitting at the militia front.
 
+## Round 5c: weapons, bands held, a finer scale (Decisions 47–49)
+
+- **Weapons** (`WeaponDef`, `content/weapons/`):
+  - The units:
+    - grem: bite 3 + claw 3
+    - brute: fists 7 (siege 1) + bite 3
+    - spitter: spit 4 acid at range 5, with a claw 1 + bite 1 for melee
+    - militia: spear 5
+  - A unit in the front rank of a fight strikes with all its melee weapons. A ranged unit
+    behind uses its best ranged weapon, and `spat` carries the damage type.
+- **Bands are held.**
+  - Only the front rank fights in melee. An enemy facing an empty front cell wraps onto
+    the flank.
+  - Back-preferring units never step into the front. When the whole front falls, the
+    squad re-anchors on its foremost rank and the lock is released, so the enemy has to
+    advance.
+  - A squad with no front units holds once an enemy is within its ranged reach.
+- **Re-forming moves** (Decision 49): a unit takes free front space sideways or
+  diagonally, or else passes through. Passed units too wide or deep move back to the
+  nearest free space. Deaths start re-forming too.
+- **Scale:** a rank is 0.06 cells (was 0.3), and melee reach is 0.07. Swaps in a fight
+  are slowed by crowding (×0.2), keeping about 0.6 s for grems.
+- **View:** units are a fifth of their former size, and their markers scale with them.
+  The camera zooms (mouse wheel) and pans (middle drag).
+
+A zoomed scripted run, 2 grems with 2 spitters behind against a hard-hitting militia
+line:
+1. The spitters spat from behind the front.
+2. The grems fell, and the spitters held their place (re-anchored, never moving
+   forward).
+3. The militia advanced to them, and they fought with claws and bites.
+
 ## Notes / open questions
 
 - Orders are per wave. Pulling back a single unit is left out for now.

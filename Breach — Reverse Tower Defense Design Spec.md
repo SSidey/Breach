@@ -2478,3 +2478,72 @@ behind grems should not stay behind them, and ranged units belong at the back.
 - The squad layer draws units at the new size, and the feel-test camera gains zoom and
   pan.
 
+### Decision 49 — Re-forming moves units into free space sideways, or through one another, never leaving them stuck
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** Decision 46 only let a unit trade places with units one rank deep and
+within its columns, so a grem behind a wider or deeper back unit (a future spit-cart) was
+stuck. The user, from the [Formation Swaps](https://claude.ai/artifact/QdDMgECbicnFT4TByNtYsL)
+diagram: "if a unit has space it should move laterally, and if not … allow them to move
+through (past each other) until they reach unoccupied space".
+- **Free space first.** A front-preferring unit behind the front takes the nearest free
+  place in the front rank, sideways or diagonally if need be.
+- **Otherwise through.** It moves forward past the weaker units directly ahead. Those
+  that fit take its back row, as before. Any that are too wide or too deep move back,
+  through the formation, to the nearest free space that fits them; the formation may
+  grow deeper.
+- **Time follows distance.** A move takes as long as the furthest unit travels, at the
+  slowest involved unit's speed, slowed by crowding in a fight (Decision 48). Nothing
+  changes place until it completes, and a death cancels it.
+- **Deaths also start re-forming.** When a front unit falls, front-preferring units can
+  close the gap sideways. Back units still never step into the front (Decision 47).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Leave wide or deep units blocking (Decision 46) | Strands stronger units behind weaker ones. |
+| Teleport units into place | Moves must take the time units need to pass one another. |
+
+**Consequences:**
+- `FormationShuffle` plans moves rather than fixed swaps, and its offsets carry a sideways
+  part, so the view slides units across as well as along.
+- Mid-preferring units moving into free second-rank space is left for when a mid unit
+  exists.
+
+### Decision 50 — Diff-scoped checks compare a stacked PR with the PR below it
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:**
+- **The problem.** `ocp-shotgun-surgery` and `context-locality` diffed against
+  `origin/main` by default. On a stack of PRs, every branch above one with a justified
+  broad change (Decision 46's 12 files) then failed on every `.gd` commit, because the
+  lower PR's files were counted again. That blocked round 5c entirely.
+- **The fix, chosen by the user over skipping the hook.** The base is resolved by
+  `ci/godot/scripts/base_ref.py`:
+  1. an explicit argument
+  2. else `BASE_REF`, which CI sets to the pull request's base branch
+  3. else the branch HEAD is stacked on: the closest remote branch whose tip is an
+     ancestor of HEAD, other than its own
+  4. else `origin/main`
+
+  Each PR is then judged on its own changes.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Skip the hook for stacked commits | Hides the check exactly where it matters; the user chose a fix instead. |
+| Wait for the lower PRs to merge | Stalls stacked work, which this project relies on. |
+
+**Consequences:**
+- `base_ref.py` comes with unit tests, which the `tools-python-tests` hook now runs.
+- CI exports `BASE_REF` for pull requests, because a PR checkout is a detached merge
+  commit and detection would find the PR's own branch.
+- Detection could be fooled by a stray remote branch sitting on HEAD's history, so CI
+  never relies on it; locally, an explicit argument always wins.
+

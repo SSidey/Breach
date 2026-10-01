@@ -10,7 +10,7 @@ enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DESTROYED }
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 
 ## Cells between one rank and the next.
-const RANK_DEPTH := 0.3
+const RANK_DEPTH := 0.06
 
 var id: int
 var faction_id: String
@@ -79,22 +79,19 @@ func lateral_span(unit: SkirmishUnit) -> Vector2:
 	return Vector2(half - unit.column - unit.footprint_width, half - unit.column)
 
 
-## The foremost living unit of each column (a wide unit counts once), left to right.
+## The front rank, left to right: only it fights in melee (Decision 47). A column whose
+## front cell is empty has no fighter, so the enemy facing it wraps onto the flank.
 func fighters() -> Array[SkirmishUnit]:
-	var out: Array[SkirmishUnit] = []
-	for column in range(width):
-		var best: SkirmishUnit = null
-		for unit in living():
-			var covers := unit.column <= column and column < unit.column + unit.footprint_width
-			if covers and (best == null or unit.rank < best.rank):
-				best = unit
-		if best != null and not out.has(best):
-			out.append(best)
+	var out: Array[SkirmishUnit] = living().filter(func(u): return u.rank == 0)
+	out.sort_custom(func(a, b): return a.column < b.column)
 	return out
 
 
 ## Step-up: living units move forward a rank while their whole footprint would be clear,
-## until nothing more can move. Returns the units that moved.
+## until nothing more can move - but only front-preferring units step into the front rank
+## (Decision 47). If the whole front has fallen, the squad re-anchors: its foremost rank
+## becomes rank 0 and front_distance moves back to match, so nobody moves on the route.
+## Returns the units that stepped up.
 func compact() -> Array[SkirmishUnit]:
 	var moved: Array[SkirmishUnit] = []
 	var any := true
@@ -105,11 +102,18 @@ func compact() -> Array[SkirmishUnit]:
 			func(a, b): return a.rank < b.rank or (a.rank == b.rank and a.column < b.column)
 		)
 		for unit in order_by_place:
-			if unit.rank > 0 and _clear_ahead(unit):
+			var into_front_ok := unit.rank > 1 or unit.preferred_position == 0
+			if unit.rank > 0 and into_front_ok and _clear_ahead(unit):
 				unit.rank -= 1
 				any = true
 				if not moved.has(unit):
 					moved.append(unit)
+	var remaining := living()
+	if not remaining.is_empty() and not remaining.any(func(u): return u.rank == 0):
+		var shift: int = remaining.reduce(func(least, u): return mini(least, u.rank), 1 << 30)
+		for unit in remaining:
+			unit.rank -= shift
+		front_distance -= direction * shift * RANK_DEPTH
 	return moved
 
 

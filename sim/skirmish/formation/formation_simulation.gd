@@ -7,7 +7,8 @@ extends RefCounted
 ## step() runs one tick in this fixed order:
 ##   1. orders  - queued wave orders apply (a retreat disengages at once)
 ##   2. engage  - hostile squads whose fronts are within MELEE_REACH lock together
-##   3. move    - free squads move as a block at their slowest unit's speed, stopping at
+##   3. move    - free squads move as a block at their slowest unit's speed (one with no
+##                front units holds once an enemy is in its ranged reach), stopping at
 ##                contact or behind a friendly squad; one that reaches a friendly squad
 ##                in combat joins it from the back (Decision 44); reaching the enemy end
 ##                is arrival (the fort is immune)
@@ -29,6 +30,7 @@ const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.g
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationContact = preload("res://sim/skirmish/formation/formation_contact.gd")
 const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle.gd")
+const FormationUnits = preload("res://sim/skirmish/formation/formation_units.gd")
 
 const MELEE_REACH := FormationContact.MELEE_REACH
 const ATTACK_INTERVAL_SECONDS := 1.0
@@ -58,7 +60,10 @@ func spawn_squad(
 	var home := 0.0 if at_player_end else route_length
 	var members: Array[SkirmishUnit] = []
 	for placement in placements:
-		members.append(_unit(placement[0], placement[1], faction_id, direction))
+		members.append(
+			FormationUnits.make(placement[0], placement[1], faction_id, direction, _next_unit_id)
+		)
+		_next_unit_id += 1
 	var squad := SkirmishSquad.new(_next_squad_id, faction_id, direction, home, width, members)
 	_next_squad_id += 1
 	squad.wait_ticks = wait_ticks
@@ -99,26 +104,6 @@ func step() -> Array:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
 	_sync_unit_distances()
 	return events
-
-
-func _unit(unit_def: UnitDef, place: Vector2i, faction_id: String, direction: int) -> SkirmishUnit:
-	var unit := SkirmishUnit.new()
-	unit.id = _next_unit_id
-	_next_unit_id += 1
-	unit.faction_id = faction_id
-	unit.hp = unit_def.hp
-	unit.max_hp = unit_def.hp
-	unit.dmg = unit_def.dmg
-	unit.speed = unit_def.speed
-	unit.footprint_depth = unit_def.footprint_depth
-	unit.footprint_width = unit_def.footprint_width
-	unit.preferred_position = unit_def.preferred_position
-	unit.position_priority = unit_def.position_priority
-	unit.attack_range = unit_def.attack_range
-	unit.rank = place.x
-	unit.column = place.y
-	unit.advance_direction = direction
-	return unit
 
 
 func _apply_orders(events: Array) -> void:
@@ -169,7 +154,7 @@ func _move(events: Array) -> void:
 		if mover.wait_ticks > 0:
 			mover.wait_ticks -= 1
 			continue
-		if mover.order == SkirmishUnit.Order.HOLD:
+		if mover.order == SkirmishUnit.Order.HOLD or FormationContact.skirmishing(mover, _squads):
 			mover.state = SkirmishSquad.State.HOLDING
 			continue
 		mover.state = SkirmishSquad.State.MOVING
@@ -224,7 +209,7 @@ func _fight(events: Array) -> void:
 	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks())
 	for shot in shots:
 		shot[1].hp -= shot[2]
-		var spat := {"target": shot[1].id, "dmg": shot[2]}
+		var spat := {"target": shot[1].id, "dmg": shot[2], "damage_type": shot[0].damage_type}
 		events.append(FormationEvents.unit_event("spat", _tick, shot[3], shot[0], spat))
 	for blow in blows:
 		blow[1].hp -= blow[2]
@@ -241,12 +226,17 @@ func _bury(events: Array) -> void:
 				events.append(FormationEvents.unit_event("died", _tick, fallen_squad, unit))
 		if deaths == 0:
 			continue
+		var front_before := fallen_squad.front_distance
 		for moved in fallen_squad.compact():
 			events.append(
 				FormationEvents.unit_event(
 					"stepped_up", _tick, fallen_squad, moved, {"rank": moved.rank}
 				)
 			)
+		fallen_squad.reforming = true  # front units may close gaps (Decision 49)
+		if not is_equal_approx(front_before, fallen_squad.front_distance):
+			_release(fallen_squad)  # its front fell: the enemy must advance (Decision 47)
+			events.append(FormationEvents.squad_event("front_fell", _tick, fallen_squad))
 		if fallen_squad.is_destroyed() and fallen_squad.state != SkirmishSquad.State.DESTROYED:
 			fallen_squad.state = SkirmishSquad.State.DESTROYED
 			_release(fallen_squad)
@@ -289,7 +279,7 @@ func _check_ends(mover: SkirmishSquad, events: Array) -> void:
 func _sync_unit_distances() -> void:
 	for entry in _squads:
 		for unit in entry.units:
-			var swapping := FormationShuffle.offset(entry, unit) * SkirmishSquad.RANK_DEPTH
+			var swapping := FormationShuffle.offset(entry, unit).x * SkirmishSquad.RANK_DEPTH
 			unit.distance = entry.unit_distance(unit) + entry.direction * swapping
 
 
