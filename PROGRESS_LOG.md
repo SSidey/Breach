@@ -46,3 +46,4 @@ Schema note: rows from 2026-09-20 onward that predate the `isp violations` / `he
 | 2026-10-01 | feature/formation-skirmish | 386 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-01 | feature/formation-domain-production | 399 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-01 | feature/formation-positions | 412 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
+| 2026-10-01 | feature/formation-weapons-scale | 428 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
