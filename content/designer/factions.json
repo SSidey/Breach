@@ -2,5 +2,12 @@
   {
     "id": "player",
     "display_name": "Player"
+  },
+  {
+    "id": "the_kingdom",
+    "display_name": "The Kingdom",
+    "stub_suspicion_ramp": "",
+    "stub_unit_types": "",
+    "stub_strategy_notes": ""
   }
 ]

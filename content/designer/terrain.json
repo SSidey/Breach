@@ -12,8 +12,8 @@
       "default_stability": 4,
       "default_max_height": 2,
       "default_max_width": 3,
-      "default_max_length": 3,
-      "default_max_depth": 1
+      "default_max_depth": 1,
+      "default_max_length": 3
     },
     {
       "id": "ROCKY",
@@ -27,8 +27,8 @@
       "default_stability": 6,
       "default_max_height": 3,
       "default_max_width": 2,
-      "default_max_length": 2,
-      "default_max_depth": 2
+      "default_max_depth": 2,
+      "default_max_length": 2
     },
     {
       "id": "SNOW",
@@ -42,8 +42,8 @@
       "default_stability": 2,
       "default_max_height": 1,
       "default_max_width": 2,
-      "default_max_length": 2,
-      "default_max_depth": 0
+      "default_max_depth": 0,
+      "default_max_length": 2
     },
     {
       "id": "DESERT",
@@ -57,8 +57,8 @@
       "default_stability": 3,
       "default_max_height": 1,
       "default_max_width": 3,
-      "default_max_length": 3,
-      "default_max_depth": 1
+      "default_max_depth": 1,
+      "default_max_length": 3
     },
     {
       "id": "SWAMP",
@@ -72,8 +72,8 @@
       "default_stability": 1,
       "default_max_height": 1,
       "default_max_width": 1,
-      "default_max_length": 1,
-      "default_max_depth": 0
+      "default_max_depth": 0,
+      "default_max_length": 1
     },
     {
       "id": "WATER",
@@ -87,8 +87,8 @@
       "default_stability": 0,
       "default_max_height": 0,
       "default_max_width": 0,
-      "default_max_length": 0,
-      "default_max_depth": 0
+      "default_max_depth": 0,
+      "default_max_length": 0
     },
     {
       "id": "FOREST",
@@ -102,8 +102,8 @@
       "default_stability": 2,
       "default_max_height": 2,
       "default_max_width": 1,
-      "default_max_length": 1,
-      "default_max_depth": 1
+      "default_max_depth": 1,
+      "default_max_length": 1
     },
     {
       "id": "MOUNTAIN",
@@ -117,8 +117,8 @@
       "default_stability": 4,
       "default_max_height": 4,
       "default_max_width": 1,
-      "default_max_length": 1,
-      "default_max_depth": 3
+      "default_max_depth": 3,
+      "default_max_length": 1
     },
     {
       "id": "RAVINE",
@@ -132,8 +132,23 @@
       "default_stability": 0,
       "default_max_height": 0,
       "default_max_width": 0,
-      "default_max_length": 0,
-      "default_max_depth": 0
+      "default_max_depth": 0,
+      "default_max_length": 0
+    },
+    {
+      "id": "HILLY",
+      "label": "Hilly",
+      "glyph": "︵",
+      "color": "#aee983",
+      "can_be_base": true,
+      "needs_bridge": false,
+      "move_cost": 2,
+      "blocks_unit_classes": "siege, cavalry",
+      "default_stability": 0,
+      "default_max_height": 0,
+      "default_max_width": 0,
+      "default_max_depth": 1,
+      "default_max_length": 0
     }
   ],
   "features": [

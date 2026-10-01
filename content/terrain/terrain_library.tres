@@ -154,8 +154,18 @@ needs_bridge = true
 move_cost = 99.0
 blocks_unit_classes = Array[String](["all"])
 
+[sub_resource type="Resource" id="Terrain_HILLY"]
+script = ExtResource("3_ni26j")
+id = "HILLY"
+display_name = "Hilly"
+glyph = "︵"
+color = Color(0.68235296, 0.9137255, 0.5137255, 1)
+move_cost = 2.0
+blocks_unit_classes = Array[String](["siege", "cavalry"])
+default_max_depth = 1
+
 [resource]
 script = ExtResource("2_alum2")
-terrains = Array[ExtResource("3_ni26j")]([SubResource("Terrain_FIELDS"), SubResource("Terrain_ROCKY"), SubResource("Terrain_SNOW"), SubResource("Terrain_DESERT"), SubResource("Terrain_SWAMP"), SubResource("Terrain_WATER"), SubResource("Terrain_FOREST"), SubResource("Terrain_MOUNTAIN"), SubResource("Terrain_RAVINE")])
+terrains = Array[ExtResource("3_ni26j")]([SubResource("Terrain_FIELDS"), SubResource("Terrain_ROCKY"), SubResource("Terrain_SNOW"), SubResource("Terrain_DESERT"), SubResource("Terrain_SWAMP"), SubResource("Terrain_WATER"), SubResource("Terrain_FOREST"), SubResource("Terrain_MOUNTAIN"), SubResource("Terrain_RAVINE"), SubResource("Terrain_HILLY")])
 features = Array[ExtResource("1_241a3")]([SubResource("Feature_ORE_VEIN"), SubResource("Feature_ARABLE"), SubResource("Feature_SPRING"), SubResource("Feature_TIMBER"), SubResource("Feature_QUARRY")])
-source_hash = "55362995f5f2d19b017df786b8062b05f9b13f6effc43531f6951f844a6706ee"
+source_hash = "1715c87523076bf6ed3da8bf5d582bdd8f474a2b51439099fb8dcd22927882d2"
