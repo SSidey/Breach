@@ -2273,3 +2273,57 @@ brute to lead. The user's direction:
   joining squad leaves the lane's squad list.
 - `FormationProduction` keeps partial build ticks per unit type.
 
+### Decision 45 — Units are built by the domain's builders, shared out to lanes by a player-chosen rule, with a capped domain reserve
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** Building one unit at a time per lane ties production to the next place in
+a formation. The player's domain holds upgrades, and some of them build units: with two
+grem builders, two grems are built at once.
+- **Builders serve the whole domain.** Each builds one unit of its type at a time, at
+  the unit's own `build_seconds`, and keeps its own progress (extending Decision 44).
+- **The player chooses how finished units are shared out** across the lanes that want
+  them:
+  - **priority:** a lane order the player sets
+  - **round robin:** turns, one unit each
+  A build claims its lane when it starts, by lane and type, never a particular place, so
+  repainting doesn't strand it. When it finishes it fills that lane's first matching
+  place, front-first. If that place has gone, it goes to the next lane by the rule, and
+  failing that to the reserve.
+- **The reserve belongs to the domain.**
+  - It is no longer per lane. Each tick it first fills matching places in any lane, by
+    the same rule.
+  - With no template wanting a type, its builders build into the reserve up to a
+    **cap**.
+  - Units banked by a reshape, or finished after their place vanished, are kept even
+    beyond the cap; the cap only stops new builds for the reserve.
+  - Permanent domain upgrades, viewed and bought between maps, will raise the cap and
+    add builders.
+- **For the feel test, builders are abstract.** They are a −/+ count per unit type
+  (grem 2 and brute 1 to start), and the reserve cap is 6.
+- **The kingdom uses the same model**: 2 militia builders, round robin, a reserve cap
+  of 0, and its lanes depart automatically.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Per-lane production (Decisions 39, 42) | Ties building to the next place in one lane; the domain, not the lane, owns the builders. |
+| Builders assigned to a lane | The user wants builders to serve the whole domain, with sharing as a player setting. |
+| An uncapped reserve | Unlimited stockpiling removes the choice of where to commit units; the cap is a domain upgrade target. |
+
+**Consequences:**
+- `UnitDef` gains `build_seconds` (grem 2, brute 4, militia 5). This replaces the
+  production-wide build time and its "twice for larger footprints" rule.
+- A new `DomainProduction` holds builders, claims, the reserve and the sharing rule.
+- `FormationProduction` keeps only the lane's wave: its template, filling, fold, send,
+  wave-full and departure.
+- A sim-side `FormationBattle` owns the lanes, both domains and the slot pool, so the
+  scene stays glue. It is the piece a real match would reuse.
+- **Later, not built:**
+  - costs, for example a grem costing 1 food
+  - recipes, for example a brute made from 4 grems, so grems are built into the
+    reserve before merging
+  - domain upgrades between maps
+
