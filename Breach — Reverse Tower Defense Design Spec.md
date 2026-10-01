@@ -1388,6 +1388,11 @@ chose a pathfinding model with one important constraint:
 
 ### Decision 27 — Structure combat is a 2D side-on plane; boundaries carry defenses; routes are designer defaults the player can change
 
+> Superseded by Decision 52 on 2026-10-01: a structure is a 3D grid of cells over its
+> site (levels above ground, dug levels below), attacked from any side; the side-on plane
+> survives only as a presentation (the detail view's section). The boundary-property model
+> (what a wall, floor or hatch blocks, per direction) and player rerouting stand.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-09-28
 
@@ -2611,3 +2616,83 @@ through (past each other) until they reach unoccupied space".
   departure, with the lane's width as its combat width, and the domain on round robin.
   `FormationLane` and `FormationBattle` keep their neutral defaults (manual, priority,
   no spreading) for other callers.
+
+### Decision 52 — Structures are 3D cell grids over their site, built from 3D parts; fights are the same indoors and out; squads hold formation by discipline
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-01
+
+**Rationale:** From discussing structures after the formation feel test. The user wants
+forts that can be brought down by more than a massive force: a rat faction tunnelling
+nearby, spreading disease to the stores, coming in through a basement or up a well. The
+user also wants height to affect sight and range, and attackers to come "from any angle
+realistically". Decision 27's single side-on plane can't express width, facing or
+underground ingress. The formation sim, meanwhile, is a top-down slice with no height.
+- **A structure is a grid of cells over its site.**
+  - Cells span the tile in plan, stacked in levels above ground and in **dug levels**
+    below it, down to the tile's dig depth.
+  - Each cell is open, solid ground, or part of a **space**: room, corridor, stair,
+    shaft, wall walk.
+  - Each face between cells is a **boundary** carrying the existing properties: what it
+    blocks (movement, projectiles, sight) in each direction, its material and HP. Doors,
+    gates, slits and murder holes stay boundary presets (Decision 37).
+- **Attacks come from any side.**
+  - Attackers reach whichever exterior faces their approach meets.
+  - The face a wave is expected to hit is **highlighted**, and the player can redirect
+    the wave to another.
+  - Destroying a wall face makes a new opening as wide as the damage.
+  - Tunnels are dug cell by cell through ground. A well is a shaft down to water, and so
+    a way in. Breaking into a basement is a breach underground.
+- **Height matters.** Standing higher extends sight and missile range and favours shots
+  downward. Floors and walls block sight.
+- **Fights are the same indoors and out.**
+  - Squads are positioned on a 2D cell grid, with a facing, and a fight can have several
+    contact fronts (two doors, a flank, the rear).
+  - An opening's width is the combat width through it, so gates and corridors are
+    chokepoints.
+  - Today's lane fight is the special case: a corridor of cells the combat width wide,
+    with one front.
+- **Squads try to keep formation.** A squad squeezes to fit an opening (5 wide becomes 2
+  wide and deeper through a 2-wide gate) and re-spreads beyond it, holding its bands
+  (Decisions 47–51).
+  - A unit's **discipline** sets how reliably it stays in formation and follows its
+    orders. A poorly disciplined unit may break off to chase an enemy.
+  - **Morale** is the related measure that can make units rout.
+  - Neither is built yet: both are recorded here as the intended model.
+- **Presentation: structures in 3D, units as 2D sprites.**
+  - Structures are assembled in Godot from **3D modular parts** (grey-box placeholders
+    first) over the cell grid.
+  - Units stay 2D sprites standing in that scene (Decision 36).
+  - An isometric-style camera with a **cutaway** (hide everything above level N) shows
+    interiors and, cut lower, the underground.
+  - A side **section** remains the detail view.
+  - The comparison that led here is the [Fort Views](https://claude.ai/artifact/2EGdCc44FG8ojF2CjFv1uB)
+    mock-up.
+- **The designer stays 2D and asset-free.** The user authors a structure as plans: pick a
+  level, draw areas, assign space types, and set boundary presets. Nothing in the
+  designer depends on the 3D parts. Godot builds the 3D view from the plan and a parts
+  library, so the parts can change without touching any map.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep the side-on plane (Decision 27), adding opening widths | Two entrances at most, breaches only at the ends, no facing, and underground ingress can't be placed. |
+| Top-down floor plans only | Loses height, which the user wants to affect sight and range. |
+| 2D isometric sprites for structures | Needs hand-drawn art for every block, corner and edge combination. 3D parts give the same view from any camera angle. |
+| Units dissolve inside buildings and re-form on order | The painted shape should mean something indoors too, and discipline gives a principled way for formations to break. |
+
+**Consequences:**
+- Supersedes Decision 27. Decisions 35 and 36 hold for units and the detail view, but
+  structures are now 3D parts.
+- The structure schema to come (`StructureDef` and friends) is a cell grid with spaces
+  and boundaries, replacing the side-on segment profile. Subject 2 (scale and ground)
+  decides the cell size, and therefore the parts' dimensions.
+- The formation sim's next step is 2D positioning with facing and several fronts, with
+  the lane as the one-front case.
+- Rest, food, warmth and disease become properties of spaces and their contents. This is
+  recorded for its own design pass, not decided here.
+- Assets: a parts library (wall, corner, gate, floor, stair, crenel, shaft) with
+  generated grey-box defaults, replaceable by free CC0 kits or hand-made Blender parts at
+  the agreed cell size.
+
