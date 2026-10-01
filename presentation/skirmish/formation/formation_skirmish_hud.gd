@@ -1,7 +1,8 @@
 class_name FormationSkirmishHud
 extends CanvasLayer
 ## Controls and readouts for the formation feel test (specs/22-formation-feel-test.md):
-## time, the shared slot pool, one brush for every lane (hotkeys 1 / 2 / E), each lane's
+## time, the shared slot pool and domain reserve, the domain's builders and how their units
+## are shared out (Decision 45), one brush for every lane (hotkeys 1 / 2 / E), each lane's
 ## wave painter with its saved presets, send and auto departure (Decision 43), the kingdom,
 ## orders for the selected squad, and a log. Builds its widgets in code, only emits signals.
 
@@ -11,6 +12,8 @@ signal pause_on_full_toggled(enabled: bool)
 signal kingdom_auto_toggled(enabled: bool)
 signal order_chosen(order: int)
 signal brush_chosen(brush: int)
+signal builders_changed(type_index: int, delta: int)
+signal distribution_chosen(index: int)
 signal preset_saved(lane_key: String)
 signal preset_applied(lane_key: String, index: int)
 signal cell_painted(lane_key: String, cell: Vector2i)
@@ -36,12 +39,13 @@ var _selected: Label
 var _log: RichTextLabel
 var _banner: Label
 var _brushes := []  # Button per brush, in BRUSHES order
+var _builders := []  # Label per builder type
 var _lanes := {}  # lane key -> {"label", "painter", "presets": OptionButton}
 var _lines: PackedStringArray = []
 var _banner_left := 0.0
 
 
-func build(lane_keys: Array) -> void:
+func build(lane_keys: Array, builder_names: Array) -> void:
 	var scroll := ScrollContainer.new()  # the panel is taller than small windows
 	scroll.position = Vector2(10, 10)
 	scroll.custom_minimum_size = Vector2(PANEL_WIDTH + 24.0, 0)
@@ -67,6 +71,7 @@ func build(lane_keys: Array) -> void:
 		func(on): pause_on_full_toggled.emit(on)
 	)
 	_pool = _label(box, "")
+	_build_domain(box, lane_keys, builder_names)
 	_build_brushes(box)
 	for lane_key in lane_keys:
 		_build_lane(box, lane_key)
@@ -84,10 +89,17 @@ func _process(delta: float) -> void:
 			_banner.text = ""
 
 
-func set_status(text: String, pool_text: String, paused: bool) -> void:
+func set_status(text: String, pool_text: String, selected_text: String, paused: bool) -> void:
 	_status.text = text
 	_pool.text = pool_text
+	_selected.text = selected_text
 	_pause_button.text = "Resume (Space)" if paused else "Pause (Space)"
+
+
+## One line per builder type, in the order build() was given.
+func set_builders(lines: Array) -> void:
+	for index in range(mini(lines.size(), _builders.size())):
+		_builders[index].text = lines[index]
 
 
 ## Shows the chosen brush and lists the player's saved presets in every lane.
@@ -104,18 +116,13 @@ func set_tools(brush: int, preset_names: Array) -> void:
 			picker.select(clampi(keep, 0, picker.item_count - 1))
 
 
-## text: the lane's summary; share: build progress; places: FormationProduction.preview().
-func set_lane(lane_key: String, text: String, share: float, places: Array, lane_width: int) -> void:
+## text: the lane's summary; places: FormationSkirmishReadout.lane()'s places.
+func set_lane(lane_key: String, text: String, places: Array, lane_width: int) -> void:
 	var lane: Dictionary = _lanes[lane_key]
 	lane["label"].text = text
 	lane["painter"].places = places
-	lane["painter"].progress = share
 	lane["painter"].lane_width = lane_width
 	lane["painter"].queue_redraw()
-
-
-func set_selected(text: String) -> void:
-	_selected.text = text
 
 
 func add_log(line: String) -> void:
@@ -128,6 +135,28 @@ func add_log(line: String) -> void:
 func show_banner(text: String) -> void:
 	_banner.text = text
 	_banner_left = BANNER_SECONDS
+
+
+func _build_domain(box: VBoxContainer, lane_keys: Array, builder_names: Array) -> void:
+	for index in range(builder_names.size()):
+		var row := _row(box)
+		_button(row, "−", func(): builders_changed.emit(index, -1))
+		_button(row, "+", func(): builders_changed.emit(index, 1))
+		var label := Label.new()
+		label.text = builder_names[index]
+		row.add_child(label)
+		_builders.append(label)
+	var share_row := _row(box)
+	var share_label := Label.new()
+	share_label.text = "Share units:"
+	share_row.add_child(share_label)
+	var picker := OptionButton.new()
+	picker.focus_mode = Control.FOCUS_NONE
+	for lane_key in lane_keys:
+		picker.add_item("%s first" % lane_key)
+	picker.add_item("Round robin")
+	picker.item_selected.connect(func(index): distribution_chosen.emit(index))
+	share_row.add_child(picker)
 
 
 func _build_brushes(box: VBoxContainer) -> void:

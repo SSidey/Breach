@@ -22,7 +22,10 @@ these shapes, so they need to exist and be validated first.
 
 - `UnitDef` (`content/definitions/unit_def.gd`) — `cost_food: int`, `hp: int`,
   `dmg: int`, `speed: float`. Used for Grem (Decision 6: the only `UnitDef` this slice
-  authors).
+  authors). Later additions:
+  - `footprint_depth` / `footprint_width` (1..8, default 1), from Decision 40
+  - `build_seconds` (> 0, default 1), the time one domain builder takes, from
+    Decision 45
 - `NodeDef` (`content/definitions/node_def.gd`) — `node_type: NodeType` (enum:
   `ORIGIN`, `RESOURCE`, `FORT`), `garrison: int`, and resource-node-only fields
   (`yield_food_per_tick: int`, `decay_interval_ticks: int`, `decay_floor_food: int`) that

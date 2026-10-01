@@ -12,6 +12,8 @@ const MAX_FOOTPRINT := 8
 ## 1x1 a grem, 2x1 cavalry, 2x2 a brute, up to 8x8 (a dragon, the widest lane).
 @export var footprint_depth: int = 1
 @export var footprint_width: int = 1
+## Seconds one of the domain's builders takes to build this unit (Decision 45).
+@export var build_seconds: float = 1.0
 
 
 func validate() -> PackedStringArray:
@@ -27,4 +29,6 @@ func validate() -> PackedStringArray:
 	for field in ["footprint_depth", "footprint_width"]:
 		if get(field) < 1 or get(field) > MAX_FOOTPRINT:
 			errors.append("%s must be 1..%d, got %d" % [field, MAX_FOOTPRINT, get(field)])
+	if build_seconds <= 0.0:
+		errors.append("build_seconds must be > 0, got %f" % build_seconds)
 	return errors

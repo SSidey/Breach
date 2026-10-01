@@ -213,6 +213,31 @@ A scripted run against a durable militia line showed it working:
 2. A second wave of three, sent part-built, arrived behind it and joined as a rear rank:
    8 units, ranks `[0,0,0,0,0,1,1,1]`, still 5 fighters.
 
+## Round 5a: the domain builds (Decision 45)
+
+Production moves from the lane to the domain:
+- **`DomainProduction`** holds builders as a count per unit type. Each builds one unit at
+  a time at the unit's new `UnitDef.build_seconds` (grem 2, brute 4, militia 5), so two
+  grem builders build two grems at once.
+  - A build claims a lane, by lane and type, when it starts, under the player's
+    **sharing rule**: a lane first (priority), or round robin.
+  - With nothing wanted it builds into the **domain reserve**, up to a cap of 6.
+  - The reserve fills matching places in any lane at once. Banked units, and builds whose
+    place vanished, may exceed the cap.
+- **`FormationProduction`** is now just the lane's wave: it fills, folds, sends, and
+  announces when full. Its leftovers bank into the domain.
+- **`FormationBattle`** owns the lanes, both domains and the pool, and the scene is glue
+  over it. The kingdom has its own domain: 2 militia builders, round robin, no reserve.
+- **HUD:** builder −/+ rows showing each build's progress and lane, a "Share units"
+  picker, and the reserve shown as n/cap. The painter fills each place a builder is
+  working toward.
+
+A scripted run under round robin:
+1. The 2 grem builders filled lanes c and k in turn. The brute builder, with no brute
+   wanted, built into the reserve.
+2. Clearing both templates banked their grems. The builds under way finished into the
+   reserve (8, over the cap of 6), and then no new builds started.
+
 ## Notes / open questions
 
 - Orders are per wave. Pulling back a single unit is left out for now.

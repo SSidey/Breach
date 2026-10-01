@@ -8,3 +8,4 @@ cost_food = 0
 hp = 26
 dmg = 5
 speed = 0.8
+build_seconds = 5.0

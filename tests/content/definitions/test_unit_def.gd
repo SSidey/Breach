@@ -48,3 +48,15 @@ func test_footprints_must_be_between_one_and_eight_slots() -> void:
 		assert_bool(Array(errors).any(func(message): return message.contains("footprint_width")))
 		. is_true()
 	)
+
+
+func test_a_unit_takes_a_positive_time_to_build() -> void:
+	var unit := UnitDef.new()
+	unit.build_seconds = 0.0
+
+	var errors := unit.validate()
+
+	(
+		assert_bool(Array(errors).any(func(message): return message.contains("build_seconds")))
+		. is_true()
+	)

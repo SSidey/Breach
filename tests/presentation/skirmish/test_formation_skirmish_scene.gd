@@ -116,5 +116,29 @@ func test_painting_a_brute_changes_the_lanes_template_at_once() -> void:
 
 	scene._paint_cell("c", Vector2i(0, 1))
 
-	var places: Array = scene._lanes["c"].production.preview()
+	var places: Array = scene._battle.lane("c").production.preview()
 	assert_bool(places.any(func(p): return p[2] == 2 and p[3] == 2 and p[0] == 0)).is_true()
+
+
+# --- Decision 45: the domain's builders and how units are shared out ---------------
+
+
+func test_the_builder_buttons_add_and_remove_builders() -> void:
+	var scene := _scene()
+
+	scene._set_builders(0, 1)
+	scene._set_builders(1, -5)
+
+	assert_int(scene._battle.player.builder_count(scene.GREM)).is_equal(3)
+	assert_int(scene._battle.player.builder_count(scene.BRUTE)).is_equal(0)
+
+
+func test_the_sharing_picker_sets_lane_priority_or_round_robin() -> void:
+	var scene := _scene()
+	var domain = scene._battle.player
+
+	scene._choose_distribution(1)  # "k first"
+	assert_array(domain.lane_order).is_equal(["k"])
+	scene._choose_distribution(2)  # "Round robin"
+
+	assert_int(domain.distribution).is_equal(domain.Distribution.ROUND_ROBIN)
