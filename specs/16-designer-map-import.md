@@ -18,7 +18,7 @@ part of the export that already has real schema:
 - links, as lanes plus `MapEdgeDef`s
 
 Prototype-only layers (tiles, roads, route geometry, structures, loss groups) are
-reported as "not imported yet" and follow in specs 18 and 20 (renumbered by Decision 30).
+reported as "not imported yet" and follow in specs 19 and 20 (renumbered by Decisions 30 and 31).
 
 **Why JSON → `.tres`, not via `.tscn`** (the user asked): `.tres` resources are what the
 game loads. Converting through an authoring scene would need a scene-node twin for every
@@ -169,7 +169,7 @@ Scenario: A wrong format or version is rejected
 ## Notes / open questions
 
 - Choosing the home when there are several player-owned critical assets: this item
-  takes the first. Multiple player homes interact with the loss-groups work in spec 18.
+  takes the first. Multiple player homes interact with the loss-groups work in spec 19.
 - Units still need `sim/` generalisation before an imported map is playable
   (milestone 2). `main.gd` keeps loading `p_f_F_c`.
 
@@ -178,7 +178,7 @@ Scenario: A wrong format or version is rejected
 - `single-noun-phrase`: `designer_map_importer.gd` ("designer map importer"),
   `designer_map_import.gd` ("designer map import" settings/button),
   `import_designer_map.gd` (tool script).
-- `ocp-extension-point`: specs 18 and 20 extend the importer with new private builders
+- `ocp-extension-point`: specs 19 and 20 extend the importer with new private builders
   for layout and structures. The result type and entry points don't change.
 - `lsp-contract-scope`: not applicable. No shared base or interface is involved.
 - `isp-fit`: the importer exposes two public static functions. `MapDef` gains one

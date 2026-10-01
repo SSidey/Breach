@@ -19,8 +19,8 @@ and running the import (specs/16) as a separate step. This item makes the design
 - The designer's libraries are repo data in `content/designer/`.
 
 This comes before the rest of the render plan (Decision 29), which is renumbered:
-- map layout and objectives → spec 18
-- map viewer → spec 19
+- map layout and objectives → spec 18, later spec 19 (Decision 31: the viewer went first)
+- map viewer → spec 19, later spec 18 (Decision 31)
 - structures → spec 20
 
 ## Components

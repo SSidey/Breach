@@ -23,6 +23,8 @@
     structure_prefabs: 'breach_structure_prefab_library_v1'
   };
   var CURRENT_FILE_KEY = 'breach_designer_current_file';
+  // Must match serve.py's API_VERSION; an older server is missing endpoints this page uses.
+  var REQUIRED_API = 2;
   var DIRTY_KEY = 'breach_designer_dirty';
 
   var health = null;
@@ -44,7 +46,13 @@
     var opts = { method: method, headers: {} };
     if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
     return fetch(path, opts).then(function (r) {
-      return r.json().then(function (j) {
+      return r.text().then(function (text) {
+        var j;
+        try { j = JSON.parse(text); } catch (e) {
+          // Not our JSON API: most often a serve.py started before an update (e.g. 501 for a new method).
+          throw new Error('the designer server answered HTTP ' + r.status + ' instead of JSON' +
+            (r.status === 501 || r.status === 404 ? ' — restart serve.py so it runs the current code' : ''));
+        }
         if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
         return j;
       });
@@ -132,7 +140,8 @@
     var exportBtn = document.getElementById('exportBtn');
     [['repoOpen', 'Open…', 'btn ghost', openMapPicker, 'Open a map from content/maps_src (Ctrl+O)'],
       ['repoSaveAs', 'Save as…', 'btn ghost', function () { saveMap(true); }, 'Save under a new file name'],
-      ['repoSave', 'Save', 'btn primary', function () { saveMap(false); }, 'Save to content/maps_src and import to content/maps (Ctrl+S)']
+      ['repoSave', 'Save', 'btn primary', function () { saveMap(false); }, 'Save to content/maps_src and import to content/maps (Ctrl+S)'],
+      ['repoView', 'View in Godot', 'btn ghost', viewInGodot, 'Open this map in the Godot map viewer (saves first if there are unsaved changes)']
     ].forEach(function (b) {
       var el = document.createElement('button');
       el.id = b[0]; el.type = 'button'; el.className = b[2]; el.textContent = b[1]; el.title = b[4];
@@ -193,6 +202,9 @@
     parts.push(currentFile
       ? '<span>File <span class="file">' + esc(currentFile) + '.designer.json</span></span>'
       : '<span>File <span class="file">(unsaved)</span></span>');
+    if ((health.api_version || 1) < REQUIRED_API) {
+      parts.push('<span class="bad" title="serve.py was started before the designer was updated">Server is out of date — restart serve.py</span>');
+    }
     if (dirty) parts.push('<span class="dirty">● unsaved changes</span>');
     if (statusText) {
       parts.push('<span class="' + statusTone + '">' + esc(statusText) + '</span>');
@@ -230,9 +242,10 @@
   }
   function validName(n) { return /^[A-Za-z0-9_-]{1,64}$/.test(n); }
 
-  function saveMap(askName) {
-    if (!currentFile || askName) { promptName(function (name) { doSave(name); }); return; }
-    doSave(currentFile);
+  // after(importResult) runs once a save finishes (used by View in Godot).
+  function saveMap(askName, after) {
+    if (!currentFile || askName) { promptName(function (name) { doSave(name, after); }); return; }
+    doSave(currentFile, after);
   }
   function promptName(then) {
     var suggested = currentFile || slug(window.BreachDesigner.mapName());
@@ -253,7 +266,7 @@
       return true;
     }
   }
-  function doSave(name) {
+  function doSave(name, after) {
     var data = window.BreachDesigner.buildExport();
     showStatus('Saving ' + name + ' and importing…', '');
     var btn = document.getElementById('repoSave');
@@ -270,11 +283,28 @@
         showStatus('Saved source JSON, but the import ' + (imp.ran ? 'failed' : 'did not run') + ' — .tres not updated', 'bad');
         showImportDetails();
       }
+      if (after) after(imp);
     }).catch(function (e) {
       lastImport = null;
       showStatus('Save failed: ' + e.message, 'bad');
     }).then(function () { if (btn) btn.disabled = false; });
   }
+  // ---------- view in Godot (specs/18) ----------
+  function viewInGodot() {
+    if ((health.api_version || 1) < REQUIRED_API) { showStatus('The designer server is out of date — stop serve.py and start it again, then retry', 'bad'); return; }
+    if (!health.godot_found) { showStatus('Godot not configured, so the viewer cannot be opened', 'bad'); return; }
+    if (!currentFile || dirty) {
+      saveMap(false, function (imp) { if (imp.ok) launchViewer(currentFile); });
+      return;
+    }
+    launchViewer(currentFile);
+  }
+  function launchViewer(name) {
+    api('POST', '/api/maps/' + encodeURIComponent(name) + '/view', {}).then(function () {
+      showStatus('Opening ' + name + ' in the Godot map viewer…', 'ok');
+    }).catch(function (e) { showStatus('Could not open the viewer: ' + e.message, 'bad'); });
+  }
+
   function showImportDetails() {
     if (!lastImport) return;
     var imp = lastImport.result;

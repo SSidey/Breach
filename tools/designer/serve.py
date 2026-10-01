@@ -12,6 +12,7 @@ API:
     GET  /api/maps                    [{name, modified, imported}]
     GET  /api/maps/<name>             the saved export JSON
     PUT  /api/maps/<name>             save + import -> {saved, import:{ran, ok, warnings, errors, output_path}}
+    POST /api/maps/<name>/view        open content/maps/<name>.tres in the Godot map viewer
     GET  /api/libraries/<library>     content/designer/<library>.json (null if absent)
     PUT  /api/libraries/<library>     write it -> {changed}
 """
@@ -42,6 +43,9 @@ STATIC_FILES = {
     "/repo.js": ("repo.js", "text/javascript; charset=utf-8"),
 }
 MAX_BODY_BYTES = 16 * 1024 * 1024
+## Bumped whenever the API gains or changes an endpoint; repo.js compares it with its own
+## REQUIRED_API so a server started before an update says "restart serve.py".
+API_VERSION = 2
 
 
 def make_handler(repo: DesignerRepo, static_dir: Path = DESIGNER_DIR, log_requests: bool = True):
@@ -68,18 +72,32 @@ def make_handler(repo: DesignerRepo, static_dir: Path = DESIGNER_DIR, log_reques
                 return
             self._api("PUT", urlparse(self.path).path)
 
+        def do_POST(self):
+            if not self._local_request():
+                return
+            self._api("POST", urlparse(self.path).path)
+
         def _api(self, method, path):
             parts = [p for p in path.split("/") if p]
             try:
                 if parts == ["api", "health"] and method == "GET":
                     self._send_json(
-                        {"repo": str(repo.root), "godot": repo.godot, "godot_found": bool(repo.godot)}
+                        {
+                            "repo": str(repo.root),
+                            "godot": repo.godot,
+                            "godot_found": bool(repo.godot),
+                            "api_version": API_VERSION,
+                        }
                     )
                 elif parts == ["api", "maps"] and method == "GET":
                     self._send_json(repo.list_maps())
-                elif len(parts) == 3 and parts[:2] == ["api", "maps"]:
+                elif len(parts) == 4 and parts[:2] == ["api", "maps"] and parts[3] == "view":
+                    if method != "POST":
+                        raise ValueError("use POST to open the viewer")
+                    self._send_json(repo.view_map(parts[2]))
+                elif len(parts) == 3 and parts[:2] == ["api", "maps"] and method != "POST":
                     self._maps(method, parts[2])
-                elif len(parts) == 3 and parts[:2] == ["api", "libraries"]:
+                elif len(parts) == 3 and parts[:2] == ["api", "libraries"] and method != "POST":
                     self._libraries(method, parts[2])
                 else:
                     self._send_json({"error": "not found"}, HTTPStatus.NOT_FOUND)
