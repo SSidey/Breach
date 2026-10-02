@@ -36,6 +36,13 @@ static func run(
 		terrain.resource_scene_unique_id = _safe_id("Terrain", terrain.id)
 	for feature in result.library.features:
 		feature.resource_scene_unique_id = _safe_id("Feature", feature.id)
+	for material in result.library.materials:
+		material.resource_scene_unique_id = _safe_id("Material", material.id)
+	for terrain in result.library.terrains:
+		for index in range(terrain.strata.size()):
+			terrain.strata[index].resource_scene_unique_id = _safe_id(
+				"Stratum", "%s_%d" % [terrain.id, index]
+			)
 	DirAccess.make_dir_recursive_absolute(
 		ProjectSettings.globalize_path(target_tres_path.get_base_dir())
 	)

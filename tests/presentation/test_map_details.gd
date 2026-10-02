@@ -78,6 +78,8 @@ func test_tile_details_show_terrain_feature_capacity_upgrades_and_bridge() -> vo
 	assert_str(farm).contains("Arable land")
 	assert_str(farm).contains("upgrades 1/1: GUARD_BARRACKS")
 	assert_str(farm).contains("stability 4")
+	assert_str(farm).contains("ground: bearing 4 (foundations 8) · dig 32 · water 12-24")
+	assert_str(farm).contains("strata: Soil, Clay, Rock")
 	assert_str(bridge).contains("Water")
 	assert_str(bridge).contains("bridge, hp 40")
 	assert_str(plain).contains("Fields (base)")

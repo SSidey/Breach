@@ -92,6 +92,39 @@
     road_move_multiplier: 0.5
   };
 
+  // The ground (Decisions 53, 54, 57): materials, and per terrain the bearing a cell column
+  // carries, how far foundations raise it, how deep the strata go (cells), the water table
+  // (cells below the surface; null = none) and the strata bands from the surface down (the
+  // last continues to the dig depth). Placeholders to tune.
+  var DEFAULT_MATERIALS = [
+    { id: 'SOIL', label: 'Soil', color: '#6b5440', dig_difficulty: 1, climb_difficulty: 0, weight: 1, span: 1, loose: false },
+    { id: 'PEAT', label: 'Peat', color: '#4a3d2c', dig_difficulty: 1, climb_difficulty: 1, weight: 1, span: 0, loose: false },
+    { id: 'SAND', label: 'Sand', color: '#cdb27a', dig_difficulty: 1, climb_difficulty: 1, weight: 1, span: 0, loose: true },
+    { id: 'GRAVEL', label: 'Gravel', color: '#8d877c', dig_difficulty: 1, climb_difficulty: 1, weight: 1, span: 0, loose: true },
+    { id: 'CLAY', label: 'Clay', color: '#8a6a4a', dig_difficulty: 2, climb_difficulty: 0, weight: 1, span: 2, loose: false },
+    { id: 'ROCK', label: 'Rock', color: '#6f6c68', dig_difficulty: 3, climb_difficulty: 0, weight: 2, span: 4, loose: false },
+    { id: 'ORE', label: 'Ore', color: '#7b5e57', dig_difficulty: 4, climb_difficulty: 0, weight: 2, span: 4, loose: false }
+  ];
+  function ground(bearing, foundationMax, digDepth, water, strata) {
+    return { bearing: bearing, foundation_max: foundationMax, dig_depth: digDepth, water_table: water,
+      strata: strata.map(function (b) { return { material: b[0], min: b[1], max: b[2] }; }) };
+  }
+  var DEFAULT_GROUND = {
+    FIELDS: ground(4, 8, 32, { min: 12, max: 24 }, [['SOIL', 2, 4], ['CLAY', 4, 8], ['ROCK', 8, 16]]),
+    ROCKY: ground(8, 12, 32, { min: 16, max: 32 }, [['SOIL', 0, 1], ['ROCK', 8, 16]]),
+    SNOW: ground(3, 6, 24, null, [['SOIL', 1, 2], ['ROCK', 8, 16]]),
+    DESERT: ground(3, 6, 32, { min: 20, max: 32 }, [['SAND', 4, 10], ['ROCK', 8, 16]]),
+    SWAMP: ground(2, 4, 16, { min: 0, max: 2 }, [['PEAT', 2, 4], ['CLAY', 4, 8]]),
+    WATER: ground(0, 0, 0, null, []),
+    FOREST: ground(4, 8, 32, { min: 10, max: 20 }, [['SOIL', 2, 3], ['CLAY', 3, 6], ['ROCK', 8, 16]]),
+    MOUNTAIN: ground(8, 12, 48, null, [['SOIL', 0, 1], ['ROCK', 16, 32]]),
+    RAVINE: ground(0, 0, 0, null, [])
+  };
+  // A terrain with no seeded ground (a custom one) starts from this.
+  var GENERIC_GROUND = ground(4, 8, 32, { min: 12, max: 24 }, [['SOIL', 1, 3], ['ROCK', 8, 16]]);
+  DEFAULT_TERRAIN_LIBRARY.materials = DEFAULT_MATERIALS;
+  DEFAULT_TERRAIN_LIBRARY.terrains.forEach(function (t) { Object.assign(t, clone(DEFAULT_GROUND[t.id])); });
+
   function seg(room) { return { room: room || '', features: [], defenses: [] }; }
   function column(h, rooms) { var c = []; for (var i = 0; i < h; i++) c.push(seg(rooms && rooms[i])); return c; }
   function struct(archetype, columns) { return normalizeStructure({ archetype: archetype, columns: columns || [] }); }
@@ -181,6 +214,12 @@
     if (!terrainLib.features) terrainLib.features = [];
     if (terrainLib.road_move_multiplier === undefined) terrainLib.road_move_multiplier = 0.5;
     terrainLib.terrains.forEach(migrateTerrainEntry);
+    // v14: the ground model (Decisions 53, 54). Seeded terrains get their ground; custom
+    // ones (e.g. Hilly) the generic ground.
+    if (!terrainLib.materials) terrainLib.materials = clone(DEFAULT_MATERIALS);
+    terrainLib.terrains.forEach(function (t) {
+      if (t.bearing === undefined) Object.assign(t, clone(DEFAULT_GROUND[t.id] || GENERIC_GROUND));
+    });
     terrainLib.terrains.forEach(function (t) {
       // v11: basements. Seeded terrains get their default depth; custom ones (e.g. Hilly) get 1.
       if (t.default_max_depth === undefined) {
@@ -247,6 +286,8 @@
 
   function terrainDef(id) { return terrainLib.terrains.find(function (t) { return t.id === id; }); }
   function featureDef(id) { return terrainLib.features.find(function (f) { return f.id === id; }); }
+  function materialDef(id) { return terrainLib.materials.find(function (m) { return m.id === id; }); }
+  function materialUsage(id) { return terrainLib.terrains.filter(function (t) { return (t.strata || []).some(function (b) { return b.material === id; }); }); }
   function baseTerrains() { return terrainLib.terrains.filter(function (t) { return t.can_be_base; }); }
   function archetypeLabel(id) { var a = ARCHETYPES.find(function (x) { return x.id === id; }); return a ? a.label : id; }
   function roomDef(id) { return ROOM_LIBRARY.find(function (r) { return r.id === id; }); }
@@ -2985,10 +3026,11 @@
         el.className = 'terrain-item lib-row';
         el.tabIndex = 0;
         el.setAttribute('data-selected', selectedTerrainItem.kind === kind && selectedTerrainItem.id === it.id ? 'true' : 'false');
-        var bg = kind === 'terrain' ? esc(it.color) : 'var(--ink-dim)';
+        var bg = kind === 'feature' ? 'var(--ink-dim)' : esc(it.color);
         el.innerHTML = '<span style="display:flex;align-items:center;gap:6px;" class="name"><span class="glyph-dot" style="background:' + bg + '">' + esc(it.glyph) + '</span>' + esc(it.label) + '</span>' +
           '<span class="mono" style="font-size:10px;color:var(--ink-dim);">' + (kind === 'terrain'
             ? 'move ×' + esc(it.move_cost) + (it.can_be_base ? ' · base' : '') + (it.needs_bridge ? ' · bridge' : '')
+            : kind === 'material' ? 'dig ' + esc(it.dig_difficulty) + ' · span ' + esc(it.span) + (it.loose ? ' · loose' : '')
             : esc(it.id)) + '</span>';
         var pick = function () { selectedTerrainItem = { kind: kind, id: it.id }; terrainNotice = ''; renderTerrainView(); };
         el.addEventListener('click', pick);
@@ -2998,13 +3040,15 @@
     }
     libList('terrainLibList', terrainLib.terrains, 'terrain');
     libList('featureLibList', terrainLib.features, 'feature');
+    libList('materialLibList', terrainLib.materials, 'material');
 
     var detail = document.getElementById('terrainDetail');
     var isTerrain = selectedTerrainItem.kind === 'terrain';
-    var item = isTerrain ? terrainDef(selectedTerrainItem.id) : featureDef(selectedTerrainItem.id);
+    var isMaterial = selectedTerrainItem.kind === 'material';
+    var item = isTerrain ? terrainDef(selectedTerrainItem.id) : isMaterial ? materialDef(selectedTerrainItem.id) : featureDef(selectedTerrainItem.id);
     if (!item) { detail.innerHTML = '<p class="empty-note">Pick a terrain type or feature to edit it.</p>'; return; }
 
-    var html = '<div class="detail-title"><span class="glyph-dot" style="width:26px;height:26px;font-size:15px;background:' + (isTerrain ? esc(item.color) : 'var(--ink-dim)') + '">' + esc(item.glyph) + '</span><h2>' + esc(item.label) + '</h2><span class="mono" style="color:var(--ink-dim);">' + esc(item.id) + '</span></div>';
+    var html = '<div class="detail-title"><span class="glyph-dot" style="width:26px;height:26px;font-size:15px;background:' + (isTerrain || isMaterial ? esc(item.color) : 'var(--ink-dim)') + '">' + esc(item.glyph || '') + '</span><h2>' + esc(item.label) + '</h2><span class="mono" style="color:var(--ink-dim);">' + esc(item.id) + '</span></div>';
     if (isTerrain) {
       var u = terrainUsage(item.id);
       html += '<p class="usage">On the current map: painted on ' + plural(u.tiles, 'tile') + (u.isBase ? ' · map base terrain' : '') + '.</p>';
@@ -3016,12 +3060,26 @@
         '<label class="checkbox-row"><input type="checkbox" id="td_bridge"' + (item.needs_bridge ? ' checked' : '') + ' /> Roads need a bridge to cross</label></div>' +
         '<div class="insp-row"><label for="td_move">Movement cost × (stub)</label><input type="number" step="0.5" min="0" id="td_move" value="' + esc(item.move_cost) + '" /></div>' +
         '<div class="insp-row"><label for="td_blocks">Blocks unit classes (stub)</label><input type="text" id="td_blocks" value="' + esc(item.blocks_unit_classes || '') + '" placeholder="e.g. siege, cavalry" /></div>' +
+        '</div>' + groundFields(item) + '<div class="panel-sub">Side-on editor (legacy)</div><div class="form-grid">' +
         '<div class="insp-row"><label for="td_stab">Default stability (segment budget)</label><input type="number" min="0" id="td_stab" value="' + esc(item.default_stability) + '" /></div>' +
         '<div class="insp-row"><label for="td_mh">Default max height</label><input type="number" min="0" id="td_mh" value="' + esc(item.default_max_height) + '" /></div>' +
         '<div class="insp-row"><label for="td_mw">Default max width</label><input type="number" min="0" id="td_mw" value="' + esc(item.default_max_width) + '" /></div>' +
         '<div class="insp-row"><label for="td_md">Default dig depth (basements)</label><input type="number" min="0" id="td_md" value="' + esc(item.default_max_depth) + '" /></div>' +
         '</div>' +
-        '<p class="hint">Stubs, not simulated. Movement cost and blocked unit classes sketch the terrain movement-resistance idea on file, where units path the least-resistant route and roads cut the cost. Stability, height and width are the build-capacity defaults each tile can override in the Inspector.</p>';
+        '<p class="hint">Stubs, not simulated. Movement cost and blocked unit classes sketch the terrain movement-resistance idea on file, where units path the least-resistant route and roads cut the cost. Stability, height and width are the side-on structure editor\'s capacity, kept until the plan editor (Decision 52) replaces it; each tile can override them in the Inspector.</p>';
+    } else if (isMaterial) {
+      var mu = materialUsage(item.id);
+      html += '<p class="usage">In the strata of ' + (mu.length ? mu.map(function (t) { return esc(t.label); }).join(', ') : 'no terrain') + '.</p>';
+      html += '<div class="form-grid">' +
+        '<div class="insp-row"><label for="td_label">Label</label><input type="text" id="td_label" value="' + esc(item.label) + '" /></div>' +
+        '<div class="insp-row"><label for="td_color">Colour</label><input type="color" id="td_color" value="' + esc(item.color) + '" /></div>' +
+        '<div class="insp-row"><label for="md_dig">Dig difficulty (burrower level)</label><input type="number" min="0" id="md_dig" value="' + esc(item.dig_difficulty) + '" /></div>' +
+        '<div class="insp-row"><label for="md_climb">Climb difficulty (climber level)</label><input type="number" min="0" id="md_climb" value="' + esc(item.climb_difficulty) + '" /></div>' +
+        '<div class="insp-row"><label for="md_weight">Weight per cell</label><input type="number" min="0" id="md_weight" value="' + esc(item.weight) + '" /></div>' +
+        '<div class="insp-row"><label for="md_span">Unsupported span (cells)</label><input type="number" min="0" id="md_span" value="' + esc(item.span) + '" /></div>' +
+        '<div class="insp-row"><label class="checkbox-row"><input type="checkbox" id="md_loose"' + (item.loose ? ' checked' : '') + ' /> Loose (falls and settles, like sand)</label></div>' +
+        '</div>' +
+        '<p class="hint">Digging needs a burrower level at the dig difficulty (one short halves the rate; Decision 54). Weight loads what is beneath; span is how far it bridges unsupported before it falls (Decision 57).</p>';
     } else {
       var fu = featureUsage(item.id);
       html += '<p class="usage">On the current map: on ' + plural(fu, 'tile') + '.</p>';
@@ -3048,7 +3106,11 @@
     if (isTerrain) {
       bindT('td_color', 'color'); bindT('td_base', 'can_be_base'); bindT('td_bridge', 'needs_bridge');
       bindT('td_move', 'move_cost', true); bindT('td_blocks', 'blocks_unit_classes');
+      bindGround(item);
       bindT('td_stab', 'default_stability', true); bindT('td_mh', 'default_max_height', true); bindT('td_mw', 'default_max_width', true); bindT('td_md', 'default_max_depth', true); bindT('td_ml', 'default_max_length', true);
+    } else if (isMaterial) {
+      bindT('td_color', 'color'); bindT('md_dig', 'dig_difficulty', true); bindT('md_climb', 'climb_difficulty', true);
+      bindT('md_weight', 'weight', true); bindT('md_span', 'span', true); bindT('md_loose', 'loose');
     } else {
       bindT('td_effect', 'stub_effect');
     }
@@ -3058,6 +3120,9 @@
         if (u2.tiles || u2.isBase) { terrainNotice = 'In use on the current map. Repaint those tiles or change the base terrain first.'; renderTerrainView(); return; }
         if (item.can_be_base && baseTerrains().length <= 1) { terrainNotice = 'At least one terrain must be usable as a base.'; renderTerrainView(); return; }
         terrainLib.terrains = terrainLib.terrains.filter(function (t) { return t.id !== item.id; });
+      } else if (isMaterial) {
+        if (materialUsage(item.id).length) { terrainNotice = 'In the strata of a terrain. Remove it from those strata first.'; renderTerrainView(); return; }
+        terrainLib.materials = terrainLib.materials.filter(function (m) { return m.id !== item.id; });
       } else {
         if (featureUsage(item.id)) { terrainNotice = 'In use on the current map. Erase it from those tiles first.'; renderTerrainView(); return; }
         terrainLib.features = terrainLib.features.filter(function (f) { return f.id !== item.id; });
@@ -3072,11 +3137,13 @@
     var input = document.getElementById(inputId);
     var id = input.value.trim().toUpperCase().replace(/\s+/g, '_');
     if (!id) return;
-    var exists = kind === 'terrain' ? terrainDef(id) : featureDef(id);
+    var exists = kind === 'terrain' ? terrainDef(id) : kind === 'material' ? materialDef(id) : featureDef(id);
     if (exists) { selectedTerrainItem = { kind: kind, id: id }; renderTerrainView(); return; }
     var label = id.charAt(0) + id.slice(1).toLowerCase().replace(/_/g, ' ');
     if (kind === 'terrain') {
-      terrainLib.terrains.push({ id: id, label: label, glyph: '?', color: '#7d7466', can_be_base: false, needs_bridge: false, move_cost: 1, blocks_unit_classes: '', default_stability: 2, default_max_height: 1, default_max_width: 2, default_max_length: 2, default_max_depth: 1 });
+      terrainLib.terrains.push(Object.assign({ id: id, label: label, glyph: '?', color: '#7d7466', can_be_base: false, needs_bridge: false, move_cost: 1, blocks_unit_classes: '', default_stability: 2, default_max_height: 1, default_max_width: 2, default_max_length: 2, default_max_depth: 1 }, clone(GENERIC_GROUND)));
+    } else if (kind === 'material') {
+      terrainLib.materials.push({ id: id, label: label, color: '#7d7466', dig_difficulty: 1, climb_difficulty: 0, weight: 1, span: 1, loose: false });
     } else {
       terrainLib.features.push({ id: id, label: label, glyph: '?', stub_effect: '' });
     }
@@ -3086,6 +3153,68 @@
   }
   document.getElementById('addTerrainBtn').addEventListener('click', function () { addLibItem('newTerrainId', 'terrain'); });
   document.getElementById('addFeatureBtn').addEventListener('click', function () { addLibItem('newFeatureId', 'feature'); });
+  document.getElementById('addMaterialBtn').addEventListener('click', function () { addLibItem('newMaterialId', 'material'); });
+
+  // The ground section of the terrain inspector (Decisions 53, 54): bearing, foundations,
+  // dig depth, the water table, and the strata bands from the surface down.
+  function groundFields(t) {
+    var water = t.water_table;
+    var options = function (selected) {
+      return terrainLib.materials.map(function (m) { return '<option value="' + esc(m.id) + '"' + (m.id === selected ? ' selected' : '') + '>' + esc(m.label) + '</option>'; }).join('');
+    };
+    var rows = (t.strata || []).map(function (b, i) {
+      return '<div class="band-row">' +
+        '<span class="mono" style="width:18px;color:var(--ink-dim);">' + (i + 1) + '</span>' +
+        '<select data-band="' + i + '" data-key="material" aria-label="Band ' + (i + 1) + ' material">' + options(b.material) + '</select>' +
+        '<input type="number" min="0" style="width:64px;" data-band="' + i + '" data-key="min" value="' + esc(b.min) + '" aria-label="Band ' + (i + 1) + ' least cells" />' +
+        '<span>to</span><input type="number" min="0" style="width:64px;" data-band="' + i + '" data-key="max" value="' + esc(b.max) + '" aria-label="Band ' + (i + 1) + ' most cells" />' +
+        '<span>cells</span><button type="button" class="btn small" data-band-remove="' + i + '" aria-label="Remove band ' + (i + 1) + '">×</button></div>';
+    }).join('');
+    return '<div class="panel-sub">Ground</div><div class="form-grid">' +
+      '<div class="insp-row"><label for="gd_bearing">Bearing (load a column carries)</label><input type="number" min="0" id="gd_bearing" value="' + esc(t.bearing) + '" /></div>' +
+      '<div class="insp-row"><label for="gd_found">Foundations raise it to</label><input type="number" min="0" id="gd_found" value="' + esc(t.foundation_max) + '" /></div>' +
+      '<div class="insp-row"><label for="gd_dig">Dig depth (cells)</label><input type="number" min="0" id="gd_dig" value="' + esc(t.dig_depth) + '" /></div>' +
+      '<div class="insp-row"><label class="checkbox-row"><input type="checkbox" id="gd_water"' + (water ? ' checked' : '') + ' /> Water table</label>' +
+      (water ? '<span class="band-row" style="margin:0;"><input type="number" min="0" style="width:64px;" id="gd_wmin" value="' + esc(water.min) + '" aria-label="Water table least depth" /> to <input type="number" min="0" style="width:64px;" id="gd_wmax" value="' + esc(water.max) + '" aria-label="Water table most depth" /> cells down</span>' : '') +
+      '</div></div>' +
+      '<p class="hint" style="margin-bottom:4px;">Strata, from the surface down. Each map picks a thickness per band from its seed; the last band continues to the dig depth.</p>' +
+      rows + '<button type="button" class="btn small" id="gd_addBand">Add band</button>' +
+      (t.foundation_max < t.bearing ? '<p class="warn-inline">Foundations can\'t lower bearing: raise "Foundations raise it to" to at least ' + esc(t.bearing) + '.</p>' : '');
+  }
+  function bindGround(t) {
+    var save = function () { saveTerrainLib(); renderTerrainView(); };
+    var num = function (el) { return Math.max(0, Number(el.value) || 0); };
+    [['gd_bearing', 'bearing'], ['gd_found', 'foundation_max'], ['gd_dig', 'dig_depth']].forEach(function (pair) {
+      document.getElementById(pair[0]).addEventListener('change', function () { t[pair[1]] = num(this); save(); });
+    });
+    document.getElementById('gd_water').addEventListener('change', function () {
+      t.water_table = this.checked ? { min: 12, max: 24 } : null; save();
+    });
+    ['gd_wmin', 'gd_wmax'].forEach(function (id, i) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('change', function () {
+        t.water_table[i ? 'max' : 'min'] = num(this);
+        if (t.water_table.min > t.water_table.max) t.water_table[i ? 'min' : 'max'] = t.water_table[i ? 'max' : 'min'];
+        save();
+      });
+    });
+    document.querySelectorAll('#terrainDetail [data-band]').forEach(function (el) {
+      el.addEventListener('change', function () {
+        var band = t.strata[Number(el.getAttribute('data-band'))], key = el.getAttribute('data-key');
+        band[key] = key === 'material' ? el.value : num(el);
+        if (band.min > band.max) band[key === 'min' ? 'max' : 'min'] = band[key];
+        save();
+      });
+    });
+    document.querySelectorAll('#terrainDetail [data-band-remove]').forEach(function (el) {
+      el.addEventListener('click', function () { t.strata.splice(Number(el.getAttribute('data-band-remove')), 1); save(); });
+    });
+    document.getElementById('gd_addBand').addEventListener('click', function () {
+      t.strata = t.strata || [];
+      t.strata.push({ material: terrainLib.materials.length ? terrainLib.materials[0].id : '', min: 1, max: 2 });
+      save();
+    });
+  }
   document.getElementById('roadMult').addEventListener('change', function () {
     terrainLib.road_move_multiplier = Math.max(0, Number(this.value) || 0); saveTerrainLib();
   });

@@ -11,6 +11,8 @@ extends RefCounted
 const TerrainDef = preload("res://content/definitions/terrain_def.gd")
 const TerrainFeatureDef = preload("res://content/definitions/terrain_feature_def.gd")
 const TerrainLibraryDef = preload("res://content/definitions/terrain_library_def.gd")
+const MaterialDef = preload("res://content/definitions/material_def.gd")
+const StratumDef = preload("res://content/definitions/stratum_def.gd")
 
 const MAP_SUFFIX := ".designer.json"
 
@@ -34,6 +36,9 @@ static func import_library(library_data: Dictionary) -> DesignerLibraryImportRes
 	for entry in library_data.get("terrains", []):
 		if _require_id(entry, "terrain", result.errors):
 			result.library.terrains.append(_terrain(entry))
+	for entry in library_data.get("materials", []):
+		if _require_id(entry, "material", result.errors):
+			result.library.materials.append(_material(entry))
 	for entry in library_data.get("features", []):
 		if _require_id(entry, "feature", result.errors):
 			result.library.features.append(_feature(entry))
@@ -123,7 +128,38 @@ static func _terrain(entry: Dictionary) -> TerrainDef:
 	terrain.blocks_unit_classes = blocked
 	for field in ["stability", "max_height", "max_width", "max_length", "max_depth"]:
 		terrain.set("default_" + field, int(entry.get("default_" + field, 0)))
+	_ground(terrain, entry)
 	return terrain
+
+
+## The ground fields (Decisions 53, 54); a terrain saved before them has none.
+static func _ground(terrain: TerrainDef, entry: Dictionary) -> void:
+	terrain.bearing = int(entry.get("bearing", 0))
+	terrain.foundation_max = int(entry.get("foundation_max", terrain.bearing))
+	terrain.dig_depth = int(entry.get("dig_depth", 0))
+	var water = entry.get("water_table")
+	if water is Dictionary:
+		terrain.water_table_min = int(water.get("min", -1))
+		terrain.water_table_max = int(water.get("max", -1))
+	for band in entry.get("strata", []):
+		var stratum := StratumDef.new()
+		stratum.material_id = str(band.get("material", ""))
+		stratum.min_cells = int(band.get("min", 1))
+		stratum.max_cells = int(band.get("max", stratum.min_cells))
+		terrain.strata.append(stratum)
+
+
+static func _material(entry: Dictionary) -> MaterialDef:
+	var material := MaterialDef.new()
+	material.id = str(entry["id"])
+	material.display_name = str(entry.get("label", material.id))
+	material.color = Color.from_string(str(entry.get("color", "#ffffff")), Color.WHITE)
+	material.dig_difficulty = int(entry.get("dig_difficulty", 1))
+	material.climb_difficulty = int(entry.get("climb_difficulty", 0))
+	material.weight = int(entry.get("weight", 1))
+	material.span = int(entry.get("span", 1))
+	material.loose = bool(entry.get("loose", false))
+	return material
 
 
 static func _feature(entry: Dictionary) -> TerrainFeatureDef:

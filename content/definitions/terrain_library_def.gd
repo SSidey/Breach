@@ -7,9 +7,12 @@ extends Resource
 
 const TerrainDef = preload("res://content/definitions/terrain_def.gd")
 const TerrainFeatureDef = preload("res://content/definitions/terrain_feature_def.gd")
+const MaterialDef = preload("res://content/definitions/material_def.gd")
 
 @export var terrains: Array[TerrainDef] = []
 @export var features: Array[TerrainFeatureDef] = []
+## What strata (and later walls) are made of (Decisions 54, 57).
+@export var materials: Array[MaterialDef] = []
 ## Multiplies a terrain's move_cost on a cell with a road.
 @export var road_move_multiplier: float = 0.5
 ## sha256 of the terrain.json this was imported from; the designer's server compares it
@@ -20,6 +23,13 @@ const TerrainFeatureDef = preload("res://content/definitions/terrain_feature_def
 func terrain(terrain_id: String) -> TerrainDef:
 	for entry in terrains:
 		if entry.id == terrain_id:
+			return entry
+	return null
+
+
+func material(material_id: String) -> MaterialDef:
+	for entry in materials:
+		if entry.id == material_id:
 			return entry
 	return null
 
@@ -35,6 +45,7 @@ func validate() -> PackedStringArray:
 	var errors := PackedStringArray()
 	errors.append_array(_validate_ids(terrains, "terrain"))
 	errors.append_array(_validate_ids(features, "feature"))
+	errors.append_array(_validate_ids(materials, "material"))
 	if not terrains.any(func(t): return t.can_be_base):
 		errors.append("at least one terrain must have can_be_base, so a map has a base terrain")
 	for entry in terrains:
@@ -42,8 +53,33 @@ func validate() -> PackedStringArray:
 			errors.append(
 				"terrain '%s': move_cost must be >= 0, got %f" % [entry.id, entry.move_cost]
 			)
+		errors.append_array(_validate_ground(entry))
 	if road_move_multiplier < 0.0:
 		errors.append("road_move_multiplier must be >= 0, got %f" % road_move_multiplier)
+	return errors
+
+
+func _validate_ground(entry: TerrainDef) -> PackedStringArray:
+	var errors := PackedStringArray()
+	var at := "terrain '%s': " % entry.id
+	if entry.foundation_max < entry.bearing:
+		errors.append(at + "foundation_max %d < bearing %d" % [entry.foundation_max, entry.bearing])
+	var water := [entry.water_table_min, entry.water_table_max]
+	if (water[0] < 0) != (water[1] < 0) or water[0] > water[1]:
+		errors.append(at + "water table must be both bounds (min <= max) or neither")
+	for stratum in entry.strata:
+		if material(stratum.material_id) == null:
+			errors.append(at + "stratum of unknown material '%s'" % stratum.material_id)
+		if stratum.min_cells < 0 or stratum.min_cells > stratum.max_cells:
+			errors.append(
+				(
+					at
+					+ (
+						"stratum '%s': min_cells %d > max_cells %d"
+						% [stratum.material_id, stratum.min_cells, stratum.max_cells]
+					)
+				)
+			)
 	return errors
 
 
