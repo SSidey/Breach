@@ -2623,6 +2623,10 @@ through (past each other) until they reach unoccupied space".
 
 ### Decision 52 — Structures are 3D cell grids over their site, built from 3D parts; fights are the same indoors and out; squads hold formation by discipline
 
+> Superseded in part by Decision 57 on 2026-10-02: structural walls are **solid cells** of
+> a material, as thick as built. Faces between cells keep openings, partitions and passage
+> presets, but no longer stand in for walls.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
 
@@ -2909,4 +2913,194 @@ stair inside a wall with no full room, and positioning upgrade elements rather t
   rotation and rule checks**, per the standing sync rule.
 - `UnitDef` holds `natural` and `equipment` item lists, replacing `weapons`.
 - Faces and spaces carry passage traits; units carry size traits such as tiny.
+
+### Decision 56 — The ground has height: tiles carry an elevation in cells, the surface runs through partial cells, and mountains are compressed and capped
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user: at one grem per cell and 16 cells per tile, a real 200 m
+mountain would be "12.5 tiles tall". They asked whether the ground needs a 3D surface
+now. Agreed: put the height variation in now and smooth the look later. The user's
+intent: "if a cell has a surface slope, i.e. not fully 1×1×1 in appearance, then units
+path along it, and when it is dug we only remove the rest of the surface-level cell".
+- **Elevation is per tile, in cells.** Each tile has an elevation: the height of its
+  ground surface in cells (one cell is one grem, and a storey is 2, per Decision 53). It
+  is authored in the designer, defaulting from the terrain type.
+- **The surface runs through partial cells.**
+  - Within a tile, the surface height of each cell column is interpolated from the
+    elevations of the tile and its neighbours, so the ground slopes smoothly across
+    tile edges.
+  - The cell the surface passes through is a **surface cell**. It is partly solid: its
+    shape is its four corner heights, in quarters of a cell. Everything below it is
+    solid strata, and everything above it is open.
+  - **Units walk on the surface.** Moving along a slope costs more than moving on the
+    flat. A step of more than one cell between neighbouring columns is a **cliff**,
+    which needs climbing (Decision 54).
+  - **Digging a surface cell removes only what is left of it.** It costs that fraction of
+    a full cell's work and leaves a flat floor at the cell's base.
+  - The simulation stays in whole cells. The view draws the surface as a smooth mesh
+    later; for now it can be stepped or ramped.
+- **Mountains are compressed and capped.**
+  - **Compressed:** heights are stylised, not 1:1. A hill rises a few cells to about a
+    tile's width (16), and a mountain tile up to the map's **ceiling**.
+  - **Capped:** each map sets a ceiling (default 64 cells, 4 tiles). Ground above it is
+    taken to continue: it is impassable, it blocks sight, and it is drawn cut off at the
+    ceiling with a capped top, like the cutaway (Decision 54). Nothing above the ceiling
+    is simulated.
+  - **Strata run all the way up.** A tile's strata column (Decision 54) is generated
+    from bedrock to the surface, top layer first, so cutting into a mountainside shows
+    its rock bands. A mountain is a high surface over mostly rock, not a different kind
+    of tile.
+- **Pillar check (Decision 58):** height shapes the lock (passes, high ground, faces to
+  dig into). It does not open the field to free manoeuvre. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Flat tiles, height as a stretch goal (Decision 35) | Sight, range and digging all need height now; retrofitting a height field later is expensive. |
+| Elevation per cell, authored | Sixteen times the authoring per tile; interpolating tile elevations gives slopes for free, and exceptions can be painted later. |
+| Whole-cell steps only | The user wants slopes that units walk along, and digging that removes only what remains. |
+| Mountains at real scale | Hundreds of cells of rock nobody visits; compressing and capping keeps the scene and the sim small. |
+| Smooth surface rendering now | Not needed to play; the data is what has to be right first. |
+
+**Consequences:**
+- `TileDef` gains `elevation` (cells); `TerrainDef` gains a default elevation; the map
+  gains a `ceiling`. The designer paints elevation and shows it, per the standing sync
+  rule.
+- A sim-side ground model derives each column's surface height and each surface cell's
+  shape from tile elevations. Pathing and dig costs read it.
+- The map viewer shows elevation (shading or contours) until the 3D ground arrives.
+- Strata generation (Decision 54) counts down from the surface.
+
+### Decision 57 — Walls are solid cells; everything stands on a support check, so digging, damage and burnt shoring can bring ground and structures down
+
+**Supersedes:** Decision 52, in part (walls as faces)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user agreed to a support-based model for mines (span, load,
+shoring, collapse, simplified floods), asked how structure collapse rolls in, and
+noted that walls should not be one cell thick. In Decision 52, a wall was a face
+between cells, so it had no thickness and could not stand on, or fall into, anything.
+- **Walls are solid cells.**
+  - A wall is a run of solid cells of a material (timber, stone, reinforced stone), as
+    thick as it is built: a palisade 1, a curtain wall 2 to 3, a keep wall 3 or more.
+  - Faces between cells still carry openings and thin things: doors, slits, grates,
+    timber partitions and passage traits (Decisions 37 and 55). A slit through a
+    3-thick wall is a 1-wide passage through its cells, with the slit preset on its
+    outer face.
+  - Stairs and rooms can be hollowed into thick walls (Decision 55).
+- **Every 3D part sits on cells.** Each part the view draws is the look of one or more
+  cells, and records which. Damage, collapse and repair change cells, and the parts
+  follow. Nothing is a free-floating mesh with hit points of its own.
+- **One support rule for ground and structures.**
+  - A solid cell is **supported** if the cell below it is solid and supported, down to
+    the strata. Alternatively, it reaches supported cells sideways within its
+    material's **span** (placeholders: sand 0, soil 1, clay 2, rock 4, timber beam 3,
+    stone arch 4).
+  - **Load** shortens the span: what rests on a cell (the material above it, and any
+    structure, by Decision 53's weights) counts against its bearing.
+  - **Shoring** is an element placed in a dug cell (a timber set, a stone arch) that
+    counts as support. It has HP and can be burnt, broken or rot.
+- **Collapse is checked only where something changed:** a cell dug, destroyed, or
+  burnt out, or shoring lost. Every cell that loses support **creaks** for a few ticks,
+  shown to both sides, then falls.
+  - Fallen material becomes **rubble**: loose cells that fill the space below, are
+    quicker to dig than the original, and harm units caught under them.
+  - **Loose materials** (sand, gravel, rubble) fall into an open cell beneath them and
+    settle no steeper than their slope. They are checked only near a change.
+- **Undermining follows.** Digging under a wall's cells and propping them with timber
+  holds them up; burning the props brings the wall down. That makes a breach that is
+  as wide as the collapse. Defenders can **countermine**: digging is heard, and a tunnel
+  can be dug to intercept it.
+- **Water stays simple.** A breach into water (a moat, a well, a cell below the water
+  table) floods the connected dug cells below that level over a few ticks. There is no
+  pressure or flow simulation (extending Decision 54's static water).
+- **Legible:** a support overlay shows how close each cell is to failing, so every
+  collapse can be read before it happens.
+- **Pillar check (Decision 58):** undermining, collapse and flooding are keys to the lock
+  and parts of it (countermining). Holds, provided the overlay keeps them predictable.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Walls as faces (Decision 52) | No thickness: a wall can't be hollowed, undermined, or collapse into what is below it. |
+| Physics-based structural simulation | Costly, hard to keep deterministic, and unreadable to the player. |
+| Structures with HP per part, unrelated to cells | Collapse, undermining and breach width wouldn't follow from the same rule as the ground. |
+| Full fluid and granular simulation | Out of proportion to what the game needs; a local check and a flood fill give the same decisions. |
+
+**Consequences:**
+- The structure schema to come marks cells as solid material, open, or space. Faces keep
+  openings and passage traits.
+- A material library holds each material's dig difficulty, climb difficulty, weight,
+  span, whether it is loose, and its look. Strata and walls both draw on it.
+- A sim-side support check (event-driven, local) and collapse events, with rubble and
+  floods, come with the underground work. The view needs a support overlay.
+- The parts library maps each part to the cells it shows.
+
+### Decision 58 — Design pillars: what keeps Breach a reverse tower defence, and how a pivot is acknowledged
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user asked "at what point does this diverge from the original
+essence, 'reverse tower defense', and just become an RTS", and wanted the answer
+codified "such that my design choices can be tested against them, keeping us on track
+or at least causing acknowledgment that we are pivoting in a known and planned way".
+The short answer is that it becomes an RTS when the defender stops being a puzzle and
+becomes an opponent. These pillars say what that means in practice.
+1. **The defence is the lock.** The defender is authored, readable and rule-driven.
+   It builds, repairs, garrisons and responds (suspicion tiers, task forces), but it
+   never plays the player's game. It does not expand an economy to strike the player's
+   base.
+2. **You win at dispatch.** The player's decisions are what to build, what to send,
+   where and when. A wave's fate is largely settled by its composition and plan. Orders
+   are given to waves and squads, never to single units, and the game can always be
+   paused.
+3. **Many keys.** Each system adds ways to break the lock: assault, siege, tunnelling,
+   undermining, infiltration, disease, flooding, starving the defender's logistics, and
+   managing suspicion. Each key has a counter in the lock.
+4. **Pressure has a cost.** Ground must be held and silence raises suspicion; waiting
+   is never free.
+5. **Space is routes and faces.** Forces travel routes between nodes and meet the
+   defence at faces, openings and chokepoints. Terrain and height shape the lock; there
+   is no open-field manoeuvre.
+6. **Legible depth.** Every system the player can exploit is visible and predictable:
+   overlays, warnings, and rules shown in play. Depth comes from combining clear rules,
+   not from hidden ones or chaos.
+
+**Testing a proposal against the pillars.** Every new Decision ends with a **Pillar
+check** line: "holds", or which pillar it bends and why.
+- A Decision that bends a pillar is a **pivot**. It names the pillar, says what changes,
+  and needs the user's explicit authorisation as a pivot.
+- A pillar itself changes only by a Decision that supersedes this one.
+- Useful questions:
+  - Does the defender now pursue the player, or only defend and respond?
+  - Could this be won by fast hands rather than a better plan?
+  - Is this a new key (or a counter), or something to manage for its own sake?
+  - Does it make the player wait for free, or keep pressure on?
+  - Does it free movement from routes?
+  - Can the player see it coming and understand why it happened?
+- **Where the project leans today:** real-time with pause, domain production and
+  formations (Decisions 38–51) lean towards an RTS, but stay within pillar 2 (waves and
+  squads, painted shapes, automatic departure). Structures, the underground and
+  materials (Decisions 52–57) lean towards a siege or colony simulation. They stay
+  within pillars 3 and 6 while they are keys, counters and readable rules. Needs (rest,
+  food, warmth, disease) are the next place to watch.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| No written pillars | Drift goes unnoticed; the user wants pivots made knowingly. |
+| A genre label alone ("reverse TD") | Too vague to test a proposal against. |
+| Pillars that forbid real-time play | Decision 38 already chose real-time with pause; the pillars test what the player controls, not the clock. |
+
+**Consequences:**
+- Every Decision from 56 on carries a Pillar check line. The run-phase procedure checks
+  new Decisions against the pillars.
+- Decisions 56 and 57 are checked above; both hold.
 

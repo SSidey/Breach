@@ -80,6 +80,9 @@ resolve**, stop and ask the user (don't assume). Once resolved, append a new Dec
 entry to `Breach — Reverse Tower Defense Design Spec.md`'s `## Decisions` section using
 `AI_First_Development_Kit/templates/decision-entry.md` — never edit a prior Decision's
 text, only append (mark superseded ones per `decision-ledger.md` if applicable).
+Every new Decision ends with a **Pillar check** line against Decision 58's design
+pillars: "holds", or which pillar it bends and why. A Decision that bends a pillar is a
+pivot: say so to the user and get their explicit authorisation before recording it.
 
 ## 4. Commit as you go
 
