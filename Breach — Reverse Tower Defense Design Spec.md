@@ -3294,3 +3294,57 @@ mountains/rocky", "with some even reaching the surface".
   seeding.
 - Ignition needs a flammable flag on materials (timber, peat): to add with fire.
 
+### Decision 63 — Traits are the one interaction mechanism; heat is a temperature, and materials react to it at thresholds
+
+**Supersedes:** Decision 62, in part (a flammable flag on materials)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** Decision 62 proposed a "flammable flag". The user: "I have previously used
+the term trait and would expect this to carry between entities as one interaction
+mechanism, e.g. fire 'ignites' wood 'flammable', or if we want to tie it purely to heat,
+set a threshold at which things ignite… fire has a temperature effect, wood ignites at
+temp exceeding X and has the burn trait, whereas rock has a much higher X and melts".
+- **Project language: a trait** is a named property with an optional level, carried
+  by any entity: a unit, an item, a material, a liquid, an element, or a face.
+  - Existing traits keep this meaning: burrower N, climber N, tiny (Decision 54), and a
+    passage's tiny gap (Decision 55).
+  - Interactions are written as **rules between an effect and traits or thresholds**,
+    never as code for a particular pair of things.
+  - There are no one-off flags. "Loose" (Decision 57) is a trait on sand, gravel and
+    rubble.
+- **Heat is a temperature.**
+  - Hot things give off heat: lava 1200, burning timber 800 (placeholders, roughly °C).
+    Whatever they touch or stand beside heats towards that temperature.
+  - A material or liquid lists **heat transitions**: above or below a temperature it
+    **gains a trait** or **becomes** another material or liquid.
+  - Placeholders:
+    - timber gains **burning** above 300 (it then gives off heat, loses HP and ends as
+      ash)
+    - peat gains burning above 250
+    - rock becomes lava above 1100
+    - lava becomes rock below 700, so it hardens where water cools it
+  - The trait does the rest: **burning** gives off heat and spreads by the same rule.
+    Nothing needs a "flammable" flag; what burns is whatever has a burning threshold.
+- **Not built yet:** temperatures spreading, fire, and state changes in play come with
+  fire. This Decision fixes the data, so materials and liquids carry their traits and
+  transitions from now on.
+- **Pillar check (Decision 58):** heat stays legible: thresholds are visible data, and a
+  heat overlay can show what is about to catch or melt. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A flammable flag (Decision 62) | One flag per interaction multiplies; the user wants one mechanism across entities. |
+| Interaction tables per pair (fire × wood) | Every new material needs a row per effect; thresholds on the material scale. |
+
+**Consequences:**
+- Materials and liquids gain `traits` (id → level) and `heat_transitions` (above or
+  below a temperature: becomes X, or gains trait T). Liquids gain a temperature.
+- `MaterialDef.loose` becomes the `loose` trait.
+- A trait library (each trait's description and the effects it gives off) can follow when
+  enough traits exist; until then trait ids are plain names with levels.
+- The spec's vocabulary (Decision 54's list) gains **trait**, **effect** and **heat
+  transition**.
+
