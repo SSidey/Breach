@@ -76,7 +76,8 @@ Scenario: The viewer shows a tile's ground
   - `TileDef.elevation` (cells; -1 = the terrain's default), `TerrainDef.default_elevation`
     and `MapLayoutDef.ceiling` (default 64), with `MapLayoutDef.elevation_at(cell)`.
   - Seeded heights, stylised and placeholder: swamp, water and ravine 0, fields and desert
-    2, forest 3, Hilly 4, rocky 6, snow 8, mountain 48.
+    2, forest 3, Hilly 4, rocky 6, snow 8. A mountain is 64, the default ceiling, so it
+    is capped and blocks flight (Decision 60).
   - The import reads `elevation_override` per tile, `ceiling` per map and
     `default_elevation` per terrain.
 - **`GroundSurface`** (`sim/ground/ground_surface.gd`, pure):
@@ -118,7 +119,15 @@ Scenario: A tile's elevation overrides its terrain's
 
 A scripted browser run set a tile on the demo map to 70. It showed the ceiling warning,
 a filled ▲70 badge, and `elevation: 70` in the saved draft. Badges appear only on the
-six tiles whose height differs from the base terrain's (water 0, forest 3, mountain 48).
+six tiles whose height differs from the base terrain's (water 0, forest 3, mountain 48 at the time; 64 since Decision 60).
+
+## Round 3 (next): relief and carved channels (Decision 59)
+
+- `TerrainDef` gains relief amplitude and scale; maps gain a seed and carved features
+  (a path, width, depth and water level).
+- `GroundSurface` adds seeded relief and carving to the tile height.
+- The designer gains relief per terrain, the seed (lock and re-roll), and a channel tool
+  for rivers, ditches and moats.
 
 ## Test-first order
 
