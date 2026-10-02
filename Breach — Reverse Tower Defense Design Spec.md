@@ -1845,6 +1845,10 @@ The user also set two calendar settings:
 
 ### Decision 36 — A 3D scene with 2D sprites for structures and units; the detail view is a side-on sprite in the Inspector Viewport
 
+> Superseded in part by Decision 69 on 2026-10-03: there is no separate detail view. You
+> zoom into a fight in the one 3D scene, and structures show or hide parts to reveal fights
+> inside them.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-09-30
 
@@ -2021,6 +2025,10 @@ before the fight.
 > Superseded in part by Decision 42 on 2026-10-01: a lane's wave is a painted template, and a
 > change takes effect **immediately** (built units fold in, leftovers are banked), rather than
 > applying from the next wave.
+
+> Superseded in part by Decision 70 on 2026-10-03: a slot is a **stand** of 2 x 2 cells,
+> holding up to that many units, and the slot pool counts stands. Front-rank combat,
+> step-up and flank wrap stay per unit.
 
 **Authorised by:** Simeon Sidey
 **Date:** 2026-09-30
@@ -3600,3 +3608,126 @@ So:
 - Load paths take bearing per column, since footprints cross terrains.
 - The formation feel test's marches lengthen, to be judged in play.
 
+### Decision 69 — Fights are watched by zooming in the one 3D scene; units are drawn by zoom level and carry faction colour; several fights at once are managed by intent, a front panel and alerts
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** With 64-cell tiles (Decision 68), units are tiny at map zoom, and several
+mass skirmishes can run at once. The user: "units look tiny but we could fix that with
+visuals on top… our combats could just be zoomed into right?"
+- **Units are drawn by zoom level**, layered:
+  - **Far out:** a formation is one token. It shows its commander, hero or lord sprite
+    scaled up where it has one; otherwise the sprite of the unit filling most of its
+    cells. The token carries a strength bar.
+  - **Middle:** a block per unit type.
+  - **Close in:** every unit's own sprite.
+- **Faction colour:** every sprite carries a colour mask, areas tinted per faction. This
+  keeps player against player, and a faction fighting itself, readable. It is a
+  requirement on the sprite work.
+- **Fights are watched by zooming in.** There is no separate detail view (Decision 36) and
+  no cutaway for field fights. For a fight inside a structure, parts of the structure are
+  shown or hidden around the focus, or with a toggle. Those parts are roofs, upper floors
+  and the wall facing the camera.
+- **Several fights at once:** the user's concern is the mental load, and this is the main
+  design risk of the scale. These keep it in check:
+  - **Standing orders per lane:** advance, hold at a point, or fall back below a strength.
+    Formations and discipline (Decision 52) carry them out.
+  - **A front panel:** one glanceable strip per active fight, showing each side's strength
+    and which way the fight is going.
+  - **Alerts with jump-to:** an alert when a fight starts or turns, with the pause or
+    notify choice of Decision 39. The game may slow down when several fights start
+    together.
+  - **Later, commanders** may carry a lane's orders, so the player leads commanders rather
+    than squads.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A separate side-on detail view | In one 3D scene, zooming in shows the same units in place, with no second art set. |
+| A cutaway for every fight | Field fights need only zoom; only fights inside structures need parts hidden. |
+| Controlling each squad closely | Too much to manage across several fights; orders, unit AI and alerts handle it. |
+
+**Consequences:**
+- The 3D presentation needs:
+  - level of detail per zoom
+  - formation tokens
+  - faction colour masks in the sprite pipeline
+  - structure parts that can be shown or hidden
+- The HUD gains the front panel and fight alerts.
+- Lanes gain standing orders beyond today's advance, hold and retreat.
+
+### Decision 70 — A formation is painted in stands: each slot is 2 × 2 cells holding up to that many units
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** At 64-cell tiles, painting formations unit by unit would be tedious. The
+user: "designing for structures on the 64x64 grid already feels tedious". Wargames solve
+this with stands (bases).
+- **One slot in the wave painter is a stand of 2 × 2 cells.** It holds up to that many
+  units, and may hold fewer (the user: "1 stand need not necessarily be 4x(1x1) units").
+  For example:
+  - a grem stand holds up to 4 grems
+  - a brute stand is one brute, which is already 2 × 2
+- The painter stays small: up to 8 stands wide by 4 deep. That deploys as a front of up to
+  16 cells, about 27 m.
+- **The slot pool counts stands**, and presets (Decision 43) are painted in stands.
+- **Combat stays per unit.**
+  - Losses thin a stand.
+  - The rank behind steps up, within a stand and between stands.
+  - Flanks wrap as before (Decisions 40 and 47).
+  - Bands, discipline and re-forming still apply per unit.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Paint formations cell by cell at the new scale | Four times the painting for the same army. |
+| One unit standing for several grems | Combat per unit (front ranks, step-up, wraps) is what the feel tests built; stands keep it. |
+| Stands always full | The user: a stand may hold fewer units. |
+
+**Consequences:**
+- The wave template's grid unit becomes the stand. The wave painter, presets and slot pool
+  work in stands.
+- Deploying a wave expands each stand into cells.
+- The formation feel test follows.
+
+### Decision 71 — Ranged units fire on the nearest detected enemy, at ranges of tens of cells, across tiles
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** At 64-cell tiles, a spitter's 5 ranks is about 8.5 m. A real archer reaches
+150 m or more, about 90 cells, so ranged fire crosses tiles.
+- **Targeting is the units' own AI**, keeping control light (Decision 69). The user: "I
+  would expect they pick the nearest detected enemy to fire upon… we leave it to the ai of
+  our units to do combat."
+  - A ranged unit fires on the **nearest detected enemy** in range.
+  - Detection is separate from range (Decision 34).
+  - The player doesn't assign targets.
+- **Ranges in cells, all placeholders to be tuned:**
+
+  | Weapon | Range (cells) |
+  |--------|---------------|
+  | spitter | 8–12 |
+  | archer | 60–90 |
+  | ballista | about 150 |
+  | trebuchet | 300 or more |
+
+  A weapon's range stays in ranks, at one cell per rank.
+- **Ranged fire works across tiles and between fights.** Line of sight, extra range from
+  height (Decision 52) and projectile flight time come with the ranged work.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Player-assigned targets | Adds control work across several fights at once. |
+| Keep short ranges | Unbelievable at the new scale. |
+
+**Consequences:**
+- `WeaponDef` ranges grow.
+- The formation sim's ranged targeting looks beyond the opposing squad to any detected
+  enemy in range. That needs a detection rule.
