@@ -96,8 +96,8 @@ Scenario: Failure cascades
   later.
 - Openings (doors, slits) in face walls, furnishing elements and their weights (Decision
   55), and fire weakening timber come with later rounds.
-- The user expects physical quantities may become discrete bands for performance
-  (Decision 65); load units are the integer first step.
+- Physical quantities are discrete: load units in eighths (Decision 65) and heat as a
+  level 0-10 (Decision 66). Loads stay additive integers rather than coarse bands.
 
 ## Rubric answers (qualitative, spec-baseline)
 

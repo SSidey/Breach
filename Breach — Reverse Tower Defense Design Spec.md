@@ -3443,3 +3443,41 @@ remove the continuous nature, I expect should aid sim performance)".
 - `MaterialDef.strength`. The structure plan's faces carry thickness in eighths.
 - The load-path solver (spec 24) works in integer load units throughout.
 
+### Decision 66 — Heat is a level from 0 to 10, not degrees; loads stay whole load units
+
+**Supersedes:** Decision 63, in part (temperatures in degrees)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user: "rather than 1000° it be Heat/Hot 10 or something like that…
+rather than something might combust at 265°, it combusts at heat 3… discrete
+abstractions would help simplify our sims… push back if you think otherwise."
+- **Heat is a level, 0 to 10,** like a trait's level. Placeholders:
+  - 0: frozen
+  - 1: ambient
+  - 3: wood smoulders and catches
+  - 5: open fire (burning gives off heat 5)
+  - 8: lava
+  - 10: the hottest, for a plane of fire
+  Thresholds use the same levels: timber gains burning above heat 3, rock becomes lava
+  above 7, and lava becomes rock below 6. Heat reads alongside traits ("glows 2",
+  "heat 8") and compares by the same rule.
+- **Pushback, accepted:** loads stay whole **load units** (Decision 65). Weights must
+  add up as they flow down a structure, and coarse bands would lose that sum. They are
+  already small integers, which is the discreteness that matters for performance.
+  Weight, strength and span stay as they are.
+- **Migration:** a saved temperature in degrees becomes a level (1 up to 50°, then one
+  level per 150°, at most 10); a saved threshold over 10 is converted the same way.
+- **Pillar check (Decision 58):** levels make heat easier to read than degrees. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Degrees (Decision 63) | Continuous and fussy; the user wants discrete levels. |
+| Banding loads too | Loads must sum exactly as they flow; they are already small integers. |
+
+**Consequences:**
+- `MaterialDef.temperature` becomes `heat` (0-10); heat transition thresholds are levels.
+- The designer edits heat as a level and labels transitions "above heat N".
+
