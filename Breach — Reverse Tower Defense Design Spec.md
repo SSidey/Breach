@@ -2777,6 +2777,10 @@ the ground allows.
 > any shape**, containing subnodes; site links between nodes are not needed. The strata,
 > traits and one-scene parts stand.
 
+> Superseded in part by Decision 72 on 2026-10-03: a node's subnodes are objectives, each
+> with a painted capture area and zone of influence. Holding all of them controls the node;
+> anything less leaves it contested.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
 
@@ -3636,8 +3640,9 @@ visuals on top… our combats could just be zoomed into right?"
   - **A front panel:** one glanceable strip per active fight, showing each side's strength
     and which way the fight is going.
   - **Alerts with jump-to:** an alert when a fight starts or turns, with the pause or
-    notify choice of Decision 39. The game may slow down when several fights start
-    together.
+    notify choice of Decision 39.
+  - **A slow-down setting:** the player can choose to have the game slow down when
+    several fights start together. It is off by default.
   - **Later, commanders** may carry a lane's orders, so the player leads commanders rather
     than squads.
 
@@ -3731,3 +3736,59 @@ this with stands (bases).
 - `WeaponDef` ranges grow.
 - The formation sim's ranged targeting looks beyond the opposing squad to any detected
   enemy in range. That needs a detection rule.
+
+### Decision 72 — Subnodes are a node's objectives, each with a painted capture area and zone of influence; a node is controlled only when all are held, otherwise contested
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** A node is a painted area of tiles (Decision 68), so holding it should mean
+holding what is in it. The user: "objectives within a node be assigned such that when all
+are controlled then the full node is controlled, otherwise contested".
+- **A subnode is an objective with two areas, both made of cells:**
+  - a **capture area**, where units must stand to take it
+  - a **zone of influence**, which it controls once held
+  - The capture area lies within the zone of influence, and the zone lies within the
+    node's area.
+  - Both are painted, in any shape. A zone needn't spread evenly round the subnode, so a
+    rectangle off to one side is fine.
+  - Zones don't overlap, so each cell answers to at most one subnode.
+- **Capturing:** a side takes a subnode by keeping its units in the capture area while no
+  enemy units are there, for a short capture time. It stays held until an enemy does the
+  same, so it needs no garrison. Whether units stay or move on is up to orders and the
+  units' own AI (Decision 69).
+- **Where subnodes come from:**
+  - Placements that make one (a well, an ore vein, a keep) are subnodes by default.
+  - Placing one gives it a default capture area and zone, sized to its type. Both can then
+    be repainted.
+  - A subnode can also be painted from scratch, for a crossroads or a hilltop.
+  - A placement's subnode can be turned off.
+- **Cells inside a zone** follow that subnode's holder: who builds there, who gets its
+  benefit, and who holds any building in it. A structure is held by enclosing it in a zone;
+  control isn't tied to the building itself.
+- **Cells outside every zone** follow the node:
+  - When one side holds every subnode, it controls the node and all of its area.
+  - Otherwise the node is **contested**, and those cells belong to nobody.
+  - For example, an ore vein with no subnode of its own can't be worked while the node is
+    contested.
+- **Contested** means subnodes of several sides share the node. While a node is
+  contested:
+  - each side has only the zones of the subnodes it holds
+  - building is limited to a side's own zones, if allowed at all during combat
+- **Every subnode is required for control.** A key-objective flag may come later.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Tie control to structure assets (a tower holds itself) | A zone of influence that encloses the building does the same, without making structures separate assets. |
+| Circular zones round each subnode | Painted zones fit the ground and the buildings; the user wants zones that can sit to one side. |
+| Some subnodes optional for control | All required for now; a key-objective flag later if needed. |
+
+**Consequences:**
+- `NodeDef` gains subnodes, each with a type, a capture area, a zone of influence and
+  validation: inside the node's area, capture area within its zone, no overlapping zones.
+- The designer gains subnode placing, and painting of capture areas and zones over a
+  node's area.
+- The sim gains capture and control state per subnode and node, and building and benefit
+  follow it.
