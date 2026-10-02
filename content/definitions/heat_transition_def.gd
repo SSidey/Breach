@@ -1,10 +1,10 @@
 class_name HeatTransitionDef
 extends Resource
-## How a material or liquid reacts to heat (Decision 63): above (rising) or below a
-## temperature it becomes another material or liquid, or gains a trait. Timber gains
-## "burning" above 300; rock becomes lava above 1100; lava becomes rock below 700.
+## How a material reacts to heat (Decisions 63, 66): above (rising) or below a heat level
+## (0-10) it becomes another material, or gains a trait. Timber gains "burning" above
+## heat 3; rock becomes lava above 7; lava becomes rock below 6.
 
-## Roughly °C, placeholders to tune.
+## A heat level 0-10, placeholders to tune.
 @export var threshold: int = 0
 ## True = once hotter than threshold; false = once cooler.
 @export var rising: bool = true
@@ -14,7 +14,7 @@ extends Resource
 @export var gains_trait: String = ""
 
 
-## The rule in words: "above 300: gains burning".
+## The rule in words: "above heat 3: gains burning".
 func describe() -> String:
 	var outcome := "becomes %s" % becomes if becomes else "gains %s" % gains_trait
-	return "%s %d: %s" % ["above" if rising else "below", threshold, outcome]
+	return "%s heat %d: %s" % ["above" if rising else "below", threshold, outcome]

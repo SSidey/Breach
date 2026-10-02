@@ -425,7 +425,7 @@
       "weight": 1,
       "span": 1,
       "strength": 1,
-      "temperature": 15,
+      "heat": 1,
       "traits": {
         "dig_difficulty": 1
       },
@@ -438,14 +438,14 @@
       "weight": 1,
       "span": 0,
       "strength": 0,
-      "temperature": 15,
+      "heat": 1,
       "traits": {
         "dig_difficulty": 1,
         "climb_difficulty": 1
       },
       "heat_transitions": [
         {
-          "above": 250,
+          "above": 3,
           "gains": "burning"
         }
       ]
@@ -457,7 +457,7 @@
       "weight": 1,
       "span": 0,
       "strength": 0,
-      "temperature": 15,
+      "heat": 1,
       "traits": {
         "dig_difficulty": 1,
         "climb_difficulty": 1,
@@ -472,7 +472,7 @@
       "weight": 1,
       "span": 0,
       "strength": 1,
-      "temperature": 15,
+      "heat": 1,
       "traits": {
         "dig_difficulty": 1,
         "climb_difficulty": 1,
@@ -487,7 +487,7 @@
       "weight": 1,
       "span": 2,
       "strength": 2,
-      "temperature": 15,
+      "heat": 1,
       "traits": {
         "dig_difficulty": 2
       },
@@ -500,13 +500,13 @@
       "weight": 2,
       "span": 4,
       "strength": 20,
-      "temperature": 15,
+      "heat": 1,
       "traits": {
         "dig_difficulty": 3
       },
       "heat_transitions": [
         {
-          "above": 1100,
+          "above": 7,
           "becomes": "LAVA"
         }
       ]
@@ -518,7 +518,7 @@
       "weight": 2,
       "span": 4,
       "strength": 20,
-      "temperature": 15,
+      "heat": 1,
       "traits": {
         "dig_difficulty": 4
       },
@@ -531,13 +531,13 @@
       "weight": 1,
       "span": 3,
       "strength": 6,
-      "temperature": 15,
+      "heat": 1,
       "traits": {
         "dig_difficulty": 1
       },
       "heat_transitions": [
         {
-          "above": 300,
+          "above": 3,
           "gains": "burning"
         }
       ]
@@ -549,7 +549,7 @@
       "weight": 1,
       "span": 0,
       "strength": 0,
-      "temperature": 15,
+      "heat": 1,
       "traits": {
         "flows": 3
       },
@@ -562,14 +562,14 @@
       "weight": 1,
       "span": 0,
       "strength": 0,
-      "temperature": 1200,
+      "heat": 8,
       "traits": {
         "flows": 1,
         "glows": 1
       },
       "heat_transitions": [
         {
-          "below": 700,
+          "below": 6,
           "becomes": "ROCK"
         }
       ]

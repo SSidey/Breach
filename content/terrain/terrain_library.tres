@@ -62,7 +62,7 @@ traits = {
 
 [sub_resource type="Resource" id="Heat_PEAT_0"]
 script = ExtResource("3_ucpav")
-threshold = 250
+threshold = 3
 gains_trait = "burning"
 
 [sub_resource type="Resource" id="Material_PEAT"]
@@ -115,7 +115,7 @@ traits = {
 
 [sub_resource type="Resource" id="Heat_ROCK_0"]
 script = ExtResource("3_ucpav")
-threshold = 1100
+threshold = 7
 becomes = "LAVA"
 
 [sub_resource type="Resource" id="Material_ROCK"]
@@ -145,7 +145,7 @@ traits = {
 
 [sub_resource type="Resource" id="Heat_TIMBER_0"]
 script = ExtResource("3_ucpav")
-threshold = 300
+threshold = 3
 gains_trait = "burning"
 
 [sub_resource type="Resource" id="Material_TIMBER"]
@@ -172,7 +172,7 @@ traits = {
 
 [sub_resource type="Resource" id="Heat_LAVA_0"]
 script = ExtResource("3_ucpav")
-threshold = 700
+threshold = 6
 rising = false
 becomes = "ROCK"
 
@@ -182,7 +182,7 @@ id = "LAVA"
 display_name = "Lava"
 color = Color(0.83137256, 0.32156864, 0.10980392, 1)
 span = 0
-temperature = 1200
+heat = 8
 traits = {
 "flows": 1,
 "glows": 1
@@ -544,4 +544,4 @@ script = ExtResource("4_jn1b3")
 terrains = Array[ExtResource("5_d0nqg")]([SubResource("Terrain_FIELDS"), SubResource("Terrain_ROCKY"), SubResource("Terrain_SNOW"), SubResource("Terrain_DESERT"), SubResource("Terrain_SWAMP"), SubResource("Terrain_WATER"), SubResource("Terrain_FOREST"), SubResource("Terrain_MOUNTAIN"), SubResource("Terrain_RAVINE"), SubResource("Terrain_HILLY")])
 features = Array[ExtResource("1_2nuu6")]([SubResource("Feature_ORE_VEIN"), SubResource("Feature_ARABLE"), SubResource("Feature_SPRING"), SubResource("Feature_TIMBER"), SubResource("Feature_QUARRY"), SubResource("Feature_LAVA_VENT")])
 materials = Array[ExtResource("2_8e4pg")]([SubResource("Material_SOIL"), SubResource("Material_PEAT"), SubResource("Material_SAND"), SubResource("Material_GRAVEL"), SubResource("Material_CLAY"), SubResource("Material_ROCK"), SubResource("Material_ORE"), SubResource("Material_TIMBER"), SubResource("Material_WATER"), SubResource("Material_LAVA")])
-source_hash = "b5fd825f8872a37b5aaf150db165585dd7009888f009400325b2643070d9f2b2"
+source_hash = "4e48c1db9ceec09b4d633c055bff2450ddfebf9b974d618b7c684833f9013aea"

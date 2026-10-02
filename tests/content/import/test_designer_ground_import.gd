@@ -136,10 +136,10 @@ func test_liquids_saved_before_decision_64_become_flowing_materials() -> void:
 	var library := DesignerLibraryImporter.import_library(library_data).library
 	var lava = library.material("LAVA")
 
-	assert_int(lava.temperature).is_equal(1200)
+	assert_int(lava.heat).is_equal(8)  # 1200 degrees, saved before Decision 66
 	assert_int(lava.trait_level("glows")).is_equal(1)
 	assert_int(lava.trait_level("flows")).is_equal(1)  # lava flows slowly
 	assert_int(library.material("WATER").trait_level("flows")).is_equal(3)
-	assert_str(lava.heat_transitions[0].describe()).is_equal("below 700: becomes ROCK")
+	assert_str(lava.heat_transitions[0].describe()).is_equal("below heat 5: becomes ROCK")
 	assert_str(library.terrain("MOUNTAIN").liquids[0].material_id).is_equal("LAVA")
 	assert_array(Array(library.validate())).is_empty()
