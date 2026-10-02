@@ -488,3 +488,12 @@ button:focus-visible, .tool:focus-visible, select:focus-visible, input:focus-vis
 .danger-zone { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
 .roadmap { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+
+/* Structure planner (spec 24) */
+.planner-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+.planner-bar select, .planner-bar input { font-size: 12px; }
+.planner-bar .row-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-dim); font-weight: 600; min-width: 40px; }
+.planner-panes { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.planner-panes canvas { background: var(--surface); border: 1px solid rgba(0,0,0,0.12); border-radius: 4px; }
+#pl_grid { cursor: crosshair; }
+.cell .diag-layer { position: absolute; inset: 0; z-index: 1; opacity: 0.85; pointer-events: none; }

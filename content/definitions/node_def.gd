@@ -16,6 +16,8 @@ enum NodeType { ORIGIN, RESOURCE, FORT, NEUTRAL, WAYPOINT }
 ## future work, not this field.
 enum ResourceType { FOOD, WOOD, STONE, METAL, CRYSTAL }
 
+const StructurePlanDef = preload("res://content/definitions/structure_plan_def.gd")
+
 ## Stable authoring identifier (Phase 4 item 2) - rendering/authoring metadata only,
 ## sim/ never reads it. Needed once array index is no longer globally unique across
 ## lanes.
@@ -98,6 +100,9 @@ enum ResourceType { FOOD, WOOD, STONE, METAL, CRYSTAL }
 ## Free-text/id placeholder for what unlocks on capture. Empty = none. No unlock
 ## system consumes this yet.
 @export var capture_reward: String = ""
+
+## The structure's plan of cells, faces and loads (spec 24); null = none drawn yet.
+@export var plan: StructurePlanDef
 
 
 func validate() -> PackedStringArray:

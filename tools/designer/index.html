@@ -37,6 +37,7 @@
       <div class="field"><label for="defaultTerrain">Base terrain</label><select id="defaultTerrain"></select></div>
       <div class="field"><label for="seed">Seed</label><input type="number" id="seed" min="1" value="1" style="width:110px;" title="Seeds relief, strata and liquid bodies, so the map's ground is the same every time (Decision 59). Re-roll for a new one." /><button class="btn small ghost" id="rerollSeed" type="button" title="New seed">&#8635;</button></div>
       <div class="field"><label for="ceiling">Ceiling</label><input type="number" id="ceiling" min="1" max="256" value="64" title="Cells. Ground above it is taken to continue: impassable, drawn capped (Decision 56)." /></div>
+      <div class="field"><label for="diagView">Show</label><select id="diagView"><option value="terrain">Terrain</option><option value="elevation">Elevation</option><option value="bearing">Bearing</option><option value="load">Structure load</option></select></div>
       <div class="field"><label for="viewAs">View as</label><select id="viewAs"></select></div>
       <button class="btn" id="resizeBtn" type="button">Resize grid</button>
       <button class="btn ghost" id="newMapBtn" type="button">New map&hellip;</button>
@@ -154,11 +155,13 @@
           <div class="bottom-tabs">
             <button class="tab-btn" type="button" id="bottomTabPaint" data-active="true">Paint layers</button>
             <button class="tab-btn" type="button" id="bottomTabStructure" data-active="false" disabled>Structure</button>
+            <button class="tab-btn" type="button" id="bottomTabPlan" data-active="false" disabled>Plan</button>
             <span class="strip-notice" id="stripNotice" role="status"></span>
             <button class="btn small ghost" type="button" id="expandBtn" hidden>Expand ⤢</button>
           </div>
           <div id="layersStrip"></div>
           <div id="structureEditor" hidden></div>
+          <div id="planEditor" hidden></div>
         </div>
       </div>
 
@@ -326,6 +329,8 @@
   </div>
 </div>
 
+<script src="load_paths.js"></script>
+<script src="planner.js"></script>
 <script src="repo.js"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@ class_name DesignerNodeBuilder
 
 const NodeDef = preload("res://content/definitions/node_def.gd")
 const GarrisonUnitDef = preload("res://content/definitions/garrison_unit_def.gd")
+const DesignerPlanBuilder = preload("res://content/import/designer_plan_builder.gd")
 
 const DEFAULT_CELL_SIZE := 64.0
 ## NodeDef properties set by the builder itself; a designer "fields" key never overrides them.
@@ -65,6 +66,8 @@ static func _build_node(
 	for field_name in entry.get("fields", {}).keys():
 		_apply_field(node, field_name, entry["fields"][field_name], errors, warnings)
 	_apply_garrison(node, entry.get("garrison_units", []), errors)
+	if entry.get("plan") is Dictionary:
+		node.plan = DesignerPlanBuilder.build(entry["plan"])
 	return node
 
 
