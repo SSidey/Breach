@@ -51,3 +51,4 @@ Schema note: rows from 2026-09-20 onward that predate the `isp violations` / `he
 | 2026-10-02 | feature/designer-ground-model | 455 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-02 | feature/ground-elevation | 469 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-02 | feature/ground-liquids | 477 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
+| 2026-10-02 | feature/ground-liquids | 479 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
