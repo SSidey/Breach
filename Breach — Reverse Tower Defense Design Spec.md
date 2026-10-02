@@ -2453,6 +2453,9 @@ behind grems should not stay behind them, and ranged units belong at the back.
 
 ### Decision 48 — Formation units are a fifth of their former size, and moving within a fight is slowed
 
+> Superseded in part by Decision 68 on 2026-10-02: with 64-cell tiles a rank is 1/64 of a
+> tile and melee reach about 1.1 cells; speeds per cell are unchanged. Crowded swaps stand.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
 
@@ -2706,6 +2709,9 @@ underground ingress. The formation sim, meanwhile, is a top-down slice with no h
 
 ### Decision 53 — One cell is one grem (1/16 of a tile); a storey is 2 cells; ground bearing, foundations and material weight replace the segment budget; capacity comes from furnishings that fit
 
+> Superseded in part by Decision 68 on 2026-10-02: a tile is **64 × 64 cells** (a cell is
+> 1/64 of a tile, about 109 m across); one cell is still one grem.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
 
@@ -2758,6 +2764,10 @@ the ground allows.
 - 3D parts are built to a cell of one grem and a storey of 2 cells.
 
 ### Decision 54 — Nodes stay on one tile and link into sites; the underground is generated strata dug by rated traits; one 3D scene shows it all
+
+> Superseded in part by Decision 68 on 2026-10-02: a node is a **painted area of tiles of
+> any shape**, containing subnodes; site links between nodes are not needed. The strata,
+> traits and one-scene parts stand.
 
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
@@ -3543,4 +3553,50 @@ round 2).
 - The load paths (designer and game) treat a cell with a solid fill as ground. Both take
   the materials, to tell liquids from solids. The shared cases gain fill cases.
 - The structure view in Godot will draw walls flush, from the same data.
+
+### Decision 68 — A tile is 64 × 64 cells, and a node is a painted area of tiles of any shape
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The example structures (spec 24 round 4) showed a 16 × 16 tile, about
+27 m across, is cramped.
+- The user's reference watch tower (24 × 24 × 30 ft) is 4 × 4 cells and 5 levels high,
+  with 3 ft walls of 4/8.
+- Towers of that size at the front of a small castle need about 48 × 48 cells, with ground
+  in front for attackers to approach.
+- On P-f-F-c, the four tiles from base to farm were only about 110 m, so troops fought
+  almost as they left home.
+
+So:
+- **A tile is 64 × 64 cells**, about 109 m across, keeping to powers of two (the user:
+  "worth trying"). A cell is still one grem.
+- **A node is a painted area of tiles, of any shape**, containing subnodes. It replaces
+  site links between nodes (Decision 54), which were never built. A tile belongs to at
+  most one node, and the node's own tile is always part of it.
+- **A plan spans its node's footprint.** Cells are measured from the node's own tile, and
+  each cell stands on its own tile's ground (bearing, dig depth, strata).
+- **Speeds per cell are unchanged** (the user: "let's see how it pans out"), so marches
+  over the same map take about four times as long.
+  - The formation sim's lengths in tile units divide by 4: a rank is 1/64 of a tile,
+    melee reach about 1.1 cells, travel the same 8 cells per second.
+- The planner zooms and pans to work across up to several tiles of cells.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep 16-cell tiles and make maps four times wider in tiles | Terrain would be painted at about 27 m resolution and maps would need four times as many tiles. |
+| 32 × 32 cell tiles | A small castle with front towers still spans tiles. The user wanted at least 48 × 48 and powers of two. |
+| Linked one-tile nodes (sites) | A castle becomes many map nodes; painting the node's area is simpler. |
+| Rectangular footprints only | The user wants any shape. |
+| Scale speeds so a tile still takes as long to cross | The user wanted to see how per-cell speeds play first. |
+
+**Consequences:**
+- `MapLayoutDef.CELLS_PER_TILE` is the one scale constant in the ground code, and
+  `planner_tools.js` holds the designer's equivalent.
+- `NodeDef.footprint`, the designer's Node area tool and footprint outlines on the map.
+- Plans are node-local, and older 16-cell plans are recentred on the 64-cell tile.
+- Load paths take bearing per column, since footprints cross terrains.
+- The formation feel test's marches lengthen, to be judged in play.
 
