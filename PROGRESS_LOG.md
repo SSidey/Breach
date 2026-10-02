@@ -60,3 +60,4 @@ Schema note: rows from 2026-09-20 onward that predate the `isp violations` / `he
 | 2026-10-02 | feature/planner-editing | 515 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-02 | feature/tile-scale-64 | 519 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-02 | feature/node-footprints | 526 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
+| 2026-10-02 | feature/subnodes | 538 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
