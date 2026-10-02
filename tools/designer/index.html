@@ -35,6 +35,7 @@
       <div class="field"><label for="cols">Cols</label><input type="number" id="cols" min="4" max="24" value="12" /></div>
       <div class="field"><label for="rows">Rows</label><input type="number" id="rows" min="3" max="16" value="7" /></div>
       <div class="field"><label for="defaultTerrain">Base terrain</label><select id="defaultTerrain"></select></div>
+      <div class="field"><label for="seed">Seed</label><input type="number" id="seed" min="1" value="1" style="width:110px;" title="Seeds relief, strata and liquid bodies, so the map's ground is the same every time (Decision 59). Re-roll for a new one." /><button class="btn small ghost" id="rerollSeed" type="button" title="New seed">&#8635;</button></div>
       <div class="field"><label for="ceiling">Ceiling</label><input type="number" id="ceiling" min="1" max="256" value="64" title="Cells. Ground above it is taken to continue: impassable, drawn capped (Decision 56)." /></div>
       <div class="field"><label for="viewAs">View as</label><select id="viewAs"></select></div>
       <button class="btn" id="resizeBtn" type="button">Resize grid</button>

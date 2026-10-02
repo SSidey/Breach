@@ -135,6 +135,10 @@
   var DEFAULT_ELEVATION = { FIELDS: 2, ROCKY: 6, SNOW: 8, DESERT: 2, SWAMP: 0, WATER: 0, FOREST: 3, MOUNTAIN: 64, RAVINE: 0 };
   GENERIC_GROUND.default_elevation = 4;
   Object.keys(DEFAULT_GROUND).forEach(function (id) { DEFAULT_GROUND[id].default_elevation = DEFAULT_ELEVATION[id]; });
+  // Seeded unevenness within a tile (Decision 59): [amplitude, scale] in cells.
+  var DEFAULT_RELIEF = { FIELDS: [1, 12], ROCKY: [2, 4], SNOW: [1, 10], DESERT: [2, 12], SWAMP: [0, 0], WATER: [0, 0], FOREST: [1, 8], MOUNTAIN: [8, 8], RAVINE: [0, 0] };
+  GENERIC_GROUND.relief = { amplitude: 2, scale: 8 };
+  Object.keys(DEFAULT_GROUND).forEach(function (id) { DEFAULT_GROUND[id].relief = { amplitude: DEFAULT_RELIEF[id][0], scale: DEFAULT_RELIEF[id][1] }; });
   DEFAULT_TERRAIN_LIBRARY.materials = DEFAULT_MATERIALS;
   DEFAULT_TERRAIN_LIBRARY.features.push({ id: 'LAVA_VENT', label: 'Lava vent', glyph: '♨', stub_effect: 'lava reaches the surface here (Decision 62)' });
   DEFAULT_TERRAIN_LIBRARY.terrains.forEach(function (t) { Object.assign(t, clone(DEFAULT_GROUND[t.id])); });
@@ -265,6 +269,8 @@
         delete t.water_table;
       }
       t.liquids.forEach(function (b) { if (b.liquid) { b.material = b.liquid; delete b.liquid; } });
+      // v18: relief (Decision 59).
+      if (!t.relief) t.relief = clone((DEFAULT_GROUND[t.id] || GENERIC_GROUND).relief);
     });
     terrainLib.terrains.forEach(function (t) {
       // v11: basements. Seeded terrains get their default depth; custom ones (e.g. Hilly) get 1.
@@ -356,6 +362,8 @@
     roads: [], // [{a:'r,c', b:'r,c'}] - explicit connections between 8-neighbour cells
     defaultTerrain: 'FIELDS',
     ceiling: 64, // cells; ground above it is taken to continue (Decision 56)
+    seed: 1, // seeds relief, strata and liquid bodies (Decision 59)
+    channels: [], // [{tiles:['r,c',...], width, depth, liquid, liquid_depth}] rivers, ditches, banks (Decision 59)
     links: [], // [{a: nodeId, b: nodeId}]
     mapFactionIds: ['player'],
     faction_relations: [], // [{a, b, stance}]
@@ -470,6 +478,19 @@
   function roadUnderWaterNotice(label) {
     setNotice('A road runs through this cell. Bridge first: erase the road here, paint ' + label + ', add a bridge, then redraw the road.');
   }
+  // Tiles next to k along every channel through it; null marks a channel that only touches k.
+  function channelNeighbours(k) {
+    var out = [];
+    state.channels.forEach(function (ch) {
+      var i = ch.tiles.indexOf(k);
+      if (i === -1) return;
+      if (ch.tiles.length === 1) out.push(null);
+      if (i > 0) out.push(ch.tiles[i - 1]);
+      if (i < ch.tiles.length - 1) out.push(ch.tiles[i + 1]);
+    });
+    return out;
+  }
+  function removeChannelsAt(k) { state.channels = state.channels.filter(function (ch) { return ch.tiles.indexOf(k) === -1; }); }
   function removeRoadsAt(k) { state.roads = state.roads.filter(function (e) { return e.a !== k && e.b !== k; }); }
   function roadWarnings() {
     var w = [];
@@ -564,6 +585,8 @@
       }
       state.defaultTerrain = parsed.defaultTerrain || 'FIELDS';
       state.ceiling = parsed.ceiling || 64;
+      state.seed = parsed.seed || 1;
+      state.channels = parsed.channels || [];
       state.links = parsed.links || [];
       state.mapFactionIds = parsed.mapFactionIds || ['player'];
       state.faction_relations = parsed.faction_relations || [];
@@ -577,7 +600,7 @@
   function safeSave() {
     storeSet(STORE_KEY, JSON.stringify({
       mapName: state.mapName, cols: state.cols, rows: state.rows, cells: state.cells,
-      tiles: state.tiles, roads: state.roads, defaultTerrain: state.defaultTerrain, ceiling: state.ceiling,
+      tiles: state.tiles, roads: state.roads, defaultTerrain: state.defaultTerrain, ceiling: state.ceiling, seed: state.seed, channels: state.channels,
       links: state.links, mapFactionIds: state.mapFactionIds, faction_relations: state.faction_relations,
       lossCriteria: state.lossCriteria, nextId: state.nextId
     }));
@@ -594,7 +617,7 @@
     state.cols = 12; state.rows = 5;
     state.mapFactionIds = ['player'];
     state.faction_relations = [];
-    state.defaultTerrain = 'FIELDS'; state.ceiling = 64;
+    state.defaultTerrain = 'FIELDS'; state.ceiling = 64; state.seed = 1; state.channels = [];
     state.cells = {}; state.tiles = {}; state.roads = [];
 
     function node(id, type, preset, extra) {
@@ -771,6 +794,7 @@
     html += '</div><div class="layer-row"><span class="row-label">Routes</span>' +
       '<button type="button" class="chip" data-kind="road" data-active="' + (state.activeTool === 'ROAD') + '"><span class="dot" style="background:var(--road)">&#9552;</span>Road (drag cell to cell)</button>' +
       '<button type="button" class="chip" data-kind="bridge" data-active="' + (state.activeTool === 'BRIDGE') + '"><span class="dot" style="background:var(--bridge)">&#9636;</span>Bridge (water, ravine)</button>' +
+      '<button type="button" class="chip" data-kind="channel" data-active="' + (state.activeTool === 'CHANNEL') + '"><span class="dot" style="background:var(--channel)">&#8776;</span>Channel: river, ditch, bank (drag tile to tile)</button>' +
       '</div>';
     var eraseOn = state.activeTool === 'eraser';
     html += '<div class="layer-row"><span class="row-label">Erase</span>' +
@@ -796,6 +820,7 @@
         if (kind === 'terrain') { setActiveTool('TERRAIN'); state.armedTerrain = id; }
         else if (kind === 'feature') { setActiveTool('FEATURE'); state.armedFeature = id; }
         else if (kind === 'bridge') setActiveTool('BRIDGE');
+        else if (kind === 'channel') setActiveTool('CHANNEL');
         else setActiveTool('ROAD');
         renderLayersStrip();
       });
@@ -2240,7 +2265,7 @@
 
   // ---------- grid ----------
   var isPainting = false;
-  document.addEventListener('mouseup', function () { isPainting = false; state.roadAnchor = null; });
+  document.addEventListener('mouseup', function () { isPainting = false; state.roadAnchor = null; state.drawingChannel = null; });
 
   function renderGrid() {
     renderViewAsSelect();
@@ -2276,6 +2301,17 @@
           var br = document.createElement('div'); br.className = 'bridge-layer'; br.title = 'Bridge';
           cellEl.appendChild(br);
         }
+        channelNeighbours(k).forEach(function (nk) {
+          var cHub = document.createElement('div'); cHub.className = 'channel-seg hub'; cellEl.appendChild(cHub);
+          if (!nk) return;
+          var ca = parseKey(k), cb = parseKey(nk);
+          var cdx = (cb[1] - ca[1]) * (CELL + GAP), cdy = (cb[0] - ca[0]) * (CELL + GAP);
+          var cHalf = document.createElement('div');
+          cHalf.className = 'channel-seg half';
+          cHalf.style.width = (Math.hypot(cdx, cdy) / 2) + 'px';
+          cHalf.style.transform = 'rotate(' + (Math.atan2(cdy, cdx) * 180 / Math.PI) + 'deg)';
+          cellEl.appendChild(cHalf);
+        });
         if (adj[k]) {
           var hub = document.createElement('div'); hub.className = 'road-seg hub'; cellEl.appendChild(hub);
           adj[k].forEach(function (nk) {
@@ -2353,12 +2389,12 @@
         cellEl.addEventListener('mouseenter', function () {
           if (!isPainting) return;
           var tool = state.activeTool;
-          if (tool !== 'select' && tool !== 'link' && tool !== 'NODE' && tool !== 'ROAD') handleCellAction(this.dataset.key, false);
+          if (tool !== 'select' && tool !== 'link' && tool !== 'NODE' && tool !== 'ROAD' && tool !== 'CHANNEL') handleCellAction(this.dataset.key, false);
         });
         cellEl.addEventListener('mousemove', function (ev) {
           // Roads only register a cell near its centre, so a diagonal stroke through a
           // shared corner doesn't also catch the two side cells.
-          if (!isPainting || state.activeTool !== 'ROAD' || this.dataset.key === state.roadAnchor) return;
+          if (!isPainting || (state.activeTool !== 'ROAD' && state.activeTool !== 'CHANNEL') || this.dataset.key === state.roadAnchor) return;
           var rect = this.getBoundingClientRect();
           var dx = ev.clientX - (rect.left + rect.width / 2), dy = ev.clientY - (rect.top + rect.height / 2);
           if (Math.abs(dx) < rect.width * 0.3 && Math.abs(dy) < rect.height * 0.3) handleCellAction(this.dataset.key, false);
@@ -2398,6 +2434,20 @@
         state.linkPending = null;
         linksChanged();
       }
+      return;
+    }
+    if (state.activeTool === 'CHANNEL') {
+      // A drag draws one channel through the tiles it crosses; a click alone makes a pond.
+      if (isDown) {
+        state.channels.push({ tiles: [k], width: 4, depth: 2, liquid: 'WATER', liquid_depth: 1 });
+        state.drawingChannel = state.channels.length - 1;
+      } else if (state.drawingChannel != null) {
+        var drawn = state.channels[state.drawingChannel], last = parseKey(drawn.tiles[drawn.tiles.length - 1]), here = parseKey(k);
+        if (drawn.tiles.indexOf(k) === -1 && Math.max(Math.abs(last[0] - here[0]), Math.abs(last[1] - here[1])) === 1) drawn.tiles.push(k);
+      }
+      state.roadAnchor = k;
+      safeSave(); renderGrid();
+      if (state.selectedCell) renderInspector();
       return;
     }
     if (state.activeTool === 'ROAD') {
@@ -2442,7 +2492,7 @@
 
   // Layers the Erase tool can target on their own (the layer strip's Erase row).
   function eraseLayerList() {
-    return [['NODE', 'Node'], ['UPGRADES', 'Upgrades'], ['ROADS', 'Roads'], ['BRIDGE', 'Bridge'],
+    return [['NODE', 'Node'], ['UPGRADES', 'Upgrades'], ['ROADS', 'Roads'], ['CHANNELS', 'Channels'], ['BRIDGE', 'Bridge'],
       ['FEATURE', 'Feature'], ['TERRAIN', 'Terrain'], ['CAPACITY', 'Capacity overrides']];
   }
   function eraseLayersAt(k, layers) {
@@ -2450,6 +2500,7 @@
     function on(id) { return layers.indexOf(id) !== -1; }
     if (on('NODE') && state.cells[k]) { removeNodeRefs(state.cells[k].id); delete state.cells[k]; }
     if (on('ROADS')) removeRoadsAt(k);
+    if (on('CHANNELS')) removeChannelsAt(k);
     if (t) {
       if (on('UPGRADES')) { delete t.upgrades; delete t.upgrade_slots; }
       if (on('BRIDGE')) delete t.bridge;
@@ -2594,6 +2645,22 @@
       fieldRow('Dig depth', numInput('t_md', t.max_depth, 'def ' + (terr.default_max_depth || 0))) + '</div></div>';
     html += '<p class="hint" style="margin-top:-4px;">Stability is the total segment budget; height and width cap the shape. Blank = the ' + esc(terr.label || 'terrain') + ' default. Prototype-only.</p>';
 
+    var through = state.channels.filter(function (ch) { return ch.tiles.indexOf(k) !== -1; });
+    if (through.length) {
+      html += '<div class="insp-section-label">Channels</div>';
+      through.forEach(function (ch) {
+        var i = state.channels.indexOf(ch);
+        var liquids = '<option value="">(dry)</option>' + flowingMaterials().map(function (m) { return '<option value="' + esc(m.id) + '"' + (m.id === ch.liquid ? ' selected' : '') + '>' + esc(m.label) + '</option>'; }).join('');
+        html += '<div class="garrison-unit-card" style="margin:0 0 8px;"><div class="gu-row"><label>' + (ch.tiles.length === 1 ? 'Pond (one tile)' : 'Along ' + plural(ch.tiles.length, 'tile')) + (ch.depth < 0 ? ', a bank' : '') + '</label></div>' +
+          '<div class="band-row"><span>width</span><input type="number" min="1" data-channel="' + i + '" data-key="width" value="' + esc(ch.width) + '" aria-label="Width in cells" />' +
+          '<span>depth</span><input type="number" data-channel="' + i + '" data-key="depth" value="' + esc(ch.depth) + '" aria-label="Depth in cells (negative raises a bank)" /></div>' +
+          '<div class="band-row"><select data-channel="' + i + '" data-key="liquid" aria-label="Liquid">' + liquids + '</select>' +
+          (ch.liquid ? '<input type="number" min="0" data-channel="' + i + '" data-key="liquid_depth" value="' + esc(ch.liquid_depth) + '" aria-label="Liquid depth in cells" /><span>deep</span>' : '') +
+          '<button type="button" class="btn small danger" data-channel-remove="' + i + '">Remove</button></div>' +
+          (ch.liquid && ch.liquid_depth > ch.depth ? warn('The liquid is deeper than the channel.') : '') + '</div>';
+      });
+      html += '<p class="hint" style="margin-top:-2px;">Cells across and down; a negative depth raises a bank or mound (Decision 59).</p>';
+    }
     html += '<div class="insp-section-label">Upgrades</div>';
     var ups = t.upgrades || [];
     var slots = t.upgrade_slots || 0;
@@ -2641,6 +2708,17 @@
         if (this.value === '') delete t[pair[1]]; else t[pair[1]] = Math.max(0, Number(this.value) || 0);
         refresh();
       });
+    });
+    document.querySelectorAll('[data-channel]').forEach(function (el) {
+      el.addEventListener('change', function () {
+        var ch = state.channels[Number(el.getAttribute('data-channel'))], field = el.getAttribute('data-key');
+        if (field === 'liquid') { ch.liquid = el.value; if (ch.liquid && !ch.liquid_depth) ch.liquid_depth = 1; }
+        else ch[field] = field === 'width' ? Math.max(1, Number(el.value) || 1) : Number(el.value) || 0;
+        refresh();
+      });
+    });
+    document.querySelectorAll('[data-channel-remove]').forEach(function (el) {
+      el.addEventListener('click', function () { state.channels.splice(Number(el.getAttribute('data-channel-remove')), 1); refresh(); });
     });
     document.getElementById('t_uslots').addEventListener('change', function () {
       ensureTile(k).upgrade_slots = Math.max(0, Number(this.value) || 0);
@@ -3312,6 +3390,8 @@
     }).join('');
     return '<div class="panel-sub">Ground</div><div class="form-grid">' +
       '<div class="insp-row"><label for="gd_elev">Default elevation (cells)</label><input type="number" min="0" id="gd_elev" value="' + esc(t.default_elevation || 0) + '" /></div>' +
+      '<div class="insp-row"><label for="gd_ramp">Relief (± cells)</label><input type="number" min="0" id="gd_ramp" value="' + esc((t.relief || {}).amplitude || 0) + '" /></div>' +
+      '<div class="insp-row"><label for="gd_rscale">Relief scale (cells across a bump)</label><input type="number" min="0" id="gd_rscale" value="' + esc((t.relief || {}).scale || 0) + '" /></div>' +
       '<div class="insp-row"><label for="gd_bearing">Bearing (load a column carries)</label><input type="number" min="0" id="gd_bearing" value="' + esc(t.bearing) + '" /></div>' +
       '<div class="insp-row"><label for="gd_found">Foundations raise it to</label><input type="number" min="0" id="gd_found" value="' + esc(t.foundation_max) + '" /></div>' +
       '<div class="insp-row"><label for="gd_dig">Dig depth (cells)</label><input type="number" min="0" id="gd_dig" value="' + esc(t.dig_depth) + '" /></div>' +
@@ -3327,6 +3407,9 @@
     var num = function (el) { return Math.max(0, Number(el.value) || 0); };
     [['gd_elev', 'default_elevation'], ['gd_bearing', 'bearing'], ['gd_found', 'foundation_max'], ['gd_dig', 'dig_depth']].forEach(function (pair) {
       document.getElementById(pair[0]).addEventListener('change', function () { t[pair[1]] = num(this); save(); });
+    });
+    [['gd_ramp', 'amplitude'], ['gd_rscale', 'scale']].forEach(function (pair) {
+      document.getElementById(pair[0]).addEventListener('change', function () { t.relief = t.relief || {}; t.relief[pair[1]] = num(this); save(); });
     });
     document.querySelectorAll('#terrainDetail [data-body]').forEach(function (el) {
       el.addEventListener('change', function () {
@@ -3433,6 +3516,10 @@
       grid: { cols: state.cols, rows: state.rows },
       default_terrain: state.defaultTerrain,
       ceiling: state.ceiling,
+      seed: state.seed,
+      channels: state.channels.map(function (ch) {
+        return { tiles: ch.tiles.map(pos), width: ch.width, depth: ch.depth, liquid: ch.liquid || null, liquid_depth: ch.liquid_depth };
+      }),
       factions: roster,
       faction_relations: state.faction_relations,
       loss_criteria: state.lossCriteria.filter(function (g) { return state.mapFactionIds.indexOf(g.faction_id) !== -1; }),
@@ -3563,6 +3650,10 @@
     state.rows = (data.grid && data.grid.rows) || state.rows;
     state.defaultTerrain = data.default_terrain || 'FIELDS';
     state.ceiling = data.ceiling || 64;
+    state.seed = data.seed || 1;
+    state.channels = (data.channels || []).map(function (ch) {
+      return { tiles: (ch.tiles || []).map(function (p) { return key(p.row, p.col); }), width: ch.width, depth: ch.depth, liquid: ch.liquid || '', liquid_depth: ch.liquid_depth || 0 };
+    });
     state.mapFactionIds = (data.factions || []).map(function (f) { return f.id; });
     if (state.mapFactionIds.indexOf('player') === -1) state.mapFactionIds.unshift('player');
     state.faction_relations = clone(data.faction_relations || []);
@@ -3632,6 +3723,12 @@
     state.selectedCell = null;
     safeSave(); renderLanesAll();
   });
+  document.getElementById('seed').addEventListener('change', function () {
+    state.seed = Math.max(1, Math.round(Number(this.value)) || 1); this.value = state.seed; safeSave();
+  });
+  document.getElementById('rerollSeed').addEventListener('click', function () {
+    state.seed = 1 + Math.floor(Math.random() * 2147483646); document.getElementById('seed').value = state.seed; safeSave();
+  });
   document.getElementById('ceiling').addEventListener('change', function () {
     state.ceiling = Math.max(1, Number(this.value) || 64); this.value = state.ceiling; safeSave(); renderGrid(); renderInspector();
   });
@@ -3645,7 +3742,8 @@
     state.cells = {}; state.tiles = {}; state.roads = []; state.links = []; state.selectedCell = null; state.nextId = { NODE: 1 };
     state.mapFactionIds = factionIds; state.lossCriteria = [];
     state.faction_relations = relationsFromDefaults();
-    state.defaultTerrain = baseTerrain; state.ceiling = 64;
+    state.defaultTerrain = baseTerrain; state.ceiling = 64; state.channels = [];
+    state.seed = 1 + Math.floor(Math.random() * 2147483646);
     state.bottomTab = 'paint'; state.structureSel = null;
     safeSave(); renderLanesAll();
   }
@@ -3692,6 +3790,7 @@
     document.getElementById('rows').value = state.rows;
     populateTerrainSelect(document.getElementById('defaultTerrain'), state.defaultTerrain);
     document.getElementById('ceiling').value = state.ceiling;
+    document.getElementById('seed').value = state.seed;
     renderRoster();
     renderRelations();
     renderRelationSelects();

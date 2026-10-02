@@ -15,6 +15,7 @@
   --good: #4c7a52;
   --danger: #a3372a;
   --road: #b08d57;
+  --channel: #4f86b8;
   --bridge: #7a5a3a;
   --shadow: 0 1px 2px rgba(33, 29, 21, 0.08), 0 4px 14px rgba(33, 29, 21, 0.06);
   --radius: 3px;
@@ -306,6 +307,9 @@ button:focus-visible, .tool:focus-visible, select:focus-visible, input:focus-vis
 }
 .cell .elev-badge.capped { color: var(--surface); background: var(--ink); }
 .cell .sub-badge, .cell .home-badge { z-index: 3; }
+.cell .channel-seg { position: absolute; background: var(--channel); opacity: 0.8; z-index: 0; pointer-events: none; }
+.cell .channel-seg.hub { left: calc(50% - 6px); top: calc(50% - 6px); width: 12px; height: 12px; border-radius: 6px; }
+.cell .channel-seg.half { left: 50%; top: 50%; height: 10px; margin-top: -5px; transform-origin: 0 50%; }
 .cell .road-seg { position: absolute; background: var(--road); z-index: 0; pointer-events: none; }
 .cell .road-seg.hub { left: calc(50% - 4px); top: calc(50% - 4px); width: 8px; height: 8px; border-radius: 2px; }
 /* half-segment from the cell centre toward a connected neighbour; length + angle set inline */

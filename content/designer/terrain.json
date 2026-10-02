@@ -15,6 +15,10 @@
       "default_max_depth": 1,
       "default_max_length": 3,
       "default_elevation": 2,
+      "relief": {
+        "amplitude": 1,
+        "scale": 12
+      },
       "bearing": 4,
       "foundation_max": 8,
       "dig_depth": 32,
@@ -60,6 +64,10 @@
       "default_max_depth": 2,
       "default_max_length": 2,
       "default_elevation": 6,
+      "relief": {
+        "amplitude": 2,
+        "scale": 4
+      },
       "bearing": 8,
       "foundation_max": 12,
       "dig_depth": 32,
@@ -107,6 +115,10 @@
       "default_max_depth": 0,
       "default_max_length": 2,
       "default_elevation": 8,
+      "relief": {
+        "amplitude": 1,
+        "scale": 10
+      },
       "bearing": 3,
       "foundation_max": 6,
       "dig_depth": 24,
@@ -139,6 +151,10 @@
       "default_max_depth": 1,
       "default_max_length": 3,
       "default_elevation": 2,
+      "relief": {
+        "amplitude": 2,
+        "scale": 12
+      },
       "bearing": 3,
       "foundation_max": 6,
       "dig_depth": 32,
@@ -179,6 +195,10 @@
       "default_max_depth": 0,
       "default_max_length": 1,
       "default_elevation": 0,
+      "relief": {
+        "amplitude": 0,
+        "scale": 0
+      },
       "bearing": 2,
       "foundation_max": 4,
       "dig_depth": 16,
@@ -219,6 +239,10 @@
       "default_max_depth": 0,
       "default_max_length": 0,
       "default_elevation": 0,
+      "relief": {
+        "amplitude": 0,
+        "scale": 0
+      },
       "bearing": 0,
       "foundation_max": 0,
       "dig_depth": 0,
@@ -240,6 +264,10 @@
       "default_max_depth": 1,
       "default_max_length": 1,
       "default_elevation": 3,
+      "relief": {
+        "amplitude": 1,
+        "scale": 8
+      },
       "bearing": 4,
       "foundation_max": 8,
       "dig_depth": 32,
@@ -285,6 +313,10 @@
       "default_max_depth": 3,
       "default_max_length": 1,
       "default_elevation": 64,
+      "relief": {
+        "amplitude": 8,
+        "scale": 8
+      },
       "bearing": 8,
       "foundation_max": 12,
       "dig_depth": 48,
@@ -325,6 +357,10 @@
       "default_max_depth": 0,
       "default_max_length": 0,
       "default_elevation": 0,
+      "relief": {
+        "amplitude": 0,
+        "scale": 0
+      },
       "bearing": 0,
       "foundation_max": 0,
       "dig_depth": 0,
@@ -346,6 +382,10 @@
       "default_max_depth": 1,
       "default_max_length": 0,
       "default_elevation": 4,
+      "relief": {
+        "amplitude": 4,
+        "scale": 6
+      },
       "bearing": 5,
       "foundation_max": 10,
       "dig_depth": 32,
