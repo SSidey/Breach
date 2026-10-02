@@ -85,7 +85,7 @@
               <label for="placementFaction">Place as</label>
               <select id="placementFaction"></select>
             </div>
-            <p class="hint">A Node is generic &mdash; set its type in the Inspector. A Waypoint node is a routing point (small dot) that a link&rsquo;s route must pass through. Road: drag from cell to neighbouring cell (diagonals too) &mdash; only cells you drag between are connected. Erase removes the top layer first: node, upgrades, roads, bridge, feature, terrain Erase removes the top layer first: node, upgrades, roads, bridge, feature, terrain.mdash; or pick layers in the Erase row under the map to remove only those. Link two linked nodes again to unlink them, or use Erase removes the top layer first: node, upgrades, roads, bridge, feature, terrain.times; in a nodeErase removes the top layer first: node, upgrades, roads, bridge, feature, terrain.rsquo;s Inspector.</p>
+            <p class="hint">A Node is generic &mdash; set its type in the Inspector. A Waypoint node is a routing point (small dot) that a link&rsquo;s route must pass through. Road: drag from cell to neighbouring cell (diagonals too) &mdash; only cells you drag between are connected. Erase removes the top layer first: node, upgrades, roads, bridge, feature, terrain &mdash; or pick layers in the Erase row under the map to remove only those. Link two linked nodes again to unlink them, or use &times; in a node&rsquo;s Inspector.</p>
           </div>
 
           <div class="panel">
@@ -154,7 +154,7 @@
         <div class="panel bottom-panel">
           <div class="bottom-tabs">
             <button class="tab-btn" type="button" id="bottomTabPaint" data-active="true">Paint layers</button>
-            <button class="tab-btn" type="button" id="bottomTabStructure" data-active="false" disabled>Structure</button>
+            <button class="tab-btn" type="button" id="bottomTabStructure" data-active="false" disabled hidden>Structure</button>
             <button class="tab-btn" type="button" id="bottomTabPlan" data-active="false" disabled>Plan</button>
             <span class="strip-notice" id="stripNotice" role="status"></span>
             <button class="btn small ghost" type="button" id="expandBtn" hidden>Expand ⤢</button>
@@ -330,6 +330,8 @@
 </div>
 
 <script src="load_paths.js"></script>
+<script src="planner_tools.js"></script>
+<script src="planner_draw.js"></script>
 <script src="planner.js"></script>
 <script src="repo.js"></script>
 </body>

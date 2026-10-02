@@ -129,6 +129,54 @@ A scripted browser run on the demo map's fort:
    (bearing 4, so 32 per column) without foundations.
 4. The map's Show: Structure load marked the fort's tile black.
 
+## Round 3: editing that behaves, flush walls, fills and rooms (Decision 67)
+
+From the user's first hands-on pass over the planner:
+- **Walls sit flush.** A face wall's side is on the cell edge and its thickness grows into
+  the cell it was drawn from (`StructureFaceDef.into_neighbour`). Alt-click flips a wall.
+  Older plans keep their own cell.
+- **Placing walls:**
+  - Walls snap to the nearest grid line, and the edge is highlighted before you click.
+  - A drag keeps to its first line and side, so a straight run never picks up
+    perpendicular strays.
+- **Digging and filling:**
+  - Digs must connect: open to the surface, or beside a dug cell.
+  - A **Fill** tool fills a dug cell with any material. Water or lava make a moat or a
+    cistern; "Ground" undoes the dig. Erase also undoes digs.
+  - For support, a solid fill is ground again and a liquid fill is not
+    (`StructurePlanDef.fills`). The shared load cases gain three fill cases.
+- **Every level:** a stepper (▲▼, PageUp and PageDown) from the tile's dig depth to the
+  ceiling over its ground. Fields reach −32.
+- **Below ground**, the isometric view cuts away to the level. It shows the terrain's
+  typical strata as blocks, digs carved out, and fills in their material, with liquids
+  see-through.
+- **Undo and redo**, one step per stroke, room or clear (Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y).
+- **Clear level** and **Clear plan**, each confirmed with a second click.
+- **Strokes end** when the button is released anywhere, so returning to the plan never
+  paints.
+- **The Room tool:** drag out a rectangle and set the height and the material and
+  thickness of the walls, floor and ceiling. **Apply** adds them all as one undo step.
+- The old side-on Structure tab is hidden, and the Map hint's garbled text is repaired.
+- **The code is split:** `planner_tools.js` holds the editing rules (tested with Node in
+  `test_planner_tools_js.py`), `planner_draw.js` the drawing, and `planner.js` the
+  panel. A server test checks every script the page loads is served.
+
+A browser run checked each of these:
+1. A drifting drag along a grid line placed 7 walls on one line.
+2. A press followed by a buttonless move painted nothing more.
+3. Undo and redo each stepped one stroke.
+4. A 4 × 3 room, two levels high, added 52 faces, and one undo removed them.
+5. A dig at −2 was refused until −1 above it was dug.
+6. A water fill and a backfill both applied.
+7. Alt-click flipped a wall, and PageUp moved up a level.
+
+It also found, and the fix removed, one bug: focusing the planner scrolled the page, so
+walls landed two rows below the cursor.
+
+Still to come: openings and furnishing elements (doors, slits, bunks, emplacements;
+Decision 55), and per-tile seeded strata in the planner, which for now shows the
+terrain's typical column.
+
 ## Test-first order
 
 1. `tests/content/definitions/test_structure_plan_def.gd`
