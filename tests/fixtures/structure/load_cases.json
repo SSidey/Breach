@@ -11,6 +11,13 @@
    "weight": 2,
    "strength": 20,
    "span": 4
+  },
+  {
+   "id": "WATER",
+   "weight": 1,
+   "strength": 0,
+   "span": 0,
+   "flows": 3
   }
  ],
  "cases": [
@@ -435,6 +442,105 @@
     "face:1,0,3,floor": 2,
     "ground:1,0": 50
    }
+  },
+  {
+   "name": "a lone wall over two pits falls",
+   "bearing": 4,
+   "plan": {
+    "faces": [
+     {
+      "x": 1,
+      "y": 1,
+      "level": 0,
+      "side": "north",
+      "material": "TIMBER",
+      "thickness": 1
+     }
+    ],
+    "dug": [
+     [
+      1,
+      1,
+      -1
+     ],
+     [
+      1,
+      0,
+      -1
+     ]
+    ]
+   },
+   "failed": [
+    "face:1,1,0,north"
+   ]
+  },
+  {
+   "name": "a lone wall over backfilled pits stands",
+   "bearing": 4,
+   "plan": {
+    "faces": [
+     {
+      "x": 1,
+      "y": 1,
+      "level": 0,
+      "side": "north",
+      "material": "TIMBER",
+      "thickness": 1
+     }
+    ],
+    "dug": [
+     [
+      1,
+      1,
+      -1
+     ],
+     [
+      1,
+      0,
+      -1
+     ]
+    ],
+    "fills": {
+     "1,1,-1": "ROCK",
+     "1,0,-1": "ROCK"
+    }
+   },
+   "failed": []
+  },
+  {
+   "name": "a lone wall over a moat falls",
+   "bearing": 4,
+   "plan": {
+    "faces": [
+     {
+      "x": 1,
+      "y": 1,
+      "level": 0,
+      "side": "north",
+      "material": "TIMBER",
+      "thickness": 1
+     }
+    ],
+    "dug": [
+     [
+      1,
+      1,
+      -1
+     ],
+     [
+      1,
+      0,
+      -1
+     ]
+    ],
+    "fills": {
+     "1,1,-1": "WATER",
+     "1,0,-1": "WATER"
+    }
+   },
+   "failed": [
+    "face:1,1,0,north"
+   ]
   }
  ]
 }

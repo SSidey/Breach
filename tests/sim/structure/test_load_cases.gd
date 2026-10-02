@@ -23,6 +23,8 @@ func _library(entries: Array) -> TerrainLibraryDef:
 		material.weight = int(entry["weight"])
 		material.strength = int(entry["strength"])
 		material.span = int(entry["span"])
+		if entry.has("flows"):
+			material.traits = {"flows": int(entry["flows"])}
 		library.materials.append(material)
 	return library
 

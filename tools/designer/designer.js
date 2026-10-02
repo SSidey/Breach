@@ -817,7 +817,7 @@
   }
   function materialMap() {
     var out = {};
-    terrainLib.materials.forEach(function (m) { out[m.id] = { weight: Number(m.weight) || 0, strength: Number(m.strength) || 0, span: Number(m.span) || 0 }; });
+    terrainLib.materials.forEach(function (m) { out[m.id] = { weight: Number(m.weight) || 0, strength: Number(m.strength) || 0, span: Number(m.span) || 0, flows: Number((m.traits || {}).flows) || 0 }; });
     return out;
   }
   function renderPlanEditor() {
