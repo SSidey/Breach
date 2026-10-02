@@ -2,24 +2,26 @@
 // plan drawn level by level on its tile's 16 x 16 cells, beside an isometric view, both
 // coloured by material or by load against capacity (BreachLoadPaths, the game's rule).
 // Editing rules live in planner_tools.js and drawing in planner_draw.js; this file is the
-// panel: tools, levels, strokes, undo, clearing and the Room tool.
+// panel: tools, levels, strokes, undo, clearing, the Room tool and the Subnodes tool
+// (spec 26; rules in planner_subnodes.js).
 (function (root) {
   'use strict';
 
-  var T = root.BreachPlannerTools, D = root.BreachPlannerDraw, ZOOMS = [4, 6, 8, 12, 16, 24];
+  var T = root.BreachPlannerTools, D = root.BreachPlannerDraw, S = root.BreachPlannerSubnodes, ZOOMS = [4, 6, 8, 12, 16, 24];
   var TOOLS = [['solid', 'Solid cell'], ['wall', 'Face wall'], ['floor', 'Floor / roof'], ['room', 'Room'],
-    ['dig', 'Dig'], ['fill', 'Fill'], ['load', 'Load'], ['erase', 'Erase']];
+    ['dig', 'Dig'], ['fill', 'Fill'], ['load', 'Load'], ['erase', 'Erase'], ['subnode', 'Subnodes']];
+  var SUBTOOLS = [['place', 'Place'], ['capture', 'Capture area'], ['zone', 'Zone'], ['remove', 'Remove']];
   var MODES = [['material', 'Material'], ['load', 'Load v capacity']];
   var SHAPES = [['free', 'Freehand'], ['area', 'Area']];
   var ui = {
     level: 0, cell: 12, tool: 'wall', shape: 'free', example: 'farmhouse', material: 'TIMBER', fillMaterial: 'GROUND', thickness: 1, load: 20, mode: 'material',
-    hover: null, room: null, pendingRoom: null, confirm: null,
+    hover: null, room: null, pendingRoom: null, confirm: null, subTool: 'place', subType: 'WELL', subActive: '',
     roomOpts: { height: 1, wall: { material: 'TIMBER', thickness: 1 }, floor: { on: true, material: 'TIMBER', thickness: 2 }, ceiling: { on: true, material: 'TIMBER', thickness: 2 } }
   };
   var histories = {}, painting = null, listening = false, current = null;
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function historyOf(node) { return histories[node.id] || (histories[node.id] = new T.History()); }
+  function historyOf(node) { return histories[node.id] || (histories[node.id] = new T.History(['plan', 'subnodes'])); }
   function solve(plan, ctx) { return BreachLoadPaths.solve(plan, ctx.materialMap(), ctx.bearing); }
 
   // ---------- applying a tool ----------
@@ -37,6 +39,13 @@
     } else if (ui.tool === 'fill') T.fill(plan, spot.x, spot.y, digLevel(), ui.fillMaterial);
     else if (ui.tool === 'load') { if (adding) plan.loads[key] = ui.load; else delete plan.loads[key]; }
     else if (ui.tool === 'erase') erase(plan, spot, l);
+    else if (ui.tool === 'subnode') S.paint(current.node.subnodes, ui.subActive, ui.subTool, spot.x, spot.y, adding, ctx);
+  }
+  // Placing and removing a subnode are single clicks, not strokes.
+  function clickSubnode(node, ctx, spot) {
+    if (ui.subTool === 'place') { var id = S.place(node.subnodes, ui.subType, spot.x, spot.y, ctx); if (id) ui.subActive = id; return; }
+    var hit = S.owner(node.subnodes, spot.x, spot.y);
+    if (hit && S.remove(node.subnodes, hit.id) && ui.subActive === hit.id) ui.subActive = '';
   }
   function erase(plan, spot, l) {
     delete plan.solid_cells[T.at(spot.x, spot.y, l)]; delete plan.loads[T.at(spot.x, spot.y, l)];
@@ -53,7 +62,8 @@
   function applyArea(plan, ctx, rect) {
     if (ui.tool === 'wall') { T.perimeterWalls(plan, rect, ui.level, ui.material, ui.thickness); return; }
     T.cellsOf(rect).forEach(function (c) {
-      if (ui.tool === 'erase') ['north', 'south', 'west', 'east'].forEach(function (side) { erase(plan, { x: c[0], y: c[1], side: side }, ui.level); });
+      if (ui.tool === 'subnode') apply(plan, ctx, { x: c[0], y: c[1] }, painting.adding);
+      else if (ui.tool === 'erase') ['north', 'south', 'west', 'east'].forEach(function (side) { erase(plan, { x: c[0], y: c[1], side: side }, ui.level); });
       else apply(plan, ctx, { x: c[0], y: c[1] }, true);
     });
   }
@@ -63,6 +73,7 @@
     if (ui.tool === 'solid') return plan.solid_cells[key] !== ui.material;
     if (ui.tool === 'wall' || ui.tool === 'floor') return T.faceIndex(plan, T.face(spot.x, spot.y, ui.level, ui.tool === 'floor' ? 'floor' : spot.side)) === -1;
     if (ui.tool === 'load') return plan.loads[key] == null;
+    if (ui.tool === 'subnode') { var s = S.find(current.node.subnodes, ui.subActive); return !s || !S.has(ui.subTool === 'zone' ? s.zone : s.capture, spot.x, spot.y); }
     return true;
   }
   // The spot under the pointer: an edge for the wall tools (locked to the stroke's line),
@@ -89,7 +100,8 @@
     var building = ctx.materials.filter(function (m) { return !(m.traits || {}).flows; }).map(function (m) { return [m.id, m.label]; });
     var fills = [['GROUND', 'Ground (undo the dig)']].concat(ctx.materials.map(function (m) { return [m.id, m.label]; }));
     var thick = [1, 2, 3, 4, 6, 8].map(function (t) { return [t, t + '/8']; });
-    var extra = ui.tool === 'fill' ? '<select id="pl_fill" aria-label="Fill with">' + options(fills, ui.fillMaterial) + '</select>'
+    var extra = ui.tool === 'subnode' ? subnodeBar(current.node)
+      : ui.tool === 'fill' ? '<select id="pl_fill" aria-label="Fill with">' + options(fills, ui.fillMaterial) + '</select>'
       : ui.tool === 'load' ? '<input type="number" id="pl_load" min="1" value="' + ui.load + '" aria-label="Load units" style="width:64px;" />'
         : ui.tool === 'dig' || ui.tool === 'erase' || ui.tool === 'room' ? ''
           : '<select id="pl_mat" aria-label="Material">' + options(building, ui.material) + '</select>' +
@@ -98,7 +110,22 @@
       '<button type="button" class="chip" id="pl_down" title="Down a level (PageDown)">▼</button>' +
       '<input type="number" id="pl_level" min="' + (-ctx.digDepth) + '" max="' + ctx.maxLevel + '" value="' + ui.level + '" style="width:58px;" aria-label="Level" />' +
       '<button type="button" class="chip" id="pl_up" title="Up a level (PageUp)">▲</button><span class="hint" style="margin:0;">' + esc(levelName(ui.level)) + '</span>' +
-      chips(TOOLS, ui.tool, 'tool') + extra + (ui.tool === 'room' ? '' : '<span class="row-label">Draw</span>' + chips(SHAPES, ui.shape, 'shape')) + '</div>';
+      chips(TOOLS, ui.tool, 'tool') + extra + (ui.tool === 'room' || (ui.tool === 'subnode' && !painted()) ? '' : '<span class="row-label">Draw</span>' + chips(SHAPES, ui.shape, 'shape')) + '</div>';
+  }
+  function subnodeHint() {
+    if (ui.subTool === 'place') return 'click a cell to place a subnode with default areas; zones never overlap';
+    if (ui.subTool === 'remove') return "click inside a subnode's zone to remove it";
+    return ui.subActive ? 'paint the ' + (ui.subTool === 'zone' ? 'zone of influence' : 'capture area (it joins the zone)') + ' of ' + ui.subActive : 'choose a subnode to paint';
+  }
+  function painted() { return ui.subTool === 'capture' || ui.subTool === 'zone'; }
+  // The Subnodes tool's own controls: what a click does, the type to place, and which
+  // subnode Capture area and Zone paint.
+  function subnodeBar(node) {
+    var types = Object.keys(S.TYPES).map(function (t) { return [t, S.TYPES[t].label]; });
+    var mine = [['', node.subnodes.length ? 'Choose a subnode' : 'No subnodes yet']].concat(node.subnodes.map(function (s) { return [s.id, s.id]; }));
+    return chips(SUBTOOLS, ui.subTool, 'subtool') +
+      (ui.subTool === 'place' ? '<select id="pl_subtype" aria-label="Subnode type">' + options(types, ui.subType) + '</select>' : '') +
+      (painted() ? '<select id="pl_subactive" aria-label="Subnode to paint">' + options(mine, ui.subActive) + '</select>' : '');
   }
   function editBar(node) {
     var h = historyOf(node);
@@ -131,12 +158,15 @@
   }
   function render(host, node, ctx) {
     node.plan = T.normalise(node.plan || T.emptyPlan());
+    node.subnodes = node.subnodes || [];
     current = { host: host, node: node, ctx: ctx };
+    if (!S.find(node.subnodes, ui.subActive)) ui.subActive = node.subnodes.length ? node.subnodes[node.subnodes.length - 1].id : '';
     var plan = node.plan, result = solve(plan, ctx);
     ui.level = Math.max(-ctx.digDepth, Math.min(ctx.maxLevel, ui.level));
     var size = D.gridSize(ctx, ui.cell);
     var failedText = result.failed.length ? result.failed.length + ' failing' : 'all standing';
     var hint = ui.mode === 'load' ? 'green < 50% of capacity, yellow < 80%, red to full, black failing'
+      : ui.tool === 'subnode' ? subnodeHint()
       : ui.shape === 'area' && ui.tool !== 'room' ? 'drag out a rectangle: walls go round its edge, everything else fills it'
       : ui.tool === 'wall' ? 'walls snap to the nearest grid line and keep to it while you drag; Alt-click flips which side a wall grows into'
         : ui.tool === 'room' ? 'drag out a rectangle, then set the room up and Apply'
@@ -154,7 +184,8 @@
   }
   function redraw(withIso) {
     var plan = current.node.plan, ctx = current.ctx, result = solve(plan, ctx);
-    var view = { level: ui.level, cell: ui.cell, mode: ui.mode, hover: ui.hover, room: ui.room || ui.pendingRoom };
+    var view = { level: ui.level, cell: ui.cell, mode: ui.mode, hover: ui.hover, room: ui.room || ui.pendingRoom,
+      subnodes: current.node.subnodes, activeSubnode: ui.subActive, editingSubnodes: ui.tool === 'subnode' };
     D.drawGrid(current.host.querySelector('#pl_grid'), plan, ctx, result, view);
     if (withIso) D.drawIso(current.host.querySelector('#pl_iso'), plan, ctx, result, view);
   }
@@ -164,6 +195,9 @@
   function bindBars(host, node, ctx) {
     function on(id, event, fn) { var el = host.querySelector(id); if (el) el.addEventListener(event, fn); }
     host.querySelectorAll('[data-tool]').forEach(function (b) { b.addEventListener('click', function () { ui.tool = b.getAttribute('data-tool'); ui.confirm = null; ui.pendingRoom = null; render(host, node, ctx); }); });
+    host.querySelectorAll('[data-subtool]').forEach(function (b) { b.addEventListener('click', function () { ui.subTool = b.getAttribute('data-subtool'); render(host, node, ctx); }); });
+    on('#pl_subtype', 'change', function () { ui.subType = this.value; });
+    on('#pl_subactive', 'change', function () { ui.subActive = this.value; render(host, node, ctx); });
     host.querySelectorAll('[data-shape]').forEach(function (b) { b.addEventListener('click', function () { ui.shape = b.getAttribute('data-shape'); render(host, node, ctx); }); });
     on('#pl_example', 'change', function () { ui.example = this.value; ui.confirm = null; });
     host.querySelectorAll('[data-mode]').forEach(function (b) { b.addEventListener('click', function () { ui.mode = b.getAttribute('data-mode'); render(host, node, ctx); }); });
@@ -176,13 +210,13 @@
     on('#pl_load', 'change', function () { ui.load = Math.max(1, Number(this.value) || 1); });
     on('#pl_zoom_in', 'click', function () { zoom(1); });
     on('#pl_zoom_out', 'click', function () { zoom(-1); });
-    on('#pl_undo', 'click', function () { if (historyOf(node).undo(node.plan)) rerender(); });
-    on('#pl_redo', 'click', function () { if (historyOf(node).redo(node.plan)) rerender(); });
+    on('#pl_undo', 'click', function () { if (historyOf(node).undo(node)) rerender(); });
+    on('#pl_redo', 'click', function () { if (historyOf(node).redo(node)) rerender(); });
     host.querySelectorAll('[data-clear]').forEach(function (b) {
       b.addEventListener('click', function () {
         var which = b.getAttribute('data-clear');
         if (ui.confirm !== which) { ui.confirm = which; render(host, node, ctx); return; }
-        ui.confirm = null; historyOf(node).record(node.plan);
+        ui.confirm = null; historyOf(node).record(node);
         if (which === 'level') T.clearLevel(node.plan, ui.level);
         else T.clearPlan(node.plan);
         if (which === 'example') loadExample(node.plan);
@@ -214,7 +248,7 @@
       if (toggle) toggle.addEventListener('change', function () { o[part].on = this.checked; });
     });
     form.querySelector('#rm_apply').addEventListener('click', function () {
-      historyOf(node).record(node.plan);
+      historyOf(node).record(node);
       T.addRoom(node.plan, ui.pendingRoom, ui.level, o);
       ui.pendingRoom = null; rerender();
     });
@@ -229,12 +263,14 @@
       var spot = spotAt(grid, ev);
       if (!spot) return;
       ui.confirm = null;
+      var before = historyOf(node).snapshot(node);
+      if (ui.tool === 'subnode' && !painted()) { painting = { before: before }; clickSubnode(node, ctx, spot); endStroke(); return; }
       if (ui.tool === 'room' || ui.shape === 'area') {
         ui.pendingRoom = null; ui.room = { x0: spot.x, y0: spot.y, x1: spot.x, y1: spot.y };
-        painting = { room: true, before: JSON.stringify(node.plan) }; redraw(false); return;
+        painting = { room: true, before: before, adding: wouldAdd(node.plan, spot) }; redraw(false); return;
       }
       var flip = ev.altKey && ui.tool === 'wall' ? T.faceIndex(node.plan, T.face(spot.x, spot.y, ui.level, spot.side)) : -1;
-      painting = { before: JSON.stringify(node.plan), line: ui.tool === 'wall' ? spot : null, last: '' };
+      painting = { before: before, line: ui.tool === 'wall' ? spot : null, last: '' };
       if (flip !== -1) { node.plan.faces[flip].into_neighbour = !node.plan.faces[flip].into_neighbour; endStroke(); return; }
       painting.adding = wouldAdd(node.plan, spot);
       stroke(node, ctx, spot);
@@ -260,18 +296,16 @@
     if (!painting || !current) return;
     var done = painting; painting = null;
     if (done.room && ui.tool === 'room') { ui.pendingRoom = ui.room; ui.room = null; render(current.host, current.node, current.ctx); return; }
-    if (done.room) { applyArea(current.node.plan, current.ctx, ui.room); ui.room = null; }
-    if (JSON.stringify(current.node.plan) !== done.before) {
-      var h = historyOf(current.node);
-      h.undos.push(done.before); h.redos = [];
-    }
+    if (done.room) { painting = done; applyArea(current.node.plan, current.ctx, ui.room); painting = null; ui.room = null; }
+    var h = historyOf(current.node);
+    if (h.snapshot(current.node) !== done.before) h.push(done.before);
     rerender();
   }
   function onKey(ev) {
     if (!current) return;
     var mod = ev.ctrlKey || ev.metaKey, key = ev.key.toLowerCase(), h = historyOf(current.node);
-    if (mod && key === 'z' && !ev.shiftKey) { ev.preventDefault(); if (h.undo(current.node.plan)) rerender(); }
-    else if (mod && (key === 'y' || (key === 'z' && ev.shiftKey))) { ev.preventDefault(); if (h.redo(current.node.plan)) rerender(); }
+    if (mod && key === 'z' && !ev.shiftKey) { ev.preventDefault(); if (h.undo(current.node)) rerender(); }
+    else if (mod && (key === 'y' || (key === 'z' && ev.shiftKey))) { ev.preventDefault(); if (h.redo(current.node)) rerender(); }
     else if (ev.key === 'PageUp') { ev.preventDefault(); setLevel(ui.level + 1); }
     else if (ev.key === 'PageDown') { ev.preventDefault(); setLevel(ui.level - 1); }
   }

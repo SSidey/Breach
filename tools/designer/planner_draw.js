@@ -80,8 +80,41 @@
       g.fillStyle = '#c96a1b'; g.beginPath(); g.arc(px(p[0]) + c / 2, py(p[1]) + c / 2, Math.max(2, c * 0.3), 0, Math.PI * 2); g.fill();
       if (c >= 16) { g.fillStyle = '#fff'; g.font = '9px sans-serif'; g.textAlign = 'center'; g.fillText(plan.loads[k], px(p[0]) + c / 2, py(p[1]) + c / 2 + 3); }
     });
+    drawSubnodes(g, view, c, px, py);
     drawHover(g, view.hover, c, px, py);
     drawRoom(g, view.room, c, px, py);
+  }
+  // A node's subnodes (spec 26) on every level: zones tinted in their type's colour,
+  // capture areas stronger, the marker with its id, and the active one outlined. Fainter
+  // unless the Subnodes tool is in use.
+  function drawSubnodes(g, view, c, px, py) {
+    var S = root.BreachPlannerSubnodes;
+    if (!S || !view.subnodes) return;
+    var strength = view.editingSubnodes ? 1 : 0.5;
+    view.subnodes.forEach(function (s) {
+      var colour = (S.TYPES[s.type] || S.TYPES.OBJECTIVE).colour;
+      g.fillStyle = colour;
+      g.globalAlpha = 0.18 * strength; s.zone.forEach(function (z) { g.fillRect(px(z[0]), py(z[1]), c, c); });
+      g.globalAlpha = 0.45 * strength; s.capture.forEach(function (z) { g.fillRect(px(z[0]), py(z[1]), c, c); });
+      g.globalAlpha = 1;
+      if (s.id === view.activeSubnode) outline(g, s.zone, colour, c, px, py);
+      g.fillStyle = colour; g.beginPath(); g.arc(px(s.at[0]) + c / 2, py(s.at[1]) + c / 2, Math.max(3, c * 0.4), 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#1d1a14'; g.font = 'bold 11px sans-serif'; g.textAlign = 'left';
+      g.fillText(s.id, px(s.at[0]) + c + 2, py(s.at[1]) + c / 2 + 4);
+    });
+  }
+  // The outer edges of a set of cells.
+  function outline(g, cells, colour, c, px, py) {
+    var S = root.BreachPlannerSubnodes;
+    g.strokeStyle = colour; g.lineWidth = 2; g.beginPath();
+    cells.forEach(function (z) {
+      var x = px(z[0]), y = py(z[1]);
+      if (!S.has(cells, z[0], z[1] - 1)) { g.moveTo(x, y); g.lineTo(x + c, y); }
+      if (!S.has(cells, z[0], z[1] + 1)) { g.moveTo(x, y + c); g.lineTo(x + c, y + c); }
+      if (!S.has(cells, z[0] - 1, z[1])) { g.moveTo(x, y); g.lineTo(x, y + c); }
+      if (!S.has(cells, z[0] + 1, z[1])) { g.moveTo(x + c, y); g.lineTo(x + c, y + c); }
+    });
+    g.stroke(); g.lineWidth = 1;
   }
   // Tile edges, so a footprint's tiles read as tiles.
   function drawTileEdges(g, b, c, px, py) {

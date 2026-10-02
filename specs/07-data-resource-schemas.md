@@ -59,6 +59,16 @@ these shapes, so they need to exist and be validated first.
   `yield_food_per_tick` convention — this vertical slice's only resource node (the
   Farm) produces Food and its only fort has no resource type at all, so a fully
   generic multi-resource node schema isn't needed yet.
+  **Added by spec 26 round 1** (Decision 72): `subnodes: Array[SubnodeDef]`, the
+  node's objectives in its local cells. A `SubnodeDef`
+  (`content/definitions/subnode_def.gd`) holds:
+  - `id`
+  - `subnode_type` (`WELL`, `ORE_VEIN`, `KEEP` or `OBJECTIVE`)
+  - `at`, its marker cell
+  - `capture_cells` and `zone_cells`
+
+  The capture area must not be empty, and it and the marker lie in the zone. Zones stay
+  on the node's tiles and don't overlap (`SubnodeDef.validate_in_node`).
 - `ResponseUnitDef` (`content/definitions/response_unit_def.gd`) — its own independent
   fields, coincidentally similar in shape to `UnitDef` (`hp`, `dmg`, `speed`) plus
   `purpose: String` (e.g. `"respond"`, per the parent spec's Task Force model). Neither

@@ -7,6 +7,7 @@ class_name DesignerNodeBuilder
 const NodeDef = preload("res://content/definitions/node_def.gd")
 const GarrisonUnitDef = preload("res://content/definitions/garrison_unit_def.gd")
 const DesignerPlanBuilder = preload("res://content/import/designer_plan_builder.gd")
+const SubnodeDef = preload("res://content/definitions/subnode_def.gd")
 
 const DEFAULT_CELL_SIZE := 64.0
 ## NodeDef properties set by the builder itself; a designer "fields" key never overrides them.
@@ -71,7 +72,30 @@ static func _build_node(
 	_apply_garrison(node, entry.get("garrison_units", []), errors)
 	if entry.get("plan") is Dictionary:
 		node.plan = DesignerPlanBuilder.build(entry["plan"])
+	for subnode_entry in entry.get("subnodes", []):
+		node.subnodes.append(_build_subnode(subnode_entry))
 	return node
+
+
+## A designer subnode: cells are [x, y] columns in the node's local cells (spec 26).
+static func _build_subnode(entry: Dictionary) -> SubnodeDef:
+	var subnode := SubnodeDef.new()
+	subnode.id = text(entry.get("id"))
+	subnode.subnode_type = text(entry.get("type"))
+	subnode.at = _cell(entry.get("at", [0, 0]))
+	for cell in entry.get("capture", []):
+		subnode.capture_cells.append(_cell(cell))
+	for cell in entry.get("zone", []):
+		subnode.zone_cells.append(_cell(cell))
+	return subnode
+
+
+static func _cell(pair) -> Vector2i:
+	return (
+		Vector2i(int(pair[0]), int(pair[1]))
+		if pair is Array and pair.size() >= 2
+		else Vector2i.ZERO
+	)
 
 
 static func _apply_field(
