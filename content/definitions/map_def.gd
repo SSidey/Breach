@@ -61,7 +61,20 @@ func validate() -> PackedStringArray:
 	errors.append_array(_validate_node_references(node_ids, faction_ids))
 	errors.append_array(_validate_faction_relations(faction_ids))
 	errors.append_array(_validate_layout_and_objectives(node_ids, faction_ids))
+	errors.append_array(_validate_footprints())
 
+	return errors
+
+
+## No tile is covered by two nodes (Decision 68).
+func _validate_footprints() -> PackedStringArray:
+	var errors := PackedStringArray()
+	var owner := {}
+	for node in _all_nodes():
+		for at in node.covered_tiles():
+			if owner.has(at) and owner[at] != node.id:
+				errors.append("nodes '%s' and '%s' share tile %s" % [owner[at], node.id, at])
+			owner[at] = node.id
 	return errors
 
 

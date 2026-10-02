@@ -89,3 +89,19 @@ func test_a_node_without_a_plan_has_none() -> void:
 	var result = DesignerMapImporter.import_map(export_data)
 
 	assert_object(result.map_def.lanes[0].nodes[0].plan).is_null()
+
+
+func test_a_nodes_tile_and_footprint_import_with_it() -> void:
+	var export_data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(LAYOUT_PATH))
+	var entry: Dictionary = export_data["nodes"][3]  # c, at row 2, col 9
+	entry["footprint"] = [{"row": 2, "col": 9}, {"row": 3, "col": 9}, {"row": 3, "col": 10}]
+
+	var result = DesignerMapImporter.import_map(export_data)
+	var node = null
+	for lane in result.map_def.lanes:
+		for candidate in lane.nodes:
+			if candidate.id == "c":
+				node = candidate
+
+	assert_object(node.tile).is_equal(Vector2i(9, 2))
+	assert_array(node.covered_tiles()).is_equal([Vector2i(9, 2), Vector2i(9, 3), Vector2i(10, 3)])
