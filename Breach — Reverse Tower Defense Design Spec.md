@@ -3242,3 +3242,55 @@ with e.g. a ballista on it then that might exceed bearing."
   touches, top-down, still event-driven and local.
 - The parts library gains thin-wall parts sized by thickness.
 
+### Decision 62 — Lava is a seeded liquid like water, commonest under mountains and rocky ground, sometimes reaching the surface
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user: lava "would not be exclusive to alternate planes but could have
+a similar seeding to the water", "more prevalent under certain terrain types, e.g.
+mountains/rocky", "with some even reaching the surface".
+- **Liquids are a library,** like materials. Water and lava are the first two. Each liquid
+  has properties (placeholders):
+  - **water:** floods dug cells (Decision 57) and slows or blocks units by their traits
+  - **lava:** harms any unit in or beside it, ignites flammable materials (timber,
+    shoring, peat), and lights its surroundings. It turns to rock where it meets water.
+    It moves slowly when it moves at all.
+  - Both are **static for now**, filling cells to a level. A breach into a body of either
+    floods the connected dug cells below that level over a few ticks (Decisions 54, 57).
+    Lava floods more slowly.
+- **Seeding generalises the water table.** A terrain lists its liquid bodies. Each one is
+  a liquid, a depth range below the surface, and a **chance** that a tile of that
+  terrain has one. Generation picks them from the map's seed, like strata. Placeholders:
+  - fields: water at 12–24, always
+  - rocky: water at 16–32; lava at 32–48, chance 0.2
+  - mountain: lava at 24–48, chance 0.35
+  - desert: water at 20–32, rare
+- **Some reach the surface.** A liquid body can rise in a **vent** to the surface: a lava
+  vent or pool, as a spring is for water. Each liquid entry has a **surface chance**;
+  lava under a mountain reaches the surface rarely (placeholder 0.05). A placed feature
+  (a lava vent, a spring) guarantees one, as a well guarantees water (Decision 54).
+- **Not only other planes.** A plane (such as Hell) differs by having more and shallower
+  lava, which is just different seeding data.
+- **Pillar check (Decision 58):** lava is both lock and key. It can guard a fort's flank,
+  and a tunnel breached into it can flood a basement, or burn the props of the
+  defender's own mine. It is readable on the strata cutaway, and the overlay marks
+  where it will flood. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Lava only on other planes | The user wants volcanic ground on the physical plane too. |
+| A separate lava table beside the water table | Two copies of one rule; a liquid library generalises it. |
+| Flowing lava simulation | Out of scale; static bodies and flood fills give the same decisions (Decision 57). |
+
+**Consequences:**
+- A liquid library (water, lava) joins materials in the terrain library.
+- `TerrainDef`'s water table (spec 23, round 1) becomes a list of liquid bodies, each
+  with a liquid, a depth range, a chance and a surface chance. The existing water tables
+  migrate as water, chance 1, surface chance 0.
+- Lava vent joins the natural features. Lava-related features and planes reuse this
+  seeding.
+- Ignition needs a flammable flag on materials (timber, peat): to add with fire.
+

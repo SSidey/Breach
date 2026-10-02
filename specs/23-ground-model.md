@@ -129,6 +129,14 @@ six tiles whose height differs from the base terrain's (water 0, forest 3, mount
 - The designer gains relief per terrain, the seed (lock and re-roll), and a channel tool
   for rivers, ditches and moats.
 
+## Round 4 (planned): liquid bodies (Decision 62)
+
+- A liquid library (water, lava) beside materials.
+- `TerrainDef.water_table` becomes `liquids`: `[{liquid, min, max, chance,
+  surface_chance}]`. Existing water tables migrate as water at chance 1.
+- The designer edits liquid bodies per terrain like strata, and a lava vent feature
+  joins the natural features.
+
 ## Test-first order
 
 1. `tests/content/definitions/test_terrain_ground.gd`
