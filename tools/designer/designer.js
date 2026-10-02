@@ -100,16 +100,16 @@
   // and rated traits met in ability-and-demand pairs (dig_difficulty against burrower,
   // climb_difficulty against climber). A material that flows is a liquid: flows N is its rate.
   var DEFAULT_MATERIALS = [
-    { id: 'SOIL', label: 'Soil', color: '#6b5440', weight: 1, span: 1, temperature: 15, traits: { dig_difficulty: 1 }, heat_transitions: [] },
-    { id: 'PEAT', label: 'Peat', color: '#4a3d2c', weight: 1, span: 0, temperature: 15, traits: { dig_difficulty: 1, climb_difficulty: 1 }, heat_transitions: [{ above: 250, gains: 'burning' }] },
-    { id: 'SAND', label: 'Sand', color: '#cdb27a', weight: 1, span: 0, temperature: 15, traits: { dig_difficulty: 1, climb_difficulty: 1, loose: 1 }, heat_transitions: [] },
-    { id: 'GRAVEL', label: 'Gravel', color: '#8d877c', weight: 1, span: 0, temperature: 15, traits: { dig_difficulty: 1, climb_difficulty: 1, loose: 1 }, heat_transitions: [] },
-    { id: 'CLAY', label: 'Clay', color: '#8a6a4a', weight: 1, span: 2, temperature: 15, traits: { dig_difficulty: 2 }, heat_transitions: [] },
-    { id: 'ROCK', label: 'Rock', color: '#6f6c68', weight: 2, span: 4, temperature: 15, traits: { dig_difficulty: 3 }, heat_transitions: [{ above: 1100, becomes: 'LAVA' }] },
-    { id: 'ORE', label: 'Ore', color: '#7b5e57', weight: 2, span: 4, temperature: 15, traits: { dig_difficulty: 4 }, heat_transitions: [] },
-    { id: 'TIMBER', label: 'Timber', color: '#8b6a3e', weight: 1, span: 3, temperature: 15, traits: { dig_difficulty: 1 }, heat_transitions: [{ above: 300, gains: 'burning' }] },
-    { id: 'WATER', label: 'Water', color: '#3a6ea5', weight: 1, span: 0, temperature: 15, traits: { flows: 3 }, heat_transitions: [] },
-    { id: 'LAVA', label: 'Lava', color: '#d4521c', weight: 1, span: 0, temperature: 1200, traits: { flows: 1, glows: 1 }, heat_transitions: [{ below: 700, becomes: 'ROCK' }] }
+    { id: 'SOIL', label: 'Soil', color: '#6b5440', weight: 1, span: 1, strength: 1, temperature: 15, traits: { dig_difficulty: 1 }, heat_transitions: [] },
+    { id: 'PEAT', label: 'Peat', color: '#4a3d2c', weight: 1, span: 0, strength: 0, temperature: 15, traits: { dig_difficulty: 1, climb_difficulty: 1 }, heat_transitions: [{ above: 250, gains: 'burning' }] },
+    { id: 'SAND', label: 'Sand', color: '#cdb27a', weight: 1, span: 0, strength: 0, temperature: 15, traits: { dig_difficulty: 1, climb_difficulty: 1, loose: 1 }, heat_transitions: [] },
+    { id: 'GRAVEL', label: 'Gravel', color: '#8d877c', weight: 1, span: 0, strength: 1, temperature: 15, traits: { dig_difficulty: 1, climb_difficulty: 1, loose: 1 }, heat_transitions: [] },
+    { id: 'CLAY', label: 'Clay', color: '#8a6a4a', weight: 1, span: 2, strength: 2, temperature: 15, traits: { dig_difficulty: 2 }, heat_transitions: [] },
+    { id: 'ROCK', label: 'Rock', color: '#6f6c68', weight: 2, span: 4, strength: 20, temperature: 15, traits: { dig_difficulty: 3 }, heat_transitions: [{ above: 1100, becomes: 'LAVA' }] },
+    { id: 'ORE', label: 'Ore', color: '#7b5e57', weight: 2, span: 4, strength: 20, temperature: 15, traits: { dig_difficulty: 4 }, heat_transitions: [] },
+    { id: 'TIMBER', label: 'Timber', color: '#8b6a3e', weight: 1, span: 3, strength: 6, temperature: 15, traits: { dig_difficulty: 1 }, heat_transitions: [{ above: 300, gains: 'burning' }] },
+    { id: 'WATER', label: 'Water', color: '#3a6ea5', weight: 1, span: 0, strength: 0, temperature: 15, traits: { flows: 3 }, heat_transitions: [] },
+    { id: 'LAVA', label: 'Lava', color: '#d4521c', weight: 1, span: 0, strength: 0, temperature: 1200, traits: { flows: 1, glows: 1 }, heat_transitions: [{ below: 700, becomes: 'ROCK' }] }
   ];
   function water(min, max, chance, surface) { return { material: 'WATER', min: min, max: max, chance: chance, surface_chance: surface }; }
   function lava(min, max, chance, surface) { return { material: 'LAVA', min: min, max: max, chance: chance, surface_chance: surface }; }
@@ -250,6 +250,8 @@
       ['dig_difficulty', 'climb_difficulty'].forEach(function (f) { if (m[f]) m.traits[f] = m[f]; delete m[f]; });
       delete m.loose;
       if (m.temperature === undefined) m.temperature = 15;
+      // v19: strength (Decision 65).
+      if (m.strength === undefined) { var seedS = DEFAULT_MATERIALS.find(function (x) { return x.id === m.id; }); m.strength = seedS ? seedS.strength : 1; }
       if (!m.heat_transitions) {
         var seedM = DEFAULT_MATERIALS.find(function (x) { return x.id === m.id; });
         m.heat_transitions = seedM ? clone(seedM.heat_transitions) : [];
@@ -3220,11 +3222,12 @@
       html += '<div class="form-grid">' +
         '<div class="insp-row"><label for="td_label">Label</label><input type="text" id="td_label" value="' + esc(item.label) + '" /></div>' +
         '<div class="insp-row"><label for="td_color">Colour</label><input type="color" id="td_color" value="' + esc(item.color) + '" /></div>' +
+        '<div class="insp-row"><label for="md_strength">Strength (load an eighth carries)</label><input type="number" min="0" id="md_strength" value="' + esc(item.strength || 0) + '" /></div>' +
         '<div class="insp-row"><label for="md_temp">Temperature (°)</label><input type="number" id="md_temp" value="' + esc(item.temperature) + '" /></div>' +
         '<div class="insp-row"><label for="md_weight">Weight per cell</label><input type="number" min="0" id="md_weight" value="' + esc(item.weight) + '" /></div>' +
         '<div class="insp-row"><label for="md_span">Unsupported span (cells)</label><input type="number" min="0" id="md_span" value="' + esc(item.span) + '" /></div>' +
         '</div>' +
-        '<p class="hint">Weight loads what is beneath; span is how far it bridges unsupported before it falls (Decision 57); temperature is the heat it gives off (Decision 63).</p>' +
+        '<p class="hint">Weight loads what is beneath; strength is the load each eighth of a cell carries (Decision 65); span is how far it bridges unsupported before it falls (Decision 57); temperature is the heat it gives off (Decision 63).</p>' +
         traitsAndHeat(item);
     } else {
       var fu = featureUsage(item.id);
@@ -3255,7 +3258,7 @@
       bindGround(item);
       bindT('td_stab', 'default_stability', true); bindT('td_mh', 'default_max_height', true); bindT('td_mw', 'default_max_width', true); bindT('td_md', 'default_max_depth', true); bindT('td_ml', 'default_max_length', true);
     } else if (isMaterial) {
-      bindT('td_color', 'color'); bindT('md_weight', 'weight', true); bindT('md_span', 'span', true);
+      bindT('td_color', 'color'); bindT('md_weight', 'weight', true); bindT('md_span', 'span', true); bindT('md_strength', 'strength', true);
       document.getElementById('md_temp').addEventListener('change', function () { item.temperature = Number(this.value) || 0; saveTerrainLib(); renderTerrainView(); });
       bindTraitsAndHeat(item);
     } else {
@@ -3293,7 +3296,7 @@
     if (kind === 'terrain') {
       terrainLib.terrains.push(Object.assign({ id: id, label: label, glyph: '?', color: '#7d7466', can_be_base: false, needs_bridge: false, move_cost: 1, blocks_unit_classes: '', default_stability: 2, default_max_height: 1, default_max_width: 2, default_max_length: 2, default_max_depth: 1 }, clone(GENERIC_GROUND)));
     } else if (kind === 'material') {
-      terrainLib.materials.push({ id: id, label: label, color: '#7d7466', weight: 1, span: 1, temperature: 15, traits: { dig_difficulty: 1 }, heat_transitions: [] });
+      terrainLib.materials.push({ id: id, label: label, color: '#7d7466', weight: 1, span: 1, strength: 1, temperature: 15, traits: { dig_difficulty: 1 }, heat_transitions: [] });
     } else {
       terrainLib.features.push({ id: id, label: label, glyph: '?', stub_effect: '' });
     }

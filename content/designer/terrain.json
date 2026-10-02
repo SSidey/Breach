@@ -424,6 +424,7 @@
       "color": "#6b5440",
       "weight": 1,
       "span": 1,
+      "strength": 1,
       "temperature": 15,
       "traits": {
         "dig_difficulty": 1
@@ -436,6 +437,7 @@
       "color": "#4a3d2c",
       "weight": 1,
       "span": 0,
+      "strength": 0,
       "temperature": 15,
       "traits": {
         "dig_difficulty": 1,
@@ -454,6 +456,7 @@
       "color": "#cdb27a",
       "weight": 1,
       "span": 0,
+      "strength": 0,
       "temperature": 15,
       "traits": {
         "dig_difficulty": 1,
@@ -468,6 +471,7 @@
       "color": "#8d877c",
       "weight": 1,
       "span": 0,
+      "strength": 1,
       "temperature": 15,
       "traits": {
         "dig_difficulty": 1,
@@ -482,6 +486,7 @@
       "color": "#8a6a4a",
       "weight": 1,
       "span": 2,
+      "strength": 2,
       "temperature": 15,
       "traits": {
         "dig_difficulty": 2
@@ -494,6 +499,7 @@
       "color": "#6f6c68",
       "weight": 2,
       "span": 4,
+      "strength": 20,
       "temperature": 15,
       "traits": {
         "dig_difficulty": 3
@@ -511,6 +517,7 @@
       "color": "#7b5e57",
       "weight": 2,
       "span": 4,
+      "strength": 20,
       "temperature": 15,
       "traits": {
         "dig_difficulty": 4
@@ -523,6 +530,7 @@
       "color": "#8b6a3e",
       "weight": 1,
       "span": 3,
+      "strength": 6,
       "temperature": 15,
       "traits": {
         "dig_difficulty": 1
@@ -540,6 +548,7 @@
       "color": "#3a6ea5",
       "weight": 1,
       "span": 0,
+      "strength": 0,
       "temperature": 15,
       "traits": {
         "flows": 3
@@ -552,6 +561,7 @@
       "color": "#d4521c",
       "weight": 1,
       "span": 0,
+      "strength": 0,
       "temperature": 1200,
       "traits": {
         "flows": 1,

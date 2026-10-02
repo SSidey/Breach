@@ -17,6 +17,7 @@ func _library() -> Dictionary:
 				"color": "#6f6c68",
 				"weight": 2,
 				"span": 4,
+				"strength": 20,
 				"traits": {"dig_difficulty": 3}
 			},
 			{"id": "SAND", "label": "Sand", "dig_difficulty": 1, "span": 0, "loose": true},
@@ -48,6 +49,7 @@ func test_materials_import_with_their_properties() -> void:
 
 	assert_str(rock.display_name).is_equal("Rock")
 	assert_int(rock.trait_level("dig_difficulty")).is_equal(3)
+	assert_int(rock.strength).is_equal(20)
 	assert_int(rock.weight).is_equal(2)
 	assert_int(rock.span).is_equal(4)
 	assert_int(library.material("SAND").trait_level("loose")).is_equal(1)  # the old flag

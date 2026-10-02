@@ -171,6 +171,7 @@ static func _material(entry: Dictionary) -> MaterialDef:
 	material.weight = int(entry.get("weight", 1))
 	material.span = int(entry.get("span", 1))
 	material.temperature = int(entry.get("temperature", 15))
+	material.strength = int(entry.get("strength", 0))
 	material.traits = _traits(entry)
 	# Saved before Decisions 63-64: a loose flag, and difficulties as fields.
 	if entry.get("loose", false):
