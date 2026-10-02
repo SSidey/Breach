@@ -121,13 +121,59 @@ A scripted browser run set a tile on the demo map to 70. It showed the ceiling w
 a filled ▲70 badge, and `elevation: 70` in the saved draft. Badges appear only on the
 six tiles whose height differs from the base terrain's (water 0, forest 3, mountain 48 at the time; 64 since Decision 60).
 
-## Round 3 (next): relief and carved channels (Decision 59)
+## Round 3: relief and carved channels (Decision 59)
 
-- `TerrainDef` gains relief amplitude and scale; maps gain a seed and carved features
-  (a path, width, depth and water level).
-- `GroundSurface` adds seeded relief and carving to the tile height.
-- The designer gains relief per terrain, the seed (lock and re-roll), and a channel tool
-  for rivers, ditches and moats.
+- **Relief:** `TerrainDef.relief_amplitude` and `relief_scale` (cells). Seeds, as
+  amplitude over scale:
+  - fields ±1 over 12
+  - rocky ±2 over 4
+  - Hilly ±4 over 6
+  - forest ±1 over 8
+  - desert ±2 over 12
+  - mountain ±8 over 8
+  - swamp, water and ravine smooth
+- **`GroundRelief`** (`sim/ground/`, pure): smooth value noise in [-1, 1] from an
+  integer hash of the map's **seed** (`MapLayoutDef.seed`), so it is the same every
+  time. `GroundSurface` scales it by each tile's amplitude and blends between tile
+  centres, so terrains meet smoothly.
+- **Channels:** `ChannelDef` (a path of neighbouring tiles, width, depth, an optional
+  flowing material and its depth) on `MapLayoutDef.channels`.
+  - **`GroundChannels`** carves each one along its centre line through the tile
+    centres. The cut is full inside the channel, with a one-cell sloped bank at the
+    edge. A negative depth raises a bank or mound instead.
+  - **`GroundSurface.liquid_at(column)`** gives the material and level of the liquid
+    held over a column.
+  - Validation: tiles are on the grid and neighbours, the width is at least 1, the
+    liquid flows, and the liquid is no deeper than the channel.
+- **Import:** a terrain's `relief`, the map's `seed`, and `channels`.
+- **Designer:**
+  - Relief fields in each terrain's Ground section.
+  - A **Seed** field with re-roll in the toolbar.
+  - A **Channel** tool under Routes: drag from tile to tile to draw one, or click once
+    for a pond.
+  - A Channels tab in the tile inspector (width, depth, liquid and its depth, remove).
+  - A Channels erase layer.
+
+```
+Scenario: Relief makes a hilly tile hilly within
+  Given three tiles at 8 with relief ±4 over 6
+  Then heights across the middle tile vary by more than a cell, stay within 4 to 12,
+  and are the same for the same seed but differ for another
+
+Scenario: A channel carves its path and holds its liquid
+  Given flat ground at 8 and a channel along three tiles, 4 wide, 3 deep, water 2 deep
+  Then its centre line is at 5, 3 cells off the line is still 8, and the water's
+  level on the line is 7
+  And with depth -2 the centre line rises to 10
+
+Scenario: Channels are checked
+  Given a channel off the grid, through tiles that don't touch, holding rock, or with
+  liquid deeper than itself
+  Then validation reports each
+```
+
+A scripted browser run dragged a river across five tiles (two diagonal steps) on the
+demo map, set its depth to 3 in the Channels tab, and saved it with water 1 deep.
 
 ## Round 4: liquids, traits and heat (Decisions 62-64)
 
@@ -195,11 +241,13 @@ migrated: no water tables or separate liquids left.
 3. `tests/presentation/test_map_details.gd` (the ground lines, and elevation)
 4. Round 4: `tests/content/definitions/test_terrain_liquids.gd`, and the liquid and migration
    cases in `test_designer_ground_import.gd`
-5. `tests/content/definitions/test_map_elevation.gd`, `tests/sim/ground/test_ground_surface.gd`,
+5. Round 3: `tests/sim/ground/test_ground_relief.gd`, `tests/content/definitions/test_channel_def.gd`,
+   `tests/content/import/test_designer_relief_import.gd`
+6. `tests/content/definitions/test_map_elevation.gd`, `tests/sim/ground/test_ground_surface.gd`,
    `tests/content/import/test_designer_elevation_import.gd` (round 2)
-6. Designer: scripted browser runs of the Terrain view (materials, ground, strata) and
+7. Designer: scripted browser runs of the Terrain view (materials, ground, strata) and
    the Lanes view (elevation, ceiling).
-7. Manual: the user tunes the placeholder values in the designer.
+8. Manual: the user tunes the placeholder values in the designer.
 
 ## Notes / open questions
 
@@ -212,7 +260,8 @@ migrated: no water tables or separate liquids left.
 
 - `single-noun-phrase`: `material_def.gd` (a material), `stratum_def.gd` (a band of
   strata), `ground_surface.gd` (the ground's surface),
-  `liquid_body_def.gd` (a body of liquid), `heat_transition_def.gd` (a heat transition); `liquid_def.gd` was folded into materials.
+  `liquid_body_def.gd` (a body of liquid), `channel_def.gd` (a channel),
+  `ground_relief.gd` (relief noise), `ground_channels.gd` (channel carving), `heat_transition_def.gd` (a heat transition); `liquid_def.gd` was folded into materials.
 - `ocp-extension-point`: a new material or terrain is data in `terrain.json`.
 - `lsp-contract-scope`: not applicable.
 - `isp-fit`: `TerrainLibraryDef` adds one lookup, `material(id)`.
