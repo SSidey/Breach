@@ -129,24 +129,67 @@ six tiles whose height differs from the base terrain's (water 0, forest 3, mount
 - The designer gains relief per terrain, the seed (lock and re-roll), and a channel tool
   for rivers, ditches and moats.
 
-## Round 4 (planned): liquid bodies (Decision 62)
+## Round 4: liquids, traits and heat (Decisions 62, 63)
 
-- A liquid library (water, lava) beside materials.
-- `TerrainDef.water_table` becomes `liquids`: `[{liquid, min, max, chance,
-  surface_chance}]`. Existing water tables migrate as water at chance 1.
-- The designer edits liquid bodies per terrain like strata, and a lava vent feature
-  joins the natural features.
+Built before round 3, because it changes round 1's data.
+- **Liquid library:** water (15°) and lava (1200°, glows). `LiquidDef` has a
+  temperature, traits and heat transitions.
+- **Liquid bodies:** `TerrainDef.water_table` becomes `liquids`, a list of
+  `LiquidBodyDef` (liquid, depth range, chance, surface chance). Seeds:
+  - fields: water 12–24
+  - rocky: water 16–32, lava 32–48 at 20%
+  - mountain: lava 24–48 at 35%, reaching the surface 5% of the time
+  - desert: water at 30%
+  - swamp: water 0–2, at the surface half the time
+  A water table saved before this imports as a water body that is always there.
+- **Traits and heat (Decision 63):**
+  - Materials and liquids carry `traits` (name → level) and `heat_transitions`
+    (`HeatTransitionDef`: above or below a temperature, becomes X or gains a trait).
+  - The `loose` flag becomes the `loose` trait, and old files migrate.
+  - Seeded transitions:
+    - peat gains burning above 250
+    - timber (a new material, for walls) gains burning above 300
+    - rock becomes lava above 1100
+    - lava becomes rock below 700
+- **Lava vent** joins the natural features.
+- **Validation:** liquid bodies name known liquids, with chances from 0 to 1. A
+  transition becomes a known material or liquid, or gains a trait.
+- **Designer:**
+  - a Liquids list and inspector (temperature, traits, heat)
+  - a traits and heat editor on materials
+  - a liquid-bodies editor in each terrain's Ground section, replacing the water table
+- **Viewer:** tile details list a terrain's liquid bodies ("liquids: Water 12-24").
+
+```
+Scenario: A transition reads as its rule
+  Given rock with "above 1100: becomes LAVA" and timber with "above 300: gains burning"
+  Then each validates, and lava's "below 700: becomes ROCK" does too
+
+Scenario: Liquid bodies are checked
+  Given a mountain with a body of Mercury, or a surface chance of 1.5
+  Then validation reports the unknown liquid, or the chance
+
+Scenario: An old water table migrates
+  Given a terrain saved with water_table {min 12, max 24}
+  Then it imports as a water body 12-24, chance 1
+```
+
+A scripted browser run showed the Mountain's lava body (24–48, 35%, surface 5%), Lava's
+glows trait and "below 700 °: becomes Rock", and Timber's burning threshold. The
+repo library migrated with no water tables left.
 
 ## Test-first order
 
 1. `tests/content/definitions/test_terrain_ground.gd`
 2. `tests/content/import/test_designer_ground_import.gd`
 3. `tests/presentation/test_map_details.gd` (the ground lines, and elevation)
-4. `tests/content/definitions/test_map_elevation.gd`, `tests/sim/ground/test_ground_surface.gd`,
+4. Round 4: `tests/content/definitions/test_terrain_liquids.gd`, and the liquid and migration
+   cases in `test_designer_ground_import.gd`
+5. `tests/content/definitions/test_map_elevation.gd`, `tests/sim/ground/test_ground_surface.gd`,
    `tests/content/import/test_designer_elevation_import.gd` (round 2)
-5. Designer: scripted browser runs of the Terrain view (materials, ground, strata) and
+6. Designer: scripted browser runs of the Terrain view (materials, ground, strata) and
    the Lanes view (elevation, ceiling).
-6. Manual: the user tunes the placeholder values in the designer.
+7. Manual: the user tunes the placeholder values in the designer.
 
 ## Notes / open questions
 
@@ -158,7 +201,8 @@ six tiles whose height differs from the base terrain's (water 0, forest 3, mount
 ## Rubric answers (qualitative, spec-baseline)
 
 - `single-noun-phrase`: `material_def.gd` (a material), `stratum_def.gd` (a band of
-  strata), `ground_surface.gd` (the ground's surface).
+  strata), `ground_surface.gd` (the ground's surface), `liquid_def.gd` (a liquid),
+  `liquid_body_def.gd` (a body of liquid), `heat_transition_def.gd` (a heat transition).
 - `ocp-extension-point`: a new material or terrain is data in `terrain.json`.
 - `lsp-contract-scope`: not applicable.
 - `isp-fit`: `TerrainLibraryDef` adds one lookup, `material(id)`.
