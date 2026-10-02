@@ -46,6 +46,16 @@ h.record(plan);
 plan.solid_cells['0,0,0'] = 'ROCK';
 out.undone = h.undo(plan) && Object.keys(plan.solid_cells).length;
 out.redone = h.redo(plan) && plan.solid_cells['0,0,0'];
+const solid = t.emptyPlan();
+t.addRoom(solid, {x0: 2, y0: 2, x1: 2, y1: 2}, 0, {height: 1, wall: {material: 'TIMBER', thickness: 1},
+  floor: {on: true, material: 'TIMBER', thickness: 1}, ceiling: {on: true, material: 'TIMBER', thickness: 1}});
+t.setSolid(solid, 2, 2, 0, 'ROCK');
+out.solidFaces = solid.faces.map(f => f.level + ':' + f.side);
+out.solidCell = solid.solid_cells['2,2,0'];
+const ring = t.emptyPlan();
+t.perimeterWalls(ring, {x0: 1, y0: 1, x1: 3, y1: 2}, 0, 'TIMBER', 1);
+out.ringWalls = ring.faces.length;
+out.areaCells = t.cellsOf({x0: 3, y0: 1, x1: 1, y1: 2}).length;
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -90,6 +100,14 @@ class PlannerToolsJsTest(unittest.TestCase):
         self.assertEqual(self.out["roomFaces"], 28 + 12 + 12)  # 14 walls x 2 levels, floor, roof
         self.assertTrue(self.out["roomSouthWall"]["into_neighbour"])
         self.assertEqual(self.out["roomCeilings"], 12)
+
+    def test_a_solid_cell_replaces_the_walls_and_floor_in_it(self) -> None:
+        self.assertEqual(self.out["solidCell"], "ROCK")
+        self.assertEqual(self.out["solidFaces"], ["1:floor"])  # only the roof above it stays
+
+    def test_an_area_has_its_cells_and_a_ring_of_walls(self) -> None:
+        self.assertEqual(self.out["ringWalls"], 10)  # 3 x 2: 2 x 3 + 2 x 2 edges
+        self.assertEqual(self.out["areaCells"], 6)
 
     def test_undo_and_redo(self) -> None:
         self.assertEqual(self.out["undone"], 0)

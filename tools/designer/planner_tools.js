@@ -43,6 +43,14 @@
   }
   function isDug(plan, x, y, l) { return dugIndex(plan, x, y, l) !== -1; }
 
+  // A solid cell fills its cell, so it replaces the thinner pieces in it (Decision 67): the
+  // walls on its four edges and its floor at that level.
+  function setSolid(plan, x, y, l, material) {
+    var inside = [face(x, y, l, 'north'), face(x, y, l, 'south'), face(x, y, l, 'west'), face(x, y, l, 'east'), face(x, y, l, 'floor')];
+    plan.faces = plan.faces.filter(function (g) { return !inside.some(function (f) { return f.x === g.x && f.y === g.y && f.level === g.level && f.side === g.side; }); });
+    plan.solid_cells[at(x, y, l)] = material;
+  }
+
   // ---------- picking edges ----------
   // The nearest grid line to a point in cell units: {x, y, side} for the cell the point is
   // in and the side of it that line is, plus the line itself ({axis: 'h'|'v', index}).
@@ -81,26 +89,33 @@
     return true;
   }
 
+  // ---------- areas ----------
+  function span(rect) {
+    return { x0: Math.min(rect.x0, rect.x1), x1: Math.max(rect.x0, rect.x1), y0: Math.min(rect.y0, rect.y1), y1: Math.max(rect.y0, rect.y1) };
+  }
+  // Walls round rect's edge at level l, flush inside it.
+  function perimeterWalls(plan, rect, l, material, thickness) {
+    var r = span(rect);
+    for (var x = r.x0; x <= r.x1; x++) { setFace(plan, face(x, r.y0, l, 'north'), material, thickness); setFace(plan, face(x, r.y1, l, 'south'), material, thickness); }
+    for (var y = r.y0; y <= r.y1; y++) { setFace(plan, face(r.x0, y, l, 'west'), material, thickness); setFace(plan, face(r.x1, y, l, 'east'), material, thickness); }
+  }
+  // Every cell of rect, front to back (so digs below a dug cell connect as they go).
+  function cellsOf(rect) {
+    var r = span(rect), out = [];
+    for (var y = r.y0; y <= r.y1; y++) for (var x = r.x0; x <= r.x1; x++) out.push([x, y]);
+    return out;
+  }
+
   // ---------- rooms ----------
   // A room over rect {x0, y0, x1, y1} from level `level`: perimeter walls on every level of
   // its height, flush inside; a floor at its base and a ceiling over its top, if wanted.
   // opts: {height, wall: {material, thickness}, floor: {on, material, thickness},
   // ceiling: {on, material, thickness}}.
   function addRoom(plan, rect, level, opts) {
-    var x0 = Math.min(rect.x0, rect.x1), x1 = Math.max(rect.x0, rect.x1), y0 = Math.min(rect.y0, rect.y1), y1 = Math.max(rect.y0, rect.y1);
-    for (var l = level; l < level + opts.height; l++) {
-      for (var x = x0; x <= x1; x++) {
-        setFace(plan, face(x, y0, l, 'north'), opts.wall.material, opts.wall.thickness);
-        setFace(plan, face(x, y1, l, 'south'), opts.wall.material, opts.wall.thickness);
-      }
-      for (var y = y0; y <= y1; y++) {
-        setFace(plan, face(x0, y, l, 'west'), opts.wall.material, opts.wall.thickness);
-        setFace(plan, face(x1, y, l, 'east'), opts.wall.material, opts.wall.thickness);
-      }
-    }
+    for (var l = level; l < level + opts.height; l++) perimeterWalls(plan, rect, l, opts.wall.material, opts.wall.thickness);
     [[opts.floor, level], [opts.ceiling, level + opts.height]].forEach(function (pair) {
       if (!pair[0] || !pair[0].on) return;
-      for (var cx = x0; cx <= x1; cx++) for (var cy = y0; cy <= y1; cy++) setFace(plan, face(cx, cy, pair[1], 'floor'), pair[0].material, pair[0].thickness);
+      cellsOf(rect).forEach(function (c) { setFace(plan, face(c[0], c[1], pair[1], 'floor'), pair[0].material, pair[0].thickness); });
     });
   }
 
@@ -135,7 +150,7 @@
 
   root.BreachPlannerTools = {
     SIZE: SIZE, at: at, emptyPlan: emptyPlan, normalise: normalise, face: face, faceIndex: faceIndex,
-    setFace: setFace, dugIndex: dugIndex, isDug: isDug, nearestEdge: nearestEdge, edgeOnLine: edgeOnLine,
+    setFace: setFace, setSolid: setSolid, perimeterWalls: perimeterWalls, cellsOf: cellsOf, dugIndex: dugIndex, isDug: isDug, nearestEdge: nearestEdge, edgeOnLine: edgeOnLine,
     canDig: canDig, fill: fill, addRoom: addRoom, clearLevel: clearLevel, clearPlan: clearPlan, History: History
   };
   if (typeof module !== 'undefined') module.exports = root.BreachPlannerTools;

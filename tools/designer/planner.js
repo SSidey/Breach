@@ -10,8 +10,9 @@
   var TOOLS = [['solid', 'Solid cell'], ['wall', 'Face wall'], ['floor', 'Floor / roof'], ['room', 'Room'],
     ['dig', 'Dig'], ['fill', 'Fill'], ['load', 'Load'], ['erase', 'Erase']];
   var MODES = [['material', 'Material'], ['load', 'Load v capacity']];
+  var SHAPES = [['free', 'Freehand'], ['area', 'Area']];
   var ui = {
-    level: 0, tool: 'wall', material: 'TIMBER', fillMaterial: 'GROUND', thickness: 1, load: 20, mode: 'material',
+    level: 0, tool: 'wall', shape: 'free', example: 'farmhouse', material: 'TIMBER', fillMaterial: 'GROUND', thickness: 1, load: 20, mode: 'material',
     hover: null, room: null, pendingRoom: null, confirm: null,
     roomOpts: { height: 1, wall: { material: 'TIMBER', thickness: 1 }, floor: { on: true, material: 'TIMBER', thickness: 2 }, ceiling: { on: true, material: 'TIMBER', thickness: 2 } }
   };
@@ -25,7 +26,7 @@
   function digLevel() { return ui.level < 0 ? ui.level : -1; }
   function apply(plan, ctx, spot, adding) {
     var l = ui.level, key = T.at(spot.x, spot.y, l);
-    if (ui.tool === 'solid') { if (adding) plan.solid_cells[key] = ui.material; else delete plan.solid_cells[key]; }
+    if (ui.tool === 'solid') { if (adding) T.setSolid(plan, spot.x, spot.y, l, ui.material); else delete plan.solid_cells[key]; }
     else if (ui.tool === 'wall' || ui.tool === 'floor') {
       var f = T.face(spot.x, spot.y, l, ui.tool === 'floor' ? 'floor' : spot.side), i = T.faceIndex(plan, f);
       if (adding) T.setFace(plan, f, ui.material, ui.thickness); else if (i !== -1) plan.faces.splice(i, 1);
@@ -45,6 +46,15 @@
       return !(floor || (edge && g.side === edge.side && g.x === edge.x && g.y === edge.y));
     });
     T.fill(plan, spot.x, spot.y, digLevel(), 'GROUND');
+  }
+  // The tool over a whole dragged rectangle: walls round its edge (flush inside), anything
+  // else in every cell; Erase clears every cell and the walls on its edges.
+  function applyArea(plan, ctx, rect) {
+    if (ui.tool === 'wall') { T.perimeterWalls(plan, rect, ui.level, ui.material, ui.thickness); return; }
+    T.cellsOf(rect).forEach(function (c) {
+      if (ui.tool === 'erase') ['north', 'south', 'west', 'east'].forEach(function (side) { erase(plan, { x: c[0], y: c[1], side: side }, ui.level); });
+      else apply(plan, ctx, { x: c[0], y: c[1] }, true);
+    });
   }
   // True if the tool would add at this spot (it isn't there yet).
   function wouldAdd(plan, spot) {
@@ -84,7 +94,7 @@
       '<button type="button" class="chip" id="pl_down" title="Down a level (PageDown)">▼</button>' +
       '<input type="number" id="pl_level" min="' + (-ctx.digDepth) + '" max="' + ctx.maxLevel + '" value="' + ui.level + '" style="width:58px;" aria-label="Level" />' +
       '<button type="button" class="chip" id="pl_up" title="Up a level (PageUp)">▲</button><span class="hint" style="margin:0;">' + esc(levelName(ui.level)) + '</span>' +
-      chips(TOOLS, ui.tool, 'tool') + extra + '</div>';
+      chips(TOOLS, ui.tool, 'tool') + extra + (ui.tool === 'room' ? '' : '<span class="row-label">Draw</span>' + chips(SHAPES, ui.shape, 'shape')) + '</div>';
   }
   function editBar(node) {
     var h = historyOf(node);
@@ -93,7 +103,10 @@
     }
     return '<button type="button" class="chip" id="pl_undo"' + (h.undos.length ? '' : ' disabled') + ' title="Ctrl+Z">Undo</button>' +
       '<button type="button" class="chip" id="pl_redo"' + (h.redos.length ? '' : ' disabled') + ' title="Ctrl+Shift+Z / Ctrl+Y">Redo</button>' +
-      clearButton('level', 'Clear level') + clearButton('plan', 'Clear plan');
+      clearButton('level', 'Clear level') + clearButton('plan', 'Clear plan') +
+      '<span class="row-label">Examples</span><select id="pl_example" aria-label="Example structure">' +
+      options((root.BreachPlannerExamples || []).map(function (e) { return [e.id, e.label]; }), ui.example) + '</select>' +
+      '<button type="button" class="chip" data-clear="example">' + (ui.confirm === 'example' ? 'Click again to replace the plan' : 'Load example') + '</button>';
   }
   function roomForm(ctx) {
     var r = ui.pendingRoom, o = ui.roomOpts;
@@ -117,6 +130,7 @@
     ui.level = Math.max(-ctx.digDepth, Math.min(ctx.maxLevel, ui.level));
     var failedText = result.failed.length ? result.failed.length + ' failing' : 'all standing';
     var hint = ui.mode === 'load' ? 'green < 50% of capacity, yellow < 80%, red to full, black failing'
+      : ui.shape === 'area' && ui.tool !== 'room' ? 'drag out a rectangle: walls go round its edge, everything else fills it'
       : ui.tool === 'wall' ? 'walls snap to the nearest grid line and keep to it while you drag; Alt-click flips which side a wall grows into'
         : ui.tool === 'room' ? 'drag out a rectangle, then set the room up and Apply'
           : ui.tool === 'dig' ? 'dig down from the surface or beside a dug cell' : 'drag to paint';
@@ -143,6 +157,8 @@
   function bindBars(host, node, ctx) {
     function on(id, event, fn) { var el = host.querySelector(id); if (el) el.addEventListener(event, fn); }
     host.querySelectorAll('[data-tool]').forEach(function (b) { b.addEventListener('click', function () { ui.tool = b.getAttribute('data-tool'); ui.confirm = null; ui.pendingRoom = null; render(host, node, ctx); }); });
+    host.querySelectorAll('[data-shape]').forEach(function (b) { b.addEventListener('click', function () { ui.shape = b.getAttribute('data-shape'); render(host, node, ctx); }); });
+    on('#pl_example', 'change', function () { ui.example = this.value; ui.confirm = null; });
     host.querySelectorAll('[data-mode]').forEach(function (b) { b.addEventListener('click', function () { ui.mode = b.getAttribute('data-mode'); render(host, node, ctx); }); });
     on('#pl_level', 'change', function () { setLevel(Number(this.value) || 0); });
     on('#pl_down', 'click', function () { setLevel(ui.level - 1); });
@@ -158,11 +174,20 @@
         var which = b.getAttribute('data-clear');
         if (ui.confirm !== which) { ui.confirm = which; render(host, node, ctx); return; }
         ui.confirm = null; historyOf(node).record(node.plan);
-        if (which === 'level') T.clearLevel(node.plan, ui.level); else T.clearPlan(node.plan);
+        if (which === 'level') T.clearLevel(node.plan, ui.level);
+        else T.clearPlan(node.plan);
+        if (which === 'example') loadExample(node.plan);
         rerender();
       });
     });
     bindRoomForm(host, node);
+  }
+  function loadExample(plan) {
+    var example = (root.BreachPlannerExamples || []).find(function (e) { return e.id === ui.example; });
+    if (!example) return;
+    var built = example.build();
+    Object.keys(built).forEach(function (k) { plan[k] = built[k]; });
+    ui.level = 0;
   }
   function bindRoomForm(host, node) {
     var form = host.querySelector('#pl_room_form');
@@ -191,7 +216,10 @@
       var spot = spotAt(grid, ev);
       if (!spot) return;
       ui.confirm = null;
-      if (ui.tool === 'room') { ui.pendingRoom = null; ui.room = { x0: spot.x, y0: spot.y, x1: spot.x, y1: spot.y }; painting = { room: true }; redraw(false); return; }
+      if (ui.tool === 'room' || ui.shape === 'area') {
+        ui.pendingRoom = null; ui.room = { x0: spot.x, y0: spot.y, x1: spot.x, y1: spot.y };
+        painting = { room: true, before: JSON.stringify(node.plan) }; redraw(false); return;
+      }
       var flip = ev.altKey && ui.tool === 'wall' ? T.faceIndex(node.plan, T.face(spot.x, spot.y, ui.level, spot.side)) : -1;
       painting = { before: JSON.stringify(node.plan), line: ui.tool === 'wall' ? spot : null, last: '' };
       if (flip !== -1) { node.plan.faces[flip].into_neighbour = !node.plan.faces[flip].into_neighbour; endStroke(); return; }
@@ -217,7 +245,8 @@
   function endStroke() {
     if (!painting || !current) return;
     var done = painting; painting = null;
-    if (done.room) { ui.pendingRoom = ui.room; ui.room = null; render(current.host, current.node, current.ctx); return; }
+    if (done.room && ui.tool === 'room') { ui.pendingRoom = ui.room; ui.room = null; render(current.host, current.node, current.ctx); return; }
+    if (done.room) { applyArea(current.node.plan, current.ctx, ui.room); ui.room = null; }
     if (JSON.stringify(current.node.plan) !== done.before) {
       var h = historyOf(current.node);
       h.undos.push(done.before); h.redos = [];

@@ -3519,6 +3519,12 @@ round 2).
   - every level from the tile's dig depth to the ceiling
 - **A Room tool.** Drag out a rectangle, choose its height and the material and thickness
   of its walls, floor and ceiling, then Apply to add them all at once (one undo step).
+- **Any tool can draw an area.** With Draw set to Area, a dragged rectangle gets walls
+  round its edge (flush inside) or the tool in every cell. That's floors, solid cells, digs,
+  fills, loads or erasing, with or without a room.
+- **A solid cell replaces the thinner pieces in it.** Placing a solid cell where a floor
+  and thin walls are removes the walls on its edges and its floor at that level, so it
+  becomes a solid cell only. The roof of the cell above stays.
 - **The old side-on Structure tab is hidden.** Plans replace it. Its libraries (room
   features, emplacements) stay on disk to become plan elements (Decision 55).
 
