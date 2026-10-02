@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## The ground model in the terrain library, per Decisions 53, 54 and 57: materials (dig
-## and climb difficulty, weight, span, loose), and each terrain's bearing, foundation
-## maximum, dig depth, water table and strata bands, which name materials.
+## and climb difficulty, weight, span), and each terrain's bearing, foundation maximum,
+## dig depth and strata bands, which name materials. Liquid bodies: test_terrain_liquids.gd.
 
 const TerrainDef = preload("res://content/definitions/terrain_def.gd")
 const TerrainLibraryDef = preload("res://content/definitions/terrain_library_def.gd")
@@ -36,8 +36,6 @@ func _fields() -> TerrainDef:
 	terrain.bearing = 4
 	terrain.foundation_max = 8
 	terrain.dig_depth = 32
-	terrain.water_table_min = 12
-	terrain.water_table_max = 24
 	terrain.strata = [_stratum("SOIL", 2, 4), _stratum("ROCK", 4, 8)]
 	return terrain
 
@@ -76,17 +74,8 @@ func test_foundations_cannot_lower_bearing() -> void:
 	assert_bool(_any(_library(terrain).validate(), "foundation_max 2 < bearing 4")).is_true()
 
 
-func test_a_water_table_is_both_bounds_or_neither() -> void:
+func test_a_terrain_without_strata_is_valid() -> void:
 	var terrain := _fields()
-	terrain.water_table_max = -1
-
-	assert_bool(_any(_library(terrain).validate(), "water table")).is_true()
-
-
-func test_a_terrain_without_water_or_strata_is_valid() -> void:
-	var terrain := _fields()
-	terrain.water_table_min = -1
-	terrain.water_table_max = -1
 	terrain.strata = []
 
 	assert_array(Array(_library(terrain).validate())).is_empty()

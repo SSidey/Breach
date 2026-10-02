@@ -18,10 +18,6 @@
       "bearing": 4,
       "foundation_max": 8,
       "dig_depth": 32,
-      "water_table": {
-        "min": 12,
-        "max": 24
-      },
       "strata": [
         {
           "material": "SOIL",
@@ -37,6 +33,15 @@
           "material": "ROCK",
           "min": 8,
           "max": 16
+        }
+      ],
+      "liquids": [
+        {
+          "liquid": "WATER",
+          "min": 12,
+          "max": 24,
+          "chance": 1,
+          "surface_chance": 0.02
         }
       ]
     },
@@ -58,10 +63,6 @@
       "bearing": 8,
       "foundation_max": 12,
       "dig_depth": 32,
-      "water_table": {
-        "min": 16,
-        "max": 32
-      },
       "strata": [
         {
           "material": "SOIL",
@@ -72,6 +73,22 @@
           "material": "ROCK",
           "min": 8,
           "max": 16
+        }
+      ],
+      "liquids": [
+        {
+          "liquid": "WATER",
+          "min": 16,
+          "max": 32,
+          "chance": 1,
+          "surface_chance": 0
+        },
+        {
+          "liquid": "LAVA",
+          "min": 32,
+          "max": 48,
+          "chance": 0.2,
+          "surface_chance": 0.02
         }
       ]
     },
@@ -93,7 +110,6 @@
       "bearing": 3,
       "foundation_max": 6,
       "dig_depth": 24,
-      "water_table": null,
       "strata": [
         {
           "material": "SOIL",
@@ -105,7 +121,8 @@
           "min": 8,
           "max": 16
         }
-      ]
+      ],
+      "liquids": []
     },
     {
       "id": "DESERT",
@@ -125,10 +142,6 @@
       "bearing": 3,
       "foundation_max": 6,
       "dig_depth": 32,
-      "water_table": {
-        "min": 20,
-        "max": 32
-      },
       "strata": [
         {
           "material": "SAND",
@@ -139,6 +152,15 @@
           "material": "ROCK",
           "min": 8,
           "max": 16
+        }
+      ],
+      "liquids": [
+        {
+          "liquid": "WATER",
+          "min": 20,
+          "max": 32,
+          "chance": 0.3,
+          "surface_chance": 0
         }
       ]
     },
@@ -160,10 +182,6 @@
       "bearing": 2,
       "foundation_max": 4,
       "dig_depth": 16,
-      "water_table": {
-        "min": 0,
-        "max": 2
-      },
       "strata": [
         {
           "material": "PEAT",
@@ -174,6 +192,15 @@
           "material": "CLAY",
           "min": 4,
           "max": 8
+        }
+      ],
+      "liquids": [
+        {
+          "liquid": "WATER",
+          "min": 0,
+          "max": 2,
+          "chance": 1,
+          "surface_chance": 0.5
         }
       ]
     },
@@ -195,8 +222,8 @@
       "bearing": 0,
       "foundation_max": 0,
       "dig_depth": 0,
-      "water_table": null,
-      "strata": []
+      "strata": [],
+      "liquids": []
     },
     {
       "id": "FOREST",
@@ -216,10 +243,6 @@
       "bearing": 4,
       "foundation_max": 8,
       "dig_depth": 32,
-      "water_table": {
-        "min": 10,
-        "max": 20
-      },
       "strata": [
         {
           "material": "SOIL",
@@ -235,6 +258,15 @@
           "material": "ROCK",
           "min": 8,
           "max": 16
+        }
+      ],
+      "liquids": [
+        {
+          "liquid": "WATER",
+          "min": 10,
+          "max": 20,
+          "chance": 1,
+          "surface_chance": 0.02
         }
       ]
     },
@@ -256,7 +288,6 @@
       "bearing": 8,
       "foundation_max": 12,
       "dig_depth": 48,
-      "water_table": null,
       "strata": [
         {
           "material": "SOIL",
@@ -267,6 +298,15 @@
           "material": "ROCK",
           "min": 16,
           "max": 32
+        }
+      ],
+      "liquids": [
+        {
+          "liquid": "LAVA",
+          "min": 24,
+          "max": 48,
+          "chance": 0.35,
+          "surface_chance": 0.05
         }
       ]
     },
@@ -288,8 +328,8 @@
       "bearing": 0,
       "foundation_max": 0,
       "dig_depth": 0,
-      "water_table": null,
-      "strata": []
+      "strata": [],
+      "liquids": []
     },
     {
       "id": "HILLY",
@@ -309,10 +349,6 @@
       "bearing": 5,
       "foundation_max": 10,
       "dig_depth": 32,
-      "water_table": {
-        "min": 14,
-        "max": 28
-      },
       "strata": [
         {
           "material": "SOIL",
@@ -329,6 +365,15 @@
           "min": 8,
           "max": 16
         }
+      ],
+      "liquids": [
+        {
+          "liquid": "WATER",
+          "min": 14,
+          "max": 28,
+          "chance": 1,
+          "surface_chance": 0.02
+        }
       ]
     }
   ],
@@ -341,7 +386,8 @@
       "climb_difficulty": 0,
       "weight": 1,
       "span": 1,
-      "loose": false
+      "traits": {},
+      "heat_transitions": []
     },
     {
       "id": "PEAT",
@@ -351,7 +397,13 @@
       "climb_difficulty": 1,
       "weight": 1,
       "span": 0,
-      "loose": false
+      "traits": {},
+      "heat_transitions": [
+        {
+          "above": 250,
+          "gains": "burning"
+        }
+      ]
     },
     {
       "id": "SAND",
@@ -361,7 +413,10 @@
       "climb_difficulty": 1,
       "weight": 1,
       "span": 0,
-      "loose": true
+      "traits": {
+        "loose": 1
+      },
+      "heat_transitions": []
     },
     {
       "id": "GRAVEL",
@@ -371,7 +426,10 @@
       "climb_difficulty": 1,
       "weight": 1,
       "span": 0,
-      "loose": true
+      "traits": {
+        "loose": 1
+      },
+      "heat_transitions": []
     },
     {
       "id": "CLAY",
@@ -381,7 +439,8 @@
       "climb_difficulty": 0,
       "weight": 1,
       "span": 2,
-      "loose": false
+      "traits": {},
+      "heat_transitions": []
     },
     {
       "id": "ROCK",
@@ -391,7 +450,13 @@
       "climb_difficulty": 0,
       "weight": 2,
       "span": 4,
-      "loose": false
+      "traits": {},
+      "heat_transitions": [
+        {
+          "above": 1100,
+          "becomes": "LAVA"
+        }
+      ]
     },
     {
       "id": "ORE",
@@ -401,7 +466,49 @@
       "climb_difficulty": 0,
       "weight": 2,
       "span": 4,
-      "loose": false
+      "traits": {},
+      "heat_transitions": []
+    },
+    {
+      "id": "TIMBER",
+      "label": "Timber",
+      "color": "#8b6a3e",
+      "dig_difficulty": 1,
+      "climb_difficulty": 0,
+      "weight": 1,
+      "span": 3,
+      "traits": {},
+      "heat_transitions": [
+        {
+          "above": 300,
+          "gains": "burning"
+        }
+      ]
+    }
+  ],
+  "liquids": [
+    {
+      "id": "WATER",
+      "label": "Water",
+      "color": "#3a6ea5",
+      "temperature": 15,
+      "traits": {},
+      "heat_transitions": []
+    },
+    {
+      "id": "LAVA",
+      "label": "Lava",
+      "color": "#d4521c",
+      "temperature": 1200,
+      "traits": {
+        "glows": 1
+      },
+      "heat_transitions": [
+        {
+          "below": 700,
+          "becomes": "ROCK"
+        }
+      ]
     }
   ],
   "features": [
@@ -434,6 +541,12 @@
       "label": "Quarry face",
       "glyph": "▣",
       "stub_effect": "exposed stone"
+    },
+    {
+      "id": "LAVA_VENT",
+      "label": "Lava vent",
+      "glyph": "♨",
+      "stub_effect": "lava reaches the surface here (Decision 62)"
     }
   ],
   "road_move_multiplier": 0.5

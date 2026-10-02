@@ -142,11 +142,21 @@ static func tile_details(map_def: MapDef, cell: Vector2i) -> String:
 
 
 static func _ground_lines(terrain, library) -> PackedStringArray:
-	var water := (
-		"water %d-%d" % [terrain.water_table_min, terrain.water_table_max]
-		if terrain.water_table_min >= 0
-		else "no water table"
-	)
+	var bodies := PackedStringArray()
+	for body in terrain.liquids:
+		var liquid = library.liquid(body.liquid_id)
+		var odds := "" if body.chance >= 1.0 else " (%d%%)" % roundi(body.chance * 100)
+		bodies.append(
+			(
+				"%s %d-%d%s"
+				% [
+					liquid.display_name if liquid else body.liquid_id,
+					body.min_cells,
+					body.max_cells,
+					odds
+				]
+			)
+		)
 	var bands := PackedStringArray()
 	for stratum in terrain.strata:
 		var material = library.material(stratum.material_id)
@@ -154,10 +164,11 @@ static func _ground_lines(terrain, library) -> PackedStringArray:
 	return PackedStringArray(
 		[
 			(
-				"ground: bearing %d (foundations %d) · dig %d · %s"
-				% [terrain.bearing, terrain.foundation_max, terrain.dig_depth, water]
+				"ground: bearing %d (foundations %d) · dig %d"
+				% [terrain.bearing, terrain.foundation_max, terrain.dig_depth]
 			),
-			"strata: %s" % ", ".join(bands)
+			"strata: %s" % ", ".join(bands),
+			"liquids: %s" % (", ".join(bodies) if not bodies.is_empty() else "none")
 		]
 	)
 
