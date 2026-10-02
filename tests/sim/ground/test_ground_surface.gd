@@ -39,38 +39,45 @@ func test_flat_ground_has_full_surface_cells_just_below_its_height() -> void:
 	assert_float(ground.surface_height(Vector2i(20, 5))).is_equal(4.0)
 
 
-func test_a_slope_runs_through_partial_cells() -> void:
-	var ground := _surface([0, 4])  # a quarter of a cell per cell, between the tile centres
+func test_a_tile_is_64_cells_across() -> void:
+	var ground := _surface([0, 64], 128)
 
-	assert_int(ground.surface_level(Vector2i(8, 0))).is_equal(0)
-	assert_array(Array(ground.surface_shape(Vector2i(8, 0)))).is_equal([0, 1, 1, 0])
-	assert_float(ground.surface_height(Vector2i(8, 0))).is_equal(0.125)
+	assert_int(MapLayoutDef.CELLS_PER_TILE).is_equal(64)
+	assert_float(ground.surface_height(Vector2i(96, 0))).is_equal(64.0)  # tile 1's centre
+
+
+func test_a_slope_runs_through_partial_cells() -> void:
+	var ground := _surface([0, 16])  # a quarter of a cell per cell, between the tile centres
+
+	assert_int(ground.surface_level(Vector2i(32, 0))).is_equal(0)
+	assert_array(Array(ground.surface_shape(Vector2i(32, 0)))).is_equal([0, 1, 1, 0])
+	assert_float(ground.surface_height(Vector2i(32, 0))).is_equal(0.125)
 
 
 func test_digging_a_surface_cell_removes_only_what_is_left_of_it() -> void:
-	var ground := _surface([0, 4])
+	var ground := _surface([0, 16])
 
-	assert_float(ground.dig_fraction(Vector2i(8, 0))).is_equal(0.125)  # an eighth of a cell is left
-	assert_float(_surface([4, 4]).dig_fraction(Vector2i(8, 0))).is_equal(1.0)
+	assert_float(ground.dig_fraction(Vector2i(32, 0))).is_equal(0.125)  # an eighth of a cell is left
+	assert_float(_surface([4, 4]).dig_fraction(Vector2i(32, 0))).is_equal(1.0)
 
 
 func test_a_steep_rise_is_a_cliff_and_a_gentle_one_is_not() -> void:
-	var steep := _surface([0, 48])  # three cells per cell
-	var gentle := _surface([0, 16])  # one cell per cell
+	var steep := _surface([0, 192], 256)  # three cells per cell
+	var gentle := _surface([0, 64], 128)  # one cell per cell
 
-	assert_bool(steep.is_cliff(Vector2i(10, 0), Vector2i(11, 0))).is_true()
-	assert_bool(gentle.is_cliff(Vector2i(10, 0), Vector2i(11, 0))).is_false()
+	assert_bool(steep.is_cliff(Vector2i(40, 0), Vector2i(41, 0))).is_true()
+	assert_bool(gentle.is_cliff(Vector2i(40, 0), Vector2i(41, 0))).is_false()
 
 
 func test_the_surface_is_level_beyond_the_outermost_tile_centres() -> void:
-	var ground := _surface([0, 16])
+	var ground := _surface([0, 64], 128)
 
 	assert_float(ground.surface_height(Vector2i(2, 0))).is_equal(0.0)
-	assert_float(ground.surface_height(Vector2i(29, 0))).is_equal(16.0)
+	assert_float(ground.surface_height(Vector2i(116, 0))).is_equal(64.0)
 
 
 func test_ground_at_the_ceiling_is_capped() -> void:
 	var ground := _surface([8, 80], 64)
 
-	assert_bool(ground.is_capped(Vector2i(30, 0))).is_true()
+	assert_bool(ground.is_capped(Vector2i(120, 0))).is_true()
 	assert_bool(ground.is_capped(Vector2i(1, 0))).is_false()

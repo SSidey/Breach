@@ -42,8 +42,8 @@ func _channel(depth: int, liquid: String = "", liquid_depth: int = 0) -> Channel
 
 func _heights(ground: GroundSurface) -> Array:
 	var out := []
-	for x in range(16, 32):
-		for y in range(16):
+	for x in range(64, 128, 2):
+		for y in range(0, 64, 2):
 			out.append(ground.surface_height(Vector2i(x, y)))
 	return out
 
@@ -51,7 +51,7 @@ func _heights(ground: GroundSurface) -> Array:
 func test_no_relief_leaves_the_tile_elevation() -> void:
 	var ground := GroundSurface.new(_layout(0, 0))
 
-	assert_float(ground.surface_height(Vector2i(20, 5))).is_equal(8.0)
+	assert_float(ground.surface_height(Vector2i(80, 20))).is_equal(8.0)
 
 
 func test_relief_makes_a_hilly_tile_hilly_within() -> void:
@@ -77,8 +77,8 @@ func test_a_channel_carves_its_depth_along_its_path() -> void:
 	layout.channels = [_channel(3)]
 	var ground := GroundSurface.new(layout)
 
-	assert_float(ground.surface_height(Vector2i(24, 8))).is_equal(5.0)  # on the line
-	assert_float(ground.surface_height(Vector2i(24, 11))).is_equal(8.0)  # beyond its width
+	assert_float(ground.surface_height(Vector2i(96, 32))).is_equal(5.0)  # on the line
+	assert_float(ground.surface_height(Vector2i(96, 35))).is_equal(8.0)  # beyond its width
 
 
 func test_a_channel_holds_its_liquid_to_a_level() -> void:
@@ -86,12 +86,12 @@ func test_a_channel_holds_its_liquid_to_a_level() -> void:
 	layout.channels = [_channel(3, "WATER", 2)]
 	var ground := GroundSurface.new(layout)
 
-	assert_dict(ground.liquid_at(Vector2i(24, 8))).is_equal({"material": "WATER", "level": 7.0})
-	assert_dict(ground.liquid_at(Vector2i(24, 12))).is_empty()
+	assert_dict(ground.liquid_at(Vector2i(96, 32))).is_equal({"material": "WATER", "level": 7.0})
+	assert_dict(ground.liquid_at(Vector2i(96, 36))).is_empty()
 
 
 func test_a_negative_depth_raises_a_bank() -> void:
 	var layout := _layout(0, 0)
 	layout.channels = [_channel(-2)]
 
-	assert_float(GroundSurface.new(layout).surface_height(Vector2i(24, 8))).is_equal(10.0)
+	assert_float(GroundSurface.new(layout).surface_height(Vector2i(96, 32))).is_equal(10.0)
