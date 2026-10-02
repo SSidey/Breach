@@ -3348,3 +3348,62 @@ temp exceeding X and has the burn trait, whereas rock has a much higher X and me
 - The spec's vocabulary (Decision 54's list) gains **trait**, **effect** and **heat
   transition**.
 
+### Decision 64 — Traits are rated and meet in ability-and-demand pairs; liquids are materials that flow
+
+**Supersedes:** Decisions 62 and 63, in part (a separate liquid library; dig and climb difficulty as plain fields)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** From the user, after Decision 63:
+- "We will need to assign differing values to traits at times, e.g. climber 2 or
+  climb_difficulty 3." Their example: lava could glow 1 or glow 2 for different
+  brightness; a creature with light_blind 3 is blinded when the light is above a
+  threshold; darksight 0 can't see in the dark, darksight 1 sees in darkness of level 1.
+- "Could liquids be a material type instead of explicitly segregated? Trait 'flows' or a
+  flowrate property."
+
+The rules:
+- **Every trait has a level** (default 1). A trait's level means nothing alone. It is
+  compared in a **pair**, an ability against a demand, and the rule says which way the
+  comparison runs:
+
+  | Ability (on a unit or item) | Demand (on what it meets) | Rule |
+  |---|---|---|
+  | climber N | climb_difficulty N | climbs if ability ≥ demand (one short: slow; Decision 54) |
+  | burrower N | dig_difficulty N | digs if ability ≥ demand (one short halves the rate) |
+  | darksight N | darkness N | sees if ability ≥ darkness |
+  | light_blind N | light N | blinded if light ≥ N |
+
+  - Light and darkness are levels at a place: the strongest **glows N** in reach, or the
+    time of day and weather (Decision 34). Darkness is the shortfall below full light.
+  - New pairs are data, added to the pair table as traits arrive. That table becomes a
+    trait library once enough traits exist (Decision 63).
+- **Dig and climb difficulty are traits** on materials (`dig_difficulty 3`,
+  `climb_difficulty 1`), not separate fields, so they follow the same rule.
+- **Physical properties stay properties:** weight, span and temperature are quantities
+  that the simulation computes with (load, support, heat), not tags to match.
+- **Liquids are materials that flow.** There is one material library. A material with
+  **flows N** is a liquid, and N is its flow rate: water 3, lava 1, which floods more
+  slowly. Melting and hardening are just one material becoming another (rock ↔ lava).
+  Liquid bodies under terrains name a flowing material.
+- **Pillar check (Decision 58):** pairs keep every interaction legible as "ability N
+  against demand M". Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Unrated traits (flags) | The user needs levels: climber 2, glows 2, darksight 1. |
+| A separate liquid library (Decision 62) | Two libraries for one kind of thing; melting would cross between them. |
+| Difficulties as their own fields | A second mechanism beside traits; pairs express them. |
+
+**Consequences:**
+- `MaterialDef` loses `dig_difficulty` and `climb_difficulty` (now traits) and gains
+  `temperature`. `LiquidDef` and the liquid library go; a liquid body names a material,
+  which must flow.
+- Saved libraries migrate: difficulties move into traits, and liquids become materials
+  with `flows`.
+- The designer's Liquids list merges into Materials, and flowing materials are marked in
+  the list.
+- The trait-pair table above is the first entry of the coming trait library.
+
