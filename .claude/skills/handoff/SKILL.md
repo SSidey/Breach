@@ -16,9 +16,9 @@ cheap enough to do every time.
 Do all of these, in order, whenever you stop with work unfinished, or when the user says
 they're leaving.
 
-1. **Commit everything on your branch,** finished or not. Unfinished work is a
-   `wip:`-free commit with the type that matches the diff (per
-   `AI_First_Development_Kit/templates/commit-message.md`), and its body says it is
+1. **Commit everything on your branch,** finished or not. There is no `wip:` type:
+   unfinished work takes the type that matches its diff (per
+   `AI_First_Development_Kit/templates/commit-message.md`), and its body says what is
    incomplete. Never leave work only in the working tree or a stash.
 2. **Push the branch:** `git push -u origin <branch>`.
 3. **Make sure a pull request exists.** If the work isn't ready for review, open it as a
