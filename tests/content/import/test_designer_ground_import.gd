@@ -15,15 +15,13 @@ func _library() -> Dictionary:
 				"id": "ROCK",
 				"label": "Rock",
 				"color": "#6f6c68",
-				"dig_difficulty": 3,
-				"climb_difficulty": 0,
 				"weight": 2,
 				"span": 4,
-				"traits": {}
+				"traits": {"dig_difficulty": 3}
 			},
-			{"id": "SAND", "label": "Sand", "dig_difficulty": 1, "span": 0, "loose": true}
+			{"id": "SAND", "label": "Sand", "dig_difficulty": 1, "span": 0, "loose": true},
+			{"id": "WATER", "label": "Water", "traits": {"flows": 3}}
 		],
-		"liquids": [{"id": "WATER", "label": "Water"}],
 		"terrains":
 		[
 			{
@@ -32,7 +30,7 @@ func _library() -> Dictionary:
 				"bearing": 3,
 				"foundation_max": 6,
 				"dig_depth": 32,
-				"liquids": [{"liquid": "WATER", "min": 20, "max": 32, "chance": 0.3}],
+				"liquids": [{"material": "WATER", "min": 20, "max": 32, "chance": 0.3}],
 				"strata":
 				[
 					{"material": "SAND", "min": 4, "max": 10},
@@ -49,10 +47,11 @@ func test_materials_import_with_their_properties() -> void:
 	var rock = library.material("ROCK")
 
 	assert_str(rock.display_name).is_equal("Rock")
-	assert_int(rock.dig_difficulty).is_equal(3)
+	assert_int(rock.trait_level("dig_difficulty")).is_equal(3)
 	assert_int(rock.weight).is_equal(2)
 	assert_int(rock.span).is_equal(4)
-	assert_int(library.material("SAND").traits.get("loose", 0)).is_equal(1)  # the old flag
+	assert_int(library.material("SAND").trait_level("loose")).is_equal(1)  # the old flag
+	assert_int(library.material("SAND").trait_level("dig_difficulty")).is_equal(1)  # old field
 
 
 func test_a_terrains_ground_imports() -> void:
@@ -61,7 +60,7 @@ func test_a_terrains_ground_imports() -> void:
 	assert_int(desert.bearing).is_equal(3)
 	assert_int(desert.foundation_max).is_equal(6)
 	assert_int(desert.dig_depth).is_equal(32)
-	assert_str(desert.liquids[0].liquid_id).is_equal("WATER")
+	assert_str(desert.liquids[0].material_id).is_equal("WATER")
 	assert_int(desert.liquids[0].max_cells).is_equal(32)
 	assert_float(desert.liquids[0].chance).is_equal(0.3)
 	assert_array(desert.strata.map(func(s): return s.material_id)).is_equal(["SAND", "ROCK"])
@@ -99,12 +98,12 @@ func test_a_water_table_saved_before_decision_63_becomes_a_water_body() -> void:
 
 	var fields = DesignerLibraryImporter.import_library(legacy).library.terrain("FIELDS")
 
-	assert_str(fields.liquids[0].liquid_id).is_equal("WATER")
+	assert_str(fields.liquids[0].material_id).is_equal("WATER")
 	assert_int(fields.liquids[0].min_cells).is_equal(12)
 	assert_float(fields.liquids[0].chance).is_equal(1.0)
 
 
-func test_liquids_import_with_temperature_traits_and_transitions() -> void:
+func test_liquids_saved_before_decision_64_become_flowing_materials() -> void:
 	var library_data := {
 		"liquids":
 		[
@@ -114,23 +113,31 @@ func test_liquids_import_with_temperature_traits_and_transitions() -> void:
 				"temperature": 1200,
 				"traits": {"glows": 1},
 				"heat_transitions": [{"below": 700, "becomes": "ROCK"}]
-			}
+			},
+			{"id": "WATER", "label": "Water"}
 		],
 		"materials":
 		[
 			{"id": "TIMBER", "heat_transitions": [{"above": 300, "gains": "burning"}]},
 			{"id": "ROCK"}
 		],
-		"terrains": [{"id": "FIELDS", "can_be_base": true}]
+		"terrains":
+		[
+			{
+				"id": "MOUNTAIN",
+				"can_be_base": true,
+				"liquids": [{"liquid": "LAVA", "min": 24, "max": 48, "chance": 0.35}]
+			}
+		]
 	}
 
 	var library := DesignerLibraryImporter.import_library(library_data).library
-	var lava = library.liquid("LAVA")
+	var lava = library.material("LAVA")
 
 	assert_int(lava.temperature).is_equal(1200)
-	assert_int(lava.traits["glows"]).is_equal(1)
+	assert_int(lava.trait_level("glows")).is_equal(1)
+	assert_int(lava.trait_level("flows")).is_equal(1)  # lava flows slowly
+	assert_int(library.material("WATER").trait_level("flows")).is_equal(3)
 	assert_str(lava.heat_transitions[0].describe()).is_equal("below 700: becomes ROCK")
-	assert_str(library.material("TIMBER").heat_transitions[0].describe()).is_equal(
-		"above 300: gains burning"
-	)
+	assert_str(library.terrain("MOUNTAIN").liquids[0].material_id).is_equal("LAVA")
 	assert_array(Array(library.validate())).is_empty()

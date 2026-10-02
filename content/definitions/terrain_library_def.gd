@@ -8,14 +8,11 @@ extends Resource
 const TerrainDef = preload("res://content/definitions/terrain_def.gd")
 const TerrainFeatureDef = preload("res://content/definitions/terrain_feature_def.gd")
 const MaterialDef = preload("res://content/definitions/material_def.gd")
-const LiquidDef = preload("res://content/definitions/liquid_def.gd")
 
 @export var terrains: Array[TerrainDef] = []
 @export var features: Array[TerrainFeatureDef] = []
 ## What strata (and later walls) are made of (Decisions 54, 57).
 @export var materials: Array[MaterialDef] = []
-## Water, lava (Decision 62).
-@export var liquids: Array[LiquidDef] = []
 ## Multiplies a terrain's move_cost on a cell with a road.
 @export var road_move_multiplier: float = 0.5
 ## sha256 of the terrain.json this was imported from; the designer's server compares it
@@ -37,13 +34,6 @@ func material(material_id: String) -> MaterialDef:
 	return null
 
 
-func liquid(liquid_id: String) -> LiquidDef:
-	for entry in liquids:
-		if entry.id == liquid_id:
-			return entry
-	return null
-
-
 func feature(feature_id: String) -> TerrainFeatureDef:
 	for entry in features:
 		if entry.id == feature_id:
@@ -56,8 +46,7 @@ func validate() -> PackedStringArray:
 	errors.append_array(_validate_ids(terrains, "terrain"))
 	errors.append_array(_validate_ids(features, "feature"))
 	errors.append_array(_validate_ids(materials, "material"))
-	errors.append_array(_validate_ids(liquids, "liquid"))
-	for entry in _substances():
+	for entry in materials:
 		errors.append_array(_validate_transitions(entry))
 	if not terrains.any(func(t): return t.can_be_base):
 		errors.append("at least one terrain must have can_be_base, so a map has a base terrain")
@@ -78,12 +67,15 @@ func _validate_ground(entry: TerrainDef) -> PackedStringArray:
 	if entry.foundation_max < entry.bearing:
 		errors.append(at + "foundation_max %d < bearing %d" % [entry.foundation_max, entry.bearing])
 	for body in entry.liquids:
-		if liquid(body.liquid_id) == null:
-			errors.append(at + "body of unknown liquid '%s'" % body.liquid_id)
+		var liquid := material(body.material_id)
+		if liquid == null:
+			errors.append(at + "liquid body of unknown material '%s'" % body.material_id)
+		elif not liquid.is_liquid():
+			errors.append(at + "liquid body of '%s' doesn't flow" % body.material_id)
 		if body.min_cells < 0 or body.min_cells > body.max_cells:
-			errors.append(at + "liquid '%s': depth min > max" % body.liquid_id)
+			errors.append(at + "liquid '%s': depth min > max" % body.material_id)
 		if not (_is_chance(body.chance) and _is_chance(body.surface_chance)):
-			errors.append(at + "liquid '%s': chance must be 0 to 1" % body.liquid_id)
+			errors.append(at + "liquid '%s': chance must be 0 to 1" % body.material_id)
 	for stratum in entry.strata:
 		if material(stratum.material_id) == null:
 			errors.append(at + "stratum of unknown material '%s'" % stratum.material_id)
@@ -106,19 +98,9 @@ func _validate_transitions(entry) -> PackedStringArray:
 		var at := "'%s' %s" % [entry.id, transition.describe()]
 		if transition.becomes.is_empty() and transition.gains_trait.is_empty():
 			errors.append(at + ": becomes nothing and gains no trait")
-		elif (
-			transition.becomes and not (material(transition.becomes) or liquid(transition.becomes))
-		):
+		elif transition.becomes and material(transition.becomes) == null:
 			errors.append(at + ": becomes unknown '%s'" % transition.becomes)
 	return errors
-
-
-## Materials and liquids together: what can change into what (Decision 63).
-func _substances() -> Array:
-	var out := []
-	out.append_array(materials)
-	out.append_array(liquids)
-	return out
 
 
 static func _is_chance(value: float) -> bool:

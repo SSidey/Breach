@@ -1,193 +1,215 @@
 [gd_resource type="Resource" script_class="TerrainLibraryDef" format=3]
 
-[ext_resource type="Script" path="res://content/definitions/terrain_feature_def.gd" id="1_8e4pg"]
-[ext_resource type="Script" path="res://content/definitions/liquid_def.gd" id="2_ucpav"]
-[ext_resource type="Script" path="res://content/definitions/heat_transition_def.gd" id="3_jn1b3"]
-[ext_resource type="Script" path="res://content/definitions/material_def.gd" id="4_d0nqg"]
-[ext_resource type="Script" path="res://content/definitions/terrain_library_def.gd" id="5_40rab"]
-[ext_resource type="Script" path="res://content/definitions/terrain_def.gd" id="6_cmqty"]
-[ext_resource type="Script" path="res://content/definitions/liquid_body_def.gd" id="7_tct2l"]
-[ext_resource type="Script" path="res://content/definitions/stratum_def.gd" id="8_cj27s"]
+[ext_resource type="Script" path="res://content/definitions/terrain_feature_def.gd" id="1_2nuu6"]
+[ext_resource type="Script" path="res://content/definitions/material_def.gd" id="2_8e4pg"]
+[ext_resource type="Script" path="res://content/definitions/heat_transition_def.gd" id="3_ucpav"]
+[ext_resource type="Script" path="res://content/definitions/terrain_library_def.gd" id="4_jn1b3"]
+[ext_resource type="Script" path="res://content/definitions/terrain_def.gd" id="5_d0nqg"]
+[ext_resource type="Script" path="res://content/definitions/liquid_body_def.gd" id="6_40rab"]
+[ext_resource type="Script" path="res://content/definitions/stratum_def.gd" id="7_cmqty"]
 
 [sub_resource type="Resource" id="Feature_ORE_VEIN"]
-script = ExtResource("1_8e4pg")
+script = ExtResource("1_2nuu6")
 id = "ORE_VEIN"
 display_name = "Ore vein"
 glyph = "◆"
 effect_notes = "metal/stone deposit - a mine could be built here"
 
 [sub_resource type="Resource" id="Feature_ARABLE"]
-script = ExtResource("1_8e4pg")
+script = ExtResource("1_2nuu6")
 id = "ARABLE"
 display_name = "Arable land"
 glyph = "≡"
 effect_notes = "supports farming"
 
 [sub_resource type="Resource" id="Feature_SPRING"]
-script = ExtResource("1_8e4pg")
+script = ExtResource("1_2nuu6")
 id = "SPRING"
 display_name = "Spring"
 glyph = "○"
 effect_notes = "fresh water"
 
 [sub_resource type="Resource" id="Feature_TIMBER"]
-script = ExtResource("1_8e4pg")
+script = ExtResource("1_2nuu6")
 id = "TIMBER"
 display_name = "Timber stand"
 glyph = "♠"
 effect_notes = "harvestable wood"
 
 [sub_resource type="Resource" id="Feature_QUARRY"]
-script = ExtResource("1_8e4pg")
+script = ExtResource("1_2nuu6")
 id = "QUARRY"
 display_name = "Quarry face"
 glyph = "▣"
 effect_notes = "exposed stone"
 
 [sub_resource type="Resource" id="Feature_LAVA_VENT"]
-script = ExtResource("1_8e4pg")
+script = ExtResource("1_2nuu6")
 id = "LAVA_VENT"
 display_name = "Lava vent"
 glyph = "♨"
 effect_notes = "lava reaches the surface here (Decision 62)"
 
-[sub_resource type="Resource" id="Liquid_WATER"]
-script = ExtResource("2_ucpav")
-id = "WATER"
-display_name = "Water"
-color = Color(0.22745098, 0.43137255, 0.64705884, 1)
-
-[sub_resource type="Resource" id="Heat_LAVA_0"]
-script = ExtResource("3_jn1b3")
-threshold = 700
-rising = false
-becomes = "ROCK"
-
-[sub_resource type="Resource" id="Liquid_LAVA"]
-script = ExtResource("2_ucpav")
-id = "LAVA"
-display_name = "Lava"
-color = Color(0.83137256, 0.32156864, 0.10980392, 1)
-temperature = 1200
-traits = {
-"glows": 1
-}
-heat_transitions = Array[ExtResource("3_jn1b3")]([SubResource("Heat_LAVA_0")])
-
 [sub_resource type="Resource" id="Material_SOIL"]
-script = ExtResource("4_d0nqg")
+script = ExtResource("2_8e4pg")
 id = "SOIL"
 display_name = "Soil"
 color = Color(0.41960785, 0.32941177, 0.2509804, 1)
+traits = {
+"dig_difficulty": 1
+}
 
 [sub_resource type="Resource" id="Heat_PEAT_0"]
-script = ExtResource("3_jn1b3")
+script = ExtResource("3_ucpav")
 threshold = 250
 gains_trait = "burning"
 
 [sub_resource type="Resource" id="Material_PEAT"]
-script = ExtResource("4_d0nqg")
+script = ExtResource("2_8e4pg")
 id = "PEAT"
 display_name = "Peat"
 color = Color(0.2901961, 0.23921569, 0.17254902, 1)
-climb_difficulty = 1
 span = 0
-heat_transitions = Array[ExtResource("3_jn1b3")]([SubResource("Heat_PEAT_0")])
+traits = {
+"climb_difficulty": 1,
+"dig_difficulty": 1
+}
+heat_transitions = Array[ExtResource("3_ucpav")]([SubResource("Heat_PEAT_0")])
 
 [sub_resource type="Resource" id="Material_SAND"]
-script = ExtResource("4_d0nqg")
+script = ExtResource("2_8e4pg")
 id = "SAND"
 display_name = "Sand"
 color = Color(0.8039216, 0.69803923, 0.47843137, 1)
-climb_difficulty = 1
 span = 0
 traits = {
+"climb_difficulty": 1,
+"dig_difficulty": 1,
 "loose": 1
 }
 
 [sub_resource type="Resource" id="Material_GRAVEL"]
-script = ExtResource("4_d0nqg")
+script = ExtResource("2_8e4pg")
 id = "GRAVEL"
 display_name = "Gravel"
 color = Color(0.5529412, 0.5294118, 0.4862745, 1)
-climb_difficulty = 1
 span = 0
 traits = {
+"climb_difficulty": 1,
+"dig_difficulty": 1,
 "loose": 1
 }
 
 [sub_resource type="Resource" id="Material_CLAY"]
-script = ExtResource("4_d0nqg")
+script = ExtResource("2_8e4pg")
 id = "CLAY"
 display_name = "Clay"
 color = Color(0.5411765, 0.41568628, 0.2901961, 1)
-dig_difficulty = 2
 span = 2
+traits = {
+"dig_difficulty": 2
+}
 
 [sub_resource type="Resource" id="Heat_ROCK_0"]
-script = ExtResource("3_jn1b3")
+script = ExtResource("3_ucpav")
 threshold = 1100
 becomes = "LAVA"
 
 [sub_resource type="Resource" id="Material_ROCK"]
-script = ExtResource("4_d0nqg")
+script = ExtResource("2_8e4pg")
 id = "ROCK"
 display_name = "Rock"
 color = Color(0.43529412, 0.42352942, 0.40784314, 1)
-dig_difficulty = 3
 weight = 2
 span = 4
-heat_transitions = Array[ExtResource("3_jn1b3")]([SubResource("Heat_ROCK_0")])
+traits = {
+"dig_difficulty": 3
+}
+heat_transitions = Array[ExtResource("3_ucpav")]([SubResource("Heat_ROCK_0")])
 
 [sub_resource type="Resource" id="Material_ORE"]
-script = ExtResource("4_d0nqg")
+script = ExtResource("2_8e4pg")
 id = "ORE"
 display_name = "Ore"
 color = Color(0.48235294, 0.36862746, 0.34117648, 1)
-dig_difficulty = 4
 weight = 2
 span = 4
+traits = {
+"dig_difficulty": 4
+}
 
 [sub_resource type="Resource" id="Heat_TIMBER_0"]
-script = ExtResource("3_jn1b3")
+script = ExtResource("3_ucpav")
 threshold = 300
 gains_trait = "burning"
 
 [sub_resource type="Resource" id="Material_TIMBER"]
-script = ExtResource("4_d0nqg")
+script = ExtResource("2_8e4pg")
 id = "TIMBER"
 display_name = "Timber"
 color = Color(0.54509807, 0.41568628, 0.24313726, 1)
 span = 3
-heat_transitions = Array[ExtResource("3_jn1b3")]([SubResource("Heat_TIMBER_0")])
+traits = {
+"dig_difficulty": 1
+}
+heat_transitions = Array[ExtResource("3_ucpav")]([SubResource("Heat_TIMBER_0")])
+
+[sub_resource type="Resource" id="Material_WATER"]
+script = ExtResource("2_8e4pg")
+id = "WATER"
+display_name = "Water"
+color = Color(0.22745098, 0.43137255, 0.64705884, 1)
+span = 0
+traits = {
+"flows": 3
+}
+
+[sub_resource type="Resource" id="Heat_LAVA_0"]
+script = ExtResource("3_ucpav")
+threshold = 700
+rising = false
+becomes = "ROCK"
+
+[sub_resource type="Resource" id="Material_LAVA"]
+script = ExtResource("2_8e4pg")
+id = "LAVA"
+display_name = "Lava"
+color = Color(0.83137256, 0.32156864, 0.10980392, 1)
+span = 0
+temperature = 1200
+traits = {
+"flows": 1,
+"glows": 1
+}
+heat_transitions = Array[ExtResource("3_ucpav")]([SubResource("Heat_LAVA_0")])
 
 [sub_resource type="Resource" id="Liquid_FIELDS_0"]
-script = ExtResource("7_tct2l")
-liquid_id = "WATER"
+script = ExtResource("6_40rab")
+material_id = "WATER"
 min_cells = 12
 max_cells = 24
 surface_chance = 0.02
 
 [sub_resource type="Resource" id="Stratum_FIELDS_0"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "SOIL"
 min_cells = 2
 max_cells = 4
 
 [sub_resource type="Resource" id="Stratum_FIELDS_1"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "CLAY"
 min_cells = 4
 max_cells = 8
 
 [sub_resource type="Resource" id="Stratum_FIELDS_2"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "ROCK"
 min_cells = 8
 max_cells = 16
 
 [sub_resource type="Resource" id="Terrain_FIELDS"]
-script = ExtResource("6_cmqty")
+script = ExtResource("5_d0nqg")
 id = "FIELDS"
 display_name = "Fields"
 glyph = "\""
@@ -196,8 +218,8 @@ bearing = 4
 default_elevation = 2
 foundation_max = 8
 dig_depth = 32
-liquids = Array[ExtResource("7_tct2l")]([SubResource("Liquid_FIELDS_0")])
-strata = Array[ExtResource("8_cj27s")]([SubResource("Stratum_FIELDS_0"), SubResource("Stratum_FIELDS_1"), SubResource("Stratum_FIELDS_2")])
+liquids = Array[ExtResource("6_40rab")]([SubResource("Liquid_FIELDS_0")])
+strata = Array[ExtResource("7_cmqty")]([SubResource("Stratum_FIELDS_0"), SubResource("Stratum_FIELDS_1"), SubResource("Stratum_FIELDS_2")])
 default_stability = 4
 default_max_height = 2
 default_max_width = 3
@@ -205,32 +227,32 @@ default_max_length = 3
 default_max_depth = 1
 
 [sub_resource type="Resource" id="Liquid_ROCKY_0"]
-script = ExtResource("7_tct2l")
-liquid_id = "WATER"
+script = ExtResource("6_40rab")
+material_id = "WATER"
 min_cells = 16
 max_cells = 32
 
 [sub_resource type="Resource" id="Liquid_ROCKY_1"]
-script = ExtResource("7_tct2l")
-liquid_id = "LAVA"
+script = ExtResource("6_40rab")
+material_id = "LAVA"
 min_cells = 32
 max_cells = 48
 chance = 0.2
 surface_chance = 0.02
 
 [sub_resource type="Resource" id="Stratum_ROCKY_0"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "SOIL"
 min_cells = 0
 
 [sub_resource type="Resource" id="Stratum_ROCKY_1"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "ROCK"
 min_cells = 8
 max_cells = 16
 
 [sub_resource type="Resource" id="Terrain_ROCKY"]
-script = ExtResource("6_cmqty")
+script = ExtResource("5_d0nqg")
 id = "ROCKY"
 display_name = "Rocky"
 glyph = "◦"
@@ -240,8 +262,8 @@ bearing = 8
 default_elevation = 6
 foundation_max = 12
 dig_depth = 32
-liquids = Array[ExtResource("7_tct2l")]([SubResource("Liquid_ROCKY_0"), SubResource("Liquid_ROCKY_1")])
-strata = Array[ExtResource("8_cj27s")]([SubResource("Stratum_ROCKY_0"), SubResource("Stratum_ROCKY_1")])
+liquids = Array[ExtResource("6_40rab")]([SubResource("Liquid_ROCKY_0"), SubResource("Liquid_ROCKY_1")])
+strata = Array[ExtResource("7_cmqty")]([SubResource("Stratum_ROCKY_0"), SubResource("Stratum_ROCKY_1")])
 default_stability = 6
 default_max_height = 3
 default_max_width = 2
@@ -249,18 +271,18 @@ default_max_length = 2
 default_max_depth = 2
 
 [sub_resource type="Resource" id="Stratum_SNOW_0"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "SOIL"
 max_cells = 2
 
 [sub_resource type="Resource" id="Stratum_SNOW_1"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "ROCK"
 min_cells = 8
 max_cells = 16
 
 [sub_resource type="Resource" id="Terrain_SNOW"]
-script = ExtResource("6_cmqty")
+script = ExtResource("5_d0nqg")
 id = "SNOW"
 display_name = "Snow"
 glyph = "*"
@@ -270,33 +292,33 @@ bearing = 3
 default_elevation = 8
 foundation_max = 6
 dig_depth = 24
-strata = Array[ExtResource("8_cj27s")]([SubResource("Stratum_SNOW_0"), SubResource("Stratum_SNOW_1")])
+strata = Array[ExtResource("7_cmqty")]([SubResource("Stratum_SNOW_0"), SubResource("Stratum_SNOW_1")])
 default_stability = 2
 default_max_height = 1
 default_max_width = 2
 default_max_length = 2
 
 [sub_resource type="Resource" id="Liquid_DESERT_0"]
-script = ExtResource("7_tct2l")
-liquid_id = "WATER"
+script = ExtResource("6_40rab")
+material_id = "WATER"
 min_cells = 20
 max_cells = 32
 chance = 0.3
 
 [sub_resource type="Resource" id="Stratum_DESERT_0"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "SAND"
 min_cells = 4
 max_cells = 10
 
 [sub_resource type="Resource" id="Stratum_DESERT_1"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "ROCK"
 min_cells = 8
 max_cells = 16
 
 [sub_resource type="Resource" id="Terrain_DESERT"]
-script = ExtResource("6_cmqty")
+script = ExtResource("5_d0nqg")
 id = "DESERT"
 display_name = "Desert"
 glyph = "∴"
@@ -306,8 +328,8 @@ bearing = 3
 default_elevation = 2
 foundation_max = 6
 dig_depth = 32
-liquids = Array[ExtResource("7_tct2l")]([SubResource("Liquid_DESERT_0")])
-strata = Array[ExtResource("8_cj27s")]([SubResource("Stratum_DESERT_0"), SubResource("Stratum_DESERT_1")])
+liquids = Array[ExtResource("6_40rab")]([SubResource("Liquid_DESERT_0")])
+strata = Array[ExtResource("7_cmqty")]([SubResource("Stratum_DESERT_0"), SubResource("Stratum_DESERT_1")])
 default_stability = 3
 default_max_height = 1
 default_max_width = 3
@@ -315,25 +337,25 @@ default_max_length = 3
 default_max_depth = 1
 
 [sub_resource type="Resource" id="Liquid_SWAMP_0"]
-script = ExtResource("7_tct2l")
-liquid_id = "WATER"
+script = ExtResource("6_40rab")
+material_id = "WATER"
 max_cells = 2
 surface_chance = 0.5
 
 [sub_resource type="Resource" id="Stratum_SWAMP_0"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "PEAT"
 min_cells = 2
 max_cells = 4
 
 [sub_resource type="Resource" id="Stratum_SWAMP_1"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "CLAY"
 min_cells = 4
 max_cells = 8
 
 [sub_resource type="Resource" id="Terrain_SWAMP"]
-script = ExtResource("6_cmqty")
+script = ExtResource("5_d0nqg")
 id = "SWAMP"
 display_name = "Swamp"
 glyph = "~"
@@ -343,15 +365,15 @@ blocks_unit_classes = Array[String](["siege"])
 bearing = 2
 foundation_max = 4
 dig_depth = 16
-liquids = Array[ExtResource("7_tct2l")]([SubResource("Liquid_SWAMP_0")])
-strata = Array[ExtResource("8_cj27s")]([SubResource("Stratum_SWAMP_0"), SubResource("Stratum_SWAMP_1")])
+liquids = Array[ExtResource("6_40rab")]([SubResource("Liquid_SWAMP_0")])
+strata = Array[ExtResource("7_cmqty")]([SubResource("Stratum_SWAMP_0"), SubResource("Stratum_SWAMP_1")])
 default_stability = 1
 default_max_height = 1
 default_max_width = 1
 default_max_length = 1
 
 [sub_resource type="Resource" id="Terrain_WATER"]
-script = ExtResource("6_cmqty")
+script = ExtResource("5_d0nqg")
 id = "WATER"
 display_name = "Water"
 glyph = "≈"
@@ -362,32 +384,32 @@ move_cost = 99.0
 blocks_unit_classes = Array[String](["infantry", "cavalry", "siege"])
 
 [sub_resource type="Resource" id="Liquid_FOREST_0"]
-script = ExtResource("7_tct2l")
-liquid_id = "WATER"
+script = ExtResource("6_40rab")
+material_id = "WATER"
 min_cells = 10
 max_cells = 20
 surface_chance = 0.02
 
 [sub_resource type="Resource" id="Stratum_FOREST_0"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "SOIL"
 min_cells = 2
 max_cells = 3
 
 [sub_resource type="Resource" id="Stratum_FOREST_1"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "CLAY"
 min_cells = 3
 max_cells = 6
 
 [sub_resource type="Resource" id="Stratum_FOREST_2"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "ROCK"
 min_cells = 8
 max_cells = 16
 
 [sub_resource type="Resource" id="Terrain_FOREST"]
-script = ExtResource("6_cmqty")
+script = ExtResource("5_d0nqg")
 id = "FOREST"
 display_name = "Forest"
 glyph = "♣"
@@ -399,8 +421,8 @@ bearing = 4
 default_elevation = 3
 foundation_max = 8
 dig_depth = 32
-liquids = Array[ExtResource("7_tct2l")]([SubResource("Liquid_FOREST_0")])
-strata = Array[ExtResource("8_cj27s")]([SubResource("Stratum_FOREST_0"), SubResource("Stratum_FOREST_1"), SubResource("Stratum_FOREST_2")])
+liquids = Array[ExtResource("6_40rab")]([SubResource("Liquid_FOREST_0")])
+strata = Array[ExtResource("7_cmqty")]([SubResource("Stratum_FOREST_0"), SubResource("Stratum_FOREST_1"), SubResource("Stratum_FOREST_2")])
 default_stability = 2
 default_max_height = 2
 default_max_width = 1
@@ -408,26 +430,26 @@ default_max_length = 1
 default_max_depth = 1
 
 [sub_resource type="Resource" id="Liquid_MOUNTAIN_0"]
-script = ExtResource("7_tct2l")
-liquid_id = "LAVA"
+script = ExtResource("6_40rab")
+material_id = "LAVA"
 min_cells = 24
 max_cells = 48
 chance = 0.35
 surface_chance = 0.05
 
 [sub_resource type="Resource" id="Stratum_MOUNTAIN_0"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "SOIL"
 min_cells = 0
 
 [sub_resource type="Resource" id="Stratum_MOUNTAIN_1"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "ROCK"
 min_cells = 16
 max_cells = 32
 
 [sub_resource type="Resource" id="Terrain_MOUNTAIN"]
-script = ExtResource("6_cmqty")
+script = ExtResource("5_d0nqg")
 id = "MOUNTAIN"
 display_name = "Mountain"
 glyph = "▲"
@@ -439,8 +461,8 @@ bearing = 8
 default_elevation = 64
 foundation_max = 12
 dig_depth = 48
-liquids = Array[ExtResource("7_tct2l")]([SubResource("Liquid_MOUNTAIN_0")])
-strata = Array[ExtResource("8_cj27s")]([SubResource("Stratum_MOUNTAIN_0"), SubResource("Stratum_MOUNTAIN_1")])
+liquids = Array[ExtResource("6_40rab")]([SubResource("Liquid_MOUNTAIN_0")])
+strata = Array[ExtResource("7_cmqty")]([SubResource("Stratum_MOUNTAIN_0"), SubResource("Stratum_MOUNTAIN_1")])
 default_stability = 4
 default_max_height = 4
 default_max_width = 1
@@ -448,7 +470,7 @@ default_max_length = 1
 default_max_depth = 3
 
 [sub_resource type="Resource" id="Terrain_RAVINE"]
-script = ExtResource("6_cmqty")
+script = ExtResource("5_d0nqg")
 id = "RAVINE"
 display_name = "Ravine"
 glyph = "∷"
@@ -459,30 +481,30 @@ move_cost = 99.0
 blocks_unit_classes = Array[String](["all"])
 
 [sub_resource type="Resource" id="Liquid_HILLY_0"]
-script = ExtResource("7_tct2l")
-liquid_id = "WATER"
+script = ExtResource("6_40rab")
+material_id = "WATER"
 min_cells = 14
 max_cells = 28
 surface_chance = 0.02
 
 [sub_resource type="Resource" id="Stratum_HILLY_0"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "SOIL"
 max_cells = 3
 
 [sub_resource type="Resource" id="Stratum_HILLY_1"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "GRAVEL"
 max_cells = 2
 
 [sub_resource type="Resource" id="Stratum_HILLY_2"]
-script = ExtResource("8_cj27s")
+script = ExtResource("7_cmqty")
 material_id = "ROCK"
 min_cells = 8
 max_cells = 16
 
 [sub_resource type="Resource" id="Terrain_HILLY"]
-script = ExtResource("6_cmqty")
+script = ExtResource("5_d0nqg")
 id = "HILLY"
 display_name = "Hilly"
 glyph = "︵"
@@ -493,14 +515,13 @@ bearing = 5
 default_elevation = 4
 foundation_max = 10
 dig_depth = 32
-liquids = Array[ExtResource("7_tct2l")]([SubResource("Liquid_HILLY_0")])
-strata = Array[ExtResource("8_cj27s")]([SubResource("Stratum_HILLY_0"), SubResource("Stratum_HILLY_1"), SubResource("Stratum_HILLY_2")])
+liquids = Array[ExtResource("6_40rab")]([SubResource("Liquid_HILLY_0")])
+strata = Array[ExtResource("7_cmqty")]([SubResource("Stratum_HILLY_0"), SubResource("Stratum_HILLY_1"), SubResource("Stratum_HILLY_2")])
 default_max_depth = 1
 
 [resource]
-script = ExtResource("5_40rab")
-terrains = Array[ExtResource("6_cmqty")]([SubResource("Terrain_FIELDS"), SubResource("Terrain_ROCKY"), SubResource("Terrain_SNOW"), SubResource("Terrain_DESERT"), SubResource("Terrain_SWAMP"), SubResource("Terrain_WATER"), SubResource("Terrain_FOREST"), SubResource("Terrain_MOUNTAIN"), SubResource("Terrain_RAVINE"), SubResource("Terrain_HILLY")])
-features = Array[ExtResource("1_8e4pg")]([SubResource("Feature_ORE_VEIN"), SubResource("Feature_ARABLE"), SubResource("Feature_SPRING"), SubResource("Feature_TIMBER"), SubResource("Feature_QUARRY"), SubResource("Feature_LAVA_VENT")])
-materials = Array[ExtResource("4_d0nqg")]([SubResource("Material_SOIL"), SubResource("Material_PEAT"), SubResource("Material_SAND"), SubResource("Material_GRAVEL"), SubResource("Material_CLAY"), SubResource("Material_ROCK"), SubResource("Material_ORE"), SubResource("Material_TIMBER")])
-liquids = Array[ExtResource("2_ucpav")]([SubResource("Liquid_WATER"), SubResource("Liquid_LAVA")])
-source_hash = "a5a1ac80eeaa38b94010865af1810c63bb84b0533fa01ab6f36f5558da240526"
+script = ExtResource("4_jn1b3")
+terrains = Array[ExtResource("5_d0nqg")]([SubResource("Terrain_FIELDS"), SubResource("Terrain_ROCKY"), SubResource("Terrain_SNOW"), SubResource("Terrain_DESERT"), SubResource("Terrain_SWAMP"), SubResource("Terrain_WATER"), SubResource("Terrain_FOREST"), SubResource("Terrain_MOUNTAIN"), SubResource("Terrain_RAVINE"), SubResource("Terrain_HILLY")])
+features = Array[ExtResource("1_2nuu6")]([SubResource("Feature_ORE_VEIN"), SubResource("Feature_ARABLE"), SubResource("Feature_SPRING"), SubResource("Feature_TIMBER"), SubResource("Feature_QUARRY"), SubResource("Feature_LAVA_VENT")])
+materials = Array[ExtResource("2_8e4pg")]([SubResource("Material_SOIL"), SubResource("Material_PEAT"), SubResource("Material_SAND"), SubResource("Material_GRAVEL"), SubResource("Material_CLAY"), SubResource("Material_ROCK"), SubResource("Material_ORE"), SubResource("Material_TIMBER"), SubResource("Material_WATER"), SubResource("Material_LAVA")])
+source_hash = "2110c9b296cd66b776d43bbc39593b1a881bf3e0e334da5d68529bfda0a0f128"

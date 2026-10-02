@@ -144,13 +144,13 @@ static func tile_details(map_def: MapDef, cell: Vector2i) -> String:
 static func _ground_lines(terrain, library) -> PackedStringArray:
 	var bodies := PackedStringArray()
 	for body in terrain.liquids:
-		var liquid = library.liquid(body.liquid_id)
+		var liquid = library.material(body.material_id)
 		var odds := "" if body.chance >= 1.0 else " (%d%%)" % roundi(body.chance * 100)
 		bodies.append(
 			(
 				"%s %d-%d%s"
 				% [
-					liquid.display_name if liquid else body.liquid_id,
+					liquid.display_name if liquid else body.material_id,
 					body.min_cells,
 					body.max_cells,
 					odds

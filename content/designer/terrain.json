@@ -37,7 +37,7 @@
       ],
       "liquids": [
         {
-          "liquid": "WATER",
+          "material": "WATER",
           "min": 12,
           "max": 24,
           "chance": 1,
@@ -77,14 +77,14 @@
       ],
       "liquids": [
         {
-          "liquid": "WATER",
+          "material": "WATER",
           "min": 16,
           "max": 32,
           "chance": 1,
           "surface_chance": 0
         },
         {
-          "liquid": "LAVA",
+          "material": "LAVA",
           "min": 32,
           "max": 48,
           "chance": 0.2,
@@ -156,7 +156,7 @@
       ],
       "liquids": [
         {
-          "liquid": "WATER",
+          "material": "WATER",
           "min": 20,
           "max": 32,
           "chance": 0.3,
@@ -196,7 +196,7 @@
       ],
       "liquids": [
         {
-          "liquid": "WATER",
+          "material": "WATER",
           "min": 0,
           "max": 2,
           "chance": 1,
@@ -262,7 +262,7 @@
       ],
       "liquids": [
         {
-          "liquid": "WATER",
+          "material": "WATER",
           "min": 10,
           "max": 20,
           "chance": 1,
@@ -302,7 +302,7 @@
       ],
       "liquids": [
         {
-          "liquid": "LAVA",
+          "material": "LAVA",
           "min": 24,
           "max": 48,
           "chance": 0.35,
@@ -368,7 +368,7 @@
       ],
       "liquids": [
         {
-          "liquid": "WATER",
+          "material": "WATER",
           "min": 14,
           "max": 28,
           "chance": 1,
@@ -382,22 +382,25 @@
       "id": "SOIL",
       "label": "Soil",
       "color": "#6b5440",
-      "dig_difficulty": 1,
-      "climb_difficulty": 0,
       "weight": 1,
       "span": 1,
-      "traits": {},
+      "temperature": 15,
+      "traits": {
+        "dig_difficulty": 1
+      },
       "heat_transitions": []
     },
     {
       "id": "PEAT",
       "label": "Peat",
       "color": "#4a3d2c",
-      "dig_difficulty": 1,
-      "climb_difficulty": 1,
       "weight": 1,
       "span": 0,
-      "traits": {},
+      "temperature": 15,
+      "traits": {
+        "dig_difficulty": 1,
+        "climb_difficulty": 1
+      },
       "heat_transitions": [
         {
           "above": 250,
@@ -409,11 +412,12 @@
       "id": "SAND",
       "label": "Sand",
       "color": "#cdb27a",
-      "dig_difficulty": 1,
-      "climb_difficulty": 1,
       "weight": 1,
       "span": 0,
+      "temperature": 15,
       "traits": {
+        "dig_difficulty": 1,
+        "climb_difficulty": 1,
         "loose": 1
       },
       "heat_transitions": []
@@ -422,11 +426,12 @@
       "id": "GRAVEL",
       "label": "Gravel",
       "color": "#8d877c",
-      "dig_difficulty": 1,
-      "climb_difficulty": 1,
       "weight": 1,
       "span": 0,
+      "temperature": 15,
       "traits": {
+        "dig_difficulty": 1,
+        "climb_difficulty": 1,
         "loose": 1
       },
       "heat_transitions": []
@@ -435,22 +440,24 @@
       "id": "CLAY",
       "label": "Clay",
       "color": "#8a6a4a",
-      "dig_difficulty": 2,
-      "climb_difficulty": 0,
       "weight": 1,
       "span": 2,
-      "traits": {},
+      "temperature": 15,
+      "traits": {
+        "dig_difficulty": 2
+      },
       "heat_transitions": []
     },
     {
       "id": "ROCK",
       "label": "Rock",
       "color": "#6f6c68",
-      "dig_difficulty": 3,
-      "climb_difficulty": 0,
       "weight": 2,
       "span": 4,
-      "traits": {},
+      "temperature": 15,
+      "traits": {
+        "dig_difficulty": 3
+      },
       "heat_transitions": [
         {
           "above": 1100,
@@ -462,45 +469,52 @@
       "id": "ORE",
       "label": "Ore",
       "color": "#7b5e57",
-      "dig_difficulty": 4,
-      "climb_difficulty": 0,
       "weight": 2,
       "span": 4,
-      "traits": {},
+      "temperature": 15,
+      "traits": {
+        "dig_difficulty": 4
+      },
       "heat_transitions": []
     },
     {
       "id": "TIMBER",
       "label": "Timber",
       "color": "#8b6a3e",
-      "dig_difficulty": 1,
-      "climb_difficulty": 0,
       "weight": 1,
       "span": 3,
-      "traits": {},
+      "temperature": 15,
+      "traits": {
+        "dig_difficulty": 1
+      },
       "heat_transitions": [
         {
           "above": 300,
           "gains": "burning"
         }
       ]
-    }
-  ],
-  "liquids": [
+    },
     {
       "id": "WATER",
       "label": "Water",
       "color": "#3a6ea5",
+      "weight": 1,
+      "span": 0,
       "temperature": 15,
-      "traits": {},
+      "traits": {
+        "flows": 3
+      },
       "heat_transitions": []
     },
     {
       "id": "LAVA",
       "label": "Lava",
       "color": "#d4521c",
+      "weight": 1,
+      "span": 0,
       "temperature": 1200,
       "traits": {
+        "flows": 1,
         "glows": 1
       },
       "heat_transitions": [

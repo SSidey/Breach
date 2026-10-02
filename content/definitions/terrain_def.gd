@@ -27,7 +27,7 @@ const LiquidBodyDef = preload("res://content/definitions/liquid_body_def.gd")
 @export var default_elevation: int = 0
 @export var foundation_max: int = 0
 @export var dig_depth: int = 0
-## Bodies of water or lava it may hold (Decision 62).
+## Bodies of water or lava (materials that flow) it may hold (Decisions 62, 64).
 @export var liquids: Array[LiquidBodyDef] = []
 ## Bands from the surface down; the last continues to dig_depth.
 @export var strata: Array[StratumDef] = []
