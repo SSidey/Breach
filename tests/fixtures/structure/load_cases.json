@@ -541,6 +541,28 @@
    "failed": [
     "face:1,1,0,north"
    ]
+  },
+  {
+   "name": "three rock cells sink on fields and stand on rock beside them",
+   "bearing": {
+    "default": 4,
+    "columns": {
+     "1,0": 8
+    }
+   },
+   "plan": {
+    "solid_cells": {
+     "0,0,0": "ROCK",
+     "0,0,1": "ROCK",
+     "0,0,2": "ROCK",
+     "1,0,0": "ROCK",
+     "1,0,1": "ROCK",
+     "1,0,2": "ROCK"
+    }
+   },
+   "failed": [
+    "cell:0,0,0"
+   ]
   }
  ]
 }

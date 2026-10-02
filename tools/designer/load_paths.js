@@ -112,6 +112,14 @@
   }
 
   // {loads: {key: units}, failed: [keys, in the order found]}.
+  // The bearing under a "ground:x,y" column: bearing is a number, a function (x, y), or
+  // {default, columns: {"x,y": n}} for a plan crossing tiles of different ground (Decision 68).
+  function columnBearing(bearing, groundKey) {
+    var p = groundKey.slice(7).split(',').map(Number);
+    if (typeof bearing === 'function') return bearing(p[0], p[1]);
+    if (bearing && typeof bearing === 'object') { var c = (bearing.columns || {})[p[0] + ',' + p[1]]; return c != null ? c : bearing.default || 0; }
+    return bearing;
+  }
   function solve(plan, materials, bearing) {
     var supports = new Supports(plan, materials);
     var elements = supports.elements();
@@ -149,7 +157,7 @@
     });
     keys.forEach(function (k) {
       held[k].forEach(function (t) {
-        if (t.indexOf('ground:') === 0 && loads[t] > bearing * 8 && failed.indexOf(k) === -1) failed.push(k);
+        if (t.indexOf('ground:') === 0 && loads[t] > columnBearing(bearing, t) * 8 && failed.indexOf(k) === -1) failed.push(k);
       });
     });
     return { loads: loads, failed: failed, capacities: capacities(elements, materials) };
