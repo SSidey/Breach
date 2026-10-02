@@ -15,7 +15,7 @@ const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle
 
 ## Pixels per formation column across the route, and per rank along it (Decision 48: a
 ## fifth of the size they were).
-const COLUMN_PX := 17.0 * 0.2
+const COLUMN_PX := 17.0 * 0.2 * 0.25  # a quarter again with 64-cell tiles (Decision 68)
 const RANK_PX := SkirmishSquad.RANK_DEPTH * 64.0 * 1.3
 const FLASH_SECONDS := 0.35
 ## One formation cell's smaller side on screen: outlines, bars and markers scale with it,

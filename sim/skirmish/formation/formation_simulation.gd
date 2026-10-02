@@ -36,7 +36,7 @@ const FormationUnits = preload("res://sim/skirmish/formation/formation_units.gd"
 
 const MELEE_REACH := FormationContact.MELEE_REACH
 const ATTACK_INTERVAL_SECONDS := 1.0
-const TRAVEL_SCALE := 0.5
+const TRAVEL_SCALE := 0.125  # tiles per second at speed 1: 8 cells a second (Decision 68)
 const EPSILON := 0.000001
 
 var route_length: float
