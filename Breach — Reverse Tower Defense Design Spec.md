@@ -3407,3 +3407,39 @@ The rules:
   the list.
 - The trait-pair table above is the first entry of the coming trait library.
 
+### Decision 65 — Structural quantities are whole numbers in eighths of a cell; materials gain strength
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** Decision 61's load paths need a weight and a capacity for every element,
+including face walls thinner than a cell. The user, on physical quantities (weight,
+span, temperature): "for sim ease I can see them becoming discrete bands (helping to
+remove the continuous nature, I expect should aid sim performance)".
+- **Discrete, not continuous.** Structural quantities are whole numbers in **load
+  units**, where one unit is an eighth of a cell of a material of weight 1. There are
+  no fractions to carry, and the results are exact and reproducible.
+  - A face wall's thickness is in eighths of a cell (1 to 8): wattle 1, timber frame 1,
+    rubble 3.
+  - A face weighs its material's weight × thickness. A solid cell weighs weight × 8.
+  - Physical quantities (weight, span, temperature, strength) stay properties, as
+    Decision 64 holds, and may later become named bands (light, heavy…) for performance.
+    Integers in eighths are the first step.
+- **Materials gain strength,** the load one eighth of a cell can carry. An element's
+  **capacity** is strength × thickness (× 8 for a solid cell). Placeholders: sand, peat
+  and liquids 0, soil 1, gravel 1, clay 2, timber 6, rock and ore 20.
+- **Ground bearing in the same units:** a column carries bearing × 8 (Decision 53).
+- **Pillar check (Decision 58):** integers keep the load overlay exact and readable.
+  Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Continuous loads (floats) | The user prefers discrete steps for simulation performance; eighths are exact. |
+| Whole cells only | Face walls are thinner than a cell (Decision 61). |
+
+**Consequences:**
+- `MaterialDef.strength`. The structure plan's faces carry thickness in eighths.
+- The load-path solver (spec 24) works in integer load units throughout.
+
