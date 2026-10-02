@@ -1,12 +1,13 @@
-// Drawing for the structure planner (spec 24 rounds 2-3; Decisions 61, 65, 67): the plan
-// grid for one level and the isometric view, coloured by material or by load against
-// capacity (BreachLoadPaths). Walls are drawn flush on their edge, thickness into the cell
-// they grow into. Below ground, the isometric view cuts the ground away to the level and
-// shows the strata as blocks with the digs carved out and fills in their material.
+// Drawing for the structure planner (spec 24 rounds 2-4, spec 25; Decisions 61, 65, 67,
+// 68): the plan grid for one level and the isometric view, coloured by material or by
+// load against capacity (BreachLoadPaths). The grid covers the node's footprint (cells
+// measured from its own tile; cells off the footprint shaded) at the current zoom. Walls
+// are drawn flush on their edge, thickness into the cell they grow into. Below ground,
+// the isometric view shows the strata as blocks with digs carved out and fills.
 (function (root) {
   'use strict';
 
-  var T = root.BreachPlannerTools, SIZE = 16, CELL = 24, UNDER = 3;
+  var T = root.BreachPlannerTools, UNDER = 3;
 
   function shade(hex, f) {
     var n = parseInt(String(hex || '#888888').slice(1), 16);
@@ -31,102 +32,118 @@
     if (f.side === 'north') return { x: f.x, y: f.into_neighbour ? f.y - t : f.y, w: 1, h: t };
     return { x: f.into_neighbour ? f.x - t : f.x, y: f.y, w: t, h: 1 };
   }
+  function boundsOf(ctx) { return ctx.bounds || T.TILE; }
+  // The grid canvas size for a context at a zoom (cell pixels).
+  function gridSize(ctx, cell) { var b = boundsOf(ctx); return { w: (b.x1 - b.x0 + 1) * cell, h: (b.y1 - b.y0 + 1) * cell }; }
 
   // ---------- plan grid (top-down, one level) ----------
   function cellGround(ctx, plan, x, y, l) {
-    var fill = plan.fills[T.at(x, y, l < 0 ? l : -1)], dug = T.isDug(plan, x, y, l < 0 ? l : -1);
+    var below = l < 0 ? l : -1, fill = plan.fills[T.at(x, y, below)], dug = T.isDug(plan, x, y, below);
     if (l > 0) return '#efe9dc';
     if (dug && fill) return ctx.material(fill) ? ctx.material(fill).color : '#3a6ea5';
     if (dug) return '#2b2621';
-    return l < 0 ? shade(ctx.stratumColour(l), 0.9) : '#efe9dc';
+    return l < 0 ? shade(ctx.stratumColour(l, x, y), 0.9) : '#efe9dc';
   }
   function drawGrid(canvas, plan, ctx, result, view) {
-    var g = canvas.getContext('2d'), l = view.level;
+    var g = canvas.getContext('2d'), l = view.level, c = view.cell, b = boundsOf(ctx);
+    var inside = ctx.inFootprint || function () { return true; };
+    function px(x) { return (x - b.x0) * c; }
+    function py(y) { return (y - b.y0) * c; }
     g.clearRect(0, 0, canvas.width, canvas.height);
-    for (var y = 0; y < SIZE; y++) for (var x = 0; x < SIZE; x++) {
-      g.fillStyle = cellGround(ctx, plan, x, y, l);
-      g.fillRect(x * CELL, y * CELL, CELL, CELL);
-      if (l > 0 && plan.solid_cells[T.at(x, y, l - 1)]) { g.fillStyle = 'rgba(0,0,0,0.08)'; g.fillRect(x * CELL, y * CELL, CELL, CELL); }
-      g.strokeStyle = 'rgba(0,0,0,0.08)'; g.strokeRect(x * CELL + 0.5, y * CELL + 0.5, CELL, CELL);
+    for (var y = b.y0; y <= b.y1; y++) for (var x = b.x0; x <= b.x1; x++) {
+      g.fillStyle = inside(x, y) ? cellGround(ctx, plan, x, y, l) : '#b9b2a4';
+      g.fillRect(px(x), py(y), c, c);
+      if (l > 0 && plan.solid_cells[T.at(x, y, l - 1)]) { g.fillStyle = 'rgba(0,0,0,0.08)'; g.fillRect(px(x), py(y), c, c); }
+      if (c >= 8) { g.strokeStyle = 'rgba(0,0,0,0.08)'; g.strokeRect(px(x) + 0.5, py(y) + 0.5, c, c); }
     }
+    drawTileEdges(g, b, c, px, py);
     plan.faces.forEach(function (f) {
       if (f.level !== l || f.side !== 'floor') return;
       g.fillStyle = colourOf(ctx, view, result, faceKey(f), f.material); g.globalAlpha = 0.45;
-      g.fillRect(f.x * CELL + 2, f.y * CELL + 2, CELL - 4, CELL - 4); g.globalAlpha = 1;
+      g.fillRect(px(f.x) + c * 0.08, py(f.y) + c * 0.08, c * 0.84, c * 0.84); g.globalAlpha = 1;
     });
     Object.keys(plan.solid_cells).forEach(function (k) {
       var p = k.split(',').map(Number);
       if (p[2] !== l) return;
       g.fillStyle = colourOf(ctx, view, result, 'cell:' + k, plan.solid_cells[k]);
-      g.fillRect(p[0] * CELL + 1, p[1] * CELL + 1, CELL - 2, CELL - 2);
+      g.fillRect(px(p[0]) + 0.5, py(p[1]) + 0.5, c - 1, c - 1);
     });
     plan.faces.forEach(function (f) {
       if (f.level !== l || f.side === 'floor') return;
-      var r = wallRect(f, Math.max(2 / CELL, f.thickness / 8));
+      var r = wallRect(f, Math.max(1.5 / c, f.thickness / 8));
       g.fillStyle = colourOf(ctx, view, result, faceKey(f), f.material);
-      g.fillRect(r.x * CELL, r.y * CELL, r.w * CELL, r.h * CELL);
+      g.fillRect(px(r.x), py(r.y), r.w * c, r.h * c);
     });
     Object.keys(plan.loads).forEach(function (k) {
       var p = k.split(',').map(Number);
       if (p[2] !== l) return;
-      g.fillStyle = '#c96a1b'; g.beginPath(); g.arc(p[0] * CELL + CELL / 2, p[1] * CELL + CELL / 2, 7, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#fff'; g.font = '9px sans-serif'; g.textAlign = 'center'; g.fillText(plan.loads[k], p[0] * CELL + CELL / 2, p[1] * CELL + CELL / 2 + 3);
+      g.fillStyle = '#c96a1b'; g.beginPath(); g.arc(px(p[0]) + c / 2, py(p[1]) + c / 2, Math.max(2, c * 0.3), 0, Math.PI * 2); g.fill();
+      if (c >= 16) { g.fillStyle = '#fff'; g.font = '9px sans-serif'; g.textAlign = 'center'; g.fillText(plan.loads[k], px(p[0]) + c / 2, py(p[1]) + c / 2 + 3); }
     });
-    drawHover(g, view.hover);
-    drawRoom(g, view.room);
+    drawHover(g, view.hover, c, px, py);
+    drawRoom(g, view.room, c, px, py);
+  }
+  // Tile edges, so a footprint's tiles read as tiles.
+  function drawTileEdges(g, b, c, px, py) {
+    var N = T.CELLS_PER_TILE;
+    g.strokeStyle = 'rgba(60,40,20,0.35)'; g.lineWidth = 1.5;
+    for (var x = Math.ceil(b.x0 / N) * N; x <= b.x1 + 1; x += N) { g.beginPath(); g.moveTo(px(x), 0); g.lineTo(px(x), py(b.y1 + 1)); g.stroke(); }
+    for (var y = Math.ceil(b.y0 / N) * N; y <= b.y1 + 1; y += N) { g.beginPath(); g.moveTo(0, py(y)); g.lineTo(px(b.x1 + 1), py(y)); g.stroke(); }
+    g.lineWidth = 1;
   }
   // The edge or cell the tool would act on.
-  function drawHover(g, hover) {
+  function drawHover(g, hover, c, px, py) {
     if (!hover) return;
     g.strokeStyle = '#d0453a'; g.lineWidth = 3;
     if (hover.side && hover.side !== 'floor') {
-      var f = T.face(hover.x, hover.y, 0, hover.side), x = f.x * CELL, y = f.y * CELL;
+      var f = T.face(hover.x, hover.y, 0, hover.side);
       g.beginPath();
-      if (f.side === 'north') { g.moveTo(x, y); g.lineTo(x + CELL, y); } else { g.moveTo(x, y); g.lineTo(x, y + CELL); }
+      if (f.side === 'north') { g.moveTo(px(f.x), py(f.y)); g.lineTo(px(f.x) + c, py(f.y)); } else { g.moveTo(px(f.x), py(f.y)); g.lineTo(px(f.x), py(f.y) + c); }
       g.stroke();
     } else {
-      g.lineWidth = 2; g.strokeRect(hover.x * CELL + 1, hover.y * CELL + 1, CELL - 2, CELL - 2);
+      g.lineWidth = 2; g.strokeRect(px(hover.x) + 1, py(hover.y) + 1, c - 2, c - 2);
     }
     g.lineWidth = 1;
   }
-  function drawRoom(g, room) {
+  function drawRoom(g, room, c, px, py) {
     if (!room) return;
     var x0 = Math.min(room.x0, room.x1), y0 = Math.min(room.y0, room.y1);
     var w = Math.abs(room.x1 - room.x0) + 1, h = Math.abs(room.y1 - room.y0) + 1;
     g.setLineDash([5, 4]); g.strokeStyle = '#1f6fb2'; g.lineWidth = 2;
-    g.strokeRect(x0 * CELL + 1, y0 * CELL + 1, w * CELL - 2, h * CELL - 2);
+    g.strokeRect(px(x0) + 1, py(y0) + 1, w * c - 2, h * c - 2);
     g.setLineDash([]); g.lineWidth = 1;
   }
 
   // ---------- isometric view ----------
-  // The cells a plan uses, with two cells of ground around them, within the tile.
-  function bounds(plan, level) {
+  // The cells a plan uses, with two cells of ground around them, within the footprint's
+  // bounds (all of them when the plan is empty).
+  function bounds(plan, level, b) {
     var xs = [], ys = [], zs = [0];
     Object.keys(plan.solid_cells).forEach(function (k) { var q = k.split(',').map(Number); xs.push(q[0]); ys.push(q[1]); zs.push(q[2] + 1); });
     plan.faces.forEach(function (f) { xs.push(f.x); ys.push(f.y); zs.push(f.level + 1); });
     plan.dug.forEach(function (d) { xs.push(d[0]); ys.push(d[1]); });
-    if (!xs.length) return { x0: 0, y0: 0, x1: SIZE, y1: SIZE, z1: 1 };
+    if (!xs.length) return { x0: b.x0, y0: b.y0, x1: b.x1 + 1, y1: b.y1 + 1, z1: 1 };
     return {
-      x0: Math.max(0, Math.min.apply(null, xs) - 2), y0: Math.max(0, Math.min.apply(null, ys) - 2),
-      x1: Math.min(SIZE, Math.max.apply(null, xs) + 3), y1: Math.min(SIZE, Math.max.apply(null, ys) + 3),
+      x0: Math.max(b.x0, Math.min.apply(null, xs) - 2), y0: Math.max(b.y0, Math.min.apply(null, ys) - 2),
+      x1: Math.min(b.x1 + 1, Math.max.apply(null, xs) + 3), y1: Math.min(b.y1 + 1, Math.max.apply(null, ys) + 3),
       z1: Math.min(level + 1, Math.max.apply(null, zs))
     };
   }
   function drawIso(canvas, plan, ctx, result, view) {
-    var g = canvas.getContext('2d'), b0 = bounds(plan, view.level), below = view.level < 0;
+    var g = canvas.getContext('2d'), b0 = bounds(plan, view.level, boundsOf(ctx)), below = view.level < 0;
     var spanXY = (b0.x1 - b0.x0) + (b0.y1 - b0.y0), spanZ = below ? UNDER : b0.z1;
-    var s = Math.max(8, Math.min(34, Math.min((canvas.width - 40) / spanXY, (canvas.height - 40) / (spanXY / 2 + spanZ * 1.15))));
+    var s = Math.max(2, Math.min(34, Math.min((canvas.width - 40) / spanXY, (canvas.height - 40) / (spanXY / 2 + spanZ * 1.15))));
     var h = s * 1.15, zTop = below ? view.level + 1 : 0;
     var ox = canvas.width / 2 - ((b0.x0 + b0.x1) / 2 - (b0.y0 + b0.y1) / 2) * s;
     var oy = canvas.height / 2 - ((b0.x0 + b0.x1) / 2 + (b0.y0 + b0.y1) / 2) * s / 2 + spanZ * h / 2 + zTop * h;
     function p(x, y, z) { return [ox + (x - y) * s, oy + (x + y) * s / 2 - z * h]; }
-    function poly(pts, fill) { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.closePath(); g.fillStyle = fill; g.fill(); g.strokeStyle = 'rgba(0,0,0,0.18)'; g.stroke(); }
-    function box(b) {
-      var x0 = b.x, y0 = b.y, z0 = b.z, x1 = x0 + b.dx, y1 = y0 + b.dy, z1 = z0 + b.dz;
-      g.globalAlpha = b.alpha || 1;
-      poly([p(x0, y1, z0), p(x1, y1, z0), p(x1, y1, z1), p(x0, y1, z1)], shade(b.colour, 0.78));
-      poly([p(x1, y0, z0), p(x1, y1, z0), p(x1, y1, z1), p(x1, y0, z1)], shade(b.colour, 0.6));
-      poly([p(x0, y0, z1), p(x1, y0, z1), p(x1, y1, z1), p(x0, y1, z1)], shade(b.colour, 1.08));
+    function poly(pts, fill) { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.closePath(); g.fillStyle = fill; g.fill(); if (s >= 6) { g.strokeStyle = 'rgba(0,0,0,0.18)'; g.stroke(); } }
+    function box(bx) {
+      var x0 = bx.x, y0 = bx.y, z0 = bx.z, x1 = x0 + bx.dx, y1 = y0 + bx.dy, z1 = z0 + bx.dz;
+      g.globalAlpha = bx.alpha || 1;
+      poly([p(x0, y1, z0), p(x1, y1, z0), p(x1, y1, z1), p(x0, y1, z1)], shade(bx.colour, 0.78));
+      poly([p(x1, y0, z0), p(x1, y1, z0), p(x1, y1, z1), p(x1, y0, z1)], shade(bx.colour, 0.6));
+      poly([p(x0, y0, z1), p(x1, y0, z1), p(x1, y1, z1), p(x0, y1, z1)], shade(bx.colour, 1.08));
       g.globalAlpha = 1;
     }
     g.clearRect(0, 0, canvas.width, canvas.height);
@@ -137,13 +154,14 @@
   // Below ground: UNDER levels of strata blocks down from the current level, digs carved
   // out, fills in their material (liquids see-through).
   function groundBoxes(plan, ctx, b0, level) {
-    var boxes = [];
+    var boxes = [], inside = ctx.inFootprint || function () { return true; };
     for (var l = level - UNDER + 1; l <= level; l++) {
       if (l < -ctx.digDepth) continue;
       for (var x = b0.x0; x < b0.x1; x++) for (var y = b0.y0; y < b0.y1; y++) {
+        if (!inside(x, y)) continue;
         var fill = plan.fills[T.at(x, y, l)];
         if (T.isDug(plan, x, y, l) && !fill) continue;
-        var colour = fill ? (ctx.material(fill) || {}).color || '#3a6ea5' : ctx.stratumColour(l);
+        var colour = fill ? (ctx.material(fill) || {}).color || '#3a6ea5' : ctx.stratumColour(l, x, y);
         boxes.push({ x: x, y: y, z: l, dx: 1, dy: 1, dz: 1, colour: colour, alpha: fill && isLiquid(ctx, fill) ? 0.6 : 1 });
       }
     }
@@ -178,5 +196,5 @@
     return boxes;
   }
 
-  root.BreachPlannerDraw = { CELL: CELL, drawGrid: drawGrid, drawIso: drawIso };
+  root.BreachPlannerDraw = { drawGrid: drawGrid, drawIso: drawIso, gridSize: gridSize };
 })(this);

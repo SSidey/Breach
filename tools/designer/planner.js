@@ -6,13 +6,13 @@
 (function (root) {
   'use strict';
 
-  var T = root.BreachPlannerTools, D = root.BreachPlannerDraw, SIZE = T.SIZE;
+  var T = root.BreachPlannerTools, D = root.BreachPlannerDraw, ZOOMS = [4, 6, 8, 12, 16, 24];
   var TOOLS = [['solid', 'Solid cell'], ['wall', 'Face wall'], ['floor', 'Floor / roof'], ['room', 'Room'],
     ['dig', 'Dig'], ['fill', 'Fill'], ['load', 'Load'], ['erase', 'Erase']];
   var MODES = [['material', 'Material'], ['load', 'Load v capacity']];
   var SHAPES = [['free', 'Freehand'], ['area', 'Area']];
   var ui = {
-    level: 0, tool: 'wall', shape: 'free', example: 'farmhouse', material: 'TIMBER', fillMaterial: 'GROUND', thickness: 1, load: 20, mode: 'material',
+    level: 0, cell: 12, tool: 'wall', shape: 'free', example: 'farmhouse', material: 'TIMBER', fillMaterial: 'GROUND', thickness: 1, load: 20, mode: 'material',
     hover: null, room: null, pendingRoom: null, confirm: null,
     roomOpts: { height: 1, wall: { material: 'TIMBER', thickness: 1 }, floor: { on: true, material: 'TIMBER', thickness: 2 }, ceiling: { on: true, material: 'TIMBER', thickness: 2 } }
   };
@@ -25,6 +25,7 @@
   // ---------- applying a tool ----------
   function digLevel() { return ui.level < 0 ? ui.level : -1; }
   function apply(plan, ctx, spot, adding) {
+    if (ctx.inFootprint && !ctx.inFootprint(spot.x, spot.y)) return;  // off the node's tiles
     var l = ui.level, key = T.at(spot.x, spot.y, l);
     if (ui.tool === 'solid') { if (adding) T.setSolid(plan, spot.x, spot.y, l, ui.material); else delete plan.solid_cells[key]; }
     else if (ui.tool === 'wall' || ui.tool === 'floor') {
@@ -32,7 +33,7 @@
       if (adding) T.setFace(plan, f, ui.material, ui.thickness); else if (i !== -1) plan.faces.splice(i, 1);
     } else if (ui.tool === 'dig') {
       var dl = digLevel(), di = T.dugIndex(plan, spot.x, spot.y, dl);
-      if (adding && di === -1 && T.canDig(plan, spot.x, spot.y, dl, ctx.digDepth)) plan.dug.push([spot.x, spot.y, dl]);
+      if (adding && di === -1 && T.canDig(plan, spot.x, spot.y, dl, ctx.digDepthAt ? ctx.digDepthAt(spot.x, spot.y) : ctx.digDepth)) plan.dug.push([spot.x, spot.y, dl]);
     } else if (ui.tool === 'fill') T.fill(plan, spot.x, spot.y, digLevel(), ui.fillMaterial);
     else if (ui.tool === 'load') { if (adding) plan.loads[key] = ui.load; else delete plan.loads[key]; }
     else if (ui.tool === 'erase') erase(plan, spot, l);
@@ -67,9 +68,10 @@
   // The spot under the pointer: an edge for the wall tools (locked to the stroke's line),
   // otherwise a cell. Null outside the grid.
   function spotAt(canvas, ev) {
-    var r = canvas.getBoundingClientRect(), fx = (ev.clientX - r.left) / D.CELL, fy = (ev.clientY - r.top) / D.CELL;
-    if (fx < 0 || fy < 0 || fx >= SIZE || fy >= SIZE) return null;
-    if (ui.tool === 'wall' || ui.tool === 'erase') return painting && painting.line ? T.edgeOnLine(fx, fy, painting.line) : T.nearestEdge(fx, fy);
+    var b = current.ctx.bounds || T.TILE, r = canvas.getBoundingClientRect();
+    var fx = b.x0 + (ev.clientX - r.left) / ui.cell, fy = b.y0 + (ev.clientY - r.top) / ui.cell;
+    if (fx < b.x0 || fy < b.y0 || fx >= b.x1 + 1 || fy >= b.y1 + 1) return null;
+    if (ui.tool === 'wall' || ui.tool === 'erase') return painting && painting.line ? T.edgeOnLine(fx, fy, painting.line, b) : T.nearestEdge(fx, fy, b);
     return { x: Math.floor(fx), y: Math.floor(fy) };
   }
 
@@ -80,6 +82,8 @@
   function options(list, selected) {
     return list.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === selected ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
   }
+  // The bearing on the node's own tile (bearing may be a number or a function of the cell).
+  function bearingHere(ctx) { var half = T.CELLS_PER_TILE / 2; return typeof ctx.bearing === 'function' ? ctx.bearing(half, half) : ctx.bearing; }
   function levelName(l) { return l < 0 ? 'below ' + (-l) : l === 0 ? 'ground' : 'level ' + l; }
   function toolBar(ctx) {
     var building = ctx.materials.filter(function (m) { return !(m.traits || {}).flows; }).map(function (m) { return [m.id, m.label]; });
@@ -101,7 +105,9 @@
     function clearButton(which, label) {
       return '<button type="button" class="chip" data-clear="' + which + '">' + (ui.confirm === which ? 'Click again to clear ' + which : label) + '</button>';
     }
-    return '<button type="button" class="chip" id="pl_undo"' + (h.undos.length ? '' : ' disabled') + ' title="Ctrl+Z">Undo</button>' +
+    return '<span class="row-label">Zoom</span><button type="button" class="chip" id="pl_zoom_out" title="Ctrl+wheel">−</button>' +
+      '<span class="hint" style="margin:0;">' + ui.cell + ' px</span><button type="button" class="chip" id="pl_zoom_in" title="Ctrl+wheel">+</button>' +
+      '<button type="button" class="chip" id="pl_undo"' + (h.undos.length ? '' : ' disabled') + ' title="Ctrl+Z">Undo</button>' +
       '<button type="button" class="chip" id="pl_redo"' + (h.redos.length ? '' : ' disabled') + ' title="Ctrl+Shift+Z / Ctrl+Y">Redo</button>' +
       clearButton('level', 'Clear level') + clearButton('plan', 'Clear plan') +
       '<span class="row-label">Examples</span><select id="pl_example" aria-label="Example structure">' +
@@ -128,6 +134,7 @@
     current = { host: host, node: node, ctx: ctx };
     var plan = node.plan, result = solve(plan, ctx);
     ui.level = Math.max(-ctx.digDepth, Math.min(ctx.maxLevel, ui.level));
+    var size = D.gridSize(ctx, ui.cell);
     var failedText = result.failed.length ? result.failed.length + ' failing' : 'all standing';
     var hint = ui.mode === 'load' ? 'green < 50% of capacity, yellow < 80%, red to full, black failing'
       : ui.shape === 'area' && ui.tool !== 'room' ? 'drag out a rectangle: walls go round its edge, everything else fills it'
@@ -136,8 +143,8 @@
           : ui.tool === 'dig' ? 'dig down from the surface or beside a dug cell' : 'drag to paint';
     host.innerHTML = toolBar(ctx) + roomForm(ctx) +
       '<div class="planner-bar"><span class="row-label">View</span>' + chips(MODES, ui.mode, 'mode') + editBar(node) +
-      '<span class="hint" style="margin:0;">' + esc(failedText) + ' · ground bears ' + ctx.bearing * 8 + ' per column · ' + esc(hint) + '</span></div>' +
-      '<div class="planner-panes"><canvas id="pl_grid" width="' + SIZE * D.CELL + '" height="' + SIZE * D.CELL + '"></canvas>' +
+      '<span class="hint" style="margin:0;">' + esc(failedText) + ' · ground here bears ' + bearingHere(ctx) * 8 + ' per column · ' + esc(hint) + '</span></div>' +
+      '<div class="planner-panes"><div class="planner-scroll" id="pl_scroll"><canvas id="pl_grid" width="' + size.w + '" height="' + size.h + '"></canvas></div>' +
       '<canvas id="pl_iso" width="640" height="460" aria-label="Isometric view of the plan"></canvas></div>';
     host.tabIndex = 0;
     redraw(true);
@@ -147,7 +154,7 @@
   }
   function redraw(withIso) {
     var plan = current.node.plan, ctx = current.ctx, result = solve(plan, ctx);
-    var view = { level: ui.level, mode: ui.mode, hover: ui.hover, room: ui.room || ui.pendingRoom };
+    var view = { level: ui.level, cell: ui.cell, mode: ui.mode, hover: ui.hover, room: ui.room || ui.pendingRoom };
     D.drawGrid(current.host.querySelector('#pl_grid'), plan, ctx, result, view);
     if (withIso) D.drawIso(current.host.querySelector('#pl_iso'), plan, ctx, result, view);
   }
@@ -167,6 +174,8 @@
     on('#pl_fill', 'change', function () { ui.fillMaterial = this.value; });
     on('#pl_thick', 'change', function () { ui.thickness = Number(this.value); });
     on('#pl_load', 'change', function () { ui.load = Math.max(1, Number(this.value) || 1); });
+    on('#pl_zoom_in', 'click', function () { zoom(1); });
+    on('#pl_zoom_out', 'click', function () { zoom(-1); });
     on('#pl_undo', 'click', function () { if (historyOf(node).undo(node.plan)) rerender(); });
     on('#pl_redo', 'click', function () { if (historyOf(node).redo(node.plan)) rerender(); });
     host.querySelectorAll('[data-clear]').forEach(function (b) {
@@ -188,6 +197,10 @@
     var built = example.build();
     Object.keys(built).forEach(function (k) { plan[k] = built[k]; });
     ui.level = 0;
+  }
+  function zoom(step) {
+    var i = ZOOMS.indexOf(ui.cell), next = ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, (i === -1 ? 3 : i) + step))];
+    if (next !== ui.cell) { ui.cell = next; render(current.host, current.node, current.ctx); }
   }
   function bindRoomForm(host, node) {
     var form = host.querySelector('#pl_room_form');
@@ -234,6 +247,7 @@
       ui.hover = spot; redraw(false);
     });
     grid.addEventListener('mouseleave', function () { if (!painting) { ui.hover = null; redraw(false); } });
+    grid.addEventListener('wheel', function (ev) { if (!ev.ctrlKey) return; ev.preventDefault(); zoom(ev.deltaY < 0 ? 1 : -1); }, { passive: false });
   }
   function stroke(node, ctx, spot) {
     var id = spot.x + ',' + spot.y + ',' + (spot.side || '');

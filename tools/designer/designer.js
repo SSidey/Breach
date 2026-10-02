@@ -420,7 +420,7 @@
       var b = Number(terr.bearing) || 0;
       return { colour: 'hsl(' + Math.round(Math.min(1, b / 10) * 120) + ', 55%, 45%)', title: 'Bearing ' + b + ' (' + b * 8 + ' per column)' };
     }
-    var node = nodeAt(k), ratio = node && window.BreachPlanner ? BreachPlanner.worstRatio(node.plan, materialMap(), Number(terr.bearing) || 0) : null;
+    var node = nodeAt(k), ratio = node && window.BreachPlanner ? BreachPlanner.worstRatio(node.plan, materialMap(), plannerContext(k).bearing) : null;
     if (ratio == null) return { colour: 'rgba(255,255,255,0.55)', title: 'No structure plan' };
     return { colour: ratio > 1 ? '#111111' : ratio > 0.8 ? '#d0453a' : ratio > 0.5 ? '#e0b43a' : '#4f9a52',
       title: ratio > 1 ? 'Something fails' : 'Worst load ' + Math.round(ratio * 100) + '% of capacity' };
@@ -806,19 +806,36 @@
     if (tab === 'paint') renderLayersStrip(); else if (tab === 'plan') renderPlanEditor(); else renderStructureEditor();
   }
   // The structure planner (spec 24, planner.js) for the selected node, on its tile's ground.
+  // The planner's view of a node (Decision 68): its plan covers the node's footprint, in
+  // cells measured from the node's own tile; each cell stands on its own tile's ground.
   function plannerContext(k) {
-    var terr = terrainDef(tileTerrainId(k)) || {}, tile = tileAt(k);
-    var digDepth = tile.max_depth != null ? Number(tile.max_depth) : Number(terr.dig_depth) || 0;
+    var CELLS = BreachPlannerTools.CELLS_PER_TILE, own = parseKey(k), area = footprintOf(k);
+    function tileOfCell(x, y) { return key(own[0] + Math.floor(y / CELLS), own[1] + Math.floor(x / CELLS)); }
+    function groundOf(tk) {
+      var terr = terrainDef(tileTerrainId(tk)) || {}, tile = tileAt(tk);
+      return { terr: terr, bearing: Number(terr.bearing) || 0, digDepth: tile.max_depth != null ? Number(tile.max_depth) : Number(terr.dig_depth) || 0 };
+    }
+    var rows = area.map(function (a) { return parseKey(a)[0] - own[0]; }), cols = area.map(function (a) { return parseKey(a)[1] - own[1]; });
+    var grounds = area.map(groundOf), here = groundOf(k);
     return {
       materials: terrainLib.materials,
       material: materialDef,
       materialMap: materialMap,
-      bearing: Number(terr.bearing) || 0,
-      groundColour: terr.color || '#8f9a4f',
-      // Every level from the tile's dig depth up to the map's ceiling over its ground.
-      digDepth: digDepth,
+      bearing: function (x, y) { return groundOf(tileOfCell(x, y)).bearing; },
+      groundColour: here.terr.color || '#8f9a4f',
+      groundColourAt: function (x, y) { return (groundOf(tileOfCell(x, y)).terr.color) || '#8f9a4f'; },
+      // The footprint's cells: bounds, and whether a cell is on one of its tiles.
+      bounds: { x0: Math.min.apply(null, cols) * CELLS, y0: Math.min.apply(null, rows) * CELLS,
+        x1: (Math.max.apply(null, cols) + 1) * CELLS - 1, y1: (Math.max.apply(null, rows) + 1) * CELLS - 1 },
+      inFootprint: function (x, y) { return area.indexOf(tileOfCell(x, y)) !== -1; },
+      // Every level from the deepest dig depth up to the map's ceiling over its ground.
+      digDepth: Math.max.apply(null, grounds.map(function (g) { return g.digDepth; })),
+      digDepthAt: function (x, y) { return groundOf(tileOfCell(x, y)).digDepth; },
       maxLevel: Math.max(1, state.ceiling - elevationAt(k)),
-      stratumColour: function (level) { var m = materialDef(stratumAt(terr, -level)); return m ? m.color : '#6b5440'; },
+      stratumColour: function (level, x, y) {
+        var terr = x == null ? here.terr : groundOf(tileOfCell(x, y)).terr, m = materialDef(stratumAt(terr, -level));
+        return m ? m.color : '#6b5440';
+      },
       save: function () { safeSave(); renderGrid(); }
     };
   }
@@ -2359,6 +2376,11 @@
         cellEl.className = 'cell';
         cellEl.dataset.key = k;
         if (state.selectedCell === k) cellEl.setAttribute('data-selected', 'true');
+        var areaOf = areaOwner(k);
+        if (areaOf && footprintOf(areaOf).length > 1) {
+          cellEl.setAttribute('data-area', state.cells[areaOf].id);
+          if (areaOf === state.selectedCell) cellEl.setAttribute('data-area-selected', 'true');
+        }
         if (state.linkPending === k) cellEl.setAttribute('data-link-pending', 'true');
         if (onPath[k]) cellEl.setAttribute('data-on-path', 'true');
 
@@ -2493,7 +2515,52 @@
     renderInspector();
   }
 
+  // ---------- node areas (Decision 68) ----------
+  // A node covers a footprint of tiles, any connected shape including its own tile.
+  function footprintOf(k) { var d = state.cells[k]; return d && d.footprint && d.footprint.length ? d.footprint : [k]; }
+  // The key of the node whose footprint covers tile k, or null.
+  function areaOwner(k) {
+    var owner = null;
+    Object.keys(state.cells).forEach(function (nk) { if (footprintOf(nk).indexOf(k) !== -1) owner = nk; });
+    return owner;
+  }
+  function connected(keys, from) {
+    var seen = {}, todo = [from];
+    seen[from] = true;
+    while (todo.length) {
+      var p = parseKey(todo.pop());
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+        var n = key(p[0] + d[0], p[1] + d[1]);
+        if (keys.indexOf(n) !== -1 && !seen[n]) { seen[n] = true; todo.push(n); }
+      });
+    }
+    return Object.keys(seen).length === keys.length;
+  }
+  // Adds or removes tile k from the selected node's footprint, keeping it connected.
+  function paintArea(k, adding) {
+    var nk = state.selectedCell, d = nk ? state.cells[nk] : null;
+    if (!d) { setNotice('Select a node first, then paint the tiles it covers.'); return; }
+    var area = footprintOf(nk).slice(), at = area.indexOf(k);
+    if (adding && at === -1) {
+      var owner = areaOwner(k);
+      if (owner && owner !== nk) { setNotice('That tile belongs to ' + state.cells[owner].id + '.'); return; }
+      area.push(k);
+      if (!connected(area, nk)) { setNotice('A node area must be one connected shape.'); return; }
+    } else if (!adding && at !== -1) {
+      if (k === nk) { setNotice('A node always covers its own tile.'); return; }
+      area.splice(at, 1);
+      if (!connected(area, nk)) { setNotice('Removing that tile would split the area.'); return; }
+    } else return;
+    d.footprint = area.length > 1 ? area : undefined;
+    setNotice(''); safeSave(); renderGrid();
+  }
+
   function handleCellAction(k, isDown) {
+    if (state.activeTool === 'AREA') {
+      if (isDown) state.areaAdding = !state.selectedCell || footprintOf(state.selectedCell).indexOf(k) === -1;
+      paintArea(k, state.areaAdding);
+      return;
+    }
     if (state.activeTool === 'select') {
       // Any cell is selectable - empty or not - so its tile layers can be edited.
       selectCell(k); renderGrid();
@@ -3569,6 +3636,7 @@
         owning_faction_id: d.owning_faction_id || null,
         hidden_from_faction_ids: d.hidden_from || [],
         grid_position: pos(k),
+        footprint: footprintOf(k).map(pos),
         structure: structureExport(k, d),
         plan: d.plan || null,
         fields: d.fields || {},
@@ -3688,6 +3756,7 @@
       structure: structureFromExport(x.structure)
     };
     if (x.plan) d.plan = clone(x.plan);
+    if ((x.footprint || []).length > 1) d.footprint = x.footprint.map(gridKey);
     migrateNode(d);
     return d;
   }

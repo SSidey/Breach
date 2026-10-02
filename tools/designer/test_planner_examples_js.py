@@ -1,6 +1,6 @@
-"""The planner's example structures (tools/designer/planner_examples.js, spec 24 round 4):
-each fits one 16 x 16 tile and stands on fields (bearing 4) under the shared load paths
-(load_paths.js, the game's rule). Run with Node; skipped where Node isn't installed.
+"""The planner's example structures (tools/designer/planner_examples.js, spec 24 round 4,
+spec 25): each fits one 64 x 64 tile and stands on the ground it names (its bearing)
+under the shared load paths (load_paths.js, the game's rule). Run with Node; skipped where Node isn't installed.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ const out = examples.map(e => {
   Object.keys(plan.solid_cells).forEach(k => { const p = k.split(',').map(Number); xs.push(p[0]); ys.push(p[1]); });
   plan.faces.forEach(f => { xs.push(f.x); ys.push(f.y); });
   plan.dug.forEach(d => { xs.push(d[0]); ys.push(d[1]); });
-  return {id: e.id, failed: paths.solve(plan, materials, 4).failed, faces: plan.faces.length,
+  return {id: e.id, failed: paths.solve(plan, materials, e.bearing).failed, fieldsFailed: paths.solve(plan, materials, 4).failed.length, faces: plan.faces.length,
     minXY: Math.min(...xs, ...ys), maxXY: Math.max(...xs, ...ys),
     levels: Math.max(...plan.faces.map(f => f.level))};
 });
@@ -55,16 +55,21 @@ class PlannerExamplesJsTest(unittest.TestCase):
     def test_there_are_four_examples(self) -> None:
         self.assertEqual(sorted(self.examples), ["castle", "farmhouse", "fort", "tower"])
 
-    def test_every_example_stands_on_fields(self) -> None:
+    def test_every_example_stands_on_its_ground(self) -> None:
         for example_id, example in self.examples.items():
             with self.subTest(example_id):
                 self.assertEqual(example["failed"], [])
+
+    def test_the_stone_examples_would_sink_on_fields(self) -> None:
+        for example_id in ("tower", "castle"):
+            with self.subTest(example_id):
+                self.assertGreater(self.examples[example_id]["fieldsFailed"], 0)
 
     def test_every_example_fits_one_tile(self) -> None:
         for example_id, example in self.examples.items():
             with self.subTest(example_id):
                 self.assertGreaterEqual(example["minXY"], 0)
-                self.assertLessEqual(example["maxXY"], 16)  # a north/west face may sit on edge 16
+                self.assertLessEqual(example["maxXY"], 64)  # a north/west face may sit on edge 64
 
 
 if __name__ == "__main__":
