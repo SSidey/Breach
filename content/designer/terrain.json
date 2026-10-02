@@ -252,7 +252,7 @@
       "default_max_width": 1,
       "default_max_depth": 3,
       "default_max_length": 1,
-      "default_elevation": 48,
+      "default_elevation": 64,
       "bearing": 8,
       "foundation_max": 12,
       "dig_depth": 48,

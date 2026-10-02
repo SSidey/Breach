@@ -122,8 +122,9 @@
   };
   // A terrain with no seeded ground (a custom one) starts from this.
   var GENERIC_GROUND = ground(4, 8, 32, { min: 12, max: 24 }, [['SOIL', 1, 3], ['ROCK', 8, 16]]);
-  // Ground height in cells for a tile that sets none (Decision 56): stylised, not 1:1.
-  var DEFAULT_ELEVATION = { FIELDS: 2, ROCKY: 6, SNOW: 8, DESERT: 2, SWAMP: 0, WATER: 0, FOREST: 3, MOUNTAIN: 48, RAVINE: 0 };
+  // Ground height in cells for a tile that sets none (Decision 56): stylised, not 1:1;
+  // a mountain reaches the default ceiling and blocks flight (Decision 60).
+  var DEFAULT_ELEVATION = { FIELDS: 2, ROCKY: 6, SNOW: 8, DESERT: 2, SWAMP: 0, WATER: 0, FOREST: 3, MOUNTAIN: 64, RAVINE: 0 };
   GENERIC_GROUND.default_elevation = 4;
   Object.keys(DEFAULT_GROUND).forEach(function (id) { DEFAULT_GROUND[id].default_elevation = DEFAULT_ELEVATION[id]; });
   DEFAULT_TERRAIN_LIBRARY.materials = DEFAULT_MATERIALS;
