@@ -18,6 +18,7 @@ const OVERRIDES := {
 	"max_height_override": "max_height",
 	"max_width_override": "max_width",
 	"dig_depth_override": "max_depth",
+	"elevation_override": "elevation",
 }
 const MISSING := "is not in the shared terrain library - save the terrain library in the designer"
 
@@ -35,6 +36,7 @@ static func build(
 	layout.cell_size = int(export_data.get("cell_size", 64))
 	layout.default_terrain_id = str(export_data.get("default_terrain", ""))
 	layout.terrain_library = library
+	layout.ceiling = int(export_data.get("ceiling", 64))
 	if library.terrain(layout.default_terrain_id) == null:
 		errors.append("default terrain '%s' %s" % [layout.default_terrain_id, MISSING])
 	for entry in export_data.get("tiles", []):

@@ -135,6 +135,7 @@ static func _terrain(entry: Dictionary) -> TerrainDef:
 ## The ground fields (Decisions 53, 54); a terrain saved before them has none.
 static func _ground(terrain: TerrainDef, entry: Dictionary) -> void:
 	terrain.bearing = int(entry.get("bearing", 0))
+	terrain.default_elevation = int(entry.get("default_elevation", 0))
 	terrain.foundation_max = int(entry.get("foundation_max", terrain.bearing))
 	terrain.dig_depth = int(entry.get("dig_depth", 0))
 	var water = entry.get("water_table")

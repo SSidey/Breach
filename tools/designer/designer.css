@@ -300,6 +300,11 @@ button:focus-visible, .tool:focus-visible, select:focus-visible, input:focus-vis
   position: absolute; bottom: 2px; left: 2px; font-size: 7.5px; font-family: 'IBM Plex Mono', monospace; z-index: 3;
   color: var(--structure); background: var(--surface); padding: 0 2px; border-radius: 2px; pointer-events: none;
 }
+.cell .elev-badge {
+  position: absolute; bottom: 2px; right: 2px; font-size: 7.5px; font-family: 'IBM Plex Mono', monospace; z-index: 3;
+  color: var(--ink-dim); background: var(--surface); padding: 0 2px; border-radius: 2px; pointer-events: none;
+}
+.cell .elev-badge.capped { color: var(--surface); background: var(--ink); }
 .cell .sub-badge, .cell .home-badge { z-index: 3; }
 .cell .road-seg { position: absolute; background: var(--road); z-index: 0; pointer-events: none; }
 .cell .road-seg.hub { left: calc(50% - 4px); top: calc(50% - 4px); width: 8px; height: 8px; border-radius: 2px; }

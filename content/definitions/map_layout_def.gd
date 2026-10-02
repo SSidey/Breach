@@ -19,6 +19,9 @@ const RouteDef = preload("res://content/definitions/route_def.gd")
 @export var tiles: Array[TileDef] = []
 @export var roads: Array[RoadSegmentDef] = []
 @export var routes: Array[RouteDef] = []
+## Ground above this height (cells) is taken to continue, impassable and unsimulated
+## (Decision 56); 64 = 4 tiles.
+@export var ceiling: int = 64
 
 
 func tile_at(cell: Vector2i) -> TileDef:
@@ -37,8 +40,19 @@ func contains(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.y >= 0 and cell.x < cols and cell.y < rows
 
 
+## A tile's ground height in cells: its own elevation, else its terrain's default.
+func elevation_at(cell: Vector2i) -> int:
+	var tile := tile_at(cell)
+	if tile != null and tile.elevation != TileDef.DEFAULT:
+		return tile.elevation
+	var terrain = terrain_library.terrain(terrain_id_at(cell)) if terrain_library else null
+	return terrain.default_elevation if terrain else 0
+
+
 func validate(node_ids: Array) -> PackedStringArray:
 	var errors := PackedStringArray()
+	if ceiling <= 0:
+		errors.append("layout ceiling must be > 0 cells, got %d" % ceiling)
 	if cols <= 0 or rows <= 0:
 		errors.append("layout cols and rows must be > 0, got %dx%d" % [cols, rows])
 	if terrain_library == null:
