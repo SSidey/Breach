@@ -18,6 +18,10 @@ enum ResourceType { FOOD, WOOD, STONE, METAL, CRYSTAL }
 
 const StructurePlanDef = preload("res://content/definitions/structure_plan_def.gd")
 
+## Tile value meaning "not placed on a tile" (maps built by hand or imported before
+## Decision 68): such a node covers no tiles.
+const NO_TILE := Vector2i(-1, -1)
+
 ## Stable authoring identifier (Phase 4 item 2) - rendering/authoring metadata only,
 ## sim/ never reads it. Needed once array index is no longer globally unique across
 ## lanes.
@@ -101,8 +105,25 @@ const StructurePlanDef = preload("res://content/definitions/structure_plan_def.g
 ## system consumes this yet.
 @export var capture_reward: String = ""
 
-## The structure's plan of cells, faces and loads (spec 24); null = none drawn yet.
+## The structure's plan of cells, faces and loads (spec 24); null = none drawn yet. Its
+## cells are measured from this node's own tile (Decision 68).
 @export var plan: StructurePlanDef
+## The map tile (col, row) the node stands on.
+@export var tile: Vector2i = NO_TILE
+## The tiles the node covers, any connected shape including its own tile (Decision 68);
+## empty means just its own tile.
+@export var footprint: Array[Vector2i] = []
+
+
+## Every tile the node covers.
+func covered_tiles() -> Array[Vector2i]:
+	var tiles: Array[Vector2i] = []
+	if footprint.is_empty():
+		if tile != NO_TILE:
+			tiles.append(tile)
+		return tiles
+	tiles.assign(footprint)
+	return tiles
 
 
 func validate() -> PackedStringArray:
@@ -139,6 +160,28 @@ func validate() -> PackedStringArray:
 	if not garrison_units.is_empty() and garrison <= 0:
 		errors.append("garrison_units requires garrison > 0, got %d" % garrison)
 	errors.append_array(_validate_garrison_units_and_hidden_from())
+	errors.append_array(_validate_footprint())
+	return errors
+
+
+## The footprint includes the node's own tile and is one connected area (edge to edge).
+func _validate_footprint() -> PackedStringArray:
+	var errors := PackedStringArray()
+	if footprint.is_empty():
+		return errors
+	if not footprint.has(tile):
+		errors.append("node '%s': its footprint must include its own tile %s" % [id, tile])
+		return errors
+	var reached := {tile: true}
+	var frontier: Array[Vector2i] = [tile]
+	while not frontier.is_empty():
+		var at: Vector2i = frontier.pop_back()
+		for step in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			if footprint.has(at + step) and not reached.has(at + step):
+				reached[at + step] = true
+				frontier.append(at + step)
+	if reached.size() < footprint.size():
+		errors.append("node '%s': its footprint must be one connected area" % id)
 	return errors
 
 

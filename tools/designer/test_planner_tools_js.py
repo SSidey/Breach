@@ -56,6 +56,11 @@ const ring = t.emptyPlan();
 t.perimeterWalls(ring, {x0: 1, y0: 1, x1: 3, y1: 2}, 0, 'TIMBER', 1);
 out.ringWalls = ring.faces.length;
 out.areaCells = t.cellsOf({x0: 3, y0: 1, x1: 1, y1: 2}).length;
+const legacy = t.normalise({solid_cells: {'2,3,0': 'ROCK'}, faces: [{x: 1, y: 1, level: 0, side: 'north', material: 'TIMBER', thickness: 1}], dug: [[4, 4, -1]], fills: {}, loads: {}});
+out.legacy = {cells: Object.keys(legacy.solid_cells), face: [legacy.faces[0].x, legacy.faces[0].y], dug: legacy.dug[0], scale: legacy.tile_cells};
+out.again = Object.keys(t.normalise(legacy).solid_cells);
+out.leftEdge = t.nearestEdge(-60.5, 3.02, {x0: -64, y0: 0, x1: 63, y1: 63});
+out.clamped = t.nearestEdge(-80, 3.5, {x0: -64, y0: 0, x1: 63, y1: 63});
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -108,6 +113,17 @@ class PlannerToolsJsTest(unittest.TestCase):
     def test_an_area_has_its_cells_and_a_ring_of_walls(self) -> None:
         self.assertEqual(self.out["ringWalls"], 10)  # 3 x 2: 2 x 3 + 2 x 2 edges
         self.assertEqual(self.out["areaCells"], 6)
+
+    def test_a_plan_from_sixteen_cell_tiles_moves_to_the_middle_once(self) -> None:
+        self.assertEqual(self.out["legacy"]["cells"], ["26,27,0"])
+        self.assertEqual(self.out["legacy"]["face"], [25, 25])
+        self.assertEqual(self.out["legacy"]["dug"], [28, 28, -1])
+        self.assertEqual(self.out["legacy"]["scale"], 64)
+        self.assertEqual(self.out["again"], ["26,27,0"])
+
+    def test_edges_are_picked_within_the_footprints_bounds(self) -> None:
+        self.assertEqual((self.out["leftEdge"]["x"], self.out["leftEdge"]["side"]), (-61, "north"))
+        self.assertEqual(self.out["clamped"]["x"], -64)
 
     def test_undo_and_redo(self) -> None:
         self.assertEqual(self.out["undone"], 0)

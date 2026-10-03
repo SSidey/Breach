@@ -63,6 +63,9 @@ static func _build_node(
 	node.position = Vector2(
 		(float(cell_pos.get("col", 0)) + 0.5) * cell, (float(cell_pos.get("row", 0)) + 0.5) * cell
 	)
+	node.tile = Vector2i(int(cell_pos.get("col", 0)), int(cell_pos.get("row", 0)))
+	for place in entry.get("footprint", []):
+		node.footprint.append(Vector2i(int(place.get("col", 0)), int(place.get("row", 0))))
 	for field_name in entry.get("fields", {}).keys():
 		_apply_field(node, field_name, entry["fields"][field_name], errors, warnings)
 	_apply_garrison(node, entry.get("garrison_units", []), errors)

@@ -5,17 +5,32 @@
 //     loads: {"x,y,level": load units} }
 // Faces are stored canonically: north, west or floor. A wall sits flush on its edge and
 // grows into its own cell, or (into_neighbour) the cell north or west of the edge.
+// Cells are measured from the node's own tile, 64 to a tile (Decision 68); a plan's
+// tile_cells records the scale it was drawn at.
 (function (root) {
   'use strict';
 
-  var SIZE = 16, HISTORY = 100;
+  var CELLS_PER_TILE = 64, SIZE = CELLS_PER_TILE, HISTORY = 100;
+  // Plans drawn on 16-cell tiles move to the middle of a 64-cell one.
+  var LEGACY_OFFSET = (CELLS_PER_TILE - 16) / 2;
+  var TILE = { x0: 0, y0: 0, x1: CELLS_PER_TILE - 1, y1: CELLS_PER_TILE - 1 };
 
   function at(x, y, l) { return x + ',' + y + ',' + l; }
-  function emptyPlan() { return { solid_cells: {}, faces: [], dug: [], fills: {}, loads: {} }; }
+  function emptyPlan() { return { tile_cells: CELLS_PER_TILE, solid_cells: {}, faces: [], dug: [], fills: {}, loads: {} }; }
   function normalise(plan) {
     plan.solid_cells = plan.solid_cells || {}; plan.faces = plan.faces || []; plan.dug = plan.dug || [];
     plan.fills = plan.fills || {}; plan.loads = plan.loads || {};
+    if (plan.tile_cells !== CELLS_PER_TILE) migrate(plan);
     return plan;
+  }
+  // A plan from 16-cell tiles: every cell shifts by LEGACY_OFFSET so it stays centred.
+  function migrate(plan) {
+    var d = LEGACY_OFFSET;
+    function moved(map) { var out = {}; Object.keys(map).forEach(function (k) { var p = k.split(',').map(Number); out[at(p[0] + d, p[1] + d, p[2])] = map[k]; }); return out; }
+    plan.solid_cells = moved(plan.solid_cells); plan.fills = moved(plan.fills); plan.loads = moved(plan.loads);
+    plan.faces.forEach(function (f) { f.x += d; f.y += d; });
+    plan.dug = plan.dug.map(function (c) { return [c[0] + d, c[1] + d, c[2]]; });
+    plan.tile_cells = CELLS_PER_TILE;
   }
 
   // A face drawn on a side of cell (x, y) at level l, stored canonically. It grows into the
@@ -54,20 +69,22 @@
   // ---------- picking edges ----------
   // The nearest grid line to a point in cell units: {x, y, side} for the cell the point is
   // in and the side of it that line is, plus the line itself ({axis: 'h'|'v', index}).
-  function nearestEdge(fx, fy) {
-    var x = Math.min(SIZE - 1, Math.max(0, Math.floor(fx))), y = Math.min(SIZE - 1, Math.max(0, Math.floor(fy)));
+  function nearestEdge(fx, fy, bounds) {
+    var b = bounds || TILE;
+    var x = Math.min(b.x1, Math.max(b.x0, Math.floor(fx))), y = Math.min(b.y1, Math.max(b.y0, Math.floor(fy)));
     var toV = Math.min(fx - x, x + 1 - fx), toH = Math.min(fy - y, y + 1 - fy);
     if (toH <= toV) return fy - y < 0.5 ? { x: x, y: y, side: 'north', axis: 'h', index: y, before: false } : { x: x, y: y, side: 'south', axis: 'h', index: y + 1, before: true };
     return fx - x < 0.5 ? { x: x, y: y, side: 'west', axis: 'v', index: x, before: false } : { x: x, y: y, side: 'east', axis: 'v', index: x + 1, before: true };
   }
   // The edge on a locked line (a stroke keeps its first line and side), nearest the point.
-  function edgeOnLine(fx, fy, line) {
-    var clamp = function (v) { return Math.min(SIZE - 1, Math.max(0, Math.floor(v))); };
+  function edgeOnLine(fx, fy, line, bounds) {
+    var b = bounds || TILE;
+    var clamp = function (v, lo, hi) { return Math.min(hi, Math.max(lo, Math.floor(v))); };
     if (line.axis === 'h') {
-      var hx = clamp(fx);
+      var hx = clamp(fx, b.x0, b.x1);
       return line.before ? { x: hx, y: line.index - 1, side: 'south' } : { x: hx, y: line.index, side: 'north' };
     }
-    var vy = clamp(fy);
+    var vy = clamp(fy, b.y0, b.y1);
     return line.before ? { x: line.index - 1, y: vy, side: 'east' } : { x: line.index, y: vy, side: 'west' };
   }
 
@@ -149,7 +166,7 @@
   };
 
   root.BreachPlannerTools = {
-    SIZE: SIZE, at: at, emptyPlan: emptyPlan, normalise: normalise, face: face, faceIndex: faceIndex,
+    SIZE: SIZE, CELLS_PER_TILE: CELLS_PER_TILE, TILE: TILE, at: at, emptyPlan: emptyPlan, normalise: normalise, face: face, faceIndex: faceIndex,
     setFace: setFace, setSolid: setSolid, perimeterWalls: perimeterWalls, cellsOf: cellsOf, dugIndex: dugIndex, isDug: isDug, nearestEdge: nearestEdge, edgeOnLine: edgeOnLine,
     canDig: canDig, fill: fill, addRoom: addRoom, clearLevel: clearLevel, clearPlan: clearPlan, History: History
   };

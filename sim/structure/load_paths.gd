@@ -2,7 +2,9 @@ class_name LoadPaths
 extends RefCounted
 ## Load paths through a structure plan (Decisions 61, 65, spec 24), in whole load units.
 ## - Each element weighs its material's weight x its eighths and carries its strength x
-##   its eighths; a ground column carries bearing x 8.
+##   its eighths; a ground column carries bearing x 8. Bearing is one number for every
+##   column, or {"default": n, "columns": {Vector2i: n}} where a plan crosses tiles of
+##   different ground (Decision 68).
 ## - Loads flow top-down: an element passes its weight plus whatever rests on it, split
 ##   equally, to what holds it (StructureSupports). An element with nothing beneath hangs
 ##   from directly held elements of its own kind within its material's span; with none in
@@ -17,7 +19,7 @@ const StructureSupports = preload("res://sim/structure/structure_supports.gd")
 
 
 ## {"loads": {key: load units}, "failed": [keys, in the order found]}.
-static func solve(plan: StructurePlanDef, library: TerrainLibraryDef, bearing: int) -> Dictionary:
+static func solve(plan: StructurePlanDef, library: TerrainLibraryDef, bearing) -> Dictionary:
 	var supports := StructureSupports.new(plan, library)
 	var elements := supports.elements()
 	var held := {}  # key -> the keys it passes its load to
@@ -43,7 +45,7 @@ static func solve(plan: StructurePlanDef, library: TerrainLibraryDef, bearing: i
 		for target in held[key]:
 			if (
 				target.begins_with("ground:")
-				and loads[target] > bearing * 8
+				and loads[target] > column_bearing(bearing, target) * 8
 				and not failed.has(key)
 			):
 				failed.append(key)
@@ -52,7 +54,7 @@ static func solve(plan: StructurePlanDef, library: TerrainLibraryDef, bearing: i
 
 ## Every element that fails as each failure brings down what it held; the plan is left as
 ## it was (the solve runs on a copy).
-static func settle(plan: StructurePlanDef, library: TerrainLibraryDef, bearing: int) -> Array:
+static func settle(plan: StructurePlanDef, library: TerrainLibraryDef, bearing) -> Array:
 	var working: StructurePlanDef = plan.duplicate(true)
 	var fallen := []
 	while true:
@@ -150,3 +152,12 @@ static func _pass_down(loads: Dictionary, key: String, targets: Array) -> void:
 	for index in range(ordered.size()):
 		var extra: int = loads[key] % ordered.size() if index == 0 else 0
 		loads[ordered[index]] = loads.get(ordered[index], 0) + share + extra
+
+
+## The bearing under a "ground:x,y" column.
+static func column_bearing(bearing, ground_key: String) -> int:
+	if not bearing is Dictionary:
+		return int(bearing)
+	var parts := ground_key.trim_prefix("ground:").split(",")
+	var column := Vector2i(int(parts[0]), int(parts[1]))
+	return int(bearing.get("columns", {}).get(column, bearing.get("default", 0)))

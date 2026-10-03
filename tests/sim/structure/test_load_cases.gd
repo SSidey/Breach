@@ -34,7 +34,7 @@ func test_every_shared_case_holds() -> void:
 	var library := _library(fixture["materials"])
 	for case in fixture["cases"]:
 		var plan := DesignerPlanBuilder.build(case["plan"])
-		var result := LoadPaths.solve(plan, library, int(case["bearing"]))
+		var result := LoadPaths.solve(plan, library, _bearing(case["bearing"]))
 		assert_array(result["failed"]).override_failure_message(case["name"]).is_equal(
 			case["failed"]
 		)
@@ -43,6 +43,17 @@ func test_every_shared_case_holds() -> void:
 				int(case["loads"][key])
 			)
 		if case.has("settled"):
-			assert_array(LoadPaths.settle(plan, library, int(case["bearing"]))).is_equal(
+			assert_array(LoadPaths.settle(plan, library, _bearing(case["bearing"]))).is_equal(
 				case["settled"]
 			)
+
+
+## A case's bearing: one number for every column, or {default, columns: {"x,y": n}}.
+func _bearing(spec) -> Variant:
+	if not spec is Dictionary:
+		return int(spec)
+	var columns := {}
+	for at in spec.get("columns", {}):
+		var parts: PackedStringArray = at.split(",")
+		columns[Vector2i(int(parts[0]), int(parts[1]))] = int(spec["columns"][at])
+	return {"default": int(spec.get("default", 0)), "columns": columns}

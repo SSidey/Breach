@@ -9,7 +9,7 @@ extends Resource
 @export var damage: int = 0
 ## acid, piercing, slashing, bludgeoning... no effect yet; resistances come later.
 @export var damage_type: String = ""
-## Reach in ranks (formation cells, 0.06 map cells each - Decision 48); 0 is melee.
+## Reach in ranks (a rank is one cell - Decisions 48 and 68); 0 is melee.
 @export var attack_range: int = 0
 ## Named traits, e.g. {"siege": 1} for weapons that damage structures (later).
 @export var traits: Dictionary = {}
