@@ -20,6 +20,9 @@ const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd"
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 
 const EPSILON := 0.000001
+## How far past a face's end (cells) a unit still meets it: only units in contact strike,
+## the ones overlapping the face or touching its corner (Decision 78).
+const CONTACT_SLACK := 0.5
 
 
 ## Free attackers whose fronts reach a hostile's side or rear lock on.
@@ -136,8 +139,9 @@ static func _busy_in_front(squad: SkirmishSquad, unit: SkirmishUnit) -> bool:
 
 
 ## One unit's strike. aim = [targets, their squad, the facing whose lateral axis matches
-## them]: it strikes the target it overlaps most across that axis, or the nearest. Counts
-## down its cooldown and adds a blow when it lands.
+## them]: it strikes the target it overlaps most across that axis, or one whose corner it
+## touches; with none in contact it doesn't strike. Counts down its cooldown and adds a
+## blow when it lands.
 static func _strike(
 	unit: SkirmishUnit, own: SkirmishSquad, aim: Array, flank: bool, interval: int, out: Array
 ) -> void:
@@ -164,7 +168,7 @@ static func _pick(unit: SkirmishUnit, own: SkirmishSquad, aim: Array) -> Skirmis
 		if key < best_key - EPSILON:
 			best = target
 			best_key = key
-	return best
+	return best if best_key <= CONTACT_SLACK + EPSILON else null
 
 
 static func _rect(squad: SkirmishSquad, unit: SkirmishUnit) -> Rect2:
