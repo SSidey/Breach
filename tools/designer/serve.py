@@ -42,6 +42,8 @@ STATIC_FILES = {
     "/designer.css": ("designer.css", "text/css; charset=utf-8"),
     "/designer.js": ("designer.js", "text/javascript; charset=utf-8"),
     "/repo.js": ("repo.js", "text/javascript; charset=utf-8"),
+    "/load_paths.js": ("load_paths.js", "text/javascript; charset=utf-8"),
+    "/planner.js": ("planner.js", "text/javascript; charset=utf-8"),
 }
 MAX_BODY_BYTES = 16 * 1024 * 1024
 ## Bumped whenever the API gains or changes an endpoint; repo.js compares it with its own

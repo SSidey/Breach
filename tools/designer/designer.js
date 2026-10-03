@@ -406,6 +406,27 @@
     if (empty) delete state.tiles[k];
   }
   function tileTerrainId(k) { return tileAt(k).terrain || state.defaultTerrain; }
+  // Diagnostic views of the map (spec 24): colour each tile by elevation, ground bearing,
+  // or its structure's load against capacity, instead of by terrain.
+  function diagnosticColour(k) {
+    var view = state.diagView || 'terrain';
+    if (view === 'terrain') return null;
+    var terr = terrainDef(tileTerrainId(k)) || {};
+    if (view === 'elevation') {
+      var e = elevationAt(k), f = Math.min(1, e / state.ceiling);
+      return { colour: 'hsl(30, 15%, ' + Math.round(18 + f * 72) + '%)', title: 'Elevation ' + e + (e >= state.ceiling ? ' (capped)' : '') };
+    }
+    if (view === 'bearing') {
+      var b = Number(terr.bearing) || 0;
+      return { colour: 'hsl(' + Math.round(Math.min(1, b / 10) * 120) + ', 55%, 45%)', title: 'Bearing ' + b + ' (' + b * 8 + ' per column)' };
+    }
+    var node = nodeAt(k), ratio = node && window.BreachPlanner ? BreachPlanner.worstRatio(node.plan, materialMap(), Number(terr.bearing) || 0) : null;
+    if (ratio == null) return { colour: 'rgba(255,255,255,0.55)', title: 'No structure plan' };
+    return { colour: ratio > 1 ? '#111111' : ratio > 0.8 ? '#d0453a' : ratio > 0.5 ? '#e0b43a' : '#4f9a52',
+      title: ratio > 1 ? 'Something fails' : 'Worst load ' + Math.round(ratio * 100) + '% of capacity' };
+  }
+  document.getElementById('diagView').addEventListener('change', function () { state.diagView = this.value; renderGrid(); });
+
   // A tile's ground height in cells: its own elevation, else its terrain's (Decision 56).
   function elevationAt(k) {
     var t = tileAt(k), d = terrainDef(tileTerrainId(k)) || {};
@@ -761,8 +782,13 @@
   function setBottomTab(tab) {
     var node = state.selectedCell ? nodeAt(state.selectedCell) : null;
     if (node && node.node_type === 'WAYPOINT') node = null; // waypoints hold no structure
-    if (tab === 'structure' && !node) tab = 'paint';
+    if ((tab === 'structure' || tab === 'plan') && !node) tab = 'paint';
     state.bottomTab = tab;
+    var pBtn = document.getElementById('bottomTabPlan');
+    pBtn.setAttribute('data-active', tab === 'plan' ? 'true' : 'false');
+    pBtn.disabled = !node;
+    pBtn.textContent = node ? 'Plan · ' + node.id : 'Plan';
+    document.getElementById('planEditor').hidden = tab !== 'plan';
     document.getElementById('bottomTabPaint').setAttribute('data-active', tab === 'paint' ? 'true' : 'false');
     var sBtn = document.getElementById('bottomTabStructure');
     sBtn.setAttribute('data-active', tab === 'structure' ? 'true' : 'false');
@@ -770,14 +796,37 @@
     sBtn.textContent = node ? 'Structure · ' + node.id : 'Structure';
     document.getElementById('layersStrip').hidden = tab !== 'paint';
     document.getElementById('structureEditor').hidden = tab !== 'structure';
-    if (tab !== 'structure') state.expanded = false;
+    if (tab !== 'structure' && tab !== 'plan') state.expanded = false;
     var ex = document.getElementById('expandBtn');
-    ex.hidden = tab !== 'structure';
+    ex.hidden = tab !== 'structure' && tab !== 'plan';
     ex.textContent = state.expanded ? 'Collapse ⤡' : 'Expand ⤢';
     document.querySelector('#viewLanes .workspace').classList.toggle('expanded', !!state.expanded);
-    if (tab === 'paint') renderLayersStrip(); else renderStructureEditor();
+    if (tab === 'paint') renderLayersStrip(); else if (tab === 'plan') renderPlanEditor(); else renderStructureEditor();
   }
-  document.getElementById('expandBtn').addEventListener('click', function () { state.expanded = !state.expanded; setBottomTab('structure'); });
+  // The structure planner (spec 24, planner.js) for the selected node, on its tile's ground.
+  function plannerContext(k) {
+    var terr = terrainDef(tileTerrainId(k)) || {};
+    return {
+      materials: terrainLib.materials,
+      material: materialDef,
+      materialMap: materialMap,
+      bearing: Number(terr.bearing) || 0,
+      groundColour: terr.color || '#8f9a4f',
+      save: function () { safeSave(); renderGrid(); }
+    };
+  }
+  function materialMap() {
+    var out = {};
+    terrainLib.materials.forEach(function (m) { out[m.id] = { weight: Number(m.weight) || 0, strength: Number(m.strength) || 0, span: Number(m.span) || 0 }; });
+    return out;
+  }
+  function renderPlanEditor() {
+    var k = state.selectedCell, node = k ? nodeAt(k) : null;
+    if (!node || !window.BreachPlanner) return;
+    BreachPlanner.render(document.getElementById('planEditor'), node, plannerContext(k));
+  }
+  document.getElementById('expandBtn').addEventListener('click', function () { state.expanded = !state.expanded; setBottomTab(state.bottomTab === 'plan' ? 'plan' : 'structure'); });
+  document.getElementById('bottomTabPlan').addEventListener('click', function () { setBottomTab('plan'); });
   var resizeTimer = null;
   window.addEventListener('resize', function () {
     // Structure cells are sized to the available width, so re-fit them after a resize.
@@ -2341,6 +2390,8 @@
           fb.title = fDef ? fDef.label : t.feature;
           cellEl.appendChild(fb);
         }
+        var diag = diagnosticColour(k);
+        if (diag) { var dl = document.createElement('div'); dl.className = 'diag-layer'; dl.style.background = diag.colour; dl.title = diag.title; cellEl.appendChild(dl); }
         var elev = elevationAt(k);
         if (elev !== Number((base || {}).default_elevation || 0)) { // only where the ground differs from the base terrain's
           var eb = document.createElement('div');
@@ -3502,6 +3553,7 @@
         hidden_from_faction_ids: d.hidden_from || [],
         grid_position: pos(k),
         structure: structureExport(k, d),
+        plan: d.plan || null,
         fields: d.fields || {},
         garrison_count: garrisonCount(d),
         garrison_units: d.garrison_units
@@ -3618,6 +3670,7 @@
       fields: clone(x.fields || {}), garrison_units: clone(x.garrison_units || []),
       structure: structureFromExport(x.structure)
     };
+    if (x.plan) d.plan = clone(x.plan);
     migrateNode(d);
     return d;
   }
