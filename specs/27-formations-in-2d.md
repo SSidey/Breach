@@ -1,7 +1,7 @@
 # Spec 27: Formations in 2D
 
 Decisions 73 (the formation model is the game's simulation), 70 (stands), 52 (squads on a
-2D cell grid), 69 (light control, unit AI) and 74 (position and facing).
+2D cell grid), 69 (light control, unit AI), 74 (position and facing) and 75 (routes).
 
 ## Purpose
 
@@ -18,7 +18,7 @@ Wave templates are painted in stands (Decision 70).
 ## Status
 
 **Design conversation under way.** The user takes design questions one subject at a
-time. Subject 1 is agreed (see Agreed below); the rest of the agenda is a starting point,
+time. Subjects 1 and 2 are agreed (see Agreed below); the rest of the agenda is a starting point,
 not decided.
 
 ## Agreed
@@ -35,6 +35,16 @@ not decided.
    - Turns rotate, never mirror: the left flank stays left.
    - A turning squad neither advances nor strikes, and blows on it count as flank blows.
    - Units face their squad's way (individual turning is subject 3).
+2. **Paths (Decision 75).**
+   - A route is a path of cells, pathfound between waypoints; its corridor is the lane's
+     combat width either side.
+   - The player assigns routes to lanes and moves their waypoints. How many routes the
+     player may run is set per map and grows with progression (an overlord upgrade, or
+     buildings and tech). Routes can be locked.
+   - Detouring round a fort is allowed; its long-ranged defences are the cost.
+   - Only the units' AI leaves a route (contact, objectives, obstacles, flanking), within
+     a leash of 16 cells scaled by discipline, rejoining at the nearest point ahead.
+   - **Open:** how the player lays out an underground route.
 
 ## Agenda for the design conversation
 

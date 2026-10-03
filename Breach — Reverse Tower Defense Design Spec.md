@@ -3874,3 +3874,66 @@ a baseline to feel-test: "Worth trying as a baseline".
   (rank, column) turned to the facing, replacing `lateral_span`'s mirroring.
 - Squads gain a turning state with a wheel time and an about-face pause.
 - The feel-test scene draws squads at their 2D cells and facings.
+
+### Decision 75 — Squads follow 2D routes the player assigns and alters, up to a per-map number that grows with progression; the units' AI leaves a route only within a leash
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 2 (paths). The user agreed the recommendation "so
+long as the player can assign a number of routes and alter them", with the number
+configurable per map and tied to progression. This builds on Decisions 26 and 27: authored
+links are the default routes, route geometry is pathfound over terrain, and the player
+can reroute.
+- **A route is a path of cells across the map**, pathfound over terrain between its
+  waypoints (Decision 26). Squads keep a distance along it, for ordering, reinforcing and
+  arrival.
+  - Its **corridor** is the lane's combat width (Decision 51) either side of the route's
+    centre line. Squads spread and sidle anywhere within it.
+  - At a bend a squad wheels when the facing nearest its heading changes (Decision 74).
+- **The player assigns and alters routes.**
+  - Each lane runs on a route. The player picks it from the map's routes and can change
+    it by moving its waypoints; the geometry between them is pathfound again.
+  - **How many routes the player may run is set per map.** Early, smaller maps may allow
+    one; maps with more objectives (like the test maps) allow more.
+  - The number can grow with **progression**: an overlord upgrade, or buildings and their
+    tech (Decision 41).
+  - A map can mark routes **locked** until a condition opens them.
+- **Going round defences is a risk, not a rule.** A route that skirts a fort still passes
+  through the reach of its longer-ranged defences, which fire on the nearest detected
+  enemy (Decision 71). Nothing forbids the detour; the fort's fire is the cost.
+- **Only the units' own AI takes a squad off its route** (Decision 69), for:
+  - **contact:** a detected enemy squad off the route, within the leash
+  - **objectives:** a subnode's capture area (Decision 72) near the route, when the lane's
+    orders say to take objectives
+  - **obstacles:** blocked cells on the route (spec 27, subject 7)
+  - **flanking:** spec 27, subject 4, by the same means
+- **A leash bounds how far a squad strays:** 16 cells by default (a quarter of a tile, a
+  placeholder), lengthened or shortened by discipline (Decision 52). A squad whose target
+  goes beyond the leash gives up and returns.
+- **Rejoining:** after a detour a squad returns to the route at the nearest point ahead of
+  where it left, not where it turned off.
+- **Off-route movement** pathfinds the squad's block over cells, with a fixed tie-break so
+  the sim stays deterministic.
+- **Pillar check (Decision 58):** the player still sends waves down lanes against a
+  defence. Choosing and bending routes is the planning choice the attacker makes, and the
+  fort's ranged reach keeps the defence the obstacle. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Player-drawn paths per squad | Too much control work across several fights (Decision 69); routes are per lane. |
+| Free roaming with no routes | Loses the lanes, the spine of a reverse tower defence. |
+| Squads that never leave their route | No flanks and no off-route objectives. |
+| A fixed number of routes for every map | The user wants it set per map and grown with progression. |
+
+**Consequences:**
+- Maps gain the number of routes the player may run, and routes can be locked behind a
+  condition.
+- The overlord's upgrades and the tech tree can raise that number.
+- The game gains route assignment and waypoint editing for the player; the designer's
+  authored links stay the defaults.
+- Lanes gain the "take objectives" or "press on" order; units gain a leash from
+  discipline.
+- Underground routes are an open question in spec 27.
