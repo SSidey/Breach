@@ -15,11 +15,14 @@ const WaveTemplate = preload("res://sim/skirmish/formation/wave_template.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
+const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 
 var faction_id: String
 var at_player_end: bool
 var departure: Departure = Departure.MANUAL
 var auto_merge := false
+## The route its waves follow (Decision 75); null keeps the simulation's lane.
+var route: FormationRoute = null
 
 var _template := WaveTemplate.new(1, 0)
 var _filled := []  # one bool per _template.ordered() place
@@ -96,7 +99,7 @@ func send(sim: FormationSimulation) -> SkirmishSquad:
 	for index in range(_filled.size()):
 		if _filled[index]:
 			placements.append(layout[1][index])
-	var squad := sim.spawn_squad(layout[0], placements, faction_id, at_player_end)
+	var squad := sim.spawn_squad(layout[0], placements, faction_id, at_player_end, 0, route)
 	squad.merges = auto_merge
 	_filled.fill(false)
 	_announced = false
