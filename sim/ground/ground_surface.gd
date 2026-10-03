@@ -10,9 +10,13 @@ extends RefCounted
 ##   is a **cliff**, which needs climbing (Decision 54).
 ## - Digging the surface cell removes only what is left of it (dig_fraction).
 ## - Ground at or above the map's ceiling is **capped**: impassable and unsimulated.
+## - On the tile shape go each terrain's seeded **relief** (GroundRelief) and the map's
+##   carved **channels** (GroundChannels), which may hold a liquid (Decision 59).
 ## Cells are global: column x runs across the map, TILE_CELLS per tile. Pure.
 
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
+const GroundRelief = preload("res://sim/ground/ground_relief.gd")
+const GroundChannels = preload("res://sim/ground/ground_channels.gd")
 
 ## Cells along a tile's edge (Decision 53).
 const TILE_CELLS := 16
@@ -21,17 +25,30 @@ var ceiling: int
 
 var _cols: int
 var _rows: int
+var _seed: int
 var _elevations := PackedInt32Array()  # per tile, row-major
+var _reliefs := []  # per tile: Vector2i(amplitude, scale)
+var _channels: GroundChannels
 
 
 func _init(layout: MapLayoutDef) -> void:
 	_cols = maxi(layout.cols, 1)
 	_rows = maxi(layout.rows, 1)
 	ceiling = layout.ceiling
+	_seed = layout.seed
+	_channels = GroundChannels.new(layout)
 	_elevations.resize(_cols * _rows)
 	for row in range(_rows):
 		for col in range(_cols):
 			_elevations[row * _cols + col] = layout.elevation_at(Vector2i(col, row))
+			var terrain = (
+				layout.terrain_library.terrain(layout.terrain_id_at(Vector2i(col, row)))
+				if layout.terrain_library
+				else null
+			)
+			_reliefs.append(
+				Vector2i(terrain.relief_amplitude, terrain.relief_scale) if terrain else Vector2i()
+			)
 
 
 ## The level (cells up from 0) of the column's surface cell.
@@ -72,6 +89,16 @@ func is_cliff(from: Vector2i, to: Vector2i) -> bool:
 	return absf(surface_height(to) - surface_height(from)) > 1.0
 
 
+## {"material", "level"} of the liquid a channel holds over the column, if its level is
+## above the ground there; {} otherwise.
+func liquid_at(column: Vector2i) -> Dictionary:
+	var centre := Vector2(column) + Vector2(0.5, 0.5)
+	var held := _channels.liquid(centre, _ground_at(centre))
+	if held.is_empty() or held["level"] <= surface_height(column):
+		return {}
+	return held
+
+
 ## True if the column's ground reaches the ceiling.
 func is_capped(column: Vector2i) -> bool:
 	return surface_height(column) >= ceiling
@@ -85,18 +112,33 @@ func _corner_quarters(column: Vector2i) -> PackedInt32Array:
 	return out
 
 
-## Ground height at a cell corner, interpolated between tile centres.
+## Ground height at a cell corner: the tile shape and relief, less any channel cut.
 func _height_at(corner: Vector2i) -> float:
-	var u := clampf(corner.x / float(TILE_CELLS) - 0.5, 0.0, _cols - 1.0)
-	var v := clampf(corner.y / float(TILE_CELLS) - 0.5, 0.0, _rows - 1.0)
+	var point := Vector2(corner)
+	return _ground_at(point) - _channels.carve(point)
+
+
+## The uncarved ground at a point: tile elevations and each tile's relief, blended between
+## tile centres (level beyond the outermost ones).
+func _ground_at(point: Vector2) -> float:
+	var u := clampf(point.x / TILE_CELLS - 0.5, 0.0, _cols - 1.0)
+	var v := clampf(point.y / TILE_CELLS - 0.5, 0.0, _rows - 1.0)
 	var col := mini(floori(u), _cols - 2) if _cols > 1 else 0
 	var row := mini(floori(v), _rows - 2) if _rows > 1 else 0
-	var fu := u - col
-	var fv := v - row
-	var top := lerpf(_tile(col, row), _tile(col + 1, row), fu)
-	var bottom := lerpf(_tile(col, row + 1), _tile(col + 1, row + 1), fu)
-	return lerpf(top, bottom, fv)
+	var weights := {
+		Vector2i(col, row): (1.0 - (u - col)) * (1.0 - (v - row)),
+		Vector2i(col + 1, row): (u - col) * (1.0 - (v - row)),
+		Vector2i(col, row + 1): (1.0 - (u - col)) * (v - row),
+		Vector2i(col + 1, row + 1): (u - col) * (v - row),
+	}
+	var height := 0.0
+	for tile in weights:
+		var index := _index(tile)
+		var relief: Vector2i = _reliefs[index]
+		var bump := relief.x * GroundRelief.noise(point, relief.y, _seed)
+		height += weights[tile] * (_elevations[index] + bump)
+	return height
 
 
-func _tile(col: int, row: int) -> float:
-	return _elevations[clampi(row, 0, _rows - 1) * _cols + clampi(col, 0, _cols - 1)]
+func _index(tile: Vector2i) -> int:
+	return clampi(tile.y, 0, _rows - 1) * _cols + clampi(tile.x, 0, _cols - 1)

@@ -12,6 +12,7 @@ const BridgeDef = preload("res://content/definitions/bridge_def.gd")
 const RoadSegmentDef = preload("res://content/definitions/road_segment_def.gd")
 const RouteDef = preload("res://content/definitions/route_def.gd")
 const TerrainLibraryDef = preload("res://content/definitions/terrain_library_def.gd")
+const ChannelDef = preload("res://content/definitions/channel_def.gd")
 
 const OVERRIDES := {
 	"stability_override": "stability",
@@ -37,6 +38,9 @@ static func build(
 	layout.default_terrain_id = str(export_data.get("default_terrain", ""))
 	layout.terrain_library = library
 	layout.ceiling = int(export_data.get("ceiling", 64))
+	layout.seed = int(export_data.get("seed", 0))
+	for entry in export_data.get("channels", []):
+		layout.channels.append(_channel(entry))
 	if library.terrain(layout.default_terrain_id) == null:
 		errors.append("default terrain '%s' %s" % [layout.default_terrain_id, MISSING])
 	for entry in export_data.get("tiles", []):
@@ -81,6 +85,19 @@ static func _tile(
 		upgrades.append(str(upgrade))
 	tile.upgrade_ids = upgrades
 	return tile
+
+
+static func _channel(entry: Dictionary) -> ChannelDef:
+	var channel := ChannelDef.new()
+	var tiles: Array[Vector2i] = []
+	for grid_position in entry.get("tiles", []):
+		tiles.append(cell_of(grid_position))
+	channel.tiles = tiles
+	channel.width = int(entry.get("width", 4))
+	channel.depth = int(entry.get("depth", 2))
+	channel.liquid_id = str(entry.get("liquid", "")) if entry.get("liquid") != null else ""
+	channel.liquid_depth = int(entry.get("liquid_depth", 0))
+	return channel
 
 
 static func _bridge(entry: Dictionary) -> BridgeDef:

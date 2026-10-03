@@ -141,6 +141,10 @@ static func _terrain(entry: Dictionary) -> TerrainDef:
 static func _ground(terrain: TerrainDef, entry: Dictionary) -> void:
 	terrain.bearing = int(entry.get("bearing", 0))
 	terrain.default_elevation = int(entry.get("default_elevation", 0))
+	var relief = entry.get("relief", {})
+	if relief is Dictionary:
+		terrain.relief_amplitude = int(relief.get("amplitude", 0))
+		terrain.relief_scale = int(relief.get("scale", 0))
 	terrain.foundation_max = int(entry.get("foundation_max", terrain.bearing))
 	terrain.dig_depth = int(entry.get("dig_depth", 0))
 	for body in entry.get("liquids", _legacy_water(entry)):

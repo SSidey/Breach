@@ -9,6 +9,7 @@ const TerrainLibraryDef = preload("res://content/definitions/terrain_library_def
 const TileDef = preload("res://content/definitions/tile_def.gd")
 const RoadSegmentDef = preload("res://content/definitions/road_segment_def.gd")
 const RouteDef = preload("res://content/definitions/route_def.gd")
+const ChannelDef = preload("res://content/definitions/channel_def.gd")
 
 @export var cols: int = 0
 @export var rows: int = 0
@@ -22,6 +23,11 @@ const RouteDef = preload("res://content/definitions/route_def.gd")
 ## Ground above this height (cells) is taken to continue, impassable and unsimulated
 ## (Decision 56); 64 = 4 tiles.
 @export var ceiling: int = 64
+## Seeds relief (and later strata and liquid bodies), so a map's ground is reproducible
+## (Decision 59).
+@export var seed: int = 0
+## Rivers, ditches, moats and banks carved along tiles (Decision 59).
+@export var channels: Array[ChannelDef] = []
 
 
 func tile_at(cell: Vector2i) -> TileDef:
@@ -69,6 +75,8 @@ func validate(node_ids: Array) -> PackedStringArray:
 	errors.append_array(_validate_tiles(node_ids))
 	errors.append_array(_validate_roads())
 	errors.append_array(_validate_routes(node_ids))
+	for channel in channels:
+		errors.append_array(channel.validate(cols, rows, terrain_library))
 	return errors
 
 

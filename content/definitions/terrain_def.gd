@@ -25,6 +25,10 @@ const LiquidBodyDef = preload("res://content/definitions/liquid_body_def.gd")
 @export var bearing: int = 0
 ## Ground height in cells for a tile of this terrain that sets none (Decision 56).
 @export var default_elevation: int = 0
+## Seeded unevenness within a tile (Decision 59): up to this many cells above or below the
+## tile's height, varying over about relief_scale cells; 0 = smooth.
+@export var relief_amplitude: int = 0
+@export var relief_scale: int = 0
 @export var foundation_max: int = 0
 @export var dig_depth: int = 0
 ## Bodies of water or lava (materials that flow) it may hold (Decisions 62, 64).
