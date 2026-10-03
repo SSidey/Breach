@@ -21,6 +21,9 @@ const MAX_FOOTPRINT := 8
 ## forward place first). Reinforcements re-form by these (Decision 46).
 @export var preferred_position: Position = Position.FRONT
 @export var position_priority: int = 0
+## How far it detects others, in cells (Decision 87; placeholder). Line of sight and light
+## come with terrain.
+@export var detection_range: float = 40.0
 ## What it fights with (Decision 47). Without weapons it strikes once for `dmg`.
 @export var weapons: Array[WeaponDef] = []
 
