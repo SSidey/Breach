@@ -27,9 +27,7 @@ func test_a_sixteen_wide_line_wheels_in_about_one_and_a_half_seconds() -> void:
 
 func test_wider_or_slower_squads_take_longer_to_wheel() -> void:
 	assert_int(SquadTurn.wheel_ticks(8, 8.0, 0.1)).is_less(SquadTurn.wheel_ticks(16, 8.0, 0.1))
-	assert_int(SquadTurn.wheel_ticks(16, 4.0, 0.1)).is_greater(
-		SquadTurn.wheel_ticks(16, 8.0, 0.1)
-	)
+	assert_int(SquadTurn.wheel_ticks(16, 4.0, 0.1)).is_greater(SquadTurn.wheel_ticks(16, 8.0, 0.1))
 	assert_int(SquadTurn.wheel_ticks(1, 1000.0, 0.1)).is_equal(1)
 
 

@@ -58,6 +58,4 @@ func test_a_straight_route_reproduces_the_lanes_lateral_spans() -> void:
 
 func test_the_gap_is_measured_along_the_facing() -> void:
 	assert_float(SquadFrame.gap_along(Vector2(2, 5), Vector2(9, 1), SquadFrame.EAST)).is_equal(7.0)
-	assert_float(SquadFrame.gap_along(Vector2(2, 5), Vector2(9, 1), SquadFrame.NORTH)).is_equal(
-		4.0
-	)
+	assert_float(SquadFrame.gap_along(Vector2(2, 5), Vector2(9, 1), SquadFrame.NORTH)).is_equal(4.0)
