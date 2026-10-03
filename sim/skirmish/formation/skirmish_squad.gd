@@ -51,6 +51,8 @@ var flank_contacts := {}
 var wings := {}
 ## A hold-until order (FormationStaging, Decision 87); empty when it has none.
 var staging := {}
+## Its will to fight, 0 to 100 (FormationMorale, Decision 82); -1 until first read.
+var morale := -1
 var wait_ticks: int = 0
 ## Re-forming after a reinforcement, and the swaps under way (Decision 46, FormationShuffle):
 ## [[mover, passed units, ticks left, ticks in all], ...].
