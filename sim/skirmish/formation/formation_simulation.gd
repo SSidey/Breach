@@ -44,6 +44,7 @@ const FormationMelee = preload("res://sim/skirmish/formation/formation_melee.gd"
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const FormationNarrowing = preload("res://sim/skirmish/formation/formation_narrowing.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -209,6 +210,8 @@ func _move(events: Array) -> void:
 		var end := FormationMarch.length(mover, route_length)
 		var travel := FormationMarch.travel_sign(mover, end)
 		if _turns_first(mover, travel, events):
+			continue
+		if FormationNarrowing.holds(mover, terrain, _tick, tick_seconds, events):
 			continue
 		var open_step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		var step := FormationMarch.pace(mover, terrain, open_step, _tick, events)

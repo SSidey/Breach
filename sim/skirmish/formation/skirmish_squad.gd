@@ -58,6 +58,12 @@ var fleeing := {}
 var rally_ticks := 0
 ## Halted by ground it can't cross (FormationMarch.pace); reported once.
 var blocked := false
+## Narrowed through a gap (FormationNarrowing): its painted places (unit id -> [rank,
+## column]), width and shift, and ticks left re-forming.
+var painted := {}
+var painted_width := 0
+var painted_shift := 0.0
+var narrow_ticks := 0
 var wait_ticks: int = 0
 ## Re-forming after a reinforcement, and the swaps under way (Decision 46, FormationShuffle):
 ## [[mover, passed units, ticks left, ticks in all], ...].
