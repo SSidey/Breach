@@ -22,12 +22,14 @@ is done.
 2. **Skills and abilities:** what they are beside traits, and how a unit gains them (tech
    per unit type, veterancy, items).
 3. **Melee skill:** a sure-hit rule (parries, outmatching) that unwieldy items (Decision
-   79) feed, kept deterministic.
-4. **Progression:** what the overlord's tech unlocks per unit type, and what a map grants.
-5. **Leaders:** commanders (built, rolled tactic traits), heroes (promoted from regular
+   79), morale bands and conditions (Decision 82) feed, kept deterministic.
+4. **Morale inputs:** courage, comfort ranges, tolerances, likes and dislikes (Decision
+   82); which are per type and which vary per unit.
+5. **Progression:** what the overlord's tech unlocks per unit type, and what a map grants.
+6. **Leaders:** commanders (built, rolled tactic traits), heroes (promoted from regular
    units, rolled tactic traits) and lords (named, authored); leadership N and tactic
    traits (Decision 81).
-6. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
+7. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
    wave painter shows it.
 
 ## Rounds

@@ -1,7 +1,7 @@
 # Spec 27: Formations in 2D
 
 Decisions 73 (the formation model is the game's simulation), 70 (stands), 52 (squads on a
-2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts) and 81 (flanks, leadership).
+2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts), 81 (flanks, leadership) and 82 (morale, shock, rout).
 
 ## Purpose
 
@@ -67,8 +67,9 @@ not decided.
      at once, with a morale hit.
    - Flanking with whole waves is a leader's tactic trait, not a lane order. Commanders
      and heroes roll tactic traits; lords have authored ones.
-   - **Open:** morale, shock (from flank hits and fighting on several sides) and rout,
-     including casualties from a panicked flight.
+   - Morale, shock and rout (Decision 82): a morale pool per formation from courage,
+     leadership, support and condition; impact and pressure shock; a rout is a panicked
+     flight with crush casualties, spreading panic, pursuit and rally.
 
 ## Agenda for the design conversation
 

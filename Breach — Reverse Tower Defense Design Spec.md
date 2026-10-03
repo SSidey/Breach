@@ -4247,3 +4247,73 @@ commander/hero/lord to prefer flanks".
   promotion belong with spec 28.
 - The formation sim gains wings, a discipline-based reach and leadership per formation.
 - Tactic traits are seeded, so a battle stays deterministic.
+
+### Decision 82 — Morale is a formation's pool, built from courage, leadership, support and condition; shock drains it; a rout is a panicked flight with crush casualties
+
+**Supersedes:** Decision 78, in part (several fronts straining discipline is now pressure shock on morale)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** The open point in spec 27, subject 4. The user agreed the recommendation
+("Lets go with those") and set out what morale is built from: a base stat such as
+courage; leadership; allies at the sides; condition (well-fed, comfortable in the
+temperature, not wet, well-rested); and likes and dislikes (liking combat, weariness from
+too much, a disliked or untrained weapon), which "could also bleed into ... how well they
+fight e.g. hit rate, damage".
+- **Morale is a whole number per formation,** read in bands: **steady**, **shaken**,
+  **wavering**, and **routing** at 0. Shaken and wavering tighten re-forming and the
+  leash; wavering also keeps wings from going out (Decision 81).
+- **What sets it.** Its maximum and recovery come from:
+  - **courage:** each unit type's base stat (the formation's average)
+  - **leadership:** the formation's best living leader (Decision 81)
+  - **support:** each side covered by a friendly formation close by adds to it, the
+    mirror of pressure shock
+  - **condition:** fed, rested, comfortable. Conditions are traits a unit's state gives
+    it (cold N or hot N when the heat is outside its comfort range, wet, hungry, tired),
+    met against its tolerances by the pair rule (Decision 64)
+  - **likes and dislikes:** traits such as likes combat (gains in melee), and dislikes on
+    an item (a disliked or untrained weapon)
+  It recovers out of contact, faster with more leadership.
+- **Morale and discipline change how well units fight.** Lower bands and bad conditions
+  slow blows and weaken them (placeholder: wavering strikes half again slower). The full
+  rule, with hit rate and melee skill, joins spec 28.
+- **Shock is morale damage,** separate from physical damage:
+  - **impact:** a burst on first contact with a side edge, doubled on the rear; a
+    **charge N** trait adds to it, scaled by speed at contact. Decision 78's
+    first-interval flank damage bonus stands too.
+  - **pressure:** each attack interval in melee, by the sides engaged (placeholders):
+    1 side 0, 2 sides 1, 3 sides 3, surrounded 6. A defender that turns to meet a flank
+    still fights on two sides, so it still takes it.
+  - **losses:** each friendly unit that falls costs a little; a leader's death costs a
+    lot (Decision 81); a nearby friendly formation routing costs some.
+  - **weariness:** long melee tires units, which feeds the tired condition.
+- **A rout is a panicked flight, not an about-face.**
+  - The formation breaks: its units flee one by one, away from the enemy and back along
+    the route at full speed. They don't fight back; every blow on them is a rear hit.
+  - **Crush casualties:** a fleeing unit that pushes through a cell held by a friendly
+    unit deals and takes blunt crush damage scaled by size, so a fleeing brute tramples
+    grems. Routing into one's own reinforcements hurts both.
+  - **Panic spreads:** a friendly formation that routers push through takes shock.
+  - **Pursuit:** pursuers chase within their leash (Decision 75); low discipline chases
+    further, and a leader who pursues (Decision 81) does so on purpose.
+  - **Rally:** routers rally on reaching a friendly leader's formation (joining it from
+    the back), or after a time out of contact if their own leader lives. Otherwise they
+    leave the field and return to the reserve (Decision 45).
+- **Deterministic:** thresholds and seeded traits only; no dice.
+- **Pillar check (Decision 58):** morale makes the planning choices (leaders, routes,
+  supply, comfort) decide fights without the player steering them. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Morale per unit | Too much to read; formations rout as bodies, and leadership is per formation. |
+| Rout as an orderly retreat | The user: a panicked flight is where casualties come from. |
+| Random rout checks | The sim is deterministic; thresholds give the same drama. |
+
+**Consequences:**
+- Unit types gain courage, comfort ranges and tolerances; items can be disliked or
+  untrained; units gain conditions from their state.
+- The formation sim gains a morale pool with bands, shock, rout, crush damage, pursuit
+  and rally.
+- The front panel (Decision 69) shows each side's morale band.
