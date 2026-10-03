@@ -36,6 +36,12 @@ static func run(
 		terrain.resource_scene_unique_id = _safe_id("Terrain", terrain.id)
 	for feature in result.library.features:
 		feature.resource_scene_unique_id = _safe_id("Feature", feature.id)
+	for material in result.library.materials:
+		material.resource_scene_unique_id = _safe_id("Material", material.id)
+		_name_all(material.heat_transitions, "Heat_%s" % material.id)
+	for terrain in result.library.terrains:
+		_name_all(terrain.strata, "Stratum_%s" % terrain.id)
+		_name_all(terrain.liquids, "Liquid_%s" % terrain.id)
 	DirAccess.make_dir_recursive_absolute(
 		ProjectSettings.globalize_path(target_tres_path.get_base_dir())
 	)
@@ -43,6 +49,12 @@ static func run(
 	if save_error != OK:
 		result.errors.append("ResourceSaver.save returned error %d" % save_error)
 	return result
+
+
+## Stable sub-resource ids, so re-importing the same JSON writes a byte-identical .tres.
+static func _name_all(entries: Array, prefix: String) -> void:
+	for index in range(entries.size()):
+		entries[index].resource_scene_unique_id = _safe_id(prefix, str(index))
 
 
 static func _safe_id(prefix: String, raw: String) -> String:

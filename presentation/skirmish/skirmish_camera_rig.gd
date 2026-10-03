@@ -4,7 +4,7 @@ extends Camera2D
 ## cursor and a middle-button drag pans, to inspect a fight up close.
 
 const MIN_ZOOM := 0.2
-const MAX_ZOOM := 40.0
+const MAX_ZOOM := 160.0
 const WHEEL_STEP := 1.15
 
 

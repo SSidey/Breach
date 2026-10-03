@@ -21,6 +21,8 @@ const CAPACITY_FIELDS := ["stability", "max_height", "max_width", "max_depth"]
 @export var max_height: int = DEFAULT
 @export var max_width: int = DEFAULT
 @export var max_depth: int = DEFAULT
+## Ground height in cells (Decision 56); -1 = the terrain's default_elevation.
+@export var elevation: int = DEFAULT
 @export var upgrade_slots: int = 0
 ## Upgrade ids (no upgrade library schema yet).
 @export var upgrade_ids: Array[String] = []
@@ -54,6 +56,10 @@ func validate() -> PackedStringArray:
 					% [cell, field, get(field)]
 				)
 			)
+	if elevation < DEFAULT:
+		errors.append(
+			"tile %s: elevation must be -1 (terrain default) or >= 0, got %d" % [cell, elevation]
+		)
 	if upgrade_ids.size() > upgrade_slots:
 		errors.append(
 			(

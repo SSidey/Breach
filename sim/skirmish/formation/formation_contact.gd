@@ -14,7 +14,8 @@ extends RefCounted
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 
-const MELEE_REACH := 0.07
+## Tiles between engaged fronts: a little over one cell (Decision 68).
+const MELEE_REACH := 0.0175
 const EPSILON := 0.000001
 
 

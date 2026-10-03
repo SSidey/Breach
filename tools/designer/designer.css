@@ -15,6 +15,7 @@
   --good: #4c7a52;
   --danger: #a3372a;
   --road: #b08d57;
+  --channel: #4f86b8;
   --bridge: #7a5a3a;
   --shadow: 0 1px 2px rgba(33, 29, 21, 0.08), 0 4px 14px rgba(33, 29, 21, 0.06);
   --radius: 3px;
@@ -217,6 +218,10 @@ header.top .status { font-size: 11px; color: var(--ink-dim); letter-spacing: 0.0
 .insp-row input[type="text"], .insp-row input[type="number"], .insp-row select {
   background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 7px; font-size: 13px; color: var(--ink); width: 100%;
 }
+.panel-sub { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--ink-dim); margin: 16px 0 8px; }
+.band-row { display: flex; flex-direction: row; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12.5px; }
+.band-row select { flex: 1; min-width: 0; }
+.band-row input[type="number"] { width: 64px; }
 .insp-row .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .insp-row label.checkbox-row { text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 500; color: var(--ink); display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .insp-row label.checkbox-row input { width: auto; }
@@ -296,7 +301,15 @@ button:focus-visible, .tool:focus-visible, select:focus-visible, input:focus-vis
   position: absolute; bottom: 2px; left: 2px; font-size: 7.5px; font-family: 'IBM Plex Mono', monospace; z-index: 3;
   color: var(--structure); background: var(--surface); padding: 0 2px; border-radius: 2px; pointer-events: none;
 }
+.cell .elev-badge {
+  position: absolute; bottom: 2px; right: 2px; font-size: 7.5px; font-family: 'IBM Plex Mono', monospace; z-index: 3;
+  color: var(--ink-dim); background: var(--surface); padding: 0 2px; border-radius: 2px; pointer-events: none;
+}
+.cell .elev-badge.capped { color: var(--surface); background: var(--ink); }
 .cell .sub-badge, .cell .home-badge { z-index: 3; }
+.cell .channel-seg { position: absolute; background: var(--channel); opacity: 0.8; z-index: 0; pointer-events: none; }
+.cell .channel-seg.hub { left: calc(50% - 6px); top: calc(50% - 6px); width: 12px; height: 12px; border-radius: 6px; }
+.cell .channel-seg.half { left: 50%; top: 50%; height: 10px; margin-top: -5px; transform-origin: 0 50%; }
 .cell .road-seg { position: absolute; background: var(--road); z-index: 0; pointer-events: none; }
 .cell .road-seg.hub { left: calc(50% - 4px); top: calc(50% - 4px); width: 8px; height: 8px; border-radius: 2px; }
 /* half-segment from the cell centre toward a connected neighbour; length + angle set inline */
@@ -475,3 +488,19 @@ button:focus-visible, .tool:focus-visible, select:focus-visible, input:focus-vis
 .danger-zone { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
 .roadmap { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+
+/* Structure planner (spec 24) */
+.planner-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+.planner-bar select, .planner-bar input { font-size: 12px; }
+.planner-bar .row-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-dim); font-weight: 600; min-width: 40px; }
+.planner-panes { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.planner-panes canvas { background: var(--surface); border: 1px solid rgba(0,0,0,0.12); border-radius: 4px; }
+#pl_grid { cursor: crosshair; }
+.cell .diag-layer { position: absolute; inset: 0; z-index: 1; opacity: 0.85; pointer-events: none; }
+
+/* Node areas (Decision 68): tiles a node covers beyond its own. */
+.cell[data-area] { box-shadow: inset 0 0 0 2px rgba(179, 118, 29, 0.55); }
+.cell[data-area-selected] { box-shadow: inset 0 0 0 3px rgba(179, 118, 29, 0.95); }
+
+/* The planner's grid scrolls when a node's footprint is bigger than the pane (Decision 68). */
+.planner-scroll { max-width: 100%; max-height: 640px; overflow: auto; border: 1px solid var(--line, #d9d4c8); }

@@ -91,9 +91,9 @@ func test_joining_grems_pass_front_rank_spitters_in_one_grem_swap() -> void:
 	var sim: FormationSimulation = setup[0]
 	var squad: SkirmishSquad = setup[1]
 
-	_steps(sim, 5)
+	_steps(sim, 6)
 	var early := squad.units.slice(3).map(func(u): return u.rank)
-	_steps(sim, 1)  # one rank at speed 1: 6 ticks
+	_steps(sim, 1)  # one rank (a cell) at speed 1, crowded: 0.625 s, so 7 ticks
 
 	assert_array(early).is_equal([1, 1, 1])
 	assert_array(squad.units.slice(3).map(func(u): return u.rank)).is_equal([0, 0, 0])

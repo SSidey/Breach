@@ -1845,6 +1845,10 @@ The user also set two calendar settings:
 
 ### Decision 36 — A 3D scene with 2D sprites for structures and units; the detail view is a side-on sprite in the Inspector Viewport
 
+> Superseded in part by Decision 69 on 2026-10-03: there is no separate detail view. You
+> zoom into a fight in the one 3D scene, and structures show or hide parts to reveal fights
+> inside them.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-09-30
 
@@ -2021,6 +2025,10 @@ before the fight.
 > Superseded in part by Decision 42 on 2026-10-01: a lane's wave is a painted template, and a
 > change takes effect **immediately** (built units fold in, leftovers are banked), rather than
 > applying from the next wave.
+
+> Superseded in part by Decision 70 on 2026-10-03: a slot is a **stand** of 2 x 2 cells,
+> holding up to that many units, and the slot pool counts stands. Front-rank combat,
+> step-up and flank wrap stay per unit.
 
 **Authorised by:** Simeon Sidey
 **Date:** 2026-09-30
@@ -2453,6 +2461,9 @@ behind grems should not stay behind them, and ranged units belong at the back.
 
 ### Decision 48 — Formation units are a fifth of their former size, and moving within a fight is slowed
 
+> Superseded in part by Decision 68 on 2026-10-02: with 64-cell tiles a rank is 1/64 of a
+> tile and melee reach about 1.1 cells; speeds per cell are unchanged. Crowded swaps stand.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
 
@@ -2623,6 +2634,10 @@ through (past each other) until they reach unoccupied space".
 
 ### Decision 52 — Structures are 3D cell grids over their site, built from 3D parts; fights are the same indoors and out; squads hold formation by discipline
 
+> Superseded in part by Decision 57 on 2026-10-02: structural walls are **solid cells** of
+> a material, as thick as built. Faces between cells keep openings, partitions and passage
+> presets, but no longer stand in for walls.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
 
@@ -2702,6 +2717,9 @@ underground ingress. The formation sim, meanwhile, is a top-down slice with no h
 
 ### Decision 53 — One cell is one grem (1/16 of a tile); a storey is 2 cells; ground bearing, foundations and material weight replace the segment budget; capacity comes from furnishings that fit
 
+> Superseded in part by Decision 68 on 2026-10-02: a tile is **64 × 64 cells** (a cell is
+> 1/64 of a tile, about 109 m across); one cell is still one grem.
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
 
@@ -2754,6 +2772,14 @@ the ground allows.
 - 3D parts are built to a cell of one grem and a storey of 2 cells.
 
 ### Decision 54 — Nodes stay on one tile and link into sites; the underground is generated strata dug by rated traits; one 3D scene shows it all
+
+> Superseded in part by Decision 68 on 2026-10-02: a node is a **painted area of tiles of
+> any shape**, containing subnodes; site links between nodes are not needed. The strata,
+> traits and one-scene parts stand.
+
+> Superseded in part by Decision 72 on 2026-10-03: a node's subnodes are objectives, each
+> with a painted capture area and zone of influence. Holding all of them controls the node;
+> anything less leaves it contested.
 
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-01
@@ -2910,3 +2936,859 @@ stair inside a wall with no full room, and positioning upgrade elements rather t
 - `UnitDef` holds `natural` and `equipment` item lists, replacing `weapons`.
 - Faces and spaces carry passage traits; units carry size traits such as tiny.
 
+### Decision 56 — The ground has height: tiles carry an elevation in cells, the surface runs through partial cells, and mountains are compressed and capped
+
+> Superseded in part by Decisions 59 and 60 on 2026-10-02: tile elevation is the coarse
+> layer, with per-cell relief and carved channels on top (59); the ceiling is the top of
+> the air as well as the ground, and mountains reach it by default (60).
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user: at one grem per cell and 16 cells per tile, a real 200 m
+mountain would be "12.5 tiles tall". They asked whether the ground needs a 3D surface
+now. Agreed: put the height variation in now and smooth the look later. The user's
+intent: "if a cell has a surface slope, i.e. not fully 1×1×1 in appearance, then units
+path along it, and when it is dug we only remove the rest of the surface-level cell".
+- **Elevation is per tile, in cells.** Each tile has an elevation: the height of its
+  ground surface in cells (one cell is one grem, and a storey is 2, per Decision 53). It
+  is authored in the designer, defaulting from the terrain type.
+- **The surface runs through partial cells.**
+  - Within a tile, the surface height of each cell column is interpolated from the
+    elevations of the tile and its neighbours, so the ground slopes smoothly across
+    tile edges.
+  - The cell the surface passes through is a **surface cell**. It is partly solid: its
+    shape is its four corner heights, in quarters of a cell. Everything below it is
+    solid strata, and everything above it is open.
+  - **Units walk on the surface.** Moving along a slope costs more than moving on the
+    flat. A step of more than one cell between neighbouring columns is a **cliff**,
+    which needs climbing (Decision 54).
+  - **Digging a surface cell removes only what is left of it.** It costs that fraction of
+    a full cell's work and leaves a flat floor at the cell's base.
+  - The simulation stays in whole cells. The view draws the surface as a smooth mesh
+    later; for now it can be stepped or ramped.
+- **Mountains are compressed and capped.**
+  - **Compressed:** heights are stylised, not 1:1. A hill rises a few cells to about a
+    tile's width (16), and a mountain tile up to the map's **ceiling**.
+  - **Capped:** each map sets a ceiling (default 64 cells, 4 tiles). Ground above it is
+    taken to continue: it is impassable, it blocks sight, and it is drawn cut off at the
+    ceiling with a capped top, like the cutaway (Decision 54). Nothing above the ceiling
+    is simulated.
+  - **Strata run all the way up.** A tile's strata column (Decision 54) is generated
+    from bedrock to the surface, top layer first, so cutting into a mountainside shows
+    its rock bands. A mountain is a high surface over mostly rock, not a different kind
+    of tile.
+- **Pillar check (Decision 58):** height shapes the lock (passes, high ground, faces to
+  dig into). It does not open the field to free manoeuvre. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Flat tiles, height as a stretch goal (Decision 35) | Sight, range and digging all need height now; retrofitting a height field later is expensive. |
+| Elevation per cell, authored | Sixteen times the authoring per tile; interpolating tile elevations gives slopes for free, and exceptions can be painted later. |
+| Whole-cell steps only | The user wants slopes that units walk along, and digging that removes only what remains. |
+| Mountains at real scale | Hundreds of cells of rock nobody visits; compressing and capping keeps the scene and the sim small. |
+| Smooth surface rendering now | Not needed to play; the data is what has to be right first. |
+
+**Consequences:**
+- `TileDef` gains `elevation` (cells); `TerrainDef` gains a default elevation; the map
+  gains a `ceiling`. The designer paints elevation and shows it, per the standing sync
+  rule.
+- A sim-side ground model derives each column's surface height and each surface cell's
+  shape from tile elevations. Pathing and dig costs read it.
+- The map viewer shows elevation (shading or contours) until the 3D ground arrives.
+- Strata generation (Decision 54) counts down from the surface.
+
+### Decision 57 — Walls are solid cells; everything stands on a support check, so digging, damage and burnt shoring can bring ground and structures down
+
+> Superseded in part by Decision 61 on 2026-10-02: walls thinner than a cell stand on
+> faces with a thickness, and support is a load path through every material, not only
+> the ground's bearing.
+
+**Supersedes:** Decision 52, in part (walls as faces)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user agreed to a support-based model for mines (span, load,
+shoring, collapse, simplified floods), asked how structure collapse rolls in, and
+noted that walls should not be one cell thick. In Decision 52, a wall was a face
+between cells, so it had no thickness and could not stand on, or fall into, anything.
+- **Walls are solid cells.**
+  - A wall is a run of solid cells of a material (timber, stone, reinforced stone), as
+    thick as it is built: a palisade 1, a curtain wall 2 to 3, a keep wall 3 or more.
+  - Faces between cells still carry openings and thin things: doors, slits, grates,
+    timber partitions and passage traits (Decisions 37 and 55). A slit through a
+    3-thick wall is a 1-wide passage through its cells, with the slit preset on its
+    outer face.
+  - Stairs and rooms can be hollowed into thick walls (Decision 55).
+- **Every 3D part sits on cells.** Each part the view draws is the look of one or more
+  cells, and records which. Damage, collapse and repair change cells, and the parts
+  follow. Nothing is a free-floating mesh with hit points of its own.
+- **One support rule for ground and structures.**
+  - A solid cell is **supported** if the cell below it is solid and supported, down to
+    the strata. Alternatively, it reaches supported cells sideways within its
+    material's **span** (placeholders: sand 0, soil 1, clay 2, rock 4, timber beam 3,
+    stone arch 4).
+  - **Load** shortens the span: what rests on a cell (the material above it, and any
+    structure, by Decision 53's weights) counts against its bearing.
+  - **Shoring** is an element placed in a dug cell (a timber set, a stone arch) that
+    counts as support. It has HP and can be burnt, broken or rot.
+- **Collapse is checked only where something changed:** a cell dug, destroyed, or
+  burnt out, or shoring lost. Every cell that loses support **creaks** for a few ticks,
+  shown to both sides, then falls.
+  - Fallen material becomes **rubble**: loose cells that fill the space below, are
+    quicker to dig than the original, and harm units caught under them.
+  - **Loose materials** (sand, gravel, rubble) fall into an open cell beneath them and
+    settle no steeper than their slope. They are checked only near a change.
+- **Undermining follows.** Digging under a wall's cells and propping them with timber
+  holds them up; burning the props brings the wall down. That makes a breach that is
+  as wide as the collapse. Defenders can **countermine**: digging is heard, and a tunnel
+  can be dug to intercept it.
+- **Water stays simple.** A breach into water (a moat, a well, a cell below the water
+  table) floods the connected dug cells below that level over a few ticks. There is no
+  pressure or flow simulation (extending Decision 54's static water).
+- **Legible:** a support overlay shows how close each cell is to failing, so every
+  collapse can be read before it happens.
+- **Pillar check (Decision 58):** undermining, collapse and flooding are keys to the lock
+  and parts of it (countermining). Holds, provided the overlay keeps them predictable.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Walls as faces (Decision 52) | No thickness: a wall can't be hollowed, undermined, or collapse into what is below it. |
+| Physics-based structural simulation | Costly, hard to keep deterministic, and unreadable to the player. |
+| Structures with HP per part, unrelated to cells | Collapse, undermining and breach width wouldn't follow from the same rule as the ground. |
+| Full fluid and granular simulation | Out of proportion to what the game needs; a local check and a flood fill give the same decisions. |
+
+**Consequences:**
+- The structure schema to come marks cells as solid material, open, or space. Faces keep
+  openings and passage traits.
+- A material library holds each material's dig difficulty, climb difficulty, weight,
+  span, whether it is loose, and its look. Strata and walls both draw on it.
+- A sim-side support check (event-driven, local) and collapse events, with rubble and
+  floods, come with the underground work. The view needs a support overlay.
+- The parts library maps each part to the cells it shows.
+
+### Decision 58 — Design pillars: what keeps Breach a reverse tower defence, and how a pivot is acknowledged
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user asked "at what point does this diverge from the original
+essence, 'reverse tower defense', and just become an RTS", and wanted the answer
+codified "such that my design choices can be tested against them, keeping us on track
+or at least causing acknowledgment that we are pivoting in a known and planned way".
+The short answer is that it becomes an RTS when the defender stops being a puzzle and
+becomes an opponent. These pillars say what that means in practice.
+1. **The defence is the lock.** The defender is authored, readable and rule-driven.
+   It builds, repairs, garrisons and responds (suspicion tiers, task forces), but it
+   never plays the player's game. It does not expand an economy to strike the player's
+   base.
+2. **You win at dispatch.** The player's decisions are what to build, what to send,
+   where and when. A wave's fate is largely settled by its composition and plan. Orders
+   are given to waves and squads, never to single units, and the game can always be
+   paused.
+3. **Many keys.** Each system adds ways to break the lock: assault, siege, tunnelling,
+   undermining, infiltration, disease, flooding, starving the defender's logistics, and
+   managing suspicion. Each key has a counter in the lock.
+4. **Pressure has a cost.** Ground must be held and silence raises suspicion; waiting
+   is never free.
+5. **Space is routes and faces.** Forces travel routes between nodes and meet the
+   defence at faces, openings and chokepoints. Terrain and height shape the lock; there
+   is no open-field manoeuvre.
+6. **Legible depth.** Every system the player can exploit is visible and predictable:
+   overlays, warnings, and rules shown in play. Depth comes from combining clear rules,
+   not from hidden ones or chaos.
+
+**Testing a proposal against the pillars.** Every new Decision ends with a **Pillar
+check** line: "holds", or which pillar it bends and why.
+- A Decision that bends a pillar is a **pivot**. It names the pillar, says what changes,
+  and needs the user's explicit authorisation as a pivot.
+- A pillar itself changes only by a Decision that supersedes this one.
+- Useful questions:
+  - Does the defender now pursue the player, or only defend and respond?
+  - Could this be won by fast hands rather than a better plan?
+  - Is this a new key (or a counter), or something to manage for its own sake?
+  - Does it make the player wait for free, or keep pressure on?
+  - Does it free movement from routes?
+  - Can the player see it coming and understand why it happened?
+- **Where the project leans today:** real-time with pause, domain production and
+  formations (Decisions 38–51) lean towards an RTS, but stay within pillar 2 (waves and
+  squads, painted shapes, automatic departure). Structures, the underground and
+  materials (Decisions 52–57) lean towards a siege or colony simulation. They stay
+  within pillars 3 and 6 while they are keys, counters and readable rules. Needs (rest,
+  food, warmth, disease) are the next place to watch.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| No written pillars | Drift goes unnoticed; the user wants pivots made knowingly. |
+| A genre label alone ("reverse TD") | Too vague to test a proposal against. |
+| Pillars that forbid real-time play | Decision 38 already chose real-time with pause; the pillars test what the player controls, not the clock. |
+
+**Consequences:**
+- Every Decision from 56 on carries a Pillar check line. The run-phase procedure checks
+  new Decisions against the pillars.
+- Decisions 56 and 57 are checked above; both hold.
+
+### Decision 59 — Surface height is layered: tile elevation, then seeded relief per cell, then carved features such as river channels
+
+**Supersedes:** Decision 56, in part (elevation per tile only)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user asked whether Decision 56 starts simple before per-cell height:
+"this is what I expected, e.g. hilly tiles actually having hilly terrain, rivers within
+a tile having depth". It does. Tile elevation is the coarse layer, and per-cell height
+builds on it in three layers, each adding to the one below.
+1. **Tile elevation** (Decision 56): the broad shape, interpolated between tile centres.
+2. **Relief:** each terrain has a **relief** amplitude and scale (placeholders: fields
+   ±1 cell, Hilly ±4 over about 6 cells, rocky ±2 and rougher, mountain ±8). Each
+   column's surface gets seeded noise of that size on top of the tile shape, so hills
+   are hilly inside a tile. It is reproducible from the map's seed, and lockable and
+   re-rollable in the designer like strata (Decision 54).
+3. **Carved features:** authored shapes that cut or raise cells below or above the
+   result:
+   - a **river or stream** is a channel with a width and depth in cells along a drawn
+     path, filled with water to a level
+   - a **ditch or moat** is the same, around a structure
+   - a **mound or bank** is the reverse
+   Water in a channel is static (Decision 54): it has a depth, slows or blocks units by
+   their traits, and needs a bridge or ford to cross.
+- The surface cell rules (partial cells in quarters, cliffs, digging what is left) apply
+  to the final height, whatever made it.
+- **Pillar check (Decision 58):** relief and rivers shape the lock (fords, banks,
+  ditches). Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Tile elevation only (Decision 56 as written) | Hills would be smooth ramps, and a river couldn't have depth within a tile. |
+| Authoring every cell's height | Sixteen squared cells per tile; seeded relief gives the texture, and carving covers what must be exact. |
+
+**Consequences:**
+- `TerrainDef` gains relief amplitude and scale. Maps gain a **seed**, and carved
+  features (path, width, depth, water level).
+- `GroundSurface` adds relief and carving to the interpolated tile height, deterministic
+  from the seed.
+- The designer gains relief per terrain, a seed with lock and re-roll, and a channel tool.
+  Rivers become features drawn across tiles.
+
+### Decision 60 — The ceiling is the top of the air as well as the ground; mountains reach it by default and block flight
+
+**Supersedes:** Decision 56, in part (the mountain default and the meaning of the ceiling)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user plans flying units: "I would expect a mountain that reaches our
+map height limit to block flying even, as such cutting early at 48 cells feels
+incorrect". Decision 56 set the mountain default to 48 under a ceiling of 64, which
+would let flyers pass over every mountain.
+- **The ceiling bounds the whole playable volume:** ground, structures and air. Nothing
+  flies above it.
+- **Mountains reach the ceiling by default.** A mountain tile's default elevation is the
+  ceiling, so it is capped and blocks movement, flight and sight. Lower mountains,
+  passes and foothills are authored lower.
+- **Air needs headroom.** Flyers move in the band between the ground (and structures)
+  and the ceiling. A map that wants flight over hills sets its ceiling high enough to
+  leave room; the default stays 64.
+- **Pillar check (Decision 58):** flight itself is not designed here. Flyers that leave
+  routes would bend pillar 5 ("space is routes and faces"), so designing flight is a
+  pivot to authorise then, with its counters (anti-air, roofs, weather) and whether flyers
+  keep to air routes. This Decision only fixes the ceiling. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Mountains below the ceiling (Decision 56) | Flyers would pass over every mountain; the user wants peaks to block flight. |
+| A separate air ceiling above the ground cap | Two limits for one idea; a mountain reaching the top of the world should block everything. |
+
+**Consequences:**
+- The Mountain terrain's default elevation becomes 64, the default ceiling. A mountain
+  default can't follow a map's own ceiling yet: a map with a higher ceiling raises its
+  mountain tiles by hand, until terrain defaults can name "the ceiling".
+- The "vertical planes" direction gains a fixed top: air is a band, not unbounded.
+
+### Decision 61 — Walls can be thinner than a cell; support is a load path through every material, not only the ground
+
+> Superseded in part by Decision 67 on 2026-10-02: a face wall sits **flush on its edge**
+> and its thickness grows into one chosen cell, rather than straddling the edge. The load
+> path rules stand.
+
+**Supersedes:** Decision 57, in part (walls only as solid cells; support as span and bearing alone)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user: a farmer's house wouldn't have walls a whole cell thick ("a cell
+is effectively an approximation of ~5-6 ft"). Also: "there should be some structural
+load element of neighbouring cells. A wooden wall with no floor doesn't immediately
+collapse… removing a cell under a wall could be fine, but if the wall supported a roof
+with e.g. a ballista on it then that might exceed bearing."
+- **Two kinds of wall.**
+  - **Face walls** stand on the face between cells, with a material and a
+    **thickness** in fractions of a cell (placeholders: wattle or plank 1/8, timber frame
+    1/6, a rubble wall 1/3). They carry weight, HP and load like any element. This is
+    a farmhouse, a partition, a palisade of stakes.
+  - **Cell walls** are solid cells, one or more thick: curtain walls, keeps (Decision
+    57).
+  - Openings (doors, slits) sit in either kind.
+- **Support is a load path.**
+  - Every element (ground cell, cell wall, face wall, floor, roof, emplacement,
+    furnishing) has a **weight** and a **capacity**: the load it can carry, from its
+    material's strength and its thickness.
+  - Load flows down. Each element passes its own weight plus what rests on it to what
+    holds it up: the element beneath, or neighbours within its span (a beam, a lintel, an
+    arch). The ground's bearing (Decision 53) is just the bottom of the path.
+  - An element **fails** when its load exceeds its capacity, or when nothing holds it
+    within its span. Failure then creaks and falls, as in Decision 57.
+  - So a timber wall stands without a floor: it carries only its own weight to its
+    footing. Removing the cell under it can be fine if its span bridges the gap. But a
+    roof with a ballista on it adds load that can then exceed what the remaining path
+    carries, and that wall comes down.
+- **Pillar check (Decision 58):** the load overlay (Decision 57) shows each element's
+  load against its capacity, so a collapse is readable before it happens. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Walls only as whole cells (Decision 57) | A house would have walls 5-6 ft thick. |
+| A support check by span alone | Ignores what a wall carries; a loaded roof should matter. |
+| Full structural physics | Unreadable and hard to keep deterministic; a load path gives the same decisions. |
+
+**Consequences:**
+- Faces gain an optional wall: material, thickness, HP. Materials gain a strength. Every
+  element gains a capacity.
+- The support check (Decision 57) becomes a load computation over the elements a change
+  touches, top-down, still event-driven and local.
+- The parts library gains thin-wall parts sized by thickness.
+
+### Decision 62 — Lava is a seeded liquid like water, commonest under mountains and rocky ground, sometimes reaching the surface
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user: lava "would not be exclusive to alternate planes but could have
+a similar seeding to the water", "more prevalent under certain terrain types, e.g.
+mountains/rocky", "with some even reaching the surface".
+- **Liquids are a library,** like materials. Water and lava are the first two. Each liquid
+  has properties (placeholders):
+  - **water:** floods dug cells (Decision 57) and slows or blocks units by their traits
+  - **lava:** harms any unit in or beside it, ignites flammable materials (timber,
+    shoring, peat), and lights its surroundings. It turns to rock where it meets water.
+    It moves slowly when it moves at all.
+  - Both are **static for now**, filling cells to a level. A breach into a body of either
+    floods the connected dug cells below that level over a few ticks (Decisions 54, 57).
+    Lava floods more slowly.
+- **Seeding generalises the water table.** A terrain lists its liquid bodies. Each one is
+  a liquid, a depth range below the surface, and a **chance** that a tile of that
+  terrain has one. Generation picks them from the map's seed, like strata. Placeholders:
+  - fields: water at 12–24, always
+  - rocky: water at 16–32; lava at 32–48, chance 0.2
+  - mountain: lava at 24–48, chance 0.35
+  - desert: water at 20–32, rare
+- **Some reach the surface.** A liquid body can rise in a **vent** to the surface: a lava
+  vent or pool, as a spring is for water. Each liquid entry has a **surface chance**;
+  lava under a mountain reaches the surface rarely (placeholder 0.05). A placed feature
+  (a lava vent, a spring) guarantees one, as a well guarantees water (Decision 54).
+- **Not only other planes.** A plane (such as Hell) differs by having more and shallower
+  lava, which is just different seeding data.
+- **Pillar check (Decision 58):** lava is both lock and key. It can guard a fort's flank,
+  and a tunnel breached into it can flood a basement, or burn the props of the
+  defender's own mine. It is readable on the strata cutaway, and the overlay marks
+  where it will flood. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Lava only on other planes | The user wants volcanic ground on the physical plane too. |
+| A separate lava table beside the water table | Two copies of one rule; a liquid library generalises it. |
+| Flowing lava simulation | Out of scale; static bodies and flood fills give the same decisions (Decision 57). |
+
+**Consequences:**
+- A liquid library (water, lava) joins materials in the terrain library.
+- `TerrainDef`'s water table (spec 23, round 1) becomes a list of liquid bodies, each
+  with a liquid, a depth range, a chance and a surface chance. The existing water tables
+  migrate as water, chance 1, surface chance 0.
+- Lava vent joins the natural features. Lava-related features and planes reuse this
+  seeding.
+- Ignition needs a flammable flag on materials (timber, peat): to add with fire.
+
+### Decision 63 — Traits are the one interaction mechanism; heat is a temperature, and materials react to it at thresholds
+
+**Supersedes:** Decision 62, in part (a flammable flag on materials)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** Decision 62 proposed a "flammable flag". The user: "I have previously used
+the term trait and would expect this to carry between entities as one interaction
+mechanism, e.g. fire 'ignites' wood 'flammable', or if we want to tie it purely to heat,
+set a threshold at which things ignite… fire has a temperature effect, wood ignites at
+temp exceeding X and has the burn trait, whereas rock has a much higher X and melts".
+- **Project language: a trait** is a named property with an optional level, carried
+  by any entity: a unit, an item, a material, a liquid, an element, or a face.
+  - Existing traits keep this meaning: burrower N, climber N, tiny (Decision 54), and a
+    passage's tiny gap (Decision 55).
+  - Interactions are written as **rules between an effect and traits or thresholds**,
+    never as code for a particular pair of things.
+  - There are no one-off flags. "Loose" (Decision 57) is a trait on sand, gravel and
+    rubble.
+- **Heat is a temperature.**
+  - Hot things give off heat: lava 1200, burning timber 800 (placeholders, roughly °C).
+    Whatever they touch or stand beside heats towards that temperature.
+  - A material or liquid lists **heat transitions**: above or below a temperature it
+    **gains a trait** or **becomes** another material or liquid.
+  - Placeholders:
+    - timber gains **burning** above 300 (it then gives off heat, loses HP and ends as
+      ash)
+    - peat gains burning above 250
+    - rock becomes lava above 1100
+    - lava becomes rock below 700, so it hardens where water cools it
+  - The trait does the rest: **burning** gives off heat and spreads by the same rule.
+    Nothing needs a "flammable" flag; what burns is whatever has a burning threshold.
+- **Not built yet:** temperatures spreading, fire, and state changes in play come with
+  fire. This Decision fixes the data, so materials and liquids carry their traits and
+  transitions from now on.
+- **Pillar check (Decision 58):** heat stays legible: thresholds are visible data, and a
+  heat overlay can show what is about to catch or melt. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A flammable flag (Decision 62) | One flag per interaction multiplies; the user wants one mechanism across entities. |
+| Interaction tables per pair (fire × wood) | Every new material needs a row per effect; thresholds on the material scale. |
+
+**Consequences:**
+- Materials and liquids gain `traits` (id → level) and `heat_transitions` (above or
+  below a temperature: becomes X, or gains trait T). Liquids gain a temperature.
+- `MaterialDef.loose` becomes the `loose` trait.
+- A trait library (each trait's description and the effects it gives off) can follow when
+  enough traits exist; until then trait ids are plain names with levels.
+- The spec's vocabulary (Decision 54's list) gains **trait**, **effect** and **heat
+  transition**.
+
+### Decision 64 — Traits are rated and meet in ability-and-demand pairs; liquids are materials that flow
+
+**Supersedes:** Decisions 62 and 63, in part (a separate liquid library; dig and climb difficulty as plain fields)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** From the user, after Decision 63:
+- "We will need to assign differing values to traits at times, e.g. climber 2 or
+  climb_difficulty 3." Their example: lava could glow 1 or glow 2 for different
+  brightness; a creature with light_blind 3 is blinded when the light is above a
+  threshold; darksight 0 can't see in the dark, darksight 1 sees in darkness of level 1.
+- "Could liquids be a material type instead of explicitly segregated? Trait 'flows' or a
+  flowrate property."
+
+The rules:
+- **Every trait has a level** (default 1). A trait's level means nothing alone. It is
+  compared in a **pair**, an ability against a demand, and the rule says which way the
+  comparison runs:
+
+  | Ability (on a unit or item) | Demand (on what it meets) | Rule |
+  |---|---|---|
+  | climber N | climb_difficulty N | climbs if ability ≥ demand (one short: slow; Decision 54) |
+  | burrower N | dig_difficulty N | digs if ability ≥ demand (one short halves the rate) |
+  | darksight N | darkness N | sees if ability ≥ darkness |
+  | light_blind N | light N | blinded if light ≥ N |
+
+  - Light and darkness are levels at a place: the strongest **glows N** in reach, or the
+    time of day and weather (Decision 34). Darkness is the shortfall below full light.
+  - New pairs are data, added to the pair table as traits arrive. That table becomes a
+    trait library once enough traits exist (Decision 63).
+- **Dig and climb difficulty are traits** on materials (`dig_difficulty 3`,
+  `climb_difficulty 1`), not separate fields, so they follow the same rule.
+- **Physical properties stay properties:** weight, span and temperature are quantities
+  that the simulation computes with (load, support, heat), not tags to match.
+- **Liquids are materials that flow.** There is one material library. A material with
+  **flows N** is a liquid, and N is its flow rate: water 3, lava 1, which floods more
+  slowly. Melting and hardening are just one material becoming another (rock ↔ lava).
+  Liquid bodies under terrains name a flowing material.
+- **Pillar check (Decision 58):** pairs keep every interaction legible as "ability N
+  against demand M". Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Unrated traits (flags) | The user needs levels: climber 2, glows 2, darksight 1. |
+| A separate liquid library (Decision 62) | Two libraries for one kind of thing; melting would cross between them. |
+| Difficulties as their own fields | A second mechanism beside traits; pairs express them. |
+
+**Consequences:**
+- `MaterialDef` loses `dig_difficulty` and `climb_difficulty` (now traits) and gains
+  `temperature`. `LiquidDef` and the liquid library go; a liquid body names a material,
+  which must flow.
+- Saved libraries migrate: difficulties move into traits, and liquids become materials
+  with `flows`.
+- The designer's Liquids list merges into Materials, and flowing materials are marked in
+  the list.
+- The trait-pair table above is the first entry of the coming trait library.
+
+### Decision 65 — Structural quantities are whole numbers in eighths of a cell; materials gain strength
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** Decision 61's load paths need a weight and a capacity for every element,
+including face walls thinner than a cell. The user, on physical quantities (weight,
+span, temperature): "for sim ease I can see them becoming discrete bands (helping to
+remove the continuous nature, I expect should aid sim performance)".
+- **Discrete, not continuous.** Structural quantities are whole numbers in **load
+  units**, where one unit is an eighth of a cell of a material of weight 1. There are
+  no fractions to carry, and the results are exact and reproducible.
+  - A face wall's thickness is in eighths of a cell (1 to 8): wattle 1, timber frame 1,
+    rubble 3.
+  - A face weighs its material's weight × thickness. A solid cell weighs weight × 8.
+  - Physical quantities (weight, span, temperature, strength) stay properties, as
+    Decision 64 holds, and may later become named bands (light, heavy…) for performance.
+    Integers in eighths are the first step.
+- **Materials gain strength,** the load one eighth of a cell can carry. An element's
+  **capacity** is strength × thickness (× 8 for a solid cell). Placeholders: sand, peat
+  and liquids 0, soil 1, gravel 1, clay 2, timber 6, rock and ore 20.
+- **Ground bearing in the same units:** a column carries bearing × 8 (Decision 53).
+- **Pillar check (Decision 58):** integers keep the load overlay exact and readable.
+  Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Continuous loads (floats) | The user prefers discrete steps for simulation performance; eighths are exact. |
+| Whole cells only | Face walls are thinner than a cell (Decision 61). |
+
+**Consequences:**
+- `MaterialDef.strength`. The structure plan's faces carry thickness in eighths.
+- The load-path solver (spec 24) works in integer load units throughout.
+
+### Decision 66 — Heat is a level from 0 to 10, not degrees; loads stay whole load units
+
+**Supersedes:** Decision 63, in part (temperatures in degrees)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user: "rather than 1000° it be Heat/Hot 10 or something like that…
+rather than something might combust at 265°, it combusts at heat 3… discrete
+abstractions would help simplify our sims… push back if you think otherwise."
+- **Heat is a level, 0 to 10,** like a trait's level. Placeholders:
+  - 0: frozen
+  - 1: ambient
+  - 3: wood smoulders and catches
+  - 5: open fire (burning gives off heat 5)
+  - 8: lava
+  - 10: the hottest, for a plane of fire
+  Thresholds use the same levels: timber gains burning above heat 3, rock becomes lava
+  above 7, and lava becomes rock below 6. Heat reads alongside traits ("glows 2",
+  "heat 8") and compares by the same rule.
+- **Pushback, accepted:** loads stay whole **load units** (Decision 65). Weights must
+  add up as they flow down a structure, and coarse bands would lose that sum. They are
+  already small integers, which is the discreteness that matters for performance.
+  Weight, strength and span stay as they are.
+- **Migration:** a saved temperature in degrees becomes a level (1 up to 50°, then one
+  level per 150°, at most 10); a saved threshold over 10 is converted the same way.
+- **Pillar check (Decision 58):** levels make heat easier to read than degrees. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Degrees (Decision 63) | Continuous and fussy; the user wants discrete levels. |
+| Banding loads too | Loads must sum exactly as they flow; they are already small integers. |
+
+**Consequences:**
+- `MaterialDef.temperature` becomes `heat` (0-10); heat transition thresholds are levels.
+- The designer edits heat as a level and labels transitions "above heat N".
+
+### Decision 67 — Face walls sit flush on their edge and grow into a chosen cell; dug cells can be filled; the planner edits like a drawing tool
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** From the user's first hands-on pass over the structure planner (spec 24
+round 2).
+- **Face walls sit flush.** Decision 61's face walls were drawn centred on the cell edge,
+  half their thickness in each cell. The user: "Feels like one wall should be the zero
+  point at the cell edge".
+  - A face wall's one side is on the edge, and its thickness grows **into the cell it
+    was drawn from**. Each face records whether that is its own cell or the neighbour
+    across the edge (`into_neighbour`), and a wall can be flipped.
+  - The Room tool puts a room's walls inside its footprint.
+  - Older plans with no `into` keep the face's own cell, which matches how they were
+    stored.
+- **Dug cells can be filled.** Digging could not be undone, and Erase ignored digs.
+  - A **Fill** tool fills a dug cell with a chosen material: soil, clay or rock as
+    backfill, or water or lava to make a moat or cistern.
+  - Filling with the tile's own ground is the same as undoing the dig.
+  - For support, a solid fill is ground again. A liquid fill is not, so a wall standing
+    over a moat still needs another support.
+  - Digs must connect: a cell can only be dug if it is open to the surface or to a cell
+    already dug, so a dig is a hole, not a pocket in solid ground.
+- **The planner edits like a drawing tool:**
+  - undo and redo, one step per stroke
+  - clearing a level or the whole plan, confirmed in the page
+  - strokes that end when the mouse button is released anywhere, so returning to the
+    plan never paints
+  - face walls that snap to the nearest grid line and keep to it for the whole stroke,
+    with the edge highlighted before it's placed
+  - every level from the tile's dig depth to the ceiling
+- **A Room tool.** Drag out a rectangle, choose its height and the material and thickness
+  of its walls, floor and ceiling, then Apply to add them all at once (one undo step).
+- **Any tool can draw an area.** With Draw set to Area, a dragged rectangle gets walls
+  round its edge (flush inside) or the tool in every cell. That's floors, solid cells, digs,
+  fills, loads or erasing, with or without a room.
+- **A solid cell replaces the thinner pieces in it.** Placing a solid cell where a floor
+  and thin walls are removes the walls on its edges and its floor at that level, so it
+  becomes a solid cell only. The roof of the cell above stays.
+- **The old side-on Structure tab is hidden.** Plans replace it. Its libraries (room
+  features, emplacements) stay on disk to become plan elements (Decision 55).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Walls centred on the edge (Decision 61) | The user wants one face of the wall on the cell edge. |
+| Walls always grow inward to the structure | The user chose the cell drawn from; walls that enclose nothing need a rule anyway. |
+| Fill only restores the ground | The user wants filling with a chosen material, including water for a moat. |
+| Keep the Structure tab until elements land | Two places to plan a structure is confusing; plans replace it. |
+
+**Consequences:**
+- `StructureFaceDef` gains `into_neighbour`, and `StructurePlanDef` gains `fills`, a map
+  from dug cell to material. The designer's plan format and the importer carry both.
+- The load paths (designer and game) treat a cell with a solid fill as ground. Both take
+  the materials, to tell liquids from solids. The shared cases gain fill cases.
+- The structure view in Godot will draw walls flush, from the same data.
+
+### Decision 68 — A tile is 64 × 64 cells, and a node is a painted area of tiles of any shape
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The example structures (spec 24 round 4) showed a 16 × 16 tile, about
+27 m across, is cramped.
+- The user's reference watch tower (24 × 24 × 30 ft) is 4 × 4 cells and 5 levels high,
+  with 3 ft walls of 4/8.
+- Towers of that size at the front of a small castle need about 48 × 48 cells, with ground
+  in front for attackers to approach.
+- On P-f-F-c, the four tiles from base to farm were only about 110 m, so troops fought
+  almost as they left home.
+
+So:
+- **A tile is 64 × 64 cells**, about 109 m across, keeping to powers of two (the user:
+  "worth trying"). A cell is still one grem.
+- **A node is a painted area of tiles, of any shape**, containing subnodes. It replaces
+  site links between nodes (Decision 54), which were never built. A tile belongs to at
+  most one node, and the node's own tile is always part of it.
+- **A plan spans its node's footprint.** Cells are measured from the node's own tile, and
+  each cell stands on its own tile's ground (bearing, dig depth, strata).
+- **Speeds per cell are unchanged** (the user: "let's see how it pans out"), so marches
+  over the same map take about four times as long.
+  - The formation sim's lengths in tile units divide by 4: a rank is 1/64 of a tile,
+    melee reach about 1.1 cells, travel the same 8 cells per second.
+- The planner zooms and pans to work across up to several tiles of cells.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep 16-cell tiles and make maps four times wider in tiles | Terrain would be painted at about 27 m resolution and maps would need four times as many tiles. |
+| 32 × 32 cell tiles | A small castle with front towers still spans tiles. The user wanted at least 48 × 48 and powers of two. |
+| Linked one-tile nodes (sites) | A castle becomes many map nodes; painting the node's area is simpler. |
+| Rectangular footprints only | The user wants any shape. |
+| Scale speeds so a tile still takes as long to cross | The user wanted to see how per-cell speeds play first. |
+
+**Consequences:**
+- `MapLayoutDef.CELLS_PER_TILE` is the one scale constant in the ground code, and
+  `planner_tools.js` holds the designer's equivalent.
+- `NodeDef.footprint`, the designer's Node area tool and footprint outlines on the map.
+- Plans are node-local, and older 16-cell plans are recentred on the 64-cell tile.
+- Load paths take bearing per column, since footprints cross terrains.
+- The formation feel test's marches lengthen, to be judged in play.
+
+### Decision 69 — Fights are watched by zooming in the one 3D scene; units are drawn by zoom level and carry faction colour; several fights at once are managed by intent, a front panel and alerts
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** With 64-cell tiles (Decision 68), units are tiny at map zoom, and several
+mass skirmishes can run at once. The user: "units look tiny but we could fix that with
+visuals on top… our combats could just be zoomed into right?"
+- **Units are drawn by zoom level**, layered:
+  - **Far out:** a formation is one token. It shows its commander, hero or lord sprite
+    scaled up where it has one; otherwise the sprite of the unit filling most of its
+    cells. The token carries a strength bar.
+  - **Middle:** a block per unit type.
+  - **Close in:** every unit's own sprite.
+- **Faction colour:** every sprite carries a colour mask, areas tinted per faction. This
+  keeps player against player, and a faction fighting itself, readable. It is a
+  requirement on the sprite work.
+- **Fights are watched by zooming in.** There is no separate detail view (Decision 36) and
+  no cutaway for field fights. For a fight inside a structure, parts of the structure are
+  shown or hidden around the focus, or with a toggle. Those parts are roofs, upper floors
+  and the wall facing the camera.
+- **Several fights at once:** the user's concern is the mental load, and this is the main
+  design risk of the scale. These keep it in check:
+  - **Standing orders per lane:** advance, hold at a point, or fall back below a strength.
+    Formations and discipline (Decision 52) carry them out.
+  - **A front panel:** one glanceable strip per active fight, showing each side's strength
+    and which way the fight is going.
+  - **Alerts with jump-to:** an alert when a fight starts or turns, with the pause or
+    notify choice of Decision 39.
+  - **A slow-down setting:** the player can choose to have the game slow down when
+    several fights start together. It is off by default.
+  - **Later, commanders** may carry a lane's orders, so the player leads commanders rather
+    than squads.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A separate side-on detail view | In one 3D scene, zooming in shows the same units in place, with no second art set. |
+| A cutaway for every fight | Field fights need only zoom; only fights inside structures need parts hidden. |
+| Controlling each squad closely | Too much to manage across several fights; orders, unit AI and alerts handle it. |
+
+**Consequences:**
+- The 3D presentation needs:
+  - level of detail per zoom
+  - formation tokens
+  - faction colour masks in the sprite pipeline
+  - structure parts that can be shown or hidden
+- The HUD gains the front panel and fight alerts.
+- Lanes gain standing orders beyond today's advance, hold and retreat.
+
+### Decision 70 — A formation is painted in stands: each slot is 2 × 2 cells holding up to that many units
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** At 64-cell tiles, painting formations unit by unit would be tedious. The
+user: "designing for structures on the 64x64 grid already feels tedious". Wargames solve
+this with stands (bases).
+- **One slot in the wave painter is a stand of 2 × 2 cells.** It holds up to that many
+  units, and may hold fewer (the user: "1 stand need not necessarily be 4x(1x1) units").
+  For example:
+  - a grem stand holds up to 4 grems
+  - a brute stand is one brute, which is already 2 × 2
+- The painter stays small: up to 8 stands wide by 4 deep. That deploys as a front of up to
+  16 cells, about 27 m.
+- **The slot pool counts stands**, and presets (Decision 43) are painted in stands.
+- **Combat stays per unit.**
+  - Losses thin a stand.
+  - The rank behind steps up, within a stand and between stands.
+  - Flanks wrap as before (Decisions 40 and 47).
+  - Bands, discipline and re-forming still apply per unit.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Paint formations cell by cell at the new scale | Four times the painting for the same army. |
+| One unit standing for several grems | Combat per unit (front ranks, step-up, wraps) is what the feel tests built; stands keep it. |
+| Stands always full | The user: a stand may hold fewer units. |
+
+**Consequences:**
+- The wave template's grid unit becomes the stand. The wave painter, presets and slot pool
+  work in stands.
+- Deploying a wave expands each stand into cells.
+- The formation feel test follows.
+
+### Decision 71 — Ranged units fire on the nearest detected enemy, at ranges of tens of cells, across tiles
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** At 64-cell tiles, a spitter's 5 ranks is about 8.5 m. A real archer reaches
+150 m or more, about 90 cells, so ranged fire crosses tiles.
+- **Targeting is the units' own AI**, keeping control light (Decision 69). The user: "I
+  would expect they pick the nearest detected enemy to fire upon… we leave it to the ai of
+  our units to do combat."
+  - A ranged unit fires on the **nearest detected enemy** in range.
+  - Detection is separate from range (Decision 34).
+  - The player doesn't assign targets.
+- **Ranges in cells, all placeholders to be tuned:**
+
+  | Weapon | Range (cells) |
+  |--------|---------------|
+  | spitter | 8–12 |
+  | archer | 60–90 |
+  | ballista | about 150 |
+  | trebuchet | 300 or more |
+
+  A weapon's range stays in ranks, at one cell per rank.
+- **Ranged fire works across tiles and between fights.** Line of sight, extra range from
+  height (Decision 52) and projectile flight time come with the ranged work.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Player-assigned targets | Adds control work across several fights at once. |
+| Keep short ranges | Unbelievable at the new scale. |
+
+**Consequences:**
+- `WeaponDef` ranges grow.
+- The formation sim's ranged targeting looks beyond the opposing squad to any detected
+  enemy in range. That needs a detection rule.
+
+### Decision 72 — Subnodes are a node's objectives, each with a painted capture area and zone of influence; a node is controlled only when all are held, otherwise contested
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** A node is a painted area of tiles (Decision 68), so holding it should mean
+holding what is in it. The user: "objectives within a node be assigned such that when all
+are controlled then the full node is controlled, otherwise contested".
+- **A subnode is an objective with two areas, both made of cells:**
+  - a **capture area**, where units must stand to take it
+  - a **zone of influence**, which it controls once held
+  - The capture area lies within the zone of influence, and the zone lies within the
+    node's area.
+  - Both are painted, in any shape. A zone needn't spread evenly round the subnode, so a
+    rectangle off to one side is fine.
+  - Zones don't overlap, so each cell answers to at most one subnode.
+- **Capturing:** a side takes a subnode by keeping its units in the capture area while no
+  enemy units are there, for a short capture time. It stays held until an enemy does the
+  same, so it needs no garrison. Whether units stay or move on is up to orders and the
+  units' own AI (Decision 69).
+- **Where subnodes come from:**
+  - Placements that make one (a well, an ore vein, a keep) are subnodes by default.
+  - Placing one gives it a default capture area and zone, sized to its type. Both can then
+    be repainted.
+  - A subnode can also be painted from scratch, for a crossroads or a hilltop.
+  - A placement's subnode can be turned off.
+- **Cells inside a zone** follow that subnode's holder: who builds there, who gets its
+  benefit, and who holds any building in it. A structure is held by enclosing it in a zone;
+  control isn't tied to the building itself.
+- **Cells outside every zone** follow the node:
+  - When one side holds every subnode, it controls the node and all of its area.
+  - Otherwise the node is **contested**, and those cells belong to nobody.
+  - For example, an ore vein with no subnode of its own can't be worked while the node is
+    contested.
+- **Contested** means subnodes of several sides share the node. While a node is
+  contested:
+  - each side has only the zones of the subnodes it holds
+  - building is limited to a side's own zones, if allowed at all during combat
+- **Every subnode is required for control.** A key-objective flag may come later.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Tie control to structure assets (a tower holds itself) | A zone of influence that encloses the building does the same, without making structures separate assets. |
+| Circular zones round each subnode | Painted zones fit the ground and the buildings; the user wants zones that can sit to one side. |
+| Some subnodes optional for control | All required for now; a key-objective flag later if needed. |
+
+**Consequences:**
+- `NodeDef` gains subnodes, each with a type, a capture area, a zone of influence and
+  validation: inside the node's area, capture area within its zone, no overlapping zones.
+- The designer gains subnode placing, and painting of capture areas and zones over a
+  node's area.
+- The sim gains capture and control state per subnode and node, and building and benefit
+  follow it.

@@ -9,6 +9,10 @@ const TerrainLibraryDef = preload("res://content/definitions/terrain_library_def
 const TileDef = preload("res://content/definitions/tile_def.gd")
 const RoadSegmentDef = preload("res://content/definitions/road_segment_def.gd")
 const RouteDef = preload("res://content/definitions/route_def.gd")
+const ChannelDef = preload("res://content/definitions/channel_def.gd")
+
+## Cells along a tile's edge: a tile is 64 x 64 cells, about 109 m (Decision 68).
+const CELLS_PER_TILE := 64
 
 @export var cols: int = 0
 @export var rows: int = 0
@@ -19,6 +23,14 @@ const RouteDef = preload("res://content/definitions/route_def.gd")
 @export var tiles: Array[TileDef] = []
 @export var roads: Array[RoadSegmentDef] = []
 @export var routes: Array[RouteDef] = []
+## Ground above this height (cells) is taken to continue, impassable and unsimulated
+## (Decision 56); 64 = 4 tiles.
+@export var ceiling: int = 64
+## Seeds relief (and later strata and liquid bodies), so a map's ground is reproducible
+## (Decision 59).
+@export var seed: int = 0
+## Rivers, ditches, moats and banks carved along tiles (Decision 59).
+@export var channels: Array[ChannelDef] = []
 
 
 func tile_at(cell: Vector2i) -> TileDef:
@@ -37,8 +49,19 @@ func contains(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.y >= 0 and cell.x < cols and cell.y < rows
 
 
+## A tile's ground height in cells: its own elevation, else its terrain's default.
+func elevation_at(cell: Vector2i) -> int:
+	var tile := tile_at(cell)
+	if tile != null and tile.elevation != TileDef.DEFAULT:
+		return tile.elevation
+	var terrain = terrain_library.terrain(terrain_id_at(cell)) if terrain_library else null
+	return terrain.default_elevation if terrain else 0
+
+
 func validate(node_ids: Array) -> PackedStringArray:
 	var errors := PackedStringArray()
+	if ceiling <= 0:
+		errors.append("layout ceiling must be > 0 cells, got %d" % ceiling)
 	if cols <= 0 or rows <= 0:
 		errors.append("layout cols and rows must be > 0, got %dx%d" % [cols, rows])
 	if terrain_library == null:
@@ -55,6 +78,8 @@ func validate(node_ids: Array) -> PackedStringArray:
 	errors.append_array(_validate_tiles(node_ids))
 	errors.append_array(_validate_roads())
 	errors.append_array(_validate_routes(node_ids))
+	for channel in channels:
+		errors.append_array(channel.validate(cols, rows, terrain_library))
 	return errors
 
 

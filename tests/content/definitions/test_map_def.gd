@@ -131,3 +131,18 @@ func test_valid_edge_across_two_lanes_has_no_errors() -> void:
 	map.edges = edges
 
 	assert_array(map.validate()).is_empty()
+
+
+func test_two_nodes_cannot_share_a_tile() -> void:
+	var map := MapDef.new()
+	var lane := _valid_lane()
+	lane.nodes[0].tile = Vector2i(0, 0)
+	lane.nodes[1].tile = Vector2i(2, 0)
+	var spread: Array[Vector2i] = [Vector2i(2, 0), Vector2i(1, 0), Vector2i(0, 0)]
+	lane.nodes[1].footprint = spread
+	var lanes: Array[LaneDef] = [lane]
+	map.lanes = lanes
+	map.tick_duration_seconds = 2.0
+	map.suspicion_tier_thresholds = [25, 50, 75, 90]
+
+	assert_bool(Array(map.validate()).any(func(m): return m.contains("share tile"))).is_true()

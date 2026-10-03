@@ -35,6 +35,9 @@
       <div class="field"><label for="cols">Cols</label><input type="number" id="cols" min="4" max="24" value="12" /></div>
       <div class="field"><label for="rows">Rows</label><input type="number" id="rows" min="3" max="16" value="7" /></div>
       <div class="field"><label for="defaultTerrain">Base terrain</label><select id="defaultTerrain"></select></div>
+      <div class="field"><label for="seed">Seed</label><input type="number" id="seed" min="1" value="1" style="width:110px;" title="Seeds relief, strata and liquid bodies, so the map's ground is the same every time (Decision 59). Re-roll for a new one." /><button class="btn small ghost" id="rerollSeed" type="button" title="New seed">&#8635;</button></div>
+      <div class="field"><label for="ceiling">Ceiling</label><input type="number" id="ceiling" min="1" max="256" value="64" title="Cells. Ground above it is taken to continue: impassable, drawn capped (Decision 56)." /></div>
+      <div class="field"><label for="diagView">Show</label><select id="diagView"><option value="terrain">Terrain</option><option value="elevation">Elevation</option><option value="bearing">Bearing</option><option value="load">Structure load</option></select></div>
       <div class="field"><label for="viewAs">View as</label><select id="viewAs"></select></div>
       <button class="btn" id="resizeBtn" type="button">Resize grid</button>
       <button class="btn ghost" id="newMapBtn" type="button">New map&hellip;</button>
@@ -73,6 +76,10 @@
                 <div class="glyph" style="background:var(--road)">&#9552;</div>
                 <div class="label">Road</div>
               </div>
+              <div class="tool wide" data-tool="AREA" tabindex="0">
+                <div class="glyph" style="background:var(--accent, #b3761d)">&#9634;</div>
+                <div class="label">Node area (select a node, then paint the tiles it covers)</div>
+              </div>
               <div class="tool wide" data-tool="link" tabindex="0">
                 <div class="glyph" style="background:var(--good)">&#8646;</div>
                 <div class="label">Link two nodes (click, then click again)</div>
@@ -82,7 +89,7 @@
               <label for="placementFaction">Place as</label>
               <select id="placementFaction"></select>
             </div>
-            <p class="hint">A Node is generic &mdash; set its type in the Inspector. A Waypoint node is a routing point (small dot) that a link&rsquo;s route must pass through. Road: drag from cell to neighbouring cell (diagonals too) &mdash; only cells you drag between are connected. Erase removes the top layer first: node, upgrades, roads, bridge, feature, terrain Erase removes the top layer first: node, upgrades, roads, bridge, feature, terrain.mdash; or pick layers in the Erase row under the map to remove only those. Link two linked nodes again to unlink them, or use Erase removes the top layer first: node, upgrades, roads, bridge, feature, terrain.times; in a nodeErase removes the top layer first: node, upgrades, roads, bridge, feature, terrain.rsquo;s Inspector.</p>
+            <p class="hint">A Node is generic &mdash; set its type in the Inspector. A Waypoint node is a routing point (small dot) that a link&rsquo;s route must pass through. Road: drag from cell to neighbouring cell (diagonals too) &mdash; only cells you drag between are connected. Erase removes the top layer first: node, upgrades, roads, bridge, feature, terrain &mdash; or pick layers in the Erase row under the map to remove only those. Link two linked nodes again to unlink them, or use &times; in a node&rsquo;s Inspector.</p>
           </div>
 
           <div class="panel">
@@ -151,12 +158,14 @@
         <div class="panel bottom-panel">
           <div class="bottom-tabs">
             <button class="tab-btn" type="button" id="bottomTabPaint" data-active="true">Paint layers</button>
-            <button class="tab-btn" type="button" id="bottomTabStructure" data-active="false" disabled>Structure</button>
+            <button class="tab-btn" type="button" id="bottomTabStructure" data-active="false" disabled hidden>Structure</button>
+            <button class="tab-btn" type="button" id="bottomTabPlan" data-active="false" disabled>Plan</button>
             <span class="strip-notice" id="stripNotice" role="status"></span>
             <button class="btn small ghost" type="button" id="expandBtn" hidden>Expand ⤢</button>
           </div>
           <div id="layersStrip"></div>
           <div id="structureEditor" hidden></div>
+          <div id="planEditor" hidden></div>
         </div>
       </div>
 
@@ -201,6 +210,15 @@
             <input type="text" id="newTerrainId" placeholder="ID (e.g. TUNDRA)" aria-label="New terrain id" />
             <button class="btn small" id="addTerrainBtn" type="button">Add</button>
           </div>
+        </div>
+        <div class="panel">
+          <h2>Materials</h2>
+          <div class="terrain-list" id="materialLibList"></div>
+          <div class="add-row">
+            <input type="text" id="newMaterialId" placeholder="ID (e.g. CHALK)" aria-label="New material id" />
+            <button class="btn small" id="addMaterialBtn" type="button">Add</button>
+          </div>
+          <p class="hint">What strata, walls and liquids are made of. A material that flows is a liquid (water, lava). Placeholder values to tune.</p>
         </div>
         <div class="panel">
           <h2>Natural features</h2>
@@ -315,6 +333,12 @@
   </div>
 </div>
 
+<script src="load_paths.js"></script>
+<script src="planner_tools.js"></script>
+<script src="planner_draw.js"></script>
+<script src="planner_examples.js"></script>
+<script src="planner_subnodes.js"></script>
+<script src="planner.js"></script>
 <script src="repo.js"></script>
 </body>
 </html>

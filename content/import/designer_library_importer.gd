@@ -11,6 +11,10 @@ extends RefCounted
 const TerrainDef = preload("res://content/definitions/terrain_def.gd")
 const TerrainFeatureDef = preload("res://content/definitions/terrain_feature_def.gd")
 const TerrainLibraryDef = preload("res://content/definitions/terrain_library_def.gd")
+const MaterialDef = preload("res://content/definitions/material_def.gd")
+const StratumDef = preload("res://content/definitions/stratum_def.gd")
+const LiquidBodyDef = preload("res://content/definitions/liquid_body_def.gd")
+const HeatTransitionDef = preload("res://content/definitions/heat_transition_def.gd")
 
 const MAP_SUFFIX := ".designer.json"
 
@@ -34,6 +38,12 @@ static func import_library(library_data: Dictionary) -> DesignerLibraryImportRes
 	for entry in library_data.get("terrains", []):
 		if _require_id(entry, "terrain", result.errors):
 			result.library.terrains.append(_terrain(entry))
+	for entry in library_data.get("materials", []):
+		if _require_id(entry, "material", result.errors):
+			result.library.materials.append(_material(entry))
+	for entry in library_data.get("liquids", []):  # a liquid library saved before Decision 64
+		if _require_id(entry, "liquid", result.errors):
+			result.library.materials.append(_legacy_liquid(entry))
 	for entry in library_data.get("features", []):
 		if _require_id(entry, "feature", result.errors):
 			result.library.features.append(_feature(entry))
@@ -123,7 +133,100 @@ static func _terrain(entry: Dictionary) -> TerrainDef:
 	terrain.blocks_unit_classes = blocked
 	for field in ["stability", "max_height", "max_width", "max_length", "max_depth"]:
 		terrain.set("default_" + field, int(entry.get("default_" + field, 0)))
+	_ground(terrain, entry)
 	return terrain
+
+
+## The ground fields (Decisions 53, 54); a terrain saved before them has none.
+static func _ground(terrain: TerrainDef, entry: Dictionary) -> void:
+	terrain.bearing = int(entry.get("bearing", 0))
+	terrain.default_elevation = int(entry.get("default_elevation", 0))
+	var relief = entry.get("relief", {})
+	if relief is Dictionary:
+		terrain.relief_amplitude = int(relief.get("amplitude", 0))
+		terrain.relief_scale = int(relief.get("scale", 0))
+	terrain.foundation_max = int(entry.get("foundation_max", terrain.bearing))
+	terrain.dig_depth = int(entry.get("dig_depth", 0))
+	for body in entry.get("liquids", _legacy_water(entry)):
+		var liquid := LiquidBodyDef.new()
+		liquid.material_id = str(body.get("material", body.get("liquid", "")))
+		liquid.min_cells = int(body.get("min", 0))
+		liquid.max_cells = int(body.get("max", liquid.min_cells))
+		liquid.chance = float(body.get("chance", 1.0))
+		liquid.surface_chance = float(body.get("surface_chance", 0.0))
+		terrain.liquids.append(liquid)
+	for band in entry.get("strata", []):
+		var stratum := StratumDef.new()
+		stratum.material_id = str(band.get("material", ""))
+		stratum.min_cells = int(band.get("min", 1))
+		stratum.max_cells = int(band.get("max", stratum.min_cells))
+		terrain.strata.append(stratum)
+
+
+static func _material(entry: Dictionary) -> MaterialDef:
+	var material := MaterialDef.new()
+	material.id = str(entry["id"])
+	material.display_name = str(entry.get("label", material.id))
+	material.color = Color.from_string(str(entry.get("color", "#ffffff")), Color.WHITE)
+	material.weight = int(entry.get("weight", 1))
+	material.span = int(entry.get("span", 1))
+	material.heat = (
+		int(entry["heat"]) if entry.has("heat") else _heat_of(int(entry.get("temperature", 15)))
+	)
+	material.strength = int(entry.get("strength", 0))
+	material.traits = _traits(entry)
+	# Saved before Decisions 63-64: a loose flag, and difficulties as fields.
+	if entry.get("loose", false):
+		material.traits["loose"] = 1
+	for field in ["dig_difficulty", "climb_difficulty"]:
+		if entry.has(field) and int(entry[field]) > 0:
+			material.traits[field] = int(entry[field])
+	material.heat_transitions = _transitions(entry)
+	return material
+
+
+## A liquid saved before Decision 64, as a material that flows (lava slowly).
+static func _legacy_liquid(entry: Dictionary) -> MaterialDef:
+	var material := _material(entry)
+	if material.trait_level("flows") == 0:
+		material.traits["flows"] = 1 if material.heat > 4 else 3
+	return material
+
+
+static func _traits(entry: Dictionary) -> Dictionary:
+	var traits := {}
+	var source = entry.get("traits", {})
+	for trait_id in source if source is Dictionary else {}:
+		traits[str(trait_id)] = int(source[trait_id])
+	return traits
+
+
+## [{"above"|"below": heat level, "becomes": id | "gains": trait}] (Decisions 63, 66).
+## A saved threshold over 10 is degrees, from before Decision 66.
+static func _transitions(entry: Dictionary) -> Array[HeatTransitionDef]:
+	var out: Array[HeatTransitionDef] = []
+	for rule in entry.get("heat_transitions", []):
+		var transition := HeatTransitionDef.new()
+		transition.rising = rule.has("above")
+		var threshold := int(rule.get("above", rule.get("below", 0)))
+		transition.threshold = _heat_of(threshold) if threshold > 10 else threshold
+		transition.becomes = str(rule.get("becomes", ""))
+		transition.gains_trait = str(rule.get("gains", ""))
+		out.append(transition)
+	return out
+
+
+## A temperature in degrees, saved before Decision 66, as a heat level 0-10.
+static func _heat_of(degrees: int) -> int:
+	return 1 if degrees <= 50 else mini(10, ceili(degrees / 150.0))
+
+
+## A water table saved before Decision 62, as a water body that is always there.
+static func _legacy_water(entry: Dictionary) -> Array:
+	var water = entry.get("water_table")
+	if not water is Dictionary:
+		return []
+	return [{"material": "WATER", "min": water.get("min", 0), "max": water.get("max", 0)}]
 
 
 static func _feature(entry: Dictionary) -> TerrainFeatureDef:
