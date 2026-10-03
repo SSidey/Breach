@@ -1,7 +1,7 @@
 # Spec 27: Formations in 2D
 
 Decisions 73 (the formation model is the game's simulation), 70 (stands), 52 (squads on a
-2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts), 81 (flanks, leadership), 82 (morale, shock, rout), 83 (stands, horde and mob), 84 (crowding and passing) and 85 (terrain).
+2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts), 81 (flanks, leadership), 82 (morale, shock, rout), 83 (stands, horde and mob), 84 (crowding and passing), 85 (terrain) and 86 (the feel test).
 
 ## Purpose
 
@@ -17,9 +17,8 @@ Wave templates are painted in stands (Decision 70).
 
 ## Status
 
-**Design conversation under way.** The user takes design questions one subject at a
-time. Subjects 1 to 7 are agreed (see Agreed below); the rest of the agenda is a starting point,
-not decided.
+**Design conversation done.** All eight agenda subjects are agreed (see Agreed below).
+Round 1 is being planned.
 
 ## Agreed
 
@@ -86,6 +85,14 @@ not decided.
    - Cliffs need climbing; capped ground, structures and deep liquid block non-swimmers.
    - High ground gives a melee bonus (its size waits for spec 28's damage steps).
    - Gaps narrow a squad into a column, front band first; oversized units go round.
+8. **The feel test (Decision 86).** One scene, a flank attack on a held line (128 × 64
+   cells, routes A over grass and B through a wood, a hill and a ford), growing by
+   round:
+   1. 2D positions, facings, turning, routes; today's frontal combat
+   2. fronts on four edges, wings, step-up per edge
+   3. morale, shock, rout, leadership
+   4. terrain speed, slope, liquids, narrowing
+   5. later: stands in the painter, horde and mob, tactic traits
 
 ## Agenda for the design conversation
 
@@ -115,4 +122,4 @@ not decided.
 
 ## Rounds
 
-None yet. The first round is planned once the agenda is settled.
+Round 1 is being planned: see Decision 86's table for what each round adds.

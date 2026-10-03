@@ -4458,3 +4458,43 @@ session on unit levers.
 - The formation sim gains narrowing into a column and widening after.
 - Every "step" of damage in Decisions 79, 82, 83 and here is a placeholder until spec 28
   defines steps.
+
+### Decision 86 — The 2D feel test is one scene, a flank attack on a held line, that grows round by round
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 8 (the feel test). The user agreed the
+recommendation ("Sounds good to me").
+- **The scene:** a strip 2 tiles wide by 1 deep (128 × 64 cells). The kingdom holds a line
+  across the middle. The player has two routes: **A** straight at the line over open
+  grass, and **B** swinging through a wood (slower ground) onto the line's side. A low
+  hill sits behind the kingdom's line, and a narrow ford crosses a stream on route B.
+- **Each round adds to the same scene,** so every change is felt against the last:
+
+  | Round | Adds | Feel-test |
+  |---|---|---|
+  | 1 | 2D positions, four facings, wheel and about-face, routes with a corridor, frontal contact | marching, turning at bends, meeting head-on in 2D |
+  | 2 | fronts on four edges, wings, step-up per edge | route B's wave hitting the side; wings walking round |
+  | 3 | morale, shock, rout and crush casualties, leadership | a flanked line wavering and breaking into its reserve |
+  | 4 | terrain speed, slope, liquid bands, narrowing at the ford | the wood slowing route B; the ford forcing a column |
+  | later | stands in the painter, horde and mob, leaders' tactic traits | painting and sending bigger, led armies |
+
+- **Round 1 keeps today's combat** (front to front) running in 2D, so any change in feel
+  comes from movement alone.
+- **The one-lane feel test stays** until the 2D scene covers what it does (Decision 73).
+- Feel-testing in a window is for the user or the local agent; a cloud agent checks
+  behaviour with tests and headless screenshots.
+- **Pillar check (Decision 58):** the scene tests the attacker's plan (two routes against
+  a held line). Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A crossroads fight first | Tests crossings (Decision 84) before facing and flanking. |
+| Reinforcement from two directions first | Needs fronts on four edges, round 2's work. |
+
+**Consequences:**
+- Round 1 is planned next: 2D positions, facing, turning and routes in
+  `sim/skirmish/formation/`, test-first, and the scene.
