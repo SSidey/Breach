@@ -6,7 +6,9 @@ extends RefCounted
 ##
 ## step() runs one tick in this fixed order:
 ##   1. orders  - queued wave orders apply (a retreat disengages at once)
-##   2. engage  - hostile squads whose fronts are within MELEE_REACH lock together
+##   2. engage  - hostile squads whose fronts are within MELEE_REACH lock together, and a
+##                free squad whose front reaches a hostile's side or rear locks onto that
+##                edge (FormationEdges, Decision 78)
 ##   3. move    - a squad that must face another way turns first, standing (an about-face
 ##                to go back the way it faces, a wheel where its route bends: Decision
 ##                74); free squads move as a block at their slowest unit's speed (one with no
@@ -38,6 +40,7 @@ const FormationUnits = preload("res://sim/skirmish/formation/formation_units.gd"
 const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
 const FormationTurning = preload("res://sim/skirmish/formation/formation_turning.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
+const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -124,6 +127,7 @@ func step() -> Array:
 	_move(events)
 	_fight(events)
 	_bury(events)
+	FormationEdges.prune(_squads, _tick, events)
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
 	FormationMarch.sync_units(_squads)
@@ -161,6 +165,7 @@ func _engage(events: Array) -> void:
 		if foe.engaged_with == 0:
 			FormationLocks.lock(foe, attacker)
 		events.append(FormationEvents.squad_event("engaged", _tick, attacker, {"with": foe.id}))
+	FormationEdges.engage(_squads, _tick, events)
 
 
 func _move(events: Array) -> void:
@@ -228,7 +233,7 @@ func _fight(events: Array) -> void:
 		if attacker_squad.state != SkirmishSquad.State.FIGHTING:
 			continue
 		var foe := squad(attacker_squad.engaged_with)
-		if foe == null or foe.is_destroyed():
+		if foe == null or foe.is_destroyed() or FormationEdges.is_flanking(attacker_squad, foe):
 			continue
 		var foe_fighters := foe.fighters()
 		for fighter in attacker_squad.fighters():
@@ -242,6 +247,7 @@ func _fight(events: Array) -> void:
 				var flank: bool = pick[1] or foe.state == SkirmishSquad.State.TURNING
 				var damage := FormationCombat.damage(fighter, flank)
 				blows.append([fighter, pick[0], damage, flank])
+	blows.append_array(FormationEdges.blows(_squads, _attack_interval_ticks(), _tick))
 	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks())
 	for shot in shots:
 		shot[1].hp -= shot[2]

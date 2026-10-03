@@ -14,6 +14,7 @@ extends RefCounted
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
+const SquadEdges = preload("res://sim/skirmish/formation/squad_edges.gd")
 
 ## Tiles between engaged fronts: a little over one cell (Decision 68).
 const MELEE_REACH := 0.0175
@@ -47,13 +48,11 @@ static func nearest_hostile(from: SkirmishSquad, squads: Array) -> SkirmishSquad
 ## The furthest an advancing squad may get this tick, wanting to reach `next`.
 static func limit(mover: SkirmishSquad, squads: Array, next: float) -> float:
 	for other in squads:
-		if other == mover or not can_engage(other) or not _ahead(mover, other):
+		if other == mover or not can_engage(other):
 			continue
-		var room := SquadGeometry.gap(mover, other) - _depth(other)
-		if other.faction_id != mover.faction_id:
-			if not SquadGeometry.facing_off(mover, other):
-				continue  # round 1 meets front to front only (spec 27)
-			room = SquadGeometry.gap(mover, other) - MELEE_REACH
+		var room := _room(mover, other)
+		if room == INF:
+			continue
 		var reachable := mover.front_distance + mover.direction * maxf(room, 0.0)
 		next = minf(next, reachable) if mover.direction > 0 else maxf(next, reachable)
 	return next
@@ -120,6 +119,22 @@ static func reinforce(leader: SkirmishSquad, joining: SkirmishSquad) -> Array[Sk
 	leader.width = width
 	joining.units.clear()
 	return leader.compact()
+
+
+## How far the mover may come toward `other` (tiles): to melee reach of a hostile's front
+## or of its side or rear face (Decision 78), or to just behind a friend; INF if `other`
+## isn't ahead across the mover's line.
+static func _room(mover: SkirmishSquad, other: SkirmishSquad) -> float:
+	if other.faction_id != mover.faction_id and not SquadGeometry.facing_off(mover, other):
+		var face := SquadEdges.face_gap(mover, other)
+		if face > EPSILON and SquadEdges.overlap_across(mover, other):
+			return face - MELEE_REACH
+		return INF
+	if not _ahead(mover, other):
+		return INF
+	if other.faction_id != mover.faction_id:
+		return SquadGeometry.gap(mover, other) - MELEE_REACH
+	return SquadGeometry.gap(mover, other) - _depth(other)
 
 
 static func _accepts(mover: SkirmishSquad, leader: SkirmishSquad) -> bool:

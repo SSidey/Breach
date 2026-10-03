@@ -51,7 +51,7 @@ static func step(squad: SkirmishSquad, tick: int, events: Array) -> bool:
 		squad.direction = -squad.direction
 		squad.about_facing = false
 	squad.facing = squad.turn_to
-	var fighting := squad.engaged_with != 0
+	var fighting := squad.engaged_with != 0 or not squad.flank_contacts.is_empty()
 	squad.state = SkirmishSquad.State.FIGHTING if fighting else SkirmishSquad.State.MOVING
 	events.append(FormationEvents.squad_event("turned", tick, squad, {"facing": squad.facing}))
 	return true
