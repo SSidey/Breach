@@ -3792,3 +3792,780 @@ are controlled then the full node is controlled, otherwise contested".
   node's area.
 - The sim gains capture and control state per subnode and node, and building and benefit
   follow it.
+
+### Decision 73 — The formation model is the game's one combat simulation
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** The formation feel test (`sim/skirmish/formation/`, spec 22, Decisions
+40–51) already carries:
+- formations, footprints, step-up and flank wrap
+- reinforcing from the back
+- painted wave templates with fold and bank
+- the shared slot pool, presets, and domain-wide builders
+
+It is pure and deterministic. Decision 52 (the same fights indoors and out, squads on a
+2D cell grid) already extends it into structures. The user chose it ("Go with your
+recommendation, the newer formation model") over the spec 21 `SkirmishSimulation` and the
+older `LaneSimulation`.
+- **New gameplay work builds on the formation model:** 2D positioning, stands (Decision
+  70), ranged fire (Decision 71), and structures (spec 20, Decision 52).
+- **The older sims stay** until their uses are moved over, so nothing breaks in the
+  meantime. They aren't extended.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Build on `LaneSimulation` | Lacks formations; everything above would have to be brought over later. |
+| Build on the spec 21 `SkirmishSimulation` | A stepping stone the formation model already replaced. |
+
+**Consequences:**
+- The next work is **2D formation positioning** (spec 27): facing, several fronts, flanks
+  that can be walked round, with stands.
+- Moving the older sims' uses over (the playable map, task forces, scripted beats) is
+  planned separately.
+
+### Decision 74 — In 2D a squad has a cell position and one of four facings; it turns as a block that keeps its painted shape, wheeling at marching pace or about-facing in place
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 1 (position and facing). The user agreed this as
+a baseline to feel-test: "Worth trying as a baseline".
+- **Position:** a squad's position is the centre of its front edge, in cells, fractional
+  while moving. Each unit keeps its painted (rank, column) in the squad's own frame, and
+  its cell is the squad's position plus that offset, turned to the squad's facing.
+- **Four facings (N, E, S, W)** for now.
+  - A quarter turn of a block on a square grid lands every cell on a cell, so ranks,
+    columns, step-up, re-forming and flank wrap carry over unchanged.
+  - A squad marching at an angle sidles, keeping the facing nearest its heading. On a
+    tie it keeps its current facing.
+  - Eight facings may come later if feel-testing asks for them.
+- **Turns keep the painted shape:**
+  - **Quarter turn (wheel):** the block pivots on its front centre. It takes as long as
+    the outer end needs to march its quarter arc at the slowest unit's speed, so heavy
+    units slow a turn as they slow a march. A 16-wide line turns in about 1.5 s at
+    speed 1.
+  - **About-face:** the block turns in place, after a short fixed pause (placeholder
+    1 s). Its back rank becomes its front. The re-form shuffle (Decision 46) then moves
+    front-preferring units forward over time.
+  - **Rotation, not mirroring:** a squad's left flank stays its left whichever way it
+    faces. This replaces today's mirroring of the squad that faces the other way.
+- **While turning,** a squad neither advances nor strikes, and blows on it count as flank
+  blows. Turning under contact is costly; spec 27's subject 3 settles contact details.
+- **Units face their squad's way.** Whether units turn on their own to meet a side or
+  rear blow is spec 27's subject 3.
+- **Pillar check (Decision 58):** four facings and whole-cell blocks keep formations
+  readable at every zoom (Decision 69). Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Facing in any direction | Puts units off the cell grid and breaks the per-cell combat the feel tests built. |
+| Eight facings now | Diagonal lines leave gaps and ragged edges that every rule would have to handle; later if needed. |
+| Instant turns | A squad could always face a threat, so flanking would mean nothing. |
+| About-face keeping rank order (countermarch) | A long march through itself; reversing ranks plus the re-form shuffle gives the cost more simply. |
+
+**Consequences:**
+- `SkirmishSquad` gains a 2D position and a facing; a unit's cell comes from its
+  (rank, column) turned to the facing, replacing `lateral_span`'s mirroring.
+- Squads gain a turning state with a wheel time and an about-face pause.
+- The feel-test scene draws squads at their 2D cells and facings.
+
+### Decision 75 — Squads follow 2D routes the player assigns and alters, up to a per-map number that grows with progression; the units' AI leaves a route only within a leash
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 2 (paths). The user agreed the recommendation "so
+long as the player can assign a number of routes and alter them", with the number
+configurable per map and tied to progression. This builds on Decisions 26 and 27: authored
+links are the default routes, route geometry is pathfound over terrain, and the player
+can reroute.
+- **A route is a path of cells across the map**, pathfound over terrain between its
+  waypoints (Decision 26). Squads keep a distance along it, for ordering, reinforcing and
+  arrival.
+  - Its **corridor** is the lane's combat width (Decision 51) either side of the route's
+    centre line. Squads spread and sidle anywhere within it.
+  - At a bend a squad wheels when the facing nearest its heading changes (Decision 74).
+- **The player assigns and alters routes.**
+  - Each lane runs on a route. The player picks it from the map's routes and can change
+    it by moving its waypoints; the geometry between them is pathfound again.
+  - **How many routes the player may run is set per map.** Early, smaller maps may allow
+    one; maps with more objectives (like the test maps) allow more.
+  - The number can grow with **progression**: an overlord upgrade, or buildings and their
+    tech (Decision 41).
+  - A map can mark routes **locked** until a condition opens them.
+- **Going round defences is a risk, not a rule.** A route that skirts a fort still passes
+  through the reach of its longer-ranged defences, which fire on the nearest detected
+  enemy (Decision 71). Nothing forbids the detour; the fort's fire is the cost.
+- **Only the units' own AI takes a squad off its route** (Decision 69), for:
+  - **contact:** a detected enemy squad off the route, within the leash
+  - **objectives:** a subnode's capture area (Decision 72) near the route, when the lane's
+    orders say to take objectives
+  - **obstacles:** blocked cells on the route (spec 27, subject 7)
+  - **flanking:** spec 27, subject 4, by the same means
+- **A leash bounds how far a squad strays:** 16 cells by default (a quarter of a tile, a
+  placeholder), lengthened or shortened by discipline (Decision 52). A squad whose target
+  goes beyond the leash gives up and returns.
+- **Rejoining:** after a detour a squad returns to the route at the nearest point ahead of
+  where it left, not where it turned off.
+- **Off-route movement** pathfinds the squad's block over cells, with a fixed tie-break so
+  the sim stays deterministic.
+- **Pillar check (Decision 58):** the player still sends waves down lanes against a
+  defence. Choosing and bending routes is the planning choice the attacker makes, and the
+  fort's ranged reach keeps the defence the obstacle. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Player-drawn paths per squad | Too much control work across several fights (Decision 69); routes are per lane. |
+| Free roaming with no routes | Loses the lanes, the spine of a reverse tower defence. |
+| Squads that never leave their route | No flanks and no off-route objectives. |
+| A fixed number of routes for every map | The user wants it set per map and grown with progression. |
+
+**Consequences:**
+- Maps gain the number of routes the player may run, and routes can be locked behind a
+  condition.
+- The overlord's upgrades and the tech tree can raise that number.
+- The game gains route assignment and waypoint editing for the player; the designer's
+  authored links stay the defaults.
+- Lanes gain the "take objectives" or "press on" order; units gain a leash from
+  discipline.
+- Underground routes are an open question in spec 27.
+
+### Decision 76 — Underground routes are drawn in plan with depth set on a side-on profile; the profile shows only what the player knows, so there is no projected dig time
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, the open point in Decision 75: how the player lays out an
+underground route. The user: "Plan plus profile works, but i push back on a projected
+build time, the player would not know what materials their route will hit".
+- **Draw in plan:** waypoints on the map as for any route (Decision 75). A stretch is
+  marked **tunnel**, with an **entry** (shaft or ramp) and an **exit** (back to the
+  surface, or a breach into a basement or well).
+- **Set depth on a profile:** selecting a tunnel stretch opens a side-on strip under the
+  map, the route unrolled flat. The player drags the tunnel's depth line; each waypoint
+  carries a depth, sloping between waypoints within a gradient limit.
+- **Depth is relative to the surface by default** ("6 cells under"), since the surface
+  rises and falls (Decision 59). A waypoint can be pinned to an absolute level, for
+  instance to meet a basement.
+- **The profile shows only what the player knows.** The surface is known. Strata are
+  shown where they have been seen: cells the player has dug, wells and mines they hold,
+  and their earlier tunnels. Everything else is drawn as unknown. So there is **no
+  projected dig time** and no warning of rock, water or lava ahead; the dig finds out.
+- **In play a tunnel route is a dig order.** The front rank digs the face (Decision 54),
+  so the squad moves at digging pace. What the dig meets becomes known and shows on the
+  profile from then on. A squad that meets ground it can't dig halts at the face and
+  raises an alert (Decision 69), and the player redraws. Once dug, the tunnel is a
+  passage later waves walk at marching pace (Decision 26).
+- **Pillar check (Decision 58):** tunnelling stays one of the keys that break a defence
+  (Decision 58's "many keys"), and not knowing the ground keeps it a gamble. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A projected dig time along the profile | The player wouldn't know the strata ahead; the user pushed back. |
+| Drawing tunnels in a 3D view | Plan plus profile is easier to draw precisely, as road and rail planners do. |
+| Absolute depth by default | A tunnel would surface or dive as the ground rose and fell. |
+
+**Consequences:**
+- Underground routes come with the underground work, not round 1 of formations in 2D.
+- Strata knowledge is per player: what they have seen of each tile's column.
+- A future way to survey ahead (a scout, a tool) would reveal strata on the profile.
+
+### Decision 77 — Digging and breaking are attacks: materials gain integrity and resistances, and items carry how well they break each
+
+**Supersedes:** Decisions 54 and 64, in part (digging as burrower against dig difficulty, with its own dig rate)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** The user: "reconcile digging with weapon damage rather than have separate
+systems, certain items will be better at destroying certain materials but may have
+detractions when used as an actual weapon e.g. a pickaxe great for stone/ore, not very
+handlable vs e.g. a sword in combat; essentially each material would gain an hp/def/traits
+for the attacks to plug in to". Nothing of digging is built yet: `MaterialDef` has weight,
+span, strength, heat and traits, and damage types have no effect (Decision 47).
+- **Breaking a cell is attacking it.** A dig face, a wall, a door or a shoring post is
+  struck by the same attacks that strike units, at the attack interval.
+- **Materials gain:**
+  - **integrity:** hit points per eighth of a cell, so a whole cell has 8 times as many
+    and a thin wall fewer (Decision 65). Integrity is how hard a material is to break;
+    strength (Decision 65) stays how much it holds up. Glass is fairly strong and easily
+    broken, so they are separate.
+  - **resistances per damage type:** stone shrugs off slashing, takes bludgeoning and
+    piercing (a pick's point) better. Soil resists little.
+  - **hardness N** (the trait that was dig_difficulty): the level a striking item needs.
+- **Items carry how they break things:**
+  - **breaker N**, an ability against hardness (Decision 64's pair rule): at least the
+    hardness, full damage; one short, half; two or more short, none. It replaces burrower
+    N, and Decision 47's **siege** trait is the same thing.
+  - A unit's natural weapons can carry breaker too: a rat's claws are breaker 1.
+- **Tools are clumsy weapons.** An item can carry **unwieldy N**, lowering its damage
+  against units by N steps. A pickaxe: piercing, breaker 3, unwieldy 1. A sword:
+  slashing, breaker 0.
+- **Units choose by target.** Against a unit, a unit strikes with its best weapon against
+  that unit; against a cell, with its best item against that material. The player
+  doesn't pick.
+- **Dig rate goes:** how fast a face advances follows from damage against integrity.
+- A destroyed cell or face is removed, and the load paths settle (Decision 57), so
+  breaking, digging and collapse are one chain.
+- **Pillar check (Decision 58):** one rule for every break-in (bash the gate, mine the
+  wall, dig under) keeps the keys to a defence legible as "this item against this
+  material". Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Separate digging (burrower, dig rate) and combat systems | The user wants one mechanism; two would drift apart. |
+| Integrity derived from strength | Brittle materials hold weight but break easily. |
+| Player-chosen items per task | More control work (Decision 69); the units' AI picks. |
+
+**Consequences:**
+- `MaterialDef` gains integrity, resistances per damage type and a hardness trait
+  (migrating dig_difficulty). Placeholder values come with the underground work.
+- Items gain breaker and unwieldy traits; burrower and siege migrate to breaker.
+- Damage types start to matter: units gain resistances too when combat uses them.
+- Decision 54's dig face (only the front rank digs) stands; it is the front rank
+  attacking the face.
+
+### Decision 78 — A squad fights on any of its four edges; units on a struck edge turn in place, step-up runs inward per edge, and several fronts strain discipline
+
+**Supersedes:** Decision 47, in part (only the front rank fights)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 3 (contact and fronts). The user agreed the
+recommendation, correcting how ranged units fight in melee.
+- **A squad has four edges,** front, left, right and rear, set by its facing (Decision
+  74). Contact can come on any edge, and each edge in contact is a **front**. A squad
+  can fight on several fronts at once; it tracks a contact per edge instead of one
+  squad it is engaged with.
+- **A side or rear hit:** the units on that edge turn in place and fight. The squad does
+  not wheel.
+  - **Surprise:** blows on a side or rear edge get the flank bonus for the first attack
+    interval while the units there turn. Then they fight normally, facing out.
+  - If the squad's front is not engaged, a rear hit makes it about-face (Decision 74),
+    so the rear becomes its front. A side hit does not make it wheel: rotating a wide
+    block needs room it may not have, and wheeling under contact draws flank blows.
+- **Step-up per front:** when a unit on a fighting edge falls, the next unit inward
+  along that edge's axis steps out into the gap. Units already fighting on another edge
+  stay put. Band rules hold (Decision 47): back-preferring units never step into a
+  fighting edge.
+- **Ranged units in melee:** a unit engaged in melee fights only with its melee weapons,
+  unless a trait lets it shoot in melee. Those are usually weaker, for balance, but that
+  is down to the weapons, not a rule.
+- **Corner units** sit on two edges: they take blows from both and strike back at one.
+- **Fighting on two or more fronts strains discipline** (Decision 52): the squad's
+  re-form and fall-back thresholds tighten (values come with discipline). This is what
+  makes flanking pay beyond the flank bonus.
+- **Pillar check (Decision 58):** fronts are what the attacker's routes and flanks create;
+  control stays light. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| The whole squad wheels to face each hit | Turns under contact; a second hit traps it mid-turn. |
+| One front only; side hits land unanswered | Too harsh, and it leaves no edge play for flanking. |
+| Each unit faces freely | Breaks the block formation Decision 74 keeps. |
+
+**Consequences:**
+- `SkirmishSquad` replaces `engaged_with` with a contact per edge, and `fighters()` per
+  edge.
+- `compact()` steps up inward per fighting edge.
+- Weapons gain a "fires in melee" trait for the few that may.
+
+### Decision 79 — Five damage types; a material's weakness or resistance shifts its hardness for that type; unwieldy items strike slower; integrity follows thickness
+
+**Supersedes:** Decision 77, in part (resistances as separate values; unwieldy lowering damage)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** The user, refining Decision 77: a codified list of damage types so they are
+used consistently; materials with a weakness or resistance to a type, affecting their
+hardness ("wood hardness 1, sword deals slashing so can impact wood? Would an axe then be
+breaker 1 with slashing?"); and unwieldy as slower or less sure blows, not weaker ones:
+"it would still hurt to get hit with a pickaxe".
+- **Damage types, one list:** **slashing, piercing, blunt** (crushing and bludgeoning),
+  **fire, acid**. A new type needs a Decision. `WeaponDef.damage_type` takes only these.
+- **Fire** deals its damage like any type and also carries a heat level to what it hits,
+  so it can set it alight by the heat thresholds (Decisions 63 and 66).
+- **Weakness and resistance shift hardness, per damage type.** A material has one
+  hardness, and may be **weak** to a type (hardness one lower against it) or
+  **resistant** (one higher), or **immune** (cannot be broken by it). Usually at most
+  one of each. The breaker pair then decides as before: at or above, full damage; one
+  short, half; two or more short, none. For example (placeholders):
+
+  | Material | Hardness | Weak to | Resistant to |
+  |---|---|---|---|
+  | soil | 1 | blunt | — |
+  | wood | 2 | slashing, fire | piercing |
+  | stone | 3 | blunt | slashing (fire: immune) |
+  | ore | 4 | — | slashing |
+
+  | Item | Type | Breaker | Wood (2, weak to slashing) | Stone (3) |
+  |---|---|---|---|---|
+  | sword | slashing | 0 | 1 short: half | none |
+  | axe | slashing | 1 | full | none |
+  | warhammer | blunt | 2 | full | full (weak to blunt, so 2) |
+  | pickaxe | piercing | 3 | full | full |
+
+- **Unwieldy N slows an item's blows**: its attack interval is longer by N steps
+  (placeholder: half again per step). Damage stands. A sure-hit rule (parries, melee
+  skill) belongs to the session on unit levers (spec 28); unwieldy will feed it then.
+- **Integrity follows thickness.** Integrity is per eighth of a cell, so a wall's is its
+  thickness times its material's. Damage takes eighths off as it goes: a battered wall
+  is visibly thinner, and its strength (Decision 65) falls with it, so it can collapse
+  under its load before it is breached through.
+- **Pillar check (Decision 58):** "this item against this material", in one small table,
+  keeps every break-in legible. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Resistances as damage multipliers beside hardness | Two numbers for one question; shifting hardness keeps one rule. |
+| Unwieldy lowering damage | The user: a pickaxe still hurts; it is clumsy, not soft. |
+| An open-ended list of damage types | The user wants one codified list, used consistently. |
+
+**Consequences:**
+- `MaterialDef` gains hardness, weak-to, resistant-to and immune-to (by damage type) and
+  integrity per eighth.
+- `WeaponDef.damage_type` is checked against the list; items gain breaker and unwieldy.
+- Damage to a face or cell removes eighths, and the load paths settle (Decision 57).
+
+### Decision 80 — Digging squads shore before they pass a material's span, carry their supplies, light their way, and a lone sneaking unit is run by its AI
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Questions the user raised during spec 27 about mines and a lone assassin;
+the user agreed the recommendations ("All sound good").
+- **Shoring before the span runs out.** A dug cell holds up within its material's span
+  (Decision 57). The dig AI never advances the face past the span from the last support:
+  the ranks behind place shoring as the face moves (Decision 54). The creak and fall of
+  Decision 57 is for damage, burnt props and countermines, not ordinary digging.
+- **Supplies are carried.** A wave can carry supplies (timber for shoring, lamps) from
+  the domain's stockpile; each unit carries a few load units, and the wave painter shows
+  the load. A dig that runs out stops at the span limit and raises an alert (Decision
+  69). Later waves on the lane bring more down the dug tunnel.
+- **Light underground.** Underground darkness is high; units need darksight at least
+  that high, or light (Decision 64):
+  - **torches:** items that glow, carried by some of the wave
+  - **lamps:** placed in the tunnel, lighting it for the waves that follow
+  - Light makes a tunnel easier to detect, and a flame near timber shoring is a fire
+    risk (Decision 66).
+- **Merging per template.** A lane's Auto merge (Decision 51, off by default) can be
+  overridden on a wave template: "never merge" keeps a lone unit from being absorbed by
+  an army it passes.
+- **A lone sneaking unit is run by its AI.** The player gives it:
+  - a squad of one stand, with its own route and waypoints (Decision 75)
+  - a **sneak** order: it moves slowly, keeps out of lit cells and known detection
+    ranges, and doesn't engage unless the order allows, making for a target (a subnode,
+    a person, a gate)
+  - **stealth N against perception N**, a new trait pair (Decision 64)
+  - On being spotted it raises an alert; the player can pause, redraw or recall it.
+  There is no hand control of single units. Infiltrators (deferred in Decision 7) get
+  their own design round.
+- **Pillar check (Decision 58):** no hand control keeps the player planning, not
+  micro-managing; tunnelling stays a key with costs (supplies, light, detection). Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Dig first, shore when it creaks | Turns every dig into a race against collapse for no gain. |
+| Shoring materials from nowhere | Removes the logistics the user wants. |
+| Hand control of a single unit | The step Decision 58 warns makes Breach an RTS. |
+
+**Consequences:**
+- Units gain a carry capacity; waves can be loaded with supplies.
+- Items that glow (torches) and placeable lamps join the item and placement libraries.
+- Wave templates gain a merge override.
+- A sneak order, and the stealth/perception pair, come with the infiltrator round.
+
+### Decision 81 — Overlapping units really wrap round a line; a formation's leadership comes from its best leader; flanking is a leader's tactic, not a lane order
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 4 (flanks and wrap). The user agreed that units
+should really wrap, and added: "for discipline and morale these should be influenced by
+the highest of leadership amongst the formation meaning commanders have better fighting
+formations that rout less frequently (equally the loss of a unit such as a
+commander/hero/lord would lose their leadership from the caps but also take an immediate
+morale hit)". On a lane flank order: "perhaps it becomes a personality trait of a
+commander/hero/lord to prefer flanks".
+- **Wings walk round the end of a line.** A squad's units that overlap the end of the
+  enemy's line form a **wing**. It steps forward and turns inward onto the enemy's side
+  edge, so the enemy fights on two fronts (Decision 78).
+  - Only overlapping units wrap; a squad never thins its engaged front to send a wing.
+  - A wing moves at the slowed in-fight speed (Decision 48), so a wrap takes time and can
+    be met: the enemy's end units turn to it, and a nearby squad can intercept.
+  - A wing stays part of its squad and is brought back by the re-form shuffle (Decision
+    46) when the fight ends.
+- **Discipline sets a wing's reach:** round the end to the side edge for any formation,
+  up to the enemy's depth plus 2 cells (placeholder); on round to the **rear** only with
+  high discipline. Low discipline wraps eagerly, stops at the side, and re-forms slowly.
+- **Leadership.** Commanders, heroes and lords carry **leadership N**. A formation's
+  leadership is the **highest among its living units**. It caps and steadies the
+  formation: it raises the discipline the formation holds to, and the morale it can have,
+  so led formations fight better and rout less. When the leader falls, the formation
+  drops to its next-best leadership at once and takes an immediate morale hit. (Morale
+  and rout are settled with spec 27's next points.)
+- **Flanking is a leader's tactic, not a lane order.** Leaders carry **tactic traits**
+  (for example prefers flanks, holds the line, pursues). A wave led by a flank-preferring
+  leader aims for the nearest free enemy edge within its leash (Decision 75) instead of
+  joining from the back (Decision 44). A wave with no leader joins from the back.
+  - **Commanders** (cheaper, built): tactic traits rolled at random (seeded) when made.
+  - **Heroes** (promoted from regular units): gain rolled tactic traits on promotion.
+  - **Lords** (named, designed units): fixed, authored tactic and behaviour traits.
+  - The player's lever is which leader goes with which wave or lane, which fits Decision
+    69's "the player leads commanders rather than squads".
+- A second route still gives a planned flank from another direction (Decision 75).
+- **Pillar check (Decision 58):** the attacker plans by choosing leaders and routes; the
+  units' AI and the leaders' traits fight the battle. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Abstract wrap (today's rule) | In 2D a free edge must be reached on foot; the walk is what can be countered. |
+| A "flank" lane order | The user: too strong; it belongs to leaders' personalities. |
+| Leadership summed or averaged | The user: the highest leader sets it, and losing that leader hurts at once. |
+
+**Consequences:**
+- Units gain leadership N and tactic traits; leader types (commander, hero, lord) and
+  promotion belong with spec 28.
+- The formation sim gains wings, a discipline-based reach and leadership per formation.
+- Tactic traits are seeded, so a battle stays deterministic.
+
+### Decision 82 — Morale is a formation's pool, built from courage, leadership, support and condition; shock drains it; a rout is a panicked flight with crush casualties
+
+**Supersedes:** Decision 78, in part (several fronts straining discipline is now pressure shock on morale)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** The open point in spec 27, subject 4. The user agreed the recommendation
+("Lets go with those") and set out what morale is built from: a base stat such as
+courage; leadership; allies at the sides; condition (well-fed, comfortable in the
+temperature, not wet, well-rested); and likes and dislikes (liking combat, weariness from
+too much, a disliked or untrained weapon), which "could also bleed into ... how well they
+fight e.g. hit rate, damage".
+- **Morale is a whole number per formation,** read in bands: **steady**, **shaken**,
+  **wavering**, and **routing** at 0. Shaken and wavering tighten re-forming and the
+  leash; wavering also keeps wings from going out (Decision 81).
+- **What sets it.** Its maximum and recovery come from:
+  - **courage:** each unit type's base stat (the formation's average)
+  - **leadership:** the formation's best living leader (Decision 81)
+  - **support:** each side covered by a friendly formation close by adds to it, the
+    mirror of pressure shock
+  - **condition:** fed, rested, comfortable. Conditions are traits a unit's state gives
+    it (cold N or hot N when the heat is outside its comfort range, wet, hungry, tired),
+    met against its tolerances by the pair rule (Decision 64)
+  - **likes and dislikes:** traits such as likes combat (gains in melee), and dislikes on
+    an item (a disliked or untrained weapon)
+  It recovers out of contact, faster with more leadership.
+- **Morale and discipline change how well units fight.** Lower bands and bad conditions
+  slow blows and weaken them (placeholder: wavering strikes half again slower). The full
+  rule, with hit rate and melee skill, joins spec 28.
+- **Shock is morale damage,** separate from physical damage:
+  - **impact:** a burst on first contact with a side edge, doubled on the rear; a
+    **charge N** trait adds to it, scaled by speed at contact. Decision 78's
+    first-interval flank damage bonus stands too.
+  - **pressure:** each attack interval in melee, by the sides engaged (placeholders):
+    1 side 0, 2 sides 1, 3 sides 3, surrounded 6. A defender that turns to meet a flank
+    still fights on two sides, so it still takes it.
+  - **losses:** each friendly unit that falls costs a little; a leader's death costs a
+    lot (Decision 81); a nearby friendly formation routing costs some.
+  - **weariness:** long melee tires units, which feeds the tired condition.
+- **A rout is a panicked flight, not an about-face.**
+  - The formation breaks: its units flee one by one, away from the enemy and back along
+    the route at full speed. They don't fight back; every blow on them is a rear hit.
+  - **Crush casualties:** a fleeing unit that pushes through a cell held by a friendly
+    unit deals and takes blunt crush damage scaled by size, so a fleeing brute tramples
+    grems. Routing into one's own reinforcements hurts both.
+  - **Panic spreads:** a friendly formation that routers push through takes shock.
+  - **Pursuit:** pursuers chase within their leash (Decision 75); low discipline chases
+    further, and a leader who pursues (Decision 81) does so on purpose.
+  - **Rally:** routers rally on reaching a friendly leader's formation (joining it from
+    the back), or after a time out of contact if their own leader lives. Otherwise they
+    leave the field and return to the reserve (Decision 45).
+- **Deterministic:** thresholds and seeded traits only; no dice.
+- **Pillar check (Decision 58):** morale makes the planning choices (leaders, routes,
+  supply, comfort) decide fights without the player steering them. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Morale per unit | Too much to read; formations rout as bodies, and leadership is per formation. |
+| Rout as an orderly retreat | The user: a panicked flight is where casualties come from. |
+| Random rout checks | The sim is deterministic; thresholds give the same drama. |
+
+**Consequences:**
+- Unit types gain courage, comfort ranges and tolerances; items can be disliked or
+  untrained; units gain conditions from their state.
+- The formation sim gains a morale pool with bands, shock, rout, crush damage, pursuit
+  and rally.
+- The front panel (Decision 69) shows each side's morale band.
+
+### Decision 83 — Stands are for painting and deploying only; horde N and mob N give a bonus to formations big enough
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 5 (stands in 2D). The user agreed that stands are
+painting and deployment only, and added a trait: "'horde N' where if their formation
+contains enough then they get a bonus or a separate adjacent one that needs a number of
+the same unit e.g. grems have mob 16, meaning at 4 full stands or 16 grems they gain a
+bonus".
+- **A stand is a unit of painting and deployment only.** Once deployed, units act per
+  cell:
+  - The squad moves and turns as one block (Decision 74). Stands are 2 × 2 and painted
+    widths are whole stands, so a turned block still lands on cells.
+  - Combat, step-up (Decision 78), wings (Decision 81), crush damage (Decision 82) and
+    re-forming are per unit, so a thinned stand leaves no hole rules must work round.
+  - Stands still show in painting, presets and the slot pool (Decision 70), and as the
+    block drawn per stand at middle zoom (Decision 69). Reinforcements fill places, not
+    stands.
+  - A lone unit is a squad of one stand that isn't full.
+- **Numbers give strength:**
+  - **horde N:** a unit gains the bonus while its formation has at least N living units
+    of any kind.
+  - **mob N:** a unit gains the bonus while its formation has at least N living units of
+    its own type. Grems: mob 16, so four full grem stands.
+  - The bonus is placeholder: more courage (Decision 82) and a step more damage. It ends
+    as soon as the count drops below N, so thinning a horde snowballs.
+- **Pillar check (Decision 58):** mob and horde make painting choices (how many of what)
+  matter in the fight. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Stands as the unit of movement and facing | Duplicates the squad block, and thinned stands leave holes. |
+| Stands that fight as one with shared health | Undoes the per-unit combat the feel tests built. |
+| One numbers trait only | The user wants both: any units (horde) and the same type (mob). |
+
+**Consequences:**
+- Deployment expands stands into cells; after that the sim knows units only.
+- Unit types gain horde N and mob N; the bonus values belong with spec 28.
+
+### Decision 84 — Within a squad, crowding rules work unchanged in its own frame; between squads, cells are claimed, friends overtake within the corridor and take turns at crossings
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 6 (crowding and passing). The user agreed the
+recommendation ("Sounds fine").
+- **Within a squad nothing changes.** Swaps (Decision 46), re-forming into free space
+  (Decision 49), step-up and spread (Decision 51) work in the squad's own rank and column
+  frame, so they hold for any facing (Decision 74). Spread runs along the squad's lateral
+  axis, bounded by the route's corridor (Decision 75), blocked cells and other squads.
+- **One unit per cell, claimed ahead.** A moving squad claims the cells it enters next.
+  When two want the same cell, the earlier claim wins and a tie goes to the lower squad
+  id, so the sim stays deterministic.
+- **Overtaking:** a faster friendly squad that catches a slower one sidles past within the
+  corridor if there is room; otherwise it queues behind, or merges when merging is on
+  (Decisions 51 and 80).
+- **Crossings:** friendly squads on routes that cross don't pass through each other. The
+  first to claim the crossing goes; the other waits. The front panel (Decision 69) flags
+  a queue that lasts, which shows a badly placed route.
+- **Only two exceptions pass through friends:** routers, with crush damage (Decision 82),
+  and tiny units, which slip through gaps in a friendly formation as they use burrows
+  (Decision 54).
+- **Pillar check (Decision 58):** route placement matters (queues and crossings are the
+  planner's problem), without any hand control. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Squads pass through friends freely | Blurs who is where; breaks crush damage and cell claims. |
+| Always queue, never overtake | A fast wave stuck behind a slow one for a whole route; 2D gives room. |
+
+**Consequences:**
+- The formation sim gains cell claims per tick, overtaking within the corridor and
+  waiting at crossings.
+- Existing swap, re-form and spread code runs in squad-local coordinates.
+
+### Decision 85 — Terrain sets speed per cell by ground, slope and liquid depth; the squad keeps the pace of its worst leading cell; gaps narrow it into a column
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 7 (terrain). The user agreed the recommendation and
+asked for liquid depth in bands rather than one wading state: "0<0.25 no pen, 0.25<0.5
+wading, 0.5<1 slow wade". On "a step more damage": "that needs discussion", in the
+session on unit levers.
+- **Speed per cell** is the unit's speed times:
+  - **ground:** the terrain's `move_cost` (placeholders: grass 1, forest ½, marsh ⅓),
+    with a bonus on roads (Decision 26)
+  - **slope:** slower uphill by the quarter-cells risen; downhill no faster
+  - **liquid depth, in bands of the unit's own height** (so a brute wades where a grem
+    swims), placeholders:
+
+    | Depth (of unit height) | Effect |
+    |---|---|
+    | under ¼ | no penalty |
+    | ¼ to ½ | wading: slower |
+    | ½ to 1 | slow wading: much slower |
+    | 1 or more | needs a swim trait or a bridge |
+
+    Lava burns whatever enters it, by heat (Decision 66).
+- **A squad moves at its slowest unit's pace on the worst cell along its leading edge,**
+  so the block stays together and a squad half in a marsh slows as a whole.
+- **Impassable:** cliffs without climber N against the face's climb difficulty (Decision
+  64), capped ground, solid structure cells, and liquid too deep for a unit that can't
+  swim. Units that can't pass go round within the leash (Decision 75).
+- **Height in melee:** the side on higher ground gets a bonus (placeholder: a step more
+  damage); a downhill charge adds to impact shock and an uphill one loses its charge
+  (Decision 82). Ranged units gain reach from height (Decision 52). What "a step" of
+  damage is belongs to spec 28.
+- **Gaps narrower than a squad:** it narrows into a column. Its width shrinks to the gap
+  and the outer columns fold in behind, front band first (the fold of Decision 42).
+  Narrowing and widening take re-form time (Decision 46), and the thin front is what
+  makes a chokepoint dangerous. Through the gap, it widens back to its painted shape.
+  Units too big for the gap go round within the leash; if there is no way, the squad
+  halts and raises an alert. Blocked cells also clip the route's corridor, which is how
+  terrain narrows a lane (Decision 41).
+- **Pathfinding** off the route uses the same costs.
+- **Pillar check (Decision 58):** terrain shapes where a defence is strong (passes,
+  fords, hills), which is what the attacker plans against. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Each unit at its own cell's speed | Tears the block apart on mixed ground. |
+| One wading state | The user: depth should matter, in cheap bands. |
+| Chokepoints block wider squads | Forts on passes would be impassable rather than dangerous. |
+| Faster downhill | Little gain; squads would string out on slopes. |
+
+**Consequences:**
+- `TerrainDef.move_cost` becomes live; the sim reads slope and liquid depth per cell
+  from `GroundSurface`.
+- Units gain a height for wading, and swim as a trait.
+- The formation sim gains narrowing into a column and widening after.
+- Every "step" of damage in Decisions 79, 82, 83 and here is a placeholder until spec 28
+  defines steps.
+
+### Decision 86 — The 2D feel test is one scene, a flank attack on a held line, that grows round by round
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 8 (the feel test). The user agreed the
+recommendation ("Sounds good to me").
+- **The scene:** a strip 2 tiles wide by 1 deep (128 × 64 cells). The kingdom holds a line
+  across the middle. The player has two routes: **A** straight at the line over open
+  grass, and **B** swinging through a wood (slower ground) onto the line's side. A low
+  hill sits behind the kingdom's line, and a narrow ford crosses a stream on route B.
+- **Each round adds to the same scene,** so every change is felt against the last:
+
+  | Round | Adds | Feel-test |
+  |---|---|---|
+  | 1 | 2D positions, four facings, wheel and about-face, routes with a corridor, frontal contact | marching, turning at bends, meeting head-on in 2D |
+  | 2 | fronts on four edges, wings, step-up per edge | route B's wave hitting the side; wings walking round |
+  | 3 | morale, shock, rout and crush casualties, leadership | a flanked line wavering and breaking into its reserve |
+  | 4 | terrain speed, slope, liquid bands, narrowing at the ford | the wood slowing route B; the ford forcing a column |
+  | later | stands in the painter, horde and mob, leaders' tactic traits | painting and sending bigger, led armies |
+
+- **Round 1 keeps today's combat** (front to front) running in 2D, so any change in feel
+  comes from movement alone.
+- **The one-lane feel test stays** until the 2D scene covers what it does (Decision 73).
+- Feel-testing in a window is for the user or the local agent; a cloud agent checks
+  behaviour with tests and headless screenshots.
+- **Pillar check (Decision 58):** the scene tests the attacker's plan (two routes against
+  a held line). Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A crossroads fight first | Tests crossings (Decision 84) before facing and flanking. |
+| Reinforcement from two directions first | Needs fronts on four edges, round 2's work. |
+
+**Consequences:**
+- Round 1 is planned next: 2D positions, facing, turning and routes in
+  `sim/skirmish/formation/`, test-first, and the scene.
+
+### Decision 87 — Waves coordinate by planned timing or by hold-until orders that act only on what a formation can detect; reaching each other beyond sight is a family of signals unlocked by tech
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Raised by the user after round 1 of spec 27 was built: route B's longer way
+means its wave arrives after route A's has fallen. The user: "We could allow the player to
+set a waypoint for the two to coincide at… or give criteria to meet i.e. one would deploy
+and wait at a location until the other would reach a certain point… the waiting
+formation would not be treated as telepathic but need to be able to see and then plan its
+departure". And: "communication among formations across distance could be an aspect of
+tech e.g. sight being baseline… horns… flags (player could unlock and assign specific
+meanings), messenger birds, light signals… beacons… or magics".
+- **Planned rendezvous (timing before departure).** The player places a rendezvous
+  waypoint shared by routes and links waves to it. The game staggers their departures by
+  predicted travel times: route lengths, slowest speeds, wheel and about-face times, build
+  time left. This is the overlord's plan given before departure, not telepathy; the sim is
+  deterministic, so it is exact until something interferes (a detour, a fight).
+- **Hold-until orders (decided in the field).** A wave marches to a staging waypoint and
+  holds (Decision 69's "hold at a point") until a trigger the player chose:
+  - it **detects its partner**
+  - it **detects the fight**: the partner engaging, or the enemy turning to it
+  - it **receives a signal** (below)
+  - a **fallback timer**: then it goes, or turns back, as set
+  It never knows what it cannot detect.
+- **Planning its own departure.** When the trigger fires, the formation estimates when its
+  partner reaches the target, from the distance and pace it detected, and leaves to arrive
+  with it. Without a leader it goes on the trigger; a leader with the **coordinated**
+  tactic trait (Decision 81) times it well.
+- **Detection is the prerequisite.** Each unit type has a detection range in cells
+  (placeholder 40); a formation detects with its best detector. Line of sight (woods,
+  ridges), light and darksight (Decision 64) come with terrain (spec 27 round 4) and later.
+- **Communication beyond sight is a family of signals, unlocked by tech** (Decision 41).
+  Sight is the baseline for every formation's judgement. Each channel is an item, a
+  structure or a trait, with its own properties:
+
+  | Channel | Reach | Needs sight | Notes (placeholders) |
+  |---|---|---|---|
+  | sight | detection range | yes | baseline; no message, only what is seen |
+  | horn | medium | no | passes woods and walls; few calls; the enemy hears it too |
+  | flags | long | yes | the player unlocks flags and assigns their meanings |
+  | lantern signals | long | yes | flashing light; best at night, gives the sender away |
+  | messenger birds | very long | no | any order, but slow, and can be lost or intercepted |
+  | beacons | very long | yes | fixed, for settlements; one meaning, lit in a chain |
+  | magic | any | no | faction-specific, with a cost |
+
+  A signal carries a meaning from a sender (a formation, a leader, a settlement) to
+  whoever can receive it on that channel; hold-until triggers can wait for one.
+- **Pillar check (Decision 58):** coordination is set up when planning (rendezvous,
+  triggers, signals) and carried out by the formations; the player never steers a fight.
+  Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Formations that know where their partners are | Telepathic; the user wants them to see or be told. |
+| Only planned timing | Can't react when something interferes on the way. |
+| One generic "signal" with no channels | Loses the tech choices and trade-offs the user wants (range, sight, enemy hearing it). |
+
+**Consequences:**
+- Unit types gain a detection range; the formation sim gains detection (also what
+  Decision 71's ranged targeting needs).
+- Waypoints gain rendezvous and staging roles; waves gain hold-until triggers and a
+  fallback timer; leaders can carry **coordinated**.
+- Communication channels become items, structures and traits in the tech trees, with
+  flag meanings the player assigns.
+- Spec 27's round 2 adds detection, hold-until (seeing the partner or the fight) and
+  planned rendezvous: route B's wave holds in the wood until it sees route A's engage,
+  then strikes. Signals beyond sight come later, with the tech work.
