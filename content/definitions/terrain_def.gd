@@ -4,6 +4,8 @@ extends Resource
 ## specs/19-map-layout-and-objectives.md (Decision 32). Imported from the designer's
 ## content/designer/terrain.json; maps reference terrains by id.
 
+const StratumDef = preload("res://content/definitions/stratum_def.gd")
+
 @export var id: String = ""
 @export var display_name: String = ""
 ## Short symbol the designer draws on the cell.
@@ -17,7 +19,19 @@ extends Resource
 @export var move_cost: float = 1.0
 ## Unit classes that cannot enter this terrain (no unit-class schema yet; ids only).
 @export var blocks_unit_classes: Array[String] = []
-## Building capacity defaults for a tile on this terrain (TileDef can override them).
+## The ground (Decisions 53, 54): the load a cell column bears, the most foundations can
+## raise it to, and how deep the strata go, in cells.
+@export var bearing: int = 0
+@export var foundation_max: int = 0
+@export var dig_depth: int = 0
+## Cells below the surface where water starts, as a range strata generation picks from;
+## -1 for both = no water table.
+@export var water_table_min: int = -1
+@export var water_table_max: int = -1
+## Bands from the surface down; the last continues to dig_depth.
+@export var strata: Array[StratumDef] = []
+## Legacy: the side-on structure editor's capacity (Decision 27), until the plan editor of
+## Decision 52 replaces it. TileDef can override them.
 @export var default_stability: int = 0
 @export var default_max_height: int = 0
 @export var default_max_width: int = 0

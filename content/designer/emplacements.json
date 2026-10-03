@@ -1,5 +1,16 @@
 [
   {
+    "id": "BOILING_OIL",
+    "label": "Oil cauldron",
+    "abbr": "OIL",
+    "mount": "ROOM",
+    "manned_by_unit": "Militia",
+    "firing_points": 1,
+    "stub_damage": 10,
+    "stub_range": 0,
+    "notes": "one-shot per siege (stub)"
+  },
+  {
     "id": "BALLISTA",
     "label": "Ballista",
     "abbr": "BAL",
@@ -9,27 +20,5 @@
     "stub_damage": 14,
     "stub_range": 5,
     "notes": ""
-  },
-  {
-    "id": "TREBUCHET",
-    "label": "Trebuchet",
-    "abbr": "TRB",
-    "mount": "ROOF",
-    "manned_by_unit": "Guard",
-    "firing_points": 3,
-    "stub_damage": 30,
-    "stub_range": 8,
-    "notes": "needs a big flat roof (stub)"
-  },
-  {
-    "id": "BOILING_OIL",
-    "label": "Oil cauldron",
-    "abbr": "OIL",
-    "mount": "ROOM",
-    "manned_by_unit": "Militia",
-    "firing_points": 1,
-    "stub_damage": 10,
-    "stub_range": 0,
-    "notes": "poured through a murder hole or over a wall (stub)"
   }
 ]

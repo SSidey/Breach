@@ -1,1 +1,7 @@
-[]
+[
+  {
+    "a": "the_kingdom",
+    "b": "player",
+    "stance": "HOSTILE"
+  }
+]

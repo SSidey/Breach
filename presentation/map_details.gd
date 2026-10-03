@@ -69,7 +69,8 @@ static func node_details(map_def: MapDef, node_id: String) -> String:
 	return "\n".join(lines)
 
 
-## A grid cell's layers (specs/19): terrain, feature, effective capacity, upgrades, bridge.
+## A grid cell's layers (specs/19): terrain, feature, the ground (Decisions 53, 54),
+## effective capacity, upgrades, bridge.
 static func tile_details(map_def: MapDef, cell: Vector2i) -> String:
 	var layout = map_def.layout
 	if layout == null or not layout.contains(cell):
@@ -97,6 +98,8 @@ static func tile_details(map_def: MapDef, cell: Vector2i) -> String:
 	if tile.feature_id:
 		var feature = library.feature(tile.feature_id)
 		lines.append("feature: %s" % (feature.display_name if feature else tile.feature_id))
+	if terrain and not terrain.strata.is_empty():
+		lines.append_array(_ground_lines(terrain, library))
 	var capacity: Dictionary = tile.effective_capacity(library, layout.default_terrain_id)
 	lines.append(
 		(
@@ -126,6 +129,27 @@ static func tile_details(map_def: MapDef, cell: Vector2i) -> String:
 			"%s, hp %d%s" % [kind, tile.bridge.hp, ", raised" if tile.bridge.raised else ""]
 		)
 	return "\n".join(lines)
+
+
+static func _ground_lines(terrain, library) -> PackedStringArray:
+	var water := (
+		"water %d-%d" % [terrain.water_table_min, terrain.water_table_max]
+		if terrain.water_table_min >= 0
+		else "no water table"
+	)
+	var bands := PackedStringArray()
+	for stratum in terrain.strata:
+		var material = library.material(stratum.material_id)
+		bands.append(material.display_name if material else stratum.material_id)
+	return PackedStringArray(
+		[
+			(
+				"ground: bearing %d (foundations %d) · dig %d · %s"
+				% [terrain.bearing, terrain.foundation_max, terrain.dig_depth, water]
+			),
+			"strata: %s" % ", ".join(bands)
+		]
+	)
 
 
 static func _layout_line(map_def: MapDef) -> String:
