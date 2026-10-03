@@ -43,7 +43,7 @@ static func holds(
 	if squad.staging.is_empty() or squad.order != SkirmishUnit.Order.ADVANCE:
 		return false
 	var partner := _triggered(squad, squads, terrain)
-	if partner != null and _time_to_go(squad, partner, pace):
+	if partner != null and _time_to_go(squad, partner, pace, terrain):
 		squad.staging = {}
 		events.append(FormationEvents.squad_event("signalled", tick, squad))
 		return false
@@ -65,7 +65,9 @@ static func holds(
 
 
 ## True unless a coordinated leader judges it too soon: it would arrive before its partner.
-static func _time_to_go(squad: SkirmishSquad, partner: SkirmishSquad, pace: Array) -> bool:
+static func _time_to_go(
+	squad: SkirmishSquad, partner: SkirmishSquad, pace: Array, terrain: FormationTerrain
+) -> bool:
 	if not squad.staging.has("meet") or not _coordinated(squad) or partner.speed() <= 0.0:
 		return true
 	var tick_seconds: float = pace[1]
@@ -79,7 +81,8 @@ static func _time_to_go(squad: SkirmishSquad, partner: SkirmishSquad, pace: Arra
 		squad.width,
 		squad.speed() * pace[0],
 		tick_seconds,
-		squad.front_distance * MapLayoutDef.CELLS_PER_TILE
+		squad.front_distance * MapLayoutDef.CELLS_PER_TILE,
+		terrain
 	)
 	return own_ticks >= partner_ticks - SLACK_TICKS
 

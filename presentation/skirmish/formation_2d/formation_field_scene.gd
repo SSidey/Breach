@@ -26,7 +26,8 @@ const FLASH_SECONDS := 0.3
 const COLOURS := {
 	"grass": Color(0.33, 0.45, 0.25),
 	"wood": Color(0.16, 0.3, 0.14),
-	"ford": Color(0.25, 0.45, 0.7),
+	"stream": Color(0.18, 0.35, 0.65),
+	"ford": Color(0.45, 0.62, 0.8),
 	"hill": Color(0.5, 0.45, 0.3),
 	"A": Color(0.95, 0.85, 0.3),
 	"B": Color(0.95, 0.55, 0.2),
@@ -91,8 +92,11 @@ func _unhandled_input(event: InputEvent) -> void:
 func _draw() -> void:
 	var size := Vector2(FormationField.SIZE) * CELL_PX
 	draw_rect(Rect2(ORIGIN, size), COLOURS["grass"])
-	for scenery in [["wood", FormationField.WOOD], ["hill", FormationField.HILL]]:
-		draw_rect(_cells(scenery[1]), COLOURS[scenery[0]])
+	draw_rect(_cells(FormationField.WOOD), COLOURS["wood"])
+	for ring in range(FormationField.HILL_QUARTERS):
+		var shade: Color = COLOURS["hill"].lightened(ring * 0.05)
+		draw_rect(_cells(FormationField.HILL.grow(-ring)), shade)
+	draw_rect(_cells(FormationField.STREAM), COLOURS["stream"])
 	draw_rect(_cells(FormationField.FORD), COLOURS["ford"])
 	for key in _field.routes:
 		_draw_route(key)
@@ -232,10 +236,18 @@ func _describe() -> String:
 	for key in _field.waves:
 		built.append("%s %d/%d" % [key, _field.waves[key].built(), FormationField.WAVE_WIDTH])
 	var line := _field.kingdom_line
+	var halted := _field.sim.squads().filter(func(s): return s.blocked).size()
 	var state: String = SkirmishSquad.State.keys()[line.state].to_lower()
 	var paused := "   (paused)" if _clock.is_paused() else ""
 	var reserve := _field.kingdom_reserve.living().size()
 	return (
-		"  Waves: %s   Line: %d (%s)   Reserve: %d%s"
-		% [", ".join(built), line.living().size(), state, reserve, paused]
+		"  Waves: %s   Line: %d (%s)   Reserve: %d%s%s"
+		% [
+			", ".join(built),
+			line.living().size(),
+			state,
+			reserve,
+			"   BLOCKED" if halted > 0 else "",
+			paused
+		]
 	)

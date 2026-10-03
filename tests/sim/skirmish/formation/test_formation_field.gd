@@ -6,6 +6,8 @@ extends GdUnitTestSuite
 ## timed to arrive together.
 
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
+const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -179,3 +181,39 @@ func test_a_flank_timed_by_the_chieftain_breaks_the_line_into_its_reserve() -> v
 	assert_int(flanked[0]["tick"] - engaged).is_less_equal(30)  # the flank lands with A
 	assert_bool(log.any(func(e): return e["type"] == "routed" and e["squad"] == line)).is_true()
 	assert_bool(log.any(func(e): return e["type"] == "crushed" and e["squad"] == reserve)).is_true()
+
+
+func test_route_bs_wave_narrows_through_the_ford_and_widens_after() -> void:
+	var field := _field(400, 200)
+	_run(field, func(log): return field.waves["B"].built() == 8)
+
+	field.send("B")
+	var log := _run(field, _has("widened"), 600)
+
+	var narrowed: Array = log.filter(func(e): return e["type"] == "narrowed")
+	assert_int(narrowed.size()).is_equal(1)
+	assert_int(narrowed[0]["width"]).is_equal(4)
+	assert_bool(log.any(func(e): return e["type"] == "widened")).is_true()
+
+
+func test_the_wood_slows_route_bs_wave() -> void:
+	var field := _field(400, 200)
+	_run(field, func(log): return field.waves["B"].built() == 8)
+
+	var wave := field.send("B")
+	_run(field, func(log): return false, 100)
+
+	assert_float(wave.position.x).is_less(60.0)  # open ground would be 80 cells on
+
+
+func test_the_wood_hides_deep_inside_but_not_at_its_edge() -> void:
+	var ground: FormationTerrain = _field().sim.terrain
+	var line_front := Vector2(FormationField.LINE_AT - 10.0, 32.5)
+
+	assert_bool(FormationSight.clear(ground, Vector2(40.5, 8.5), line_front)).is_false()
+	(
+		assert_bool(
+			FormationSight.clear(ground, FormationField.STAGING + Vector2(0.5, 0.5), line_front)
+		)
+		. is_true()
+	)

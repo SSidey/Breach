@@ -10,8 +10,9 @@ extends RefCounted
 ## be sent together, timed to arrive at once (planned rendezvous). Wings walk round the
 ## line's ends (Decision 81). A broken line routs east into the kingdom's reserve on the
 ## hill (Decision 82); the player's routers who reach home go back to the reserve. The
-## wood, ford and hill are drawn only until terrain arrives (round 4). The player's
-## domain builders fill both waves in turn. Pure.
+## ground matters (Decision 85): the wood slows and hides, B's wave narrows through the
+## ford, and the reserve fights down from the hill. The player's domain builders fill both
+## waves in turn. Pure.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
@@ -23,6 +24,7 @@ const WavePresets = preload("res://sim/skirmish/formation/wave_presets.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
+const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 const SIZE := Vector2i(128, 64)
@@ -36,13 +38,22 @@ const RESERVE_WIDTH := 6
 const WAVE_WIDTH := 8
 ## Where route B turns south onto the line's side, and where its wave waits in the wood.
 const FLANK_X := 81.0
-const STAGING := Vector2(56, 10)
+## Route B runs east along the wood's southern edge, one cell inside the trees.
+const B_Y := 21.0
+const STAGING := Vector2(56, B_Y)
 ## How long a waiting wave holds before going anyway (seconds).
 const WAIT_SECONDS := 60.0
 ## Scenery, in cells, drawn by the scene (no effect until round 4).
+## The ground (Decision 85): a wood (half pace, blocks sight) that route B runs through
+## along its southern edge, a stream too deep for grems with a 4-cell ford on route B, and
+## the hill under the reserve, rising a quarter-cell a cell to 2 cells high.
 const WOOD := Rect2(16, 0, 44, 22)
-const FORD := Rect2(28, 0, 3, 22)
+const STREAM := Rect2(28, 0, 3, 28)
+const FORD := Rect2(28, B_Y - 2, 3, 4)
 const HILL := Rect2(92, 16, 20, 32)
+const STREAM_DEPTH := 1.2
+const FORD_DEPTH := 0.4
+const HILL_QUARTERS := 8
 
 var tick_seconds: float
 var sim: FormationSimulation
@@ -59,14 +70,14 @@ var _tick := 0
 static func route_points() -> Dictionary:
 	return {
 		"A": PackedVector2Array([Vector2(0, 32), Vector2(128, 32)]),
-		"B": PackedVector2Array([Vector2(0, 10), Vector2(FLANK_X, 10), Vector2(FLANK_X, 64)]),
+		"B": PackedVector2Array([Vector2(0, B_Y), Vector2(FLANK_X, B_Y), Vector2(FLANK_X, 64)]),
 	}
 
 
 ## How far along each route a wave's front meets the line: A its front, B its north side.
 static func contact_cells() -> Dictionary:
 	var north_face := 32.0 - KINGDOM_WIDTH / 2.0
-	return {"A": LINE_AT - 1.0, "B": FLANK_X + (north_face - 1.0 - 10.0)}
+	return {"A": LINE_AT - 1.0, "B": FLANK_X + (north_face - 1.0 - B_Y)}
 
 
 ## `leader_unit`, if given, leads route B's wave from its second rank.
@@ -82,6 +93,7 @@ func _init(
 	sim = FormationSimulation.new(float(SIZE.x) / MapLayoutDef.CELLS_PER_TILE, seconds_per_tick)
 	sim.combat_width = WAVE_WIDTH
 	sim.walk_wings = true
+	sim.terrain = _ground()
 	var points := route_points()
 	for key in points:
 		routes[key] = FormationRoute.new(points[key], WAVE_WIDTH / 2.0)
@@ -127,7 +139,13 @@ func send_together(keys: Array) -> Array:
 	var cells_per_second := _wave_unit.speed * FormationSimulation.TRAVEL_SCALE * 64.0
 	for key in keys:
 		predicted[key] = FormationRendezvous.ticks_to(
-			routes[key], contact_cells()[key], WAVE_WIDTH, cells_per_second, tick_seconds
+			routes[key],
+			contact_cells()[key],
+			WAVE_WIDTH,
+			cells_per_second,
+			tick_seconds,
+			0.0,
+			sim.terrain
 		)
 	var waits := FormationRendezvous.waits(predicted)
 	var sent := []
@@ -162,6 +180,17 @@ func set_wait(waiting: bool) -> void:
 			"meet": Vector2(contact_cells()["A"], 32),
 			"meet_cells": contact_cells()["B"],
 		}
+
+
+## The field's terrain (Decision 85).
+static func _ground() -> FormationTerrain:
+	var terrain := FormationTerrain.new(SIZE)
+	terrain.paint(Rect2i(WOOD), {"cost": 0.5, "blocks_sight": true})
+	terrain.paint(Rect2i(STREAM), {"depth": STREAM_DEPTH})
+	terrain.paint(Rect2i(FORD), {"depth": FORD_DEPTH})
+	for ring in range(HILL_QUARTERS):
+		terrain.paint(Rect2i(HILL.grow(-ring)), {"height": ring + 1})
+	return terrain
 
 
 func _hold_the_line(unit_def: UnitDef) -> void:
