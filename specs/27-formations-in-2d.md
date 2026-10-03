@@ -122,4 +122,24 @@ Round 1 is being planned.
 
 ## Rounds
 
-Round 1 is being planned: see Decision 86's table for what each round adds.
+Decision 86's table sets what each round adds to the one feel-test scene.
+
+### Round 1: squads in 2D (in progress)
+
+A squad keeps its distance along its own route (Decision 75) and takes its 2D place and
+facing from it. On a straight east-west route, turning by facing gives exactly the lane's
+numbers (the west-facing squad's mirror included), so the one-lane feel test and its tests
+are unchanged. Squads on different routes meet through 2D geometry. Four stacked PRs:
+1. **Building blocks** (PR #56): `FormationRoute` (a path of cells; point, heading and
+   nearest facing at a distance; corridor), `SquadFrame` (four facings; a unit's cells
+   from the front centre, turned not mirrored; lateral interval; gap along a facing) and
+   `SquadTurn` (wheel time from the outer end's quarter arc; the about-face pause;
+   reversing ranks and columns). New files only.
+2. **Squads on routes:** squads gain a route, facing and position; contact and stop-behind
+   measured along the facing in cells, frontal only (opposite facings); units gain a 2D
+   position.
+3. **Turning:** a turning state; wheels at bends; about-face on retreat and on advancing
+   again; a turning squad neither advances nor strikes, and blows on it are flank blows.
+4. **The 2D scene:** `FormationField` (one sim, routes A and B, the kingdom line holding on
+   A) and a top-down scene. In round 1, route B rejoins A before the line so its wave
+   reinforces from behind; round 2 redraws it onto the line's side.
