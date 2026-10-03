@@ -4317,3 +4317,45 @@ fight e.g. hit rate, damage".
 - The formation sim gains a morale pool with bands, shock, rout, crush damage, pursuit
   and rally.
 - The front panel (Decision 69) shows each side's morale band.
+
+### Decision 83 — Stands are for painting and deploying only; horde N and mob N give a bonus to formations big enough
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 5 (stands in 2D). The user agreed that stands are
+painting and deployment only, and added a trait: "'horde N' where if their formation
+contains enough then they get a bonus or a separate adjacent one that needs a number of
+the same unit e.g. grems have mob 16, meaning at 4 full stands or 16 grems they gain a
+bonus".
+- **A stand is a unit of painting and deployment only.** Once deployed, units act per
+  cell:
+  - The squad moves and turns as one block (Decision 74). Stands are 2 × 2 and painted
+    widths are whole stands, so a turned block still lands on cells.
+  - Combat, step-up (Decision 78), wings (Decision 81), crush damage (Decision 82) and
+    re-forming are per unit, so a thinned stand leaves no hole rules must work round.
+  - Stands still show in painting, presets and the slot pool (Decision 70), and as the
+    block drawn per stand at middle zoom (Decision 69). Reinforcements fill places, not
+    stands.
+  - A lone unit is a squad of one stand that isn't full.
+- **Numbers give strength:**
+  - **horde N:** a unit gains the bonus while its formation has at least N living units
+    of any kind.
+  - **mob N:** a unit gains the bonus while its formation has at least N living units of
+    its own type. Grems: mob 16, so four full grem stands.
+  - The bonus is placeholder: more courage (Decision 82) and a step more damage. It ends
+    as soon as the count drops below N, so thinning a horde snowballs.
+- **Pillar check (Decision 58):** mob and horde make painting choices (how many of what)
+  matter in the fight. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Stands as the unit of movement and facing | Duplicates the squad block, and thinned stands leave holes. |
+| Stands that fight as one with shared health | Undoes the per-unit combat the feel tests built. |
+| One numbers trait only | The user wants both: any units (horde) and the same type (mob). |
+
+**Consequences:**
+- Deployment expands stands into cells; after that the sim knows units only.
+- Unit types gain horde N and mob N; the bonus values belong with spec 28.
