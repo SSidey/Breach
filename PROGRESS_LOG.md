@@ -48,6 +48,7 @@ Schema note: rows from 2026-09-20 onward that predate the `isp violations` / `he
 | 2026-10-01 | feature/formation-positions | 412 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-01 | feature/formation-weapons-scale | 428 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-01 | feature/formation-spread-merge | 442 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
+| 2026-10-01 | feature/lanes-eight-wide | 443 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-02 | feature/designer-ground-model | 455 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-02 | feature/ground-elevation | 469 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-02 | feature/ground-liquids | 477 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
@@ -61,3 +62,4 @@ Schema note: rows from 2026-09-20 onward that predate the `isp violations` / `he
 | 2026-10-02 | feature/tile-scale-64 | 519 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-02 | feature/node-footprints | 526 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
 | 2026-10-02 | feature/subnodes | 538 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |
+| 2026-10-03 | feature/lanes-eight-wide | 539 | 0 | 0 | 0 | 0 | 0 | 0 | N/A (no tool, see ci/godot/README.md) | PASS |

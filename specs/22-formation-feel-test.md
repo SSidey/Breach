@@ -341,6 +341,12 @@ it, against the kingdom's 3-militia line:
 2. On an 8-wide lane, all 8 grems reached the front, and the outer ones flanked the
    militia.
 
+## Lane width 8
+
+From the user ("Let's get lane to 8 wide"): both feel-test lanes are now **8 wide**, the
+cap from Decision 41 (they were 5 and 4). The combat width follows, so reinforcements can
+spread to a front of 8 (Decision 51). Starting lines and the slot pool are unchanged.
+
 ## Notes / open questions
 
 - Orders are per wave. Pulling back a single unit is left out for now.

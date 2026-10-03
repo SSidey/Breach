@@ -80,7 +80,7 @@ func test_lanes_start_departing_on_their_own_and_sharing_round_robin() -> void:
 	assert_int(scene._battle.player.distribution).is_equal(
 		scene._battle.player.Distribution.ROUND_ROBIN
 	)
-	assert_int(scene.simulation("c").combat_width).is_equal(5)
+	assert_int(scene.simulation("c").combat_width).is_equal(8)
 
 
 func test_auto_merge_marks_the_waves_a_lane_sends() -> void:
@@ -186,3 +186,11 @@ func test_the_camera_zooms_toward_a_point_within_limits() -> void:
 
 	assert_float(closest).is_equal_approx(camera.MAX_ZOOM, 0.0001)
 	assert_float(camera.zoom.x).is_equal_approx(camera.MIN_ZOOM, 0.0001)
+
+
+func test_both_lanes_are_eight_wide() -> void:
+	var scene := _scene()
+
+	assert_int(scene.simulation("c").combat_width).is_equal(8)
+	assert_int(scene.simulation("k").combat_width).is_equal(8)
+	assert_int(scene._battle.lane("k").lane_width).is_equal(8)

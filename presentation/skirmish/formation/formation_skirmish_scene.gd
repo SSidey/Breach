@@ -33,7 +33,7 @@ const MILITIA := preload("res://content/units/kingdom_militia.tres")
 
 const POOL_TOTAL := 8
 ## Each lane's maximum frontline width (feel-test config; maps author this later).
-const LANE_WIDTHS := {"c": 5, "k": 4}
+const LANE_WIDTHS := {"c": 8, "k": 8}
 const START_SLOTS := {"c": 5, "k": 3}
 const KINGDOM_LINE := 3
 ## Brushes in HUD order (hotkeys 1, 2, 3, E); null erases.
