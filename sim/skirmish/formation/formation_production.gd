@@ -23,6 +23,8 @@ var departure: Departure = Departure.MANUAL
 var auto_merge := false
 ## The route its waves follow (Decision 75); null keeps the simulation's lane.
 var route: FormationRoute = null
+## A hold-until order its waves carry (FormationStaging, Decision 87); empty for none.
+var staging := {}
 
 var _template := WaveTemplate.new(1, 0)
 var _filled := []  # one bool per _template.ordered() place
@@ -89,9 +91,10 @@ func step(sim: FormationSimulation) -> Array:
 	return events
 
 
-## Deploys the filled places as one squad (the painted layout) and restarts the same
-## template, empty; null when nothing is filled.
-func send(sim: FormationSimulation) -> SkirmishSquad:
+## Deploys the filled places as one squad (the painted layout), setting out after
+## `wait_ticks` (a planned rendezvous, Decision 87), and restarts the same template, empty;
+## null when nothing is filled.
+func send(sim: FormationSimulation, wait_ticks: int = 0) -> SkirmishSquad:
 	if built() == 0:
 		return null
 	var layout := _template.layout()
@@ -99,8 +102,11 @@ func send(sim: FormationSimulation) -> SkirmishSquad:
 	for index in range(_filled.size()):
 		if _filled[index]:
 			placements.append(layout[1][index])
-	var squad := sim.spawn_squad(layout[0], placements, faction_id, at_player_end, 0, route)
+	var squad := sim.spawn_squad(
+		layout[0], placements, faction_id, at_player_end, wait_ticks, route
+	)
 	squad.merges = auto_merge
+	squad.staging = staging.duplicate()
 	_filled.fill(false)
 	_announced = false
 	return squad

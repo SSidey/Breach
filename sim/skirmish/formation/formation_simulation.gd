@@ -9,19 +9,16 @@ extends RefCounted
 ##   2. engage  - hostile squads whose fronts are within MELEE_REACH lock together, and a
 ##                free squad whose front reaches a hostile's side or rear locks onto that
 ##                edge (FormationEdges, Decision 78)
-##   3. move    - a squad that must face another way turns first, standing (an about-face
-##                to go back the way it faces, a wheel where its route bends: Decision
-##                74); free squads move as a block at their slowest unit's speed (one with no
-##                front units holds once an enemy is in its ranged reach), stopping at
-##                contact or behind a friendly squad; one that reaches a friendly squad
-##                in combat joins it from the back (Decision 44), as does one that merges
-##                into a friendly squad on the march (Decision 51); reaching the enemy end
-##                is arrival (the fort is immune)
-##   4. combat  - each squad's front-rank fighters strike: the enemy fighter they overlap
-##                laterally, or - past the end of a narrower enemy line - the nearest end
-##                fighter as a flank attack (x FLANK_BONUS). A unit struck by several foes
-##                takes every blow but strikes back at only one. Ranged units strike the
-##                nearest enemy in range from anywhere in their squad (Decision 46)
+##   3. move    - a squad that must face another way turns first (Decision 74); a staged
+##                one holds until its trigger (Decision 87); free squads move as a block
+##                at their slowest unit's pace (skirmishers hold in ranged reach), stopping
+##                at contact or behind a friend; one reaching a friend in combat (or
+##                merging) joins it from the back (Decisions 44, 51); wings walk round
+##                (Decision 81); reaching the enemy end is arrival
+##   4. combat  - front-rank fighters strike the enemy fighter they overlap, or past a
+##                narrower line's end wrap as a flank attack (x FLANK_BONUS) unless wings
+##                walk; flank locks and wings strike edges (FormationEdges, FormationWings);
+##                ranged units strike the nearest enemy in range (Decision 46)
 ##   5. deaths  - the fallen die, the ranks behind step up, and a squad with no one left
 ##                is destroyed, freeing whoever fought it
 ##   6. re-form - a reinforced squad's units swap toward their preferred places, and in a
@@ -42,6 +39,7 @@ const FormationTurning = preload("res://sim/skirmish/formation/formation_turning
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
+const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -185,6 +183,8 @@ func _move(events: Array) -> void:
 			continue
 		if mover.wait_ticks > 0:
 			mover.wait_ticks -= 1
+			continue
+		if FormationStaging.holds(mover, _squads, _tick, events):
 			continue
 		if mover.order == SkirmishUnit.Order.HOLD or FormationContact.skirmishing(mover, _squads):
 			mover.state = SkirmishSquad.State.HOLDING
