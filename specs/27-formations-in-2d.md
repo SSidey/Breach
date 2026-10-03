@@ -1,7 +1,7 @@
 # Spec 27: Formations in 2D
 
 Decisions 73 (the formation model is the game's simulation), 70 (stands), 52 (squads on a
-2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts), 81 (flanks, leadership), 82 (morale, shock, rout), 83 (stands, horde and mob) and 84 (crowding and passing).
+2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts), 81 (flanks, leadership), 82 (morale, shock, rout), 83 (stands, horde and mob), 84 (crowding and passing) and 85 (terrain).
 
 ## Purpose
 
@@ -18,7 +18,7 @@ Wave templates are painted in stands (Decision 70).
 ## Status
 
 **Design conversation under way.** The user takes design questions one subject at a
-time. Subjects 1 to 6 are agreed (see Agreed below); the rest of the agenda is a starting point,
+time. Subjects 1 to 7 are agreed (see Agreed below); the rest of the agenda is a starting point,
 not decided.
 
 ## Agreed
@@ -79,6 +79,13 @@ not decided.
    - One unit per cell, claimed ahead; earlier claim wins, ties to the lower squad id.
    - Friends overtake within the corridor or queue; at crossings, first claim goes.
    - Only routers (crush damage) and tiny units pass through friends.
+7. **Terrain (Decision 85).**
+   - Speed per cell from ground (`move_cost`), slope (uphill slower) and liquid depth in
+     bands of unit height (under ¼ free, to ½ wading, to 1 slow wading, deeper swims).
+   - A squad keeps the pace of its worst leading cell.
+   - Cliffs need climbing; capped ground, structures and deep liquid block non-swimmers.
+   - High ground gives a melee bonus (its size waits for spec 28's damage steps).
+   - Gaps narrow a squad into a column, front band first; oversized units go round.
 
 ## Agenda for the design conversation
 

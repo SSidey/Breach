@@ -4397,3 +4397,64 @@ recommendation ("Sounds fine").
 - The formation sim gains cell claims per tick, overtaking within the corridor and
   waiting at crossings.
 - Existing swap, re-form and spread code runs in squad-local coordinates.
+
+### Decision 85 — Terrain sets speed per cell by ground, slope and liquid depth; the squad keeps the pace of its worst leading cell; gaps narrow it into a column
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 7 (terrain). The user agreed the recommendation and
+asked for liquid depth in bands rather than one wading state: "0<0.25 no pen, 0.25<0.5
+wading, 0.5<1 slow wade". On "a step more damage": "that needs discussion", in the
+session on unit levers.
+- **Speed per cell** is the unit's speed times:
+  - **ground:** the terrain's `move_cost` (placeholders: grass 1, forest ½, marsh ⅓),
+    with a bonus on roads (Decision 26)
+  - **slope:** slower uphill by the quarter-cells risen; downhill no faster
+  - **liquid depth, in bands of the unit's own height** (so a brute wades where a grem
+    swims), placeholders:
+
+    | Depth (of unit height) | Effect |
+    |---|---|
+    | under ¼ | no penalty |
+    | ¼ to ½ | wading: slower |
+    | ½ to 1 | slow wading: much slower |
+    | 1 or more | needs a swim trait or a bridge |
+
+    Lava burns whatever enters it, by heat (Decision 66).
+- **A squad moves at its slowest unit's pace on the worst cell along its leading edge,**
+  so the block stays together and a squad half in a marsh slows as a whole.
+- **Impassable:** cliffs without climber N against the face's climb difficulty (Decision
+  64), capped ground, solid structure cells, and liquid too deep for a unit that can't
+  swim. Units that can't pass go round within the leash (Decision 75).
+- **Height in melee:** the side on higher ground gets a bonus (placeholder: a step more
+  damage); a downhill charge adds to impact shock and an uphill one loses its charge
+  (Decision 82). Ranged units gain reach from height (Decision 52). What "a step" of
+  damage is belongs to spec 28.
+- **Gaps narrower than a squad:** it narrows into a column. Its width shrinks to the gap
+  and the outer columns fold in behind, front band first (the fold of Decision 42).
+  Narrowing and widening take re-form time (Decision 46), and the thin front is what
+  makes a chokepoint dangerous. Through the gap, it widens back to its painted shape.
+  Units too big for the gap go round within the leash; if there is no way, the squad
+  halts and raises an alert. Blocked cells also clip the route's corridor, which is how
+  terrain narrows a lane (Decision 41).
+- **Pathfinding** off the route uses the same costs.
+- **Pillar check (Decision 58):** terrain shapes where a defence is strong (passes,
+  fords, hills), which is what the attacker plans against. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Each unit at its own cell's speed | Tears the block apart on mixed ground. |
+| One wading state | The user: depth should matter, in cheap bands. |
+| Chokepoints block wider squads | Forts on passes would be impassable rather than dangerous. |
+| Faster downhill | Little gain; squads would string out on slopes. |
+
+**Consequences:**
+- `TerrainDef.move_cost` becomes live; the sim reads slope and liquid depth per cell
+  from `GroundSurface`.
+- Units gain a height for wading, and swim as a trait.
+- The formation sim gains narrowing into a column and widening after.
+- Every "step" of damage in Decisions 79, 82, 83 and here is a placeholder until spec 28
+  defines steps.

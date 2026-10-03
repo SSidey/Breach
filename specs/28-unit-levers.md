@@ -25,11 +25,13 @@ is done.
    79), morale bands and conditions (Decision 82) feed, kept deterministic.
 4. **Morale inputs:** courage, comfort ranges, tolerances, likes and dislikes (Decision
    82); which are per type and which vary per unit.
-5. **Progression:** what the overlord's tech unlocks per unit type, and what a map grants.
-6. **Leaders:** commanders (built, rolled tactic traits), heroes (promoted from regular
+5. **Damage steps:** what "a step more damage" means (Decisions 79, 82, 83, 85 use it
+   as a placeholder): a flat amount, a fraction, or levels of damage.
+6. **Progression:** what the overlord's tech unlocks per unit type, and what a map grants.
+7. **Leaders:** commanders (built, rolled tactic traits), heroes (promoted from regular
    units, rolled tactic traits) and lords (named, authored); leadership N and tactic
    traits (Decision 81).
-7. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
+8. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
    wave painter shows it.
 
 ## Rounds
