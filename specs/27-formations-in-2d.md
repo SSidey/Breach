@@ -1,7 +1,7 @@
 # Spec 27: Formations in 2D
 
 Decisions 73 (the formation model is the game's simulation), 70 (stands), 52 (squads on a
-2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts), 81 (flanks, leadership), 82 (morale, shock, rout) and 83 (stands, horde and mob).
+2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts), 81 (flanks, leadership), 82 (morale, shock, rout), 83 (stands, horde and mob) and 84 (crowding and passing).
 
 ## Purpose
 
@@ -18,7 +18,7 @@ Wave templates are painted in stands (Decision 70).
 ## Status
 
 **Design conversation under way.** The user takes design questions one subject at a
-time. Subjects 1 to 5 are agreed (see Agreed below); the rest of the agenda is a starting point,
+time. Subjects 1 to 6 are agreed (see Agreed below); the rest of the agenda is a starting point,
 not decided.
 
 ## Agreed
@@ -74,6 +74,11 @@ not decided.
    - Stands are for painting and deploying only; deployed units act per cell.
    - horde N (enough units of any kind) and mob N (enough of one type; grems mob 16)
      give a bonus while the formation holds that many.
+6. **Crowding and passing (Decision 84).**
+   - Within a squad the rules are unchanged, in the squad's own frame.
+   - One unit per cell, claimed ahead; earlier claim wins, ties to the lower squad id.
+   - Friends overtake within the corridor or queue; at crossings, first claim goes.
+   - Only routers (crush damage) and tiny units pass through friends.
 
 ## Agenda for the design conversation
 

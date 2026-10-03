@@ -4359,3 +4359,41 @@ bonus".
 **Consequences:**
 - Deployment expands stands into cells; after that the sim knows units only.
 - Unit types gain horde N and mob N; the bonus values belong with spec 28.
+
+### Decision 84 — Within a squad, crowding rules work unchanged in its own frame; between squads, cells are claimed, friends overtake within the corridor and take turns at crossings
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 6 (crowding and passing). The user agreed the
+recommendation ("Sounds fine").
+- **Within a squad nothing changes.** Swaps (Decision 46), re-forming into free space
+  (Decision 49), step-up and spread (Decision 51) work in the squad's own rank and column
+  frame, so they hold for any facing (Decision 74). Spread runs along the squad's lateral
+  axis, bounded by the route's corridor (Decision 75), blocked cells and other squads.
+- **One unit per cell, claimed ahead.** A moving squad claims the cells it enters next.
+  When two want the same cell, the earlier claim wins and a tie goes to the lower squad
+  id, so the sim stays deterministic.
+- **Overtaking:** a faster friendly squad that catches a slower one sidles past within the
+  corridor if there is room; otherwise it queues behind, or merges when merging is on
+  (Decisions 51 and 80).
+- **Crossings:** friendly squads on routes that cross don't pass through each other. The
+  first to claim the crossing goes; the other waits. The front panel (Decision 69) flags
+  a queue that lasts, which shows a badly placed route.
+- **Only two exceptions pass through friends:** routers, with crush damage (Decision 82),
+  and tiny units, which slip through gaps in a friendly formation as they use burrows
+  (Decision 54).
+- **Pillar check (Decision 58):** route placement matters (queues and crossings are the
+  planner's problem), without any hand control. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Squads pass through friends freely | Blurs who is where; breaks crush damage and cell claims. |
+| Always queue, never overtake | A fast wave stuck behind a slow one for a whole route; 2D gives room. |
+
+**Consequences:**
+- The formation sim gains cell claims per tick, overtaking within the corridor and
+  waiting at crossings.
+- Existing swap, re-form and spread code runs in squad-local coordinates.
