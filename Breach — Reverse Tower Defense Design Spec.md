@@ -4191,3 +4191,59 @@ the user agreed the recommendations ("All sound good").
 - Items that glow (torches) and placeable lamps join the item and placement libraries.
 - Wave templates gain a merge override.
 - A sneak order, and the stealth/perception pair, come with the infiltrator round.
+
+### Decision 81 — Overlapping units really wrap round a line; a formation's leadership comes from its best leader; flanking is a leader's tactic, not a lane order
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 4 (flanks and wrap). The user agreed that units
+should really wrap, and added: "for discipline and morale these should be influenced by
+the highest of leadership amongst the formation meaning commanders have better fighting
+formations that rout less frequently (equally the loss of a unit such as a
+commander/hero/lord would lose their leadership from the caps but also take an immediate
+morale hit)". On a lane flank order: "perhaps it becomes a personality trait of a
+commander/hero/lord to prefer flanks".
+- **Wings walk round the end of a line.** A squad's units that overlap the end of the
+  enemy's line form a **wing**. It steps forward and turns inward onto the enemy's side
+  edge, so the enemy fights on two fronts (Decision 78).
+  - Only overlapping units wrap; a squad never thins its engaged front to send a wing.
+  - A wing moves at the slowed in-fight speed (Decision 48), so a wrap takes time and can
+    be met: the enemy's end units turn to it, and a nearby squad can intercept.
+  - A wing stays part of its squad and is brought back by the re-form shuffle (Decision
+    46) when the fight ends.
+- **Discipline sets a wing's reach:** round the end to the side edge for any formation,
+  up to the enemy's depth plus 2 cells (placeholder); on round to the **rear** only with
+  high discipline. Low discipline wraps eagerly, stops at the side, and re-forms slowly.
+- **Leadership.** Commanders, heroes and lords carry **leadership N**. A formation's
+  leadership is the **highest among its living units**. It caps and steadies the
+  formation: it raises the discipline the formation holds to, and the morale it can have,
+  so led formations fight better and rout less. When the leader falls, the formation
+  drops to its next-best leadership at once and takes an immediate morale hit. (Morale
+  and rout are settled with spec 27's next points.)
+- **Flanking is a leader's tactic, not a lane order.** Leaders carry **tactic traits**
+  (for example prefers flanks, holds the line, pursues). A wave led by a flank-preferring
+  leader aims for the nearest free enemy edge within its leash (Decision 75) instead of
+  joining from the back (Decision 44). A wave with no leader joins from the back.
+  - **Commanders** (cheaper, built): tactic traits rolled at random (seeded) when made.
+  - **Heroes** (promoted from regular units): gain rolled tactic traits on promotion.
+  - **Lords** (named, designed units): fixed, authored tactic and behaviour traits.
+  - The player's lever is which leader goes with which wave or lane, which fits Decision
+    69's "the player leads commanders rather than squads".
+- A second route still gives a planned flank from another direction (Decision 75).
+- **Pillar check (Decision 58):** the attacker plans by choosing leaders and routes; the
+  units' AI and the leaders' traits fight the battle. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Abstract wrap (today's rule) | In 2D a free edge must be reached on foot; the walk is what can be countered. |
+| A "flank" lane order | The user: too strong; it belongs to leaders' personalities. |
+| Leadership summed or averaged | The user: the highest leader sets it, and losing that leader hurts at once. |
+
+**Consequences:**
+- Units gain leadership N and tactic traits; leader types (commander, hero, lord) and
+  promotion belong with spec 28.
+- The formation sim gains wings, a discipline-based reach and leadership per formation.
+- Tactic traits are seeded, so a battle stays deterministic.

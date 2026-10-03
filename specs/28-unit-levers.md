@@ -24,7 +24,10 @@ is done.
 3. **Melee skill:** a sure-hit rule (parries, outmatching) that unwieldy items (Decision
    79) feed, kept deterministic.
 4. **Progression:** what the overlord's tech unlocks per unit type, and what a map grants.
-5. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
+5. **Leaders:** commanders (built, rolled tactic traits), heroes (promoted from regular
+   units, rolled tactic traits) and lords (named, authored); leadership N and tactic
+   traits (Decision 81).
+6. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
    wave painter shows it.
 
 ## Rounds

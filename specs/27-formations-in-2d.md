@@ -1,7 +1,7 @@
 # Spec 27: Formations in 2D
 
 Decisions 73 (the formation model is the game's simulation), 70 (stands), 52 (squads on a
-2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts).
+2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts) and 81 (flanks, leadership).
 
 ## Purpose
 
@@ -18,7 +18,7 @@ Wave templates are painted in stands (Decision 70).
 ## Status
 
 **Design conversation under way.** The user takes design questions one subject at a
-time. Subjects 1 to 3 are agreed (see Agreed below); the rest of the agenda is a starting point,
+time. Subjects 1 to 4 are agreed (see Agreed below); the rest of the agenda is a starting point,
 not decided.
 
 ## Agreed
@@ -59,6 +59,16 @@ not decided.
    - Two or more fronts strain discipline.
    - Digging logistics, light and a lone sneaking unit: Decision 80. Workers and
      logistics have their own agenda in spec 29.
+4. **Flanks and wrap (Decision 81).**
+   - Overlapping units form a wing that walks round the line's end to the side edge; only
+     overlap units wrap, at in-fight speed, and the wing re-forms into its squad after.
+   - Discipline sets reach: side for all, rear only for the highly disciplined.
+   - A formation's leadership is its best living leader's; losing that leader drops it
+     at once, with a morale hit.
+   - Flanking with whole waves is a leader's tactic trait, not a lane order. Commanders
+     and heroes roll tactic traits; lords have authored ones.
+   - **Open:** morale, shock (from flank hits and fighting on several sides) and rout,
+     including casualties from a panicked flight.
 
 ## Agenda for the design conversation
 
