@@ -3937,3 +3937,101 @@ can reroute.
 - Lanes gain the "take objectives" or "press on" order; units gain a leash from
   discipline.
 - Underground routes are an open question in spec 27.
+
+### Decision 76 — Underground routes are drawn in plan with depth set on a side-on profile; the profile shows only what the player knows, so there is no projected dig time
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, the open point in Decision 75: how the player lays out an
+underground route. The user: "Plan plus profile works, but i push back on a projected
+build time, the player would not know what materials their route will hit".
+- **Draw in plan:** waypoints on the map as for any route (Decision 75). A stretch is
+  marked **tunnel**, with an **entry** (shaft or ramp) and an **exit** (back to the
+  surface, or a breach into a basement or well).
+- **Set depth on a profile:** selecting a tunnel stretch opens a side-on strip under the
+  map, the route unrolled flat. The player drags the tunnel's depth line; each waypoint
+  carries a depth, sloping between waypoints within a gradient limit.
+- **Depth is relative to the surface by default** ("6 cells under"), since the surface
+  rises and falls (Decision 59). A waypoint can be pinned to an absolute level, for
+  instance to meet a basement.
+- **The profile shows only what the player knows.** The surface is known. Strata are
+  shown where they have been seen: cells the player has dug, wells and mines they hold,
+  and their earlier tunnels. Everything else is drawn as unknown. So there is **no
+  projected dig time** and no warning of rock, water or lava ahead; the dig finds out.
+- **In play a tunnel route is a dig order.** The front rank digs the face (Decision 54),
+  so the squad moves at digging pace. What the dig meets becomes known and shows on the
+  profile from then on. A squad that meets ground it can't dig halts at the face and
+  raises an alert (Decision 69), and the player redraws. Once dug, the tunnel is a
+  passage later waves walk at marching pace (Decision 26).
+- **Pillar check (Decision 58):** tunnelling stays one of the keys that break a defence
+  (Decision 58's "many keys"), and not knowing the ground keeps it a gamble. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A projected dig time along the profile | The player wouldn't know the strata ahead; the user pushed back. |
+| Drawing tunnels in a 3D view | Plan plus profile is easier to draw precisely, as road and rail planners do. |
+| Absolute depth by default | A tunnel would surface or dive as the ground rose and fell. |
+
+**Consequences:**
+- Underground routes come with the underground work, not round 1 of formations in 2D.
+- Strata knowledge is per player: what they have seen of each tile's column.
+- A future way to survey ahead (a scout, a tool) would reveal strata on the profile.
+
+### Decision 77 — Digging and breaking are attacks: materials gain integrity and resistances, and items carry how well they break each
+
+**Supersedes:** Decisions 54 and 64, in part (digging as burrower against dig difficulty, with its own dig rate)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** The user: "reconcile digging with weapon damage rather than have separate
+systems, certain items will be better at destroying certain materials but may have
+detractions when used as an actual weapon e.g. a pickaxe great for stone/ore, not very
+handlable vs e.g. a sword in combat; essentially each material would gain an hp/def/traits
+for the attacks to plug in to". Nothing of digging is built yet: `MaterialDef` has weight,
+span, strength, heat and traits, and damage types have no effect (Decision 47).
+- **Breaking a cell is attacking it.** A dig face, a wall, a door or a shoring post is
+  struck by the same attacks that strike units, at the attack interval.
+- **Materials gain:**
+  - **integrity:** hit points per eighth of a cell, so a whole cell has 8 times as many
+    and a thin wall fewer (Decision 65). Integrity is how hard a material is to break;
+    strength (Decision 65) stays how much it holds up. Glass is fairly strong and easily
+    broken, so they are separate.
+  - **resistances per damage type:** stone shrugs off slashing, takes bludgeoning and
+    piercing (a pick's point) better. Soil resists little.
+  - **hardness N** (the trait that was dig_difficulty): the level a striking item needs.
+- **Items carry how they break things:**
+  - **breaker N**, an ability against hardness (Decision 64's pair rule): at least the
+    hardness, full damage; one short, half; two or more short, none. It replaces burrower
+    N, and Decision 47's **siege** trait is the same thing.
+  - A unit's natural weapons can carry breaker too: a rat's claws are breaker 1.
+- **Tools are clumsy weapons.** An item can carry **unwieldy N**, lowering its damage
+  against units by N steps. A pickaxe: piercing, breaker 3, unwieldy 1. A sword:
+  slashing, breaker 0.
+- **Units choose by target.** Against a unit, a unit strikes with its best weapon against
+  that unit; against a cell, with its best item against that material. The player
+  doesn't pick.
+- **Dig rate goes:** how fast a face advances follows from damage against integrity.
+- A destroyed cell or face is removed, and the load paths settle (Decision 57), so
+  breaking, digging and collapse are one chain.
+- **Pillar check (Decision 58):** one rule for every break-in (bash the gate, mine the
+  wall, dig under) keeps the keys to a defence legible as "this item against this
+  material". Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Separate digging (burrower, dig rate) and combat systems | The user wants one mechanism; two would drift apart. |
+| Integrity derived from strength | Brittle materials hold weight but break easily. |
+| Player-chosen items per task | More control work (Decision 69); the units' AI picks. |
+
+**Consequences:**
+- `MaterialDef` gains integrity, resistances per damage type and a hardness trait
+  (migrating dig_difficulty). Placeholder values come with the underground work.
+- Items gain breaker and unwieldy traits; burrower and siege migrate to breaker.
+- Damage types start to matter: units gain resistances too when combat uses them.
+- Decision 54's dig face (only the front rank digs) stands; it is the front rank
+  attacking the face.

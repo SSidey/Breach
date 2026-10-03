@@ -44,7 +44,10 @@ not decided.
    - Detouring round a fort is allowed; its long-ranged defences are the cost.
    - Only the units' AI leaves a route (contact, objectives, obstacles, flanking), within
      a leash of 16 cells scaled by discipline, rejoining at the nearest point ahead.
-   - **Open:** how the player lays out an underground route.
+   - Underground routes (Decision 76): drawn in plan, depth set on a side-on profile,
+     relative to the surface by default. The profile shows only known strata, so there is
+     no projected dig time. Digging is attacking cells (Decision 77). Both come with the
+     underground work, not round 1.
 
 ## Agenda for the design conversation
 
