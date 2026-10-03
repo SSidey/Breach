@@ -56,6 +56,8 @@ var morale := -1
 ## Routing (FormationRout): each fleeing unit's place, and ticks with no enemy near.
 var fleeing := {}
 var rally_ticks := 0
+## Halted by ground it can't cross (FormationMarch.pace); reported once.
+var blocked := false
 var wait_ticks: int = 0
 ## Re-forming after a reinforcement, and the swaps under way (Decision 46, FormationShuffle):
 ## [[mover, passed units, ticks left, ticks in all], ...].

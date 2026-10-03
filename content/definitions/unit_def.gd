@@ -31,6 +31,8 @@ const MAX_FOOTPRINT := 8
 ## How it leads (Decision 81), e.g. "coordinated": times a waiting wave's departure from
 ## what it sees (Decision 87).
 @export var tactics: Array[String] = []
+## How tall it stands, in cells (Decision 85): water a quarter of this deep slows it.
+@export var height: float = 1.0
 ## What it fights with (Decision 47). Without weapons it strikes once for `dmg`.
 @export var weapons: Array[WeaponDef] = []
 

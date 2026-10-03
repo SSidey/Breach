@@ -62,8 +62,8 @@ static func band(squad: SkirmishSquad) -> Band:
 
 
 ## The attack interval for the squad's units: half again as long while it wavers.
-static func interval(squad: SkirmishSquad, base: int) -> int:
-	return roundi(base * 1.5) if band(squad) == Band.WAVERING else base
+static func interval(squad: SkirmishSquad, usual: int) -> int:
+	return roundi(usual * 1.5) if band(squad) == Band.WAVERING else usual
 
 
 ## Drains the squad's morale; a change of band is a "morale_band" event.
