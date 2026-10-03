@@ -51,6 +51,8 @@ static func ranged_blows(squads: Array, interval_ticks: int) -> Array:
 	for own in squads:
 		if own.is_destroyed() or own.state == SkirmishSquad.State.ARRIVED:
 			continue
+		if own.state == SkirmishSquad.State.TURNING:
+			continue  # a turning squad doesn't strike (Decision 74)
 		var melee: Array = own.fighters() if own.state == SkirmishSquad.State.FIGHTING else []
 		for shooter in own.living():
 			if shooter.attack_range <= 0 or melee.has(shooter):
