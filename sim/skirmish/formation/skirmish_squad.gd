@@ -8,9 +8,10 @@ extends RefCounted
 enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DESTROYED }
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
-## Cells between one rank and the next.
-const RANK_DEPTH := 0.06
+## Tiles between one rank and the next: one cell (Decisions 48 and 68).
+const RANK_DEPTH := 1.0 / MapLayoutDef.CELLS_PER_TILE
 
 var id: int
 var faction_id: String

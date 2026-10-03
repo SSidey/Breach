@@ -18,8 +18,8 @@ const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const GroundRelief = preload("res://sim/ground/ground_relief.gd")
 const GroundChannels = preload("res://sim/ground/ground_channels.gd")
 
-## Cells along a tile's edge (Decision 53).
-const TILE_CELLS := 16
+## Cells along a tile's edge (Decision 68).
+const TILE_CELLS := MapLayoutDef.CELLS_PER_TILE
 
 var ceiling: int
 

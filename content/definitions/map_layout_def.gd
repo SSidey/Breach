@@ -11,6 +11,9 @@ const RoadSegmentDef = preload("res://content/definitions/road_segment_def.gd")
 const RouteDef = preload("res://content/definitions/route_def.gd")
 const ChannelDef = preload("res://content/definitions/channel_def.gd")
 
+## Cells along a tile's edge: a tile is 64 x 64 cells, about 109 m (Decision 68).
+const CELLS_PER_TILE := 64
+
 @export var cols: int = 0
 @export var rows: int = 0
 ## Pixels per cell; node positions are cell centres at this size.
