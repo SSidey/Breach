@@ -5,8 +5,9 @@
 //
 // A plan: { solid_cells: {"x,y,level": material}, faces: [{x, y, level, side, material,
 // thickness}] (side: north, south, east, west or floor; thickness in eighths),
-// dug: [[x, y, level]], loads: {"x,y,level": load units} }.
-// Materials: { id: {weight, strength, span} }.
+// dug: [[x, y, level]], fills: {"x,y,level": material} (Decision 67), loads: {"x,y,level":
+// load units} }. Materials: { id: {weight, strength, span, flows} }. A dug cell filled
+// with a solid is ground again; a liquid fill (flows > 0) holds nothing up.
 (function (root) {
   'use strict';
 
@@ -21,7 +22,7 @@
   function cellKey(x, y, level) { return 'cell:' + x + ',' + y + ',' + level; }
   function parse(text) { return text.split(',').map(Number); }
 
-  function Supports(plan) {
+  function Supports(plan, materials) {
     this.cells = {};
     this.faces = {};
     this.dug = {};
@@ -35,7 +36,10 @@
       var at = parse(key.split(':')[1]);
       self.faces[key] = { at: [at[0], at[1], at[2]], kind: key.split(',')[3], material: f.material, eighths: f.thickness };
     });
-    (plan.dug || []).forEach(function (d) { self.dug[d.join(',')] = true; });
+    (plan.dug || []).forEach(function (d) {
+      var fill = (plan.fills || {})[d.join(',')], m = fill && materials ? materials[fill] : null;
+      if (!m || m.flows > 0) self.dug[d.join(',')] = true;
+    });
   }
   Supports.prototype.elements = function () {
     var out = {}, self = this;
@@ -109,7 +113,7 @@
 
   // {loads: {key: units}, failed: [keys, in the order found]}.
   function solve(plan, materials, bearing) {
-    var supports = new Supports(plan);
+    var supports = new Supports(plan, materials);
     var elements = supports.elements();
     var keys = Object.keys(elements);
     var held = {}, failed = [], bridged = {};

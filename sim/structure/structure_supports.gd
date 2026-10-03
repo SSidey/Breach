@@ -8,10 +8,12 @@ extends RefCounted
 ##   or the ground at level 0.
 ## - A floor rests on the solid cell beneath, the face walls along its edges a level down,
 ##   or the ground at level 0.
-## Ground counts only where it isn't dug.
+## Ground counts only where it isn't dug, or is dug and filled with a solid (Decision 67);
+## a liquid fill (a moat) holds nothing up.
 
 const StructurePlanDef = preload("res://content/definitions/structure_plan_def.gd")
 const StructureFaceDef = preload("res://content/definitions/structure_face_def.gd")
+const TerrainLibraryDef = preload("res://content/definitions/terrain_library_def.gd")
 
 const DOWN := Vector3i(0, 0, -1)
 
@@ -20,12 +22,15 @@ var _faces := {}  # key -> StructureFaceDef
 var _dug := {}  # Vector3i -> true
 
 
-func _init(plan: StructurePlanDef) -> void:
+## library tells solid fills from liquid ones; without it every fill counts as still dug.
+func _init(plan: StructurePlanDef, library: TerrainLibraryDef = null) -> void:
 	_plan = plan
 	for face in plan.faces:
 		_faces[face.key()] = face
 	for at in plan.dug:
-		_dug[at] = true
+		var fill = library.material(plan.fills[at]) if library and plan.fills.has(at) else null
+		if fill == null or fill.is_liquid():
+			_dug[at] = true
 
 
 ## Every element: key -> {"at": Vector3i, "kind": "cell" | side name, "material": id,

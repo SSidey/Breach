@@ -33,6 +33,37 @@ func test_a_plan_builds_its_cells_faces_dug_cells_and_loads() -> void:
 	assert_int(plan.loads[Vector3i(1, 1, 1)]).is_equal(40)
 
 
+func test_flush_walls_and_fills_build_from_the_designer_plan() -> void:
+	var designer_plan := _plan()
+	designer_plan["faces"].append(
+		{
+			"x": 4,
+			"y": 4,
+			"level": 0,
+			"side": "north",
+			"material": "TIMBER",
+			"thickness": 1,
+			"into_neighbour": true
+		}
+	)
+	designer_plan["fills"] = {"2,2,-1": "WATER"}
+
+	var plan := DesignerPlanBuilder.build(designer_plan)
+
+	assert_bool(plan.faces[0].into_neighbour).is_true()  # drawn as a south wall
+	assert_bool(plan.faces[2].into_neighbour).is_true()  # flipped explicitly
+	assert_bool(plan.face_at(Vector3i(1, 1, 1), StructureFaceDef.FLOOR).into_neighbour).is_false()
+	assert_str(plan.fills[Vector3i(2, 2, -1)]).is_equal("WATER")
+
+
+func test_an_older_plans_north_wall_grows_into_its_own_cell() -> void:
+	var plan := DesignerPlanBuilder.build(
+		{"faces": [{"x": 0, "y": 1, "level": 0, "side": "north", "material": "TIMBER"}]}
+	)
+
+	assert_bool(plan.faces[0].into_neighbour).is_false()
+
+
 func test_a_nodes_plan_imports_with_it() -> void:
 	var export_data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(LAYOUT_PATH))
 	export_data["nodes"][0]["plan"] = _plan()

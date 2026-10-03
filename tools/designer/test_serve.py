@@ -4,6 +4,7 @@ ephemeral port over a temp repo, with a fake Godot runner."""
 from __future__ import annotations
 
 import json
+import re
 import sys
 import tempfile
 import threading
@@ -15,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from designer_repo import DesignerRepo  # noqa: E402
+import serve  # noqa: E402
 from serve import API_VERSION, make_handler  # noqa: E402
 from test_designer_repo import MAP, FakeRunner  # noqa: E402
 
@@ -53,6 +55,12 @@ class ServeTest(unittest.TestCase):
         status, body = self.request("GET", "/")
         self.assertEqual(status, 200)
         self.assertIn(b"designer", body)
+
+    def test_every_script_the_page_loads_is_served(self):
+        page = (serve.DESIGNER_DIR / "index.html").read_text(encoding="utf-8")
+        for src in re.findall(r'<script src="([^"]+)"', page):
+            with self.subTest(src):
+                self.assertIn("/" + src, serve.STATIC_FILES)
 
     def test_health_reports_godot(self):
         status, body = self.request("GET", "/api/health")

@@ -783,6 +783,7 @@
     var node = state.selectedCell ? nodeAt(state.selectedCell) : null;
     if (node && node.node_type === 'WAYPOINT') node = null; // waypoints hold no structure
     if ((tab === 'structure' || tab === 'plan') && !node) tab = 'paint';
+    if (tab === 'structure') tab = 'plan'; // retired (Decision 67)
     state.bottomTab = tab;
     var pBtn = document.getElementById('bottomTabPlan');
     pBtn.setAttribute('data-active', tab === 'plan' ? 'true' : 'false');
@@ -793,6 +794,7 @@
     var sBtn = document.getElementById('bottomTabStructure');
     sBtn.setAttribute('data-active', tab === 'structure' ? 'true' : 'false');
     sBtn.disabled = !node;
+    sBtn.hidden = true; // the side-on editor is retired; plans replace it (Decision 67)
     sBtn.textContent = node ? 'Structure · ' + node.id : 'Structure';
     document.getElementById('layersStrip').hidden = tab !== 'paint';
     document.getElementById('structureEditor').hidden = tab !== 'structure';
@@ -805,19 +807,34 @@
   }
   // The structure planner (spec 24, planner.js) for the selected node, on its tile's ground.
   function plannerContext(k) {
-    var terr = terrainDef(tileTerrainId(k)) || {};
+    var terr = terrainDef(tileTerrainId(k)) || {}, tile = tileAt(k);
+    var digDepth = tile.max_depth != null ? Number(tile.max_depth) : Number(terr.dig_depth) || 0;
     return {
       materials: terrainLib.materials,
       material: materialDef,
       materialMap: materialMap,
       bearing: Number(terr.bearing) || 0,
       groundColour: terr.color || '#8f9a4f',
+      // Every level from the tile's dig depth up to the map's ceiling over its ground.
+      digDepth: digDepth,
+      maxLevel: Math.max(1, state.ceiling - elevationAt(k)),
+      stratumColour: function (level) { var m = materialDef(stratumAt(terr, -level)); return m ? m.color : '#6b5440'; },
       save: function () { safeSave(); renderGrid(); }
     };
   }
+  // The terrain's typical stratum `depth` cells down (1 = just below the surface): its
+  // bands from the surface down, each taken at the middle of its range.
+  function stratumAt(terr, depth) {
+    var bands = terr.strata || [], reached = 0;
+    for (var i = 0; i < bands.length; i++) {
+      reached += Math.round(((Number(bands[i].min) || 0) + (Number(bands[i].max) || 0)) / 2);
+      if (depth <= reached) return bands[i].material;
+    }
+    return bands.length ? bands[bands.length - 1].material : 'SOIL';
+  }
   function materialMap() {
     var out = {};
-    terrainLib.materials.forEach(function (m) { out[m.id] = { weight: Number(m.weight) || 0, strength: Number(m.strength) || 0, span: Number(m.span) || 0 }; });
+    terrainLib.materials.forEach(function (m) { out[m.id] = { weight: Number(m.weight) || 0, strength: Number(m.strength) || 0, span: Number(m.span) || 0, flows: Number((m.traits || {}).flows) || 0 }; });
     return out;
   }
   function renderPlanEditor() {

@@ -13,6 +13,9 @@ const TerrainLibraryDef = preload("res://content/definitions/terrain_library_def
 @export var faces: Array[StructureFaceDef] = []
 ## Ground cells removed (level < 0).
 @export var dug: Array[Vector3i] = []
+## Dug cells filled again (Decision 67): Vector3i -> material id. A solid fill is ground
+## again; a liquid fill (water, lava) is a moat or cistern.
+@export var fills: Dictionary = {}
 ## Vector3i cell -> load units resting there.
 @export var loads: Dictionary = {}
 
@@ -35,4 +38,11 @@ func validate(library: TerrainLibraryDef) -> PackedStringArray:
 			errors.append("%s: unknown material '%s'" % [face.key(), face.material_id])
 		if face.thickness < 1 or face.thickness > 8:
 			errors.append("%s: thickness %d is not 1 to 8 eighths" % [face.key(), face.thickness])
+		if face.side == StructureFaceDef.FLOOR and face.into_neighbour:
+			errors.append("%s: a floor has no neighbour to grow into" % face.key())
+	for at in fills:
+		if library.material(fills[at]) == null:
+			errors.append("fill %s: unknown material '%s'" % [at, fills[at]])
+		if not dug.has(at):
+			errors.append("fill %s: the cell isn't dug" % [at])
 	return errors

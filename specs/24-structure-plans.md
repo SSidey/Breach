@@ -129,6 +129,83 @@ A scripted browser run on the demo map's fort:
    (bearing 4, so 32 per column) without foundations.
 4. The map's Show: Structure load marked the fort's tile black.
 
+## Round 3: editing that behaves, flush walls, fills and rooms (Decision 67)
+
+From the user's first hands-on pass over the planner:
+- **Walls sit flush.** A face wall's side is on the cell edge and its thickness grows into
+  the cell it was drawn from (`StructureFaceDef.into_neighbour`). Alt-click flips a wall.
+  Older plans keep their own cell.
+- **Placing walls:**
+  - Walls snap to the nearest grid line, and the edge is highlighted before you click.
+  - A drag keeps to its first line and side, so a straight run never picks up
+    perpendicular strays.
+- **Digging and filling:**
+  - Digs must connect: open to the surface, or beside a dug cell.
+  - A **Fill** tool fills a dug cell with any material. Water or lava make a moat or a
+    cistern; "Ground" undoes the dig. Erase also undoes digs.
+  - For support, a solid fill is ground again and a liquid fill is not
+    (`StructurePlanDef.fills`). The shared load cases gain three fill cases.
+- **Every level:** a stepper (▲▼, PageUp and PageDown) from the tile's dig depth to the
+  ceiling over its ground. Fields reach −32.
+- **Below ground**, the isometric view cuts away to the level. It shows the terrain's
+  typical strata as blocks, digs carved out, and fills in their material, with liquids
+  see-through.
+- **Undo and redo**, one step per stroke, room or clear (Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y).
+- **Clear level** and **Clear plan**, each confirmed with a second click.
+- **Strokes end** when the button is released anywhere, so returning to the plan never
+  paints.
+- **The Room tool:** drag out a rectangle and set the height and the material and
+  thickness of the walls, floor and ceiling. **Apply** adds them all as one undo step.
+- The old side-on Structure tab is hidden, and the Map hint's garbled text is repaired.
+- **The code is split:** `planner_tools.js` holds the editing rules (tested with Node in
+  `test_planner_tools_js.py`), `planner_draw.js` the drawing, and `planner.js` the
+  panel. A server test checks every script the page loads is served.
+
+A browser run checked each of these:
+1. A drifting drag along a grid line placed 7 walls on one line.
+2. A press followed by a buttonless move painted nothing more.
+3. Undo and redo each stepped one stroke.
+4. A 4 × 3 room, two levels high, added 52 faces, and one undo removed them.
+5. A dig at −2 was refused until −1 above it was dug.
+6. A water fill and a backfill both applied.
+7. Alt-click flipped a wall, and PageUp moved up a level.
+
+It also found, and the fix removed, one bug: focusing the planner scrolled the page, so
+walls landed two rows below the cursor.
+
+Still to come: openings and furnishing elements (doors, slits, bunks, emplacements;
+Decision 55), and per-tile seeded strata in the planner, which for now shows the
+terrain's typical column.
+
+## Round 4: areas, solid overrides and example structures
+
+From the user's second pass over the planner:
+- **Draw: Freehand or Area** for every tool except Room. An area gets walls round its
+  edge (flush inside) or the tool in every cell; Erase clears every cell and the walls on
+  its edges.
+- **A solid cell replaces the thinner pieces in it** (its edge walls and its floor at that
+  level), so it becomes a solid cell only.
+- **Examples** (`planner_examples.js`), loaded from the Examples menu with a
+  second-click confirm (undoable). Each is built with the same editing rules as hand
+  edits, fits one tile, and stands on fields. `test_planner_examples_js.py` checks both
+  under the game's load paths.
+  - **Farmer's house:** a 5 × 4 timber house with a roof, a shed, and a fenced yard with
+    a gate.
+  - **Watch tower:** four storeys on a 4 × 4 footprint, rock below and timber above.
+    Rock all the way up sinks on fields; on rocky ground it could stand.
+  - **Palisade fort:** a 14 × 14 timber palisade two storeys high with a two-wide gate,
+    four corner towers and a barracks.
+  - **Small castle:** a water-filled moat round the tile with a causeway, a rock curtain
+    wall, two gate towers, a three-storey keep and a timber hall.
+- **What tuning the examples showed:**
+  - Fields bear 32 load units per column, so rock walls more than about two storeys high
+    sink. A door's lintel loads the walls beside it, and a 1/8 timber wall can't carry a
+    roof next to a door.
+  - Real builders face the same choices (stone below, timber above; build on rock), so
+    the rule reads true.
+  - **A castle is cramped on one tile** (16 cells is about 27 m). That raises the
+    question of nodes larger than a tile, which is open with the user.
+
 ## Test-first order
 
 1. `tests/content/definitions/test_structure_plan_def.gd`

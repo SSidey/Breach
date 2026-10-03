@@ -3194,6 +3194,10 @@ would let flyers pass over every mountain.
 
 ### Decision 61 — Walls can be thinner than a cell; support is a load path through every material, not only the ground
 
+> Superseded in part by Decision 67 on 2026-10-02: a face wall sits **flush on its edge**
+> and its thickness grows into one chosen cell, rather than straddling the edge. The load
+> path rules stand.
+
 **Supersedes:** Decision 57, in part (walls only as solid cells; support as span and bearing alone)
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-02
@@ -3480,4 +3484,63 @@ abstractions would help simplify our sims… push back if you think otherwise."
 **Consequences:**
 - `MaterialDef.temperature` becomes `heat` (0-10); heat transition thresholds are levels.
 - The designer edits heat as a level and labels transitions "above heat N".
+
+### Decision 67 — Face walls sit flush on their edge and grow into a chosen cell; dug cells can be filled; the planner edits like a drawing tool
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** From the user's first hands-on pass over the structure planner (spec 24
+round 2).
+- **Face walls sit flush.** Decision 61's face walls were drawn centred on the cell edge,
+  half their thickness in each cell. The user: "Feels like one wall should be the zero
+  point at the cell edge".
+  - A face wall's one side is on the edge, and its thickness grows **into the cell it
+    was drawn from**. Each face records whether that is its own cell or the neighbour
+    across the edge (`into_neighbour`), and a wall can be flipped.
+  - The Room tool puts a room's walls inside its footprint.
+  - Older plans with no `into` keep the face's own cell, which matches how they were
+    stored.
+- **Dug cells can be filled.** Digging could not be undone, and Erase ignored digs.
+  - A **Fill** tool fills a dug cell with a chosen material: soil, clay or rock as
+    backfill, or water or lava to make a moat or cistern.
+  - Filling with the tile's own ground is the same as undoing the dig.
+  - For support, a solid fill is ground again. A liquid fill is not, so a wall standing
+    over a moat still needs another support.
+  - Digs must connect: a cell can only be dug if it is open to the surface or to a cell
+    already dug, so a dig is a hole, not a pocket in solid ground.
+- **The planner edits like a drawing tool:**
+  - undo and redo, one step per stroke
+  - clearing a level or the whole plan, confirmed in the page
+  - strokes that end when the mouse button is released anywhere, so returning to the
+    plan never paints
+  - face walls that snap to the nearest grid line and keep to it for the whole stroke,
+    with the edge highlighted before it's placed
+  - every level from the tile's dig depth to the ceiling
+- **A Room tool.** Drag out a rectangle, choose its height and the material and thickness
+  of its walls, floor and ceiling, then Apply to add them all at once (one undo step).
+- **Any tool can draw an area.** With Draw set to Area, a dragged rectangle gets walls
+  round its edge (flush inside) or the tool in every cell. That's floors, solid cells, digs,
+  fills, loads or erasing, with or without a room.
+- **A solid cell replaces the thinner pieces in it.** Placing a solid cell where a floor
+  and thin walls are removes the walls on its edges and its floor at that level, so it
+  becomes a solid cell only. The roof of the cell above stays.
+- **The old side-on Structure tab is hidden.** Plans replace it. Its libraries (room
+  features, emplacements) stay on disk to become plan elements (Decision 55).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Walls centred on the edge (Decision 61) | The user wants one face of the wall on the cell edge. |
+| Walls always grow inward to the structure | The user chose the cell drawn from; walls that enclose nothing need a rule anyway. |
+| Fill only restores the ground | The user wants filling with a chosen material, including water for a moat. |
+| Keep the Structure tab until elements land | Two places to plan a structure is confusing; plans replace it. |
+
+**Consequences:**
+- `StructureFaceDef` gains `into_neighbour`, and `StructurePlanDef` gains `fills`, a map
+  from dug cell to material. The designer's plan format and the importer carry both.
+- The load paths (designer and game) treat a cell with a solid fill as ground. Both take
+  the materials, to tell liquids from solids. The shared cases gain fill cases.
+- The structure view in Godot will draw walls flush, from the same data.
 

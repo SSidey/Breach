@@ -18,7 +18,7 @@ const StructureSupports = preload("res://sim/structure/structure_supports.gd")
 
 ## {"loads": {key: load units}, "failed": [keys, in the order found]}.
 static func solve(plan: StructurePlanDef, library: TerrainLibraryDef, bearing: int) -> Dictionary:
-	var supports := StructureSupports.new(plan)
+	var supports := StructureSupports.new(plan, library)
 	var elements := supports.elements()
 	var held := {}  # key -> the keys it passes its load to
 	var failed := []
