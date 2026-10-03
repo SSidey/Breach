@@ -4498,3 +4498,74 @@ recommendation ("Sounds good to me").
 **Consequences:**
 - Round 1 is planned next: 2D positions, facing, turning and routes in
   `sim/skirmish/formation/`, test-first, and the scene.
+
+### Decision 87 — Waves coordinate by planned timing or by hold-until orders that act only on what a formation can detect; reaching each other beyond sight is a family of signals unlocked by tech
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Raised by the user after round 1 of spec 27 was built: route B's longer way
+means its wave arrives after route A's has fallen. The user: "We could allow the player to
+set a waypoint for the two to coincide at… or give criteria to meet i.e. one would deploy
+and wait at a location until the other would reach a certain point… the waiting
+formation would not be treated as telepathic but need to be able to see and then plan its
+departure". And: "communication among formations across distance could be an aspect of
+tech e.g. sight being baseline… horns… flags (player could unlock and assign specific
+meanings), messenger birds, light signals… beacons… or magics".
+- **Planned rendezvous (timing before departure).** The player places a rendezvous
+  waypoint shared by routes and links waves to it. The game staggers their departures by
+  predicted travel times: route lengths, slowest speeds, wheel and about-face times, build
+  time left. This is the overlord's plan given before departure, not telepathy; the sim is
+  deterministic, so it is exact until something interferes (a detour, a fight).
+- **Hold-until orders (decided in the field).** A wave marches to a staging waypoint and
+  holds (Decision 69's "hold at a point") until a trigger the player chose:
+  - it **detects its partner**
+  - it **detects the fight**: the partner engaging, or the enemy turning to it
+  - it **receives a signal** (below)
+  - a **fallback timer**: then it goes, or turns back, as set
+  It never knows what it cannot detect.
+- **Planning its own departure.** When the trigger fires, the formation estimates when its
+  partner reaches the target, from the distance and pace it detected, and leaves to arrive
+  with it. Without a leader it goes on the trigger; a leader with the **coordinated**
+  tactic trait (Decision 81) times it well.
+- **Detection is the prerequisite.** Each unit type has a detection range in cells
+  (placeholder 40); a formation detects with its best detector. Line of sight (woods,
+  ridges), light and darksight (Decision 64) come with terrain (spec 27 round 4) and later.
+- **Communication beyond sight is a family of signals, unlocked by tech** (Decision 41).
+  Sight is the baseline for every formation's judgement. Each channel is an item, a
+  structure or a trait, with its own properties:
+
+  | Channel | Reach | Needs sight | Notes (placeholders) |
+  |---|---|---|---|
+  | sight | detection range | yes | baseline; no message, only what is seen |
+  | horn | medium | no | passes woods and walls; few calls; the enemy hears it too |
+  | flags | long | yes | the player unlocks flags and assigns their meanings |
+  | lantern signals | long | yes | flashing light; best at night, gives the sender away |
+  | messenger birds | very long | no | any order, but slow, and can be lost or intercepted |
+  | beacons | very long | yes | fixed, for settlements; one meaning, lit in a chain |
+  | magic | any | no | faction-specific, with a cost |
+
+  A signal carries a meaning from a sender (a formation, a leader, a settlement) to
+  whoever can receive it on that channel; hold-until triggers can wait for one.
+- **Pillar check (Decision 58):** coordination is set up when planning (rendezvous,
+  triggers, signals) and carried out by the formations; the player never steers a fight.
+  Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Formations that know where their partners are | Telepathic; the user wants them to see or be told. |
+| Only planned timing | Can't react when something interferes on the way. |
+| One generic "signal" with no channels | Loses the tech choices and trade-offs the user wants (range, sight, enemy hearing it). |
+
+**Consequences:**
+- Unit types gain a detection range; the formation sim gains detection (also what
+  Decision 71's ranged targeting needs).
+- Waypoints gain rendezvous and staging roles; waves gain hold-until triggers and a
+  fallback timer; leaders can carry **coordinated**.
+- Communication channels become items, structures and traits in the tech trees, with
+  flag meanings the player assigns.
+- Spec 27's round 2 adds detection, hold-until (seeing the partner or the fight) and
+  planned rendezvous: route B's wave holds in the wood until it sees route A's engage,
+  then strikes. Signals beyond sight come later, with the tech work.

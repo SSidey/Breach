@@ -1,7 +1,7 @@
 # Spec 27: Formations in 2D
 
 Decisions 73 (the formation model is the game's simulation), 70 (stands), 52 (squads on a
-2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts), 81 (flanks, leadership), 82 (morale, shock, rout), 83 (stands, horde and mob), 84 (crowding and passing), 85 (terrain) and 86 (the feel test).
+2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts), 81 (flanks, leadership), 82 (morale, shock, rout), 83 (stands, horde and mob), 84 (crowding and passing), 85 (terrain), 86 (the feel test) and 87 (coordination and signals).
 
 ## Purpose
 
@@ -143,3 +143,11 @@ are unchanged. Squads on different routes meet through 2D geometry. Four stacked
 4. **The 2D scene:** `FormationField` (one sim, routes A and B, the kingdom line holding on
    A) and a top-down scene. In round 1, route B rejoins A before the line so its wave
    reinforces from behind; round 2 redraws it onto the line's side.
+
+### Round 2 (next): fronts, wings and coordination
+
+Decision 86's round 2 (fronts on four edges, wings, step-up per edge; route B redrawn
+onto the line's side), plus Decision 87: a detection range per unit type, hold-until
+orders (seeing the partner or the fight, with a fallback timer) and planned rendezvous
+timing. Route B's wave holds in the wood until it sees route A's wave engage, then
+strikes the flank. Signals beyond sight come with the tech work.
