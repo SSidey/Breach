@@ -1,13 +1,15 @@
 class_name FormationSimulation
 extends RefCounted
-## One lane of the formation feel test (specs/22-formation-feel-test.md, Decision 40):
-## squads of both factions on one route. Deterministic - every phase iterates squads and
+## The formation fight (specs/22-formation-feel-test.md, Decision 40): squads of both
+## factions, each on its route (spec 27). Deterministic - every phase iterates squads and
 ## units in id order, and blows land simultaneously.
 ##
 ## step() runs one tick in this fixed order:
 ##   1. orders  - queued wave orders apply (a retreat disengages at once)
 ##   2. engage  - hostile squads whose fronts are within MELEE_REACH lock together
-##   3. move    - free squads move as a block at their slowest unit's speed (one with no
+##   3. move    - a squad that must face another way turns first, standing (an about-face
+##                to go back the way it faces, a wheel where its route bends: Decision
+##                74); free squads move as a block at their slowest unit's speed (one with no
 ##                front units holds once an enemy is in its ranged reach), stopping at
 ##                contact or behind a friendly squad; one that reaches a friendly squad
 ##                in combat joins it from the back (Decision 44), as does one that merges
@@ -34,6 +36,8 @@ const FormationContact = preload("res://sim/skirmish/formation/formation_contact
 const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle.gd")
 const FormationUnits = preload("res://sim/skirmish/formation/formation_units.gd")
 const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
+const FormationTurning = preload("res://sim/skirmish/formation/formation_turning.gd")
+const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -139,7 +143,7 @@ func _apply_orders(events: Array) -> void:
 			FormationEvents.squad_event("order_applied", _tick, target, {"order": order_name})
 		)
 		if target.order == SkirmishUnit.Order.RETREAT and target.engaged_with != 0:
-			_release(target)
+			FormationLocks.release(target, _squads)
 			events.append(FormationEvents.squad_event("disengaged", _tick, target))
 	_pending_orders.clear()
 
@@ -148,27 +152,22 @@ func _engage(events: Array) -> void:
 	for attacker in _squads:
 		if not FormationContact.can_engage(attacker) or attacker.engaged_with != 0:
 			continue
+		if attacker.state == SkirmishSquad.State.TURNING:
+			continue  # it turns first (Decision 74)
 		var foe := FormationContact.nearest_hostile(attacker, _squads)
 		if foe == null:
 			continue
-		_lock(attacker, foe)
+		FormationLocks.lock(attacker, foe)
 		if foe.engaged_with == 0:
-			_lock(foe, attacker)
+			FormationLocks.lock(foe, attacker)
 		events.append(FormationEvents.squad_event("engaged", _tick, attacker, {"with": foe.id}))
-
-
-func _lock(squad_entry: SkirmishSquad, foe: SkirmishSquad) -> void:
-	squad_entry.engaged_with = foe.id
-	squad_entry.state = SkirmishSquad.State.FIGHTING
-	if not squad_entry.joined.is_empty():
-		squad_entry.reforming = true  # units merged on the march may now spread
-	for unit in squad_entry.living():
-		unit.attack_cooldown = 1  # the first blows land this tick
 
 
 func _move(events: Array) -> void:
 	var joins := []  # [leader, joining]
 	for mover in _squads:
+		if FormationTurning.step(mover, _tick, events):
+			continue
 		if mover.state in [SkirmishSquad.State.DESTROYED, SkirmishSquad.State.FIGHTING]:
 			continue
 		if mover.state == SkirmishSquad.State.ARRIVED:
@@ -181,20 +180,30 @@ func _move(events: Array) -> void:
 			continue
 		mover.state = SkirmishSquad.State.MOVING
 		var advancing := mover.order == SkirmishUnit.Order.ADVANCE
-		var direction := mover.direction if advancing else -mover.direction
-		var step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		var end := FormationMarch.length(mover, route_length)
-		var next := clampf(mover.front_distance + direction * step, 0.0, end)
+		var travel := FormationMarch.travel_sign(mover, end)
+		var step := mover.speed() * TRAVEL_SCALE * tick_seconds
+		if _turns_first(mover, travel, events):
+			continue
+		var next := clampf(mover.front_distance + travel * step, 0.0, end)
 		if advancing:
 			next = FormationContact.limit(mover, _squads, next)
 		mover.front_distance = next
-		FormationMarch.face(mover)
 		var leader := FormationContact.joinable(mover, _squads) if advancing else null
 		if leader != null:
 			joins.append([leader, mover])
 		FormationMarch.check_ends(mover, end, _tick, events)
 	for pair in joins:
 		_join(pair[0], pair[1], events)
+
+
+## True if the squad must turn before moving `travel` along its route: it starts the turn.
+func _turns_first(mover: SkirmishSquad, travel: int, events: Array) -> bool:
+	var cells_per_second := mover.speed() * TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
+	if not FormationTurning.begin(mover, travel, cells_per_second, tick_seconds):
+		return false
+	events.append(FormationEvents.squad_event("turning", _tick, mover, {"facing": mover.turn_to}))
+	return true
 
 
 ## A wave reaching a friendly squad in combat becomes its rear ranks (Decision 44); one
@@ -230,8 +239,9 @@ func _fight(events: Array) -> void:
 			fighter.attack_cooldown -= 1
 			if fighter.attack_cooldown <= 0:
 				fighter.attack_cooldown = _attack_interval_ticks()
-				var damage := FormationCombat.damage(fighter, pick[1])
-				blows.append([fighter, pick[0], damage, pick[1]])
+				var flank: bool = pick[1] or foe.state == SkirmishSquad.State.TURNING
+				var damage := FormationCombat.damage(fighter, flank)
+				blows.append([fighter, pick[0], damage, flank])
 	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks())
 	for shot in shots:
 		shot[1].hp -= shot[2]
@@ -261,24 +271,13 @@ func _bury(events: Array) -> void:
 			)
 		fallen_squad.reforming = true  # front units may close gaps (Decision 49)
 		if not is_equal_approx(front_before, fallen_squad.front_distance):
-			_release(fallen_squad)  # its front fell: the enemy must advance (Decision 47)
+			# Its front fell: the enemy must advance (Decision 47).
+			FormationLocks.release(fallen_squad, _squads)
 			events.append(FormationEvents.squad_event("front_fell", _tick, fallen_squad))
 		if fallen_squad.is_destroyed() and fallen_squad.state != SkirmishSquad.State.DESTROYED:
 			fallen_squad.state = SkirmishSquad.State.DESTROYED
-			_release(fallen_squad)
+			FormationLocks.release(fallen_squad, _squads)
 			events.append(FormationEvents.squad_event("destroyed", _tick, fallen_squad))
-
-
-## Ends a squad's fight and frees every squad that was fighting it.
-func _release(released: SkirmishSquad) -> void:
-	released.engaged_with = 0
-	if released.state != SkirmishSquad.State.DESTROYED:
-		released.state = SkirmishSquad.State.MOVING
-	for other in _squads:
-		if other.engaged_with == released.id:
-			other.engaged_with = 0
-			if other.state != SkirmishSquad.State.DESTROYED:
-				other.state = SkirmishSquad.State.MOVING
 
 
 func _attack_interval_ticks() -> int:

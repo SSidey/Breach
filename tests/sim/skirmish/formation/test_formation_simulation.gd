@@ -151,9 +151,12 @@ func test_a_retreating_squad_disengages_and_the_enemy_is_freed() -> void:
 	sim.order(mine.id, SkirmishUnit.Order.RETREAT)
 	var events := sim.step()
 
-	assert_array(events.map(func(e): return e["type"])).contains(["disengaged"])
-	assert_float(mine.front_distance).is_less(at)
+	assert_array(events.map(func(e): return e["type"])).contains(["disengaged", "turning"])
 	assert_int(theirs.engaged_with).is_equal(0)
+	# It about-faces first (Decision 74), then marches home.
+	_run(sim, func(): return mine.state == SkirmishSquad.State.MOVING)
+	sim.step()
+	assert_float(mine.front_distance).is_less(at)
 
 
 func test_reaching_the_enemy_end_is_arrival() -> void:

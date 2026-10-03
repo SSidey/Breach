@@ -44,7 +44,7 @@ func test_a_squad_follows_its_route_round_a_bend() -> void:
 	var squad := sim.spawn_squad(2, _line(_def(), 2), "player", true, 0, bend)
 
 	assert_int(squad.facing).is_equal(SquadFrame.EAST)
-	_run(sim, 50)  # 8 cells a second: 40 cells along, 8 past the bend
+	_run(sim, 53)  # 8 cells a second: 40 cells along, 8 past the bend, 3 ticks wheeling
 
 	assert_vector(squad.position).is_equal_approx(Vector2(32, 8), Vector2(0.01, 0.01))
 	assert_int(squad.facing).is_equal(SquadFrame.SOUTH)
