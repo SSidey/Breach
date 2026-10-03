@@ -4035,3 +4035,109 @@ span, strength, heat and traits, and damage types have no effect (Decision 47).
 - Damage types start to matter: units gain resistances too when combat uses them.
 - Decision 54's dig face (only the front rank digs) stands; it is the front rank
   attacking the face.
+
+### Decision 78 — A squad fights on any of its four edges; units on a struck edge turn in place, step-up runs inward per edge, and several fronts strain discipline
+
+**Supersedes:** Decision 47, in part (only the front rank fights)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 3 (contact and fronts). The user agreed the
+recommendation, correcting how ranged units fight in melee.
+- **A squad has four edges,** front, left, right and rear, set by its facing (Decision
+  74). Contact can come on any edge, and each edge in contact is a **front**. A squad
+  can fight on several fronts at once; it tracks a contact per edge instead of one
+  squad it is engaged with.
+- **A side or rear hit:** the units on that edge turn in place and fight. The squad does
+  not wheel.
+  - **Surprise:** blows on a side or rear edge get the flank bonus for the first attack
+    interval while the units there turn. Then they fight normally, facing out.
+  - If the squad's front is not engaged, a rear hit makes it about-face (Decision 74),
+    so the rear becomes its front. A side hit does not make it wheel: rotating a wide
+    block needs room it may not have, and wheeling under contact draws flank blows.
+- **Step-up per front:** when a unit on a fighting edge falls, the next unit inward
+  along that edge's axis steps out into the gap. Units already fighting on another edge
+  stay put. Band rules hold (Decision 47): back-preferring units never step into a
+  fighting edge.
+- **Ranged units in melee:** a unit engaged in melee fights only with its melee weapons,
+  unless a trait lets it shoot in melee. Those are usually weaker, for balance, but that
+  is down to the weapons, not a rule.
+- **Corner units** sit on two edges: they take blows from both and strike back at one.
+- **Fighting on two or more fronts strains discipline** (Decision 52): the squad's
+  re-form and fall-back thresholds tighten (values come with discipline). This is what
+  makes flanking pay beyond the flank bonus.
+- **Pillar check (Decision 58):** fronts are what the attacker's routes and flanks create;
+  control stays light. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| The whole squad wheels to face each hit | Turns under contact; a second hit traps it mid-turn. |
+| One front only; side hits land unanswered | Too harsh, and it leaves no edge play for flanking. |
+| Each unit faces freely | Breaks the block formation Decision 74 keeps. |
+
+**Consequences:**
+- `SkirmishSquad` replaces `engaged_with` with a contact per edge, and `fighters()` per
+  edge.
+- `compact()` steps up inward per fighting edge.
+- Weapons gain a "fires in melee" trait for the few that may.
+
+### Decision 79 — Five damage types; a material's weakness or resistance shifts its hardness for that type; unwieldy items strike slower; integrity follows thickness
+
+**Supersedes:** Decision 77, in part (resistances as separate values; unwieldy lowering damage)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** The user, refining Decision 77: a codified list of damage types so they are
+used consistently; materials with a weakness or resistance to a type, affecting their
+hardness ("wood hardness 1, sword deals slashing so can impact wood? Would an axe then be
+breaker 1 with slashing?"); and unwieldy as slower or less sure blows, not weaker ones:
+"it would still hurt to get hit with a pickaxe".
+- **Damage types, one list:** **slashing, piercing, blunt** (crushing and bludgeoning),
+  **fire, acid**. A new type needs a Decision. `WeaponDef.damage_type` takes only these.
+- **Fire** deals its damage like any type and also carries a heat level to what it hits,
+  so it can set it alight by the heat thresholds (Decisions 63 and 66).
+- **Weakness and resistance shift hardness, per damage type.** A material has one
+  hardness, and may be **weak** to a type (hardness one lower against it) or
+  **resistant** (one higher), or **immune** (cannot be broken by it). Usually at most
+  one of each. The breaker pair then decides as before: at or above, full damage; one
+  short, half; two or more short, none. For example (placeholders):
+
+  | Material | Hardness | Weak to | Resistant to |
+  |---|---|---|---|
+  | soil | 1 | blunt | — |
+  | wood | 2 | slashing, fire | piercing |
+  | stone | 3 | blunt | slashing (fire: immune) |
+  | ore | 4 | — | slashing |
+
+  | Item | Type | Breaker | Wood (2, weak to slashing) | Stone (3) |
+  |---|---|---|---|---|
+  | sword | slashing | 0 | 1 short: half | none |
+  | axe | slashing | 1 | full | none |
+  | warhammer | blunt | 2 | 1 short: half | full (weak, so 2) |
+  | pickaxe | piercing | 3 | full | full |
+
+- **Unwieldy N slows an item's blows**: its attack interval is longer by N steps
+  (placeholder: half again per step). Damage stands. A sure-hit rule (parries, melee
+  skill) belongs to the session on unit levers (spec 28); unwieldy will feed it then.
+- **Integrity follows thickness.** Integrity is per eighth of a cell, so a wall's is its
+  thickness times its material's. Damage takes eighths off as it goes: a battered wall
+  is visibly thinner, and its strength (Decision 65) falls with it, so it can collapse
+  under its load before it is breached through.
+- **Pillar check (Decision 58):** "this item against this material", in one small table,
+  keeps every break-in legible. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Resistances as damage multipliers beside hardness | Two numbers for one question; shifting hardness keeps one rule. |
+| Unwieldy lowering damage | The user: a pickaxe still hurts; it is clumsy, not soft. |
+| An open-ended list of damage types | The user wants one codified list, used consistently. |
+
+**Consequences:**
+- `MaterialDef` gains hardness, weak-to, resistant-to and immune-to (by damage type) and
+  integrity per eighth.
+- `WeaponDef.damage_type` is checked against the list; items gain breaker and unwieldy.
+- Damage to a face or cell removes eighths, and the load paths settle (Decision 57).

@@ -1,7 +1,7 @@
 # Spec 27: Formations in 2D
 
 Decisions 73 (the formation model is the game's simulation), 70 (stands), 52 (squads on a
-2D cell grid), 69 (light control, unit AI), 74 (position and facing) and 75 (routes).
+2D cell grid), 69 (light control, unit AI), 74 (position and facing), 75 (routes) and 78 (contact and fronts).
 
 ## Purpose
 
@@ -18,7 +18,7 @@ Wave templates are painted in stands (Decision 70).
 ## Status
 
 **Design conversation under way.** The user takes design questions one subject at a
-time. Subjects 1 and 2 are agreed (see Agreed below); the rest of the agenda is a starting point,
+time. Subjects 1 to 3 are agreed (see Agreed below); the rest of the agenda is a starting point,
 not decided.
 
 ## Agreed
@@ -47,7 +47,16 @@ not decided.
    - Underground routes (Decision 76): drawn in plan, depth set on a side-on profile,
      relative to the surface by default. The profile shows only known strata, so there is
      no projected dig time. Digging is attacking cells (Decision 77). Both come with the
-     underground work, not round 1.
+     underground work, not round 1. Damage types and breaking: Decision 79.
+3. **Contact and fronts (Decision 78).**
+   - Any of a squad's four edges can be a front; it can fight on several at once.
+   - Units on a struck side or rear edge turn in place; the flank bonus applies for the
+     first interval. A free squad about-faces to a rear hit but doesn't wheel to a side
+     hit.
+   - Step-up runs inward per fighting edge; band rules hold. Corner units take blows
+     from both edges and strike back at one.
+   - A unit in melee uses only melee weapons unless a trait allows otherwise.
+   - Two or more fronts strain discipline.
 
 ## Agenda for the design conversation
 
