@@ -33,6 +33,9 @@ const FormationEvents = preload("res://sim/skirmish/formation/formation_events.g
 const FormationContact = preload("res://sim/skirmish/formation/formation_contact.gd")
 const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle.gd")
 const FormationUnits = preload("res://sim/skirmish/formation/formation_units.gd")
+const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
+const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
+const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 const MELEE_REACH := FormationContact.MELEE_REACH
 const ATTACK_INTERVAL_SECONDS := 1.0
@@ -45,6 +48,7 @@ var tick_seconds: float
 ## each squad within its own columns.
 var combat_width := 0
 
+var _route: FormationRoute
 var _squads: Array[SkirmishSquad] = []
 var _next_squad_id := 1
 var _next_unit_id := 1
@@ -55,14 +59,22 @@ var _tick := 0
 func _init(length: float, seconds_per_tick: float) -> void:
 	route_length = length
 	tick_seconds = seconds_per_tick
+	_route = FormationRoute.straight(length * MapLayoutDef.CELLS_PER_TILE)
 
 
-## placements: [[UnitDef, Vector2i(rank, column)], ...] from a WaveTemplate layout.
+## placements: [[UnitDef, Vector2i(rank, column)], ...] from a WaveTemplate layout. The
+## squad follows `route` (Decision 75), or the lane's straight route if null.
 func spawn_squad(
-	width: int, placements: Array, faction_id: String, at_player_end: bool, wait_ticks: int = 0
+	width: int,
+	placements: Array,
+	faction_id: String,
+	at_player_end: bool,
+	wait_ticks: int = 0,
+	route: FormationRoute = null
 ) -> SkirmishSquad:
+	var path := route if route != null else _route
 	var direction := 1 if at_player_end else -1
-	var home := 0.0 if at_player_end else route_length
+	var home := 0.0 if at_player_end else path.length_cells() / MapLayoutDef.CELLS_PER_TILE
 	var members: Array[SkirmishUnit] = []
 	for placement in placements:
 		members.append(
@@ -71,10 +83,12 @@ func spawn_squad(
 		_next_unit_id += 1
 	var squad := SkirmishSquad.new(_next_squad_id, faction_id, direction, home, width, members)
 	_next_squad_id += 1
+	squad.route = path
+	FormationMarch.face(squad)
 	squad.wait_ticks = wait_ticks
 	squad.combat_width = combat_width
 	_squads.append(squad)
-	_sync_unit_distances()
+	FormationMarch.sync_units(_squads)
 	return squad
 
 
@@ -108,7 +122,7 @@ func step() -> Array:
 	_bury(events)
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
-	_sync_unit_distances()
+	FormationMarch.sync_units(_squads)
 	return events
 
 
@@ -169,14 +183,16 @@ func _move(events: Array) -> void:
 		var advancing := mover.order == SkirmishUnit.Order.ADVANCE
 		var direction := mover.direction if advancing else -mover.direction
 		var step := mover.speed() * TRAVEL_SCALE * tick_seconds
-		var next := clampf(mover.front_distance + direction * step, 0.0, route_length)
+		var end := FormationMarch.length(mover, route_length)
+		var next := clampf(mover.front_distance + direction * step, 0.0, end)
 		if advancing:
 			next = FormationContact.limit(mover, _squads, next)
 		mover.front_distance = next
+		FormationMarch.face(mover)
 		var leader := FormationContact.joinable(mover, _squads) if advancing else null
 		if leader != null:
 			joins.append([leader, mover])
-		_check_ends(mover, events)
+		FormationMarch.check_ends(mover, end, _tick, events)
 	for pair in joins:
 		_join(pair[0], pair[1], events)
 
@@ -263,34 +279,6 @@ func _release(released: SkirmishSquad) -> void:
 			other.engaged_with = 0
 			if other.state != SkirmishSquad.State.DESTROYED:
 				other.state = SkirmishSquad.State.MOVING
-
-
-func _check_ends(mover: SkirmishSquad, events: Array) -> void:
-	var enemy_end := route_length if mover.direction > 0 else 0.0
-	if (
-		mover.order == SkirmishUnit.Order.ADVANCE
-		and is_equal_approx(mover.front_distance, enemy_end)
-	):
-		mover.front_distance = enemy_end
-		mover.state = SkirmishSquad.State.ARRIVED  # the enemy fort is immune in the feel test
-		events.append(FormationEvents.squad_event("arrived", _tick, mover))
-	elif (
-		mover.order == SkirmishUnit.Order.RETREAT
-		and is_equal_approx(mover.front_distance, mover.home_distance)
-	):
-		mover.front_distance = mover.home_distance
-		mover.order = SkirmishUnit.Order.HOLD
-		mover.state = SkirmishSquad.State.HOLDING
-		events.append(FormationEvents.squad_event("returned", _tick, mover))
-
-
-## Units mirror their squad's placement - including any swap under way - so views can
-## read unit.distance.
-func _sync_unit_distances() -> void:
-	for entry in _squads:
-		for unit in entry.units:
-			var swapping := FormationShuffle.offset(entry, unit).x * SkirmishSquad.RANK_DEPTH
-			unit.distance = entry.unit_distance(unit) + entry.direction * swapping
 
 
 func _attack_interval_ticks() -> int:
