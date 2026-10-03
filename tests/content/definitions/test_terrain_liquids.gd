@@ -41,12 +41,12 @@ func _material(id: String, traits: Dictionary, transitions: Array = []) -> Mater
 
 
 func _library() -> TerrainLibraryDef:
-	var lava := _material("LAVA", {"flows": 1, "glows": 2}, [_transition(700, false, "ROCK")])
-	lava.temperature = 1200
+	var lava := _material("LAVA", {"flows": 1, "glows": 2}, [_transition(6, false, "ROCK")])
+	lava.heat = 8
 	var library := TerrainLibraryDef.new()
 	library.materials = [
-		_material("ROCK", {"dig_difficulty": 3}, [_transition(1100, true, "LAVA")]),
-		_material("TIMBER", {}, [_transition(300, true, "", "burning")]),
+		_material("ROCK", {"dig_difficulty": 3}, [_transition(7, true, "LAVA")]),
+		_material("TIMBER", {}, [_transition(3, true, "", "burning")]),
 		_material("WATER", {"flows": 3}),
 		lava,
 	]
@@ -100,14 +100,14 @@ func test_a_chance_outside_zero_to_one_is_an_error() -> void:
 
 func test_a_transition_becoming_an_unknown_material_is_an_error() -> void:
 	var library := _library()
-	library.materials[0].heat_transitions.assign([_transition(1100, true, "GLASS")])
+	library.materials[0].heat_transitions.assign([_transition(7, true, "GLASS")])
 
 	assert_bool(_any(library.validate(), "becomes unknown 'GLASS'")).is_true()
 
 
 func test_a_transition_must_become_something_or_gain_a_trait() -> void:
 	var library := _library()
-	library.materials[1].heat_transitions.assign([_transition(300, true, "")])
+	library.materials[1].heat_transitions.assign([_transition(3, true, "")])
 
 	assert_bool(_any(library.validate(), "becomes nothing and gains no trait")).is_true()
 
@@ -116,11 +116,11 @@ func test_a_transition_reads_as_its_rule() -> void:
 	var library := _library()
 
 	assert_str(library.material("ROCK").heat_transitions[0].describe()).is_equal(
-		"above 1100: becomes LAVA"
+		"above heat 7: becomes LAVA"
 	)
 	assert_str(library.material("TIMBER").heat_transitions[0].describe()).is_equal(
-		"above 300: gains burning"
+		"above heat 3: gains burning"
 	)
 	assert_str(library.material("LAVA").heat_transitions[0].describe()).is_equal(
-		"below 700: becomes ROCK"
+		"below heat 6: becomes ROCK"
 	)

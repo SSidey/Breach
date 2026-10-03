@@ -170,7 +170,10 @@ static func _material(entry: Dictionary) -> MaterialDef:
 	material.color = Color.from_string(str(entry.get("color", "#ffffff")), Color.WHITE)
 	material.weight = int(entry.get("weight", 1))
 	material.span = int(entry.get("span", 1))
-	material.temperature = int(entry.get("temperature", 15))
+	material.heat = (
+		int(entry["heat"]) if entry.has("heat") else _heat_of(int(entry.get("temperature", 15)))
+	)
+	material.strength = int(entry.get("strength", 0))
 	material.traits = _traits(entry)
 	# Saved before Decisions 63-64: a loose flag, and difficulties as fields.
 	if entry.get("loose", false):
@@ -186,7 +189,7 @@ static func _material(entry: Dictionary) -> MaterialDef:
 static func _legacy_liquid(entry: Dictionary) -> MaterialDef:
 	var material := _material(entry)
 	if material.trait_level("flows") == 0:
-		material.traits["flows"] = 1 if material.temperature > 500 else 3
+		material.traits["flows"] = 1 if material.heat > 4 else 3
 	return material
 
 
@@ -198,17 +201,24 @@ static func _traits(entry: Dictionary) -> Dictionary:
 	return traits
 
 
-## [{"above"|"below": temperature, "becomes": id | "gains": trait}] (Decision 63).
+## [{"above"|"below": heat level, "becomes": id | "gains": trait}] (Decisions 63, 66).
+## A saved threshold over 10 is degrees, from before Decision 66.
 static func _transitions(entry: Dictionary) -> Array[HeatTransitionDef]:
 	var out: Array[HeatTransitionDef] = []
 	for rule in entry.get("heat_transitions", []):
 		var transition := HeatTransitionDef.new()
 		transition.rising = rule.has("above")
-		transition.threshold = int(rule.get("above", rule.get("below", 0)))
+		var threshold := int(rule.get("above", rule.get("below", 0)))
+		transition.threshold = _heat_of(threshold) if threshold > 10 else threshold
 		transition.becomes = str(rule.get("becomes", ""))
 		transition.gains_trait = str(rule.get("gains", ""))
 		out.append(transition)
 	return out
+
+
+## A temperature in degrees, saved before Decision 66, as a heat level 0-10.
+static func _heat_of(degrees: int) -> int:
+	return 1 if degrees <= 50 else mini(10, ceili(degrees / 150.0))
 
 
 ## A water table saved before Decision 62, as a water body that is always there.

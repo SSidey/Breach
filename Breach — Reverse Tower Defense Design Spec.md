@@ -3407,3 +3407,77 @@ The rules:
   the list.
 - The trait-pair table above is the first entry of the coming trait library.
 
+### Decision 65 — Structural quantities are whole numbers in eighths of a cell; materials gain strength
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** Decision 61's load paths need a weight and a capacity for every element,
+including face walls thinner than a cell. The user, on physical quantities (weight,
+span, temperature): "for sim ease I can see them becoming discrete bands (helping to
+remove the continuous nature, I expect should aid sim performance)".
+- **Discrete, not continuous.** Structural quantities are whole numbers in **load
+  units**, where one unit is an eighth of a cell of a material of weight 1. There are
+  no fractions to carry, and the results are exact and reproducible.
+  - A face wall's thickness is in eighths of a cell (1 to 8): wattle 1, timber frame 1,
+    rubble 3.
+  - A face weighs its material's weight × thickness. A solid cell weighs weight × 8.
+  - Physical quantities (weight, span, temperature, strength) stay properties, as
+    Decision 64 holds, and may later become named bands (light, heavy…) for performance.
+    Integers in eighths are the first step.
+- **Materials gain strength,** the load one eighth of a cell can carry. An element's
+  **capacity** is strength × thickness (× 8 for a solid cell). Placeholders: sand, peat
+  and liquids 0, soil 1, gravel 1, clay 2, timber 6, rock and ore 20.
+- **Ground bearing in the same units:** a column carries bearing × 8 (Decision 53).
+- **Pillar check (Decision 58):** integers keep the load overlay exact and readable.
+  Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Continuous loads (floats) | The user prefers discrete steps for simulation performance; eighths are exact. |
+| Whole cells only | Face walls are thinner than a cell (Decision 61). |
+
+**Consequences:**
+- `MaterialDef.strength`. The structure plan's faces carry thickness in eighths.
+- The load-path solver (spec 24) works in integer load units throughout.
+
+### Decision 66 — Heat is a level from 0 to 10, not degrees; loads stay whole load units
+
+**Supersedes:** Decision 63, in part (temperatures in degrees)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user: "rather than 1000° it be Heat/Hot 10 or something like that…
+rather than something might combust at 265°, it combusts at heat 3… discrete
+abstractions would help simplify our sims… push back if you think otherwise."
+- **Heat is a level, 0 to 10,** like a trait's level. Placeholders:
+  - 0: frozen
+  - 1: ambient
+  - 3: wood smoulders and catches
+  - 5: open fire (burning gives off heat 5)
+  - 8: lava
+  - 10: the hottest, for a plane of fire
+  Thresholds use the same levels: timber gains burning above heat 3, rock becomes lava
+  above 7, and lava becomes rock below 6. Heat reads alongside traits ("glows 2",
+  "heat 8") and compares by the same rule.
+- **Pushback, accepted:** loads stay whole **load units** (Decision 65). Weights must
+  add up as they flow down a structure, and coarse bands would lose that sum. They are
+  already small integers, which is the discreteness that matters for performance.
+  Weight, strength and span stay as they are.
+- **Migration:** a saved temperature in degrees becomes a level (1 up to 50°, then one
+  level per 150°, at most 10); a saved threshold over 10 is converted the same way.
+- **Pillar check (Decision 58):** levels make heat easier to read than degrees. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Degrees (Decision 63) | Continuous and fussy; the user wants discrete levels. |
+| Banding loads too | Loads must sum exactly as they flow; they are already small integers. |
+
+**Consequences:**
+- `MaterialDef.temperature` becomes `heat` (0-10); heat transition thresholds are levels.
+- The designer edits heat as a level and labels transitions "above heat N".
+

@@ -13,8 +13,12 @@ const HeatTransitionDef = preload("res://content/definitions/heat_transition_def
 @export var weight: int = 1
 ## Cells it can bridge unsupported before it falls (Decision 57).
 @export var span: int = 1
-## The heat it gives off, roughly °C: lava 1200, most things 15 (Decision 63).
-@export var temperature: int = 15
+## Load one eighth of a cell of it carries (Decision 65): an element carries strength x
+## its eighths.
+@export var strength: int = 0
+## The heat it gives off, a level 0-10 (Decision 66): 1 is ambient, 5 an open fire,
+## 8 lava.
+@export var heat: int = 1
 ## Trait id -> level (Decision 64), met in ability-and-demand pairs: dig_difficulty against
 ## a unit's burrower, climb_difficulty against climber; flows N makes it a liquid (N its
 ## rate); loose falls and settles; glows N lights its surroundings.

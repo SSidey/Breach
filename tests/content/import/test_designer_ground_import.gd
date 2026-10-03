@@ -17,6 +17,7 @@ func _library() -> Dictionary:
 				"color": "#6f6c68",
 				"weight": 2,
 				"span": 4,
+				"strength": 20,
 				"traits": {"dig_difficulty": 3}
 			},
 			{"id": "SAND", "label": "Sand", "dig_difficulty": 1, "span": 0, "loose": true},
@@ -48,6 +49,7 @@ func test_materials_import_with_their_properties() -> void:
 
 	assert_str(rock.display_name).is_equal("Rock")
 	assert_int(rock.trait_level("dig_difficulty")).is_equal(3)
+	assert_int(rock.strength).is_equal(20)
 	assert_int(rock.weight).is_equal(2)
 	assert_int(rock.span).is_equal(4)
 	assert_int(library.material("SAND").trait_level("loose")).is_equal(1)  # the old flag
@@ -134,10 +136,10 @@ func test_liquids_saved_before_decision_64_become_flowing_materials() -> void:
 	var library := DesignerLibraryImporter.import_library(library_data).library
 	var lava = library.material("LAVA")
 
-	assert_int(lava.temperature).is_equal(1200)
+	assert_int(lava.heat).is_equal(8)  # 1200 degrees, saved before Decision 66
 	assert_int(lava.trait_level("glows")).is_equal(1)
 	assert_int(lava.trait_level("flows")).is_equal(1)  # lava flows slowly
 	assert_int(library.material("WATER").trait_level("flows")).is_equal(3)
-	assert_str(lava.heat_transitions[0].describe()).is_equal("below 700: becomes ROCK")
+	assert_str(lava.heat_transitions[0].describe()).is_equal("below heat 5: becomes ROCK")
 	assert_str(library.terrain("MOUNTAIN").liquids[0].material_id).is_equal("LAVA")
 	assert_array(Array(library.validate())).is_empty()
