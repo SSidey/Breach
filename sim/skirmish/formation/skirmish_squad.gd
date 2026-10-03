@@ -9,6 +9,8 @@ enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DESTROYED }
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
+const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
+const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 
 ## Tiles between one rank and the next: one cell (Decisions 48 and 68).
 const RANK_DEPTH := 1.0 / MapLayoutDef.CELLS_PER_TILE
@@ -18,7 +20,19 @@ var faction_id: String
 ## +1 advances toward the kingdom's end, -1 toward the player's.
 var direction: int
 var home_distance: float
-var front_distance: float
+## Tiles along the route; setting it moves `position` with it.
+var front_distance: float:
+	set(value):
+		front_distance = value
+		_place()
+## The route the squad follows (Decision 75); null is a straight lane along x.
+var route: FormationRoute = null:
+	set(value):
+		route = value
+		_place()
+## Which way the squad faces (SquadFrame), and the centre of its front edge in cells.
+var facing: int = SquadFrame.EAST
+var position := Vector2.ZERO
 var width: int
 var order: SkirmishUnit.Order = SkirmishUnit.Order.ADVANCE
 var state: State = State.MOVING
@@ -53,6 +67,7 @@ func _init(
 	id = squad_id
 	faction_id = faction
 	direction = travel_direction
+	facing = SquadFrame.EAST if direction > 0 else SquadFrame.WEST
 	home_distance = home
 	front_distance = home
 	width = maxi(formation_width, 1)
@@ -81,13 +96,12 @@ func unit_distance(unit: SkirmishUnit) -> float:
 	return front_distance - direction * unit.rank * RANK_DEPTH
 
 
-## The unit's columns as a lateral span, centred on the lane (less any centre_shift). The
-## squad facing the other way is mirrored, so both sides share one lateral axis.
+## The unit's columns as a lateral span on the world axis across the squad's facing: turned
+## from its (rank, column), never mirrored (Decision 74). On a straight lane both sides
+## share the lane's lateral axis, centred on it (less any centre_shift).
 func lateral_span(unit: SkirmishUnit) -> Vector2:
-	var left := unit.column - width / 2.0 + centre_shift
-	if direction > 0:
-		return Vector2(left, left + unit.footprint_width)
-	return Vector2(-left - unit.footprint_width, -left)
+	var rect := SquadFrame.unit_rect(position, facing, width, centre_shift, unit)
+	return SquadFrame.lateral_interval(rect, facing)
 
 
 ## The front rank, left to right: only it fights in melee (Decision 47). A column whose
@@ -141,3 +155,8 @@ func _clear_ahead(unit: SkirmishUnit) -> bool:
 		if rows_overlap and columns_overlap:
 			return false
 	return true
+
+
+func _place() -> void:
+	var cells := front_distance * MapLayoutDef.CELLS_PER_TILE
+	position = route.point_at(cells) if route != null else Vector2(cells, 0.0)

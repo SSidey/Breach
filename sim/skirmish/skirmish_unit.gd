@@ -17,6 +17,8 @@ var dmg: int = 0
 var speed: float = 0.0
 ## Cells along the route, from the player's end (0) to the kingdom's (route length).
 var distance: float = 0.0
+## Formation sim: the centre of the unit's cells on the map (spec 27).
+var position := Vector2.ZERO
 ## Where this unit started: the end it retreats to.
 var home_distance: float = 0.0
 ## +1 advances toward the kingdom's end, -1 toward the player's.
