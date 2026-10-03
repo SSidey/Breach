@@ -1,7 +1,9 @@
 extends GdUnitTestSuite
-## FormationField, per Decision 86 and spec 27 round 1: one simulation over a 128 x 64 cell
-## field, the player's waves on routes A (straight at the line) and B (round through the
-## wood, rejoining A before the line in round 1), and the kingdom's line holding across A.
+## FormationField, per Decisions 86 and 87 and spec 27 rounds 1 and 2: one simulation over
+## a 128 x 64 cell field, the player's waves on routes A (straight at the line) and B
+## (through the wood and onto the line's north side), and the kingdom's line holding
+## across A. B's wave can wait in the wood until it sees A's engage, or both can be sent
+## timed to arrive together.
 
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
@@ -52,13 +54,14 @@ func test_the_kingdom_holds_a_line_across_route_a() -> void:
 	)
 
 
-func test_both_routes_end_at_the_far_side_along_the_centre() -> void:
+func test_route_a_runs_at_the_line_and_route_b_onto_its_side() -> void:
 	var field := _field()
 
-	for key in ["A", "B"]:
-		var route = field.routes[key]
-		assert_vector(route.point_at(route.length_cells())).is_equal(Vector2(128, 32))
-	assert_float(field.routes["B"].length_cells()).is_greater(field.routes["A"].length_cells())
+	var a = field.routes["A"]
+	var b = field.routes["B"]
+	assert_vector(a.point_at(a.length_cells())).is_equal(Vector2(128, 32))
+	assert_vector(b.point_at(b.length_cells())).is_equal(Vector2(FormationField.FLANK_X, 64))
+	assert_bool(FormationField.WOOD.has_point(FormationField.STAGING)).is_true()
 
 
 func test_a_wave_sent_down_route_a_fights_the_line() -> void:
@@ -71,18 +74,57 @@ func test_a_wave_sent_down_route_a_fights_the_line() -> void:
 	assert_int(field.kingdom_line.state).is_equal(SkirmishSquad.State.FIGHTING)
 
 
-func test_a_wave_on_route_b_comes_round_and_reinforces_the_fight() -> void:
-	var field := _field(400, 200)  # both sides last until route B's wave comes round
-	_run(field, func(log): return field.waves["A"].built() == 8 and field.waves["B"].built() == 8)
-	field.send("A")
-	_run(field, _has("engaged"))
+func test_a_wave_on_route_b_strikes_the_lines_side() -> void:
+	var field := _field(400, 200)
+	_run(field, func(log): return field.waves["B"].built() == 8)
 
 	field.send("B")
-	var log := _run(field, _has("reinforced"))
+	var log := _run(field, _has("flanked"))
 
-	var reinforced: Array = log.filter(func(e): return e["type"] == "reinforced")
-	assert_int(reinforced.size()).is_equal(1)
-	assert_int(log.filter(func(e): return e["type"] == "turned").size()).is_greater_equal(2)
+	var flanked: Array = log.filter(func(e): return e["type"] == "flanked")
+	assert_int(flanked.size()).is_equal(1)
+	assert_int(flanked[0]["squad"]).is_equal(field.kingdom_line.id)
+	assert_int(log.filter(func(e): return e["type"] == "turned").size()).is_greater_equal(1)
+
+
+func test_a_wider_wave_sends_wings_round_the_line() -> void:
+	var field := _field(400, 200)
+	_run(field, _has("wave_full"))
+
+	field.send("A")
+	var log := _run(field, _has("wing_arrived"))
+
+	assert_bool(log.any(func(e): return e["type"] == "wing_arrived")).is_true()
+
+
+func test_b_waits_in_the_wood_until_it_sees_a_engage_then_flanks() -> void:
+	var field := _field(400, 200)
+	field.set_wait(true)
+	_run(field, func(log): return field.waves["A"].built() == 8 and field.waves["B"].built() == 8)
+	field.send("B")
+	var waiting := _run(field, _has("staged"))
+	assert_bool(waiting.any(func(e): return e["type"] == "staged")).is_true()
+
+	field.send("A")
+	var log := _run(field, _has("flanked"))
+
+	var kinds: Array = log.map(func(e): return e["type"])
+	assert_int(kinds.find("signalled")).is_greater(kinds.find("engaged"))
+	assert_int(kinds.find("flanked")).is_greater(kinds.find("signalled"))
+
+
+func test_waves_sent_together_reach_the_line_together() -> void:
+	var field := _field(400, 200)
+	_run(field, func(log): return field.waves["A"].built() == 8 and field.waves["B"].built() == 8)
+
+	field.send_together(["A", "B"])
+	var log := _run(
+		field, func(log): return _has("engaged").call(log) and _has("flanked").call(log)
+	)
+
+	var engaged: int = log.filter(func(e): return e["type"] == "engaged")[0]["tick"]
+	var flanked: int = log.filter(func(e): return e["type"] == "flanked")[0]["tick"]
+	assert_int(absi(engaged - flanked)).is_less_equal(3)
 
 
 func test_waves_depart_on_their_own_when_set_to() -> void:

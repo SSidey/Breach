@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## FormationFieldScene smoke tests, per Decision 86 and spec 27 round 1: the 2D field
+## FormationFieldScene smoke tests, per Decisions 86 and 87 and spec 27: the 2D field
 ## builds, its waves fill and can be sent, and squads stand in 2D on their routes. How it
 ## plays - marching, wheeling, meeting head-on - is checked by hand.
 
@@ -39,3 +39,15 @@ func test_a_sent_wave_marches_down_its_route_in_2d() -> void:
 	assert_float(wave.position.x).is_greater(0.0)
 	for unit in wave.living():
 		assert_float(unit.position.y).is_between(27.0, 37.0)
+
+
+func test_waves_can_be_sent_together_and_b_can_wait() -> void:
+	var scene := _scene()
+	scene.field().set_wait(true)
+	scene.run_ticks(200)
+
+	var sent: Array = scene.field().send_together(["A", "B"])
+	scene.run_ticks(5)
+
+	assert_int(sent.size()).is_equal(2)
+	assert_bool(sent[1].staging.is_empty()).is_false()
