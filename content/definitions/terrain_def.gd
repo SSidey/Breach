@@ -5,6 +5,7 @@ extends Resource
 ## content/designer/terrain.json; maps reference terrains by id.
 
 const StratumDef = preload("res://content/definitions/stratum_def.gd")
+const LiquidBodyDef = preload("res://content/definitions/liquid_body_def.gd")
 
 @export var id: String = ""
 @export var display_name: String = ""
@@ -26,10 +27,8 @@ const StratumDef = preload("res://content/definitions/stratum_def.gd")
 @export var default_elevation: int = 0
 @export var foundation_max: int = 0
 @export var dig_depth: int = 0
-## Cells below the surface where water starts, as a range strata generation picks from;
-## -1 for both = no water table.
-@export var water_table_min: int = -1
-@export var water_table_max: int = -1
+## Bodies of water or lava (materials that flow) it may hold (Decisions 62, 64).
+@export var liquids: Array[LiquidBodyDef] = []
 ## Bands from the surface down; the last continues to dig_depth.
 @export var strata: Array[StratumDef] = []
 ## Legacy: the side-on structure editor's capacity (Decision 27), until the plan editor of

@@ -13,6 +13,8 @@ const TerrainFeatureDef = preload("res://content/definitions/terrain_feature_def
 const TerrainLibraryDef = preload("res://content/definitions/terrain_library_def.gd")
 const MaterialDef = preload("res://content/definitions/material_def.gd")
 const StratumDef = preload("res://content/definitions/stratum_def.gd")
+const LiquidBodyDef = preload("res://content/definitions/liquid_body_def.gd")
+const HeatTransitionDef = preload("res://content/definitions/heat_transition_def.gd")
 
 const MAP_SUFFIX := ".designer.json"
 
@@ -39,6 +41,9 @@ static func import_library(library_data: Dictionary) -> DesignerLibraryImportRes
 	for entry in library_data.get("materials", []):
 		if _require_id(entry, "material", result.errors):
 			result.library.materials.append(_material(entry))
+	for entry in library_data.get("liquids", []):  # a liquid library saved before Decision 64
+		if _require_id(entry, "liquid", result.errors):
+			result.library.materials.append(_legacy_liquid(entry))
 	for entry in library_data.get("features", []):
 		if _require_id(entry, "feature", result.errors):
 			result.library.features.append(_feature(entry))
@@ -138,10 +143,14 @@ static func _ground(terrain: TerrainDef, entry: Dictionary) -> void:
 	terrain.default_elevation = int(entry.get("default_elevation", 0))
 	terrain.foundation_max = int(entry.get("foundation_max", terrain.bearing))
 	terrain.dig_depth = int(entry.get("dig_depth", 0))
-	var water = entry.get("water_table")
-	if water is Dictionary:
-		terrain.water_table_min = int(water.get("min", -1))
-		terrain.water_table_max = int(water.get("max", -1))
+	for body in entry.get("liquids", _legacy_water(entry)):
+		var liquid := LiquidBodyDef.new()
+		liquid.material_id = str(body.get("material", body.get("liquid", "")))
+		liquid.min_cells = int(body.get("min", 0))
+		liquid.max_cells = int(body.get("max", liquid.min_cells))
+		liquid.chance = float(body.get("chance", 1.0))
+		liquid.surface_chance = float(body.get("surface_chance", 0.0))
+		terrain.liquids.append(liquid)
 	for band in entry.get("strata", []):
 		var stratum := StratumDef.new()
 		stratum.material_id = str(band.get("material", ""))
@@ -155,12 +164,55 @@ static func _material(entry: Dictionary) -> MaterialDef:
 	material.id = str(entry["id"])
 	material.display_name = str(entry.get("label", material.id))
 	material.color = Color.from_string(str(entry.get("color", "#ffffff")), Color.WHITE)
-	material.dig_difficulty = int(entry.get("dig_difficulty", 1))
-	material.climb_difficulty = int(entry.get("climb_difficulty", 0))
 	material.weight = int(entry.get("weight", 1))
 	material.span = int(entry.get("span", 1))
-	material.loose = bool(entry.get("loose", false))
+	material.temperature = int(entry.get("temperature", 15))
+	material.traits = _traits(entry)
+	# Saved before Decisions 63-64: a loose flag, and difficulties as fields.
+	if entry.get("loose", false):
+		material.traits["loose"] = 1
+	for field in ["dig_difficulty", "climb_difficulty"]:
+		if entry.has(field) and int(entry[field]) > 0:
+			material.traits[field] = int(entry[field])
+	material.heat_transitions = _transitions(entry)
 	return material
+
+
+## A liquid saved before Decision 64, as a material that flows (lava slowly).
+static func _legacy_liquid(entry: Dictionary) -> MaterialDef:
+	var material := _material(entry)
+	if material.trait_level("flows") == 0:
+		material.traits["flows"] = 1 if material.temperature > 500 else 3
+	return material
+
+
+static func _traits(entry: Dictionary) -> Dictionary:
+	var traits := {}
+	var source = entry.get("traits", {})
+	for trait_id in source if source is Dictionary else {}:
+		traits[str(trait_id)] = int(source[trait_id])
+	return traits
+
+
+## [{"above"|"below": temperature, "becomes": id | "gains": trait}] (Decision 63).
+static func _transitions(entry: Dictionary) -> Array[HeatTransitionDef]:
+	var out: Array[HeatTransitionDef] = []
+	for rule in entry.get("heat_transitions", []):
+		var transition := HeatTransitionDef.new()
+		transition.rising = rule.has("above")
+		transition.threshold = int(rule.get("above", rule.get("below", 0)))
+		transition.becomes = str(rule.get("becomes", ""))
+		transition.gains_trait = str(rule.get("gains", ""))
+		out.append(transition)
+	return out
+
+
+## A water table saved before Decision 62, as a water body that is always there.
+static func _legacy_water(entry: Dictionary) -> Array:
+	var water = entry.get("water_table")
+	if not water is Dictionary:
+		return []
+	return [{"material": "WATER", "min": water.get("min", 0), "max": water.get("max", 0)}]
 
 
 static func _feature(entry: Dictionary) -> TerrainFeatureDef:
