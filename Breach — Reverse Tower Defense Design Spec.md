@@ -3826,3 +3826,51 @@ older `LaneSimulation`.
   that can be walked round, with stands.
 - Moving the older sims' uses over (the playable map, task forces, scripted beats) is
   planned separately.
+
+### Decision 74 — In 2D a squad has a cell position and one of four facings; it turns as a block that keeps its painted shape, wheeling at marching pace or about-facing in place
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Spec 27, agenda subject 1 (position and facing). The user agreed this as
+a baseline to feel-test: "Worth trying as a baseline".
+- **Position:** a squad's position is the centre of its front edge, in cells, fractional
+  while moving. Each unit keeps its painted (rank, column) in the squad's own frame, and
+  its cell is the squad's position plus that offset, turned to the squad's facing.
+- **Four facings (N, E, S, W)** for now.
+  - A quarter turn of a block on a square grid lands every cell on a cell, so ranks,
+    columns, step-up, re-forming and flank wrap carry over unchanged.
+  - A squad marching at an angle sidles, keeping the facing nearest its heading. On a
+    tie it keeps its current facing.
+  - Eight facings may come later if feel-testing asks for them.
+- **Turns keep the painted shape:**
+  - **Quarter turn (wheel):** the block pivots on its front centre. It takes as long as
+    the outer end needs to march its quarter arc at the slowest unit's speed, so heavy
+    units slow a turn as they slow a march. A 16-wide line turns in about 1.5 s at
+    speed 1.
+  - **About-face:** the block turns in place, after a short fixed pause (placeholder
+    1 s). Its back rank becomes its front. The re-form shuffle (Decision 46) then moves
+    front-preferring units forward over time.
+  - **Rotation, not mirroring:** a squad's left flank stays its left whichever way it
+    faces. This replaces today's mirroring of the squad that faces the other way.
+- **While turning,** a squad neither advances nor strikes, and blows on it count as flank
+  blows. Turning under contact is costly; spec 27's subject 3 settles contact details.
+- **Units face their squad's way.** Whether units turn on their own to meet a side or
+  rear blow is spec 27's subject 3.
+- **Pillar check (Decision 58):** four facings and whole-cell blocks keep formations
+  readable at every zoom (Decision 69). Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Facing in any direction | Puts units off the cell grid and breaks the per-cell combat the feel tests built. |
+| Eight facings now | Diagonal lines leave gaps and ragged edges that every rule would have to handle; later if needed. |
+| Instant turns | A squad could always face a threat, so flanking would mean nothing. |
+| About-face keeping rank order (countermarch) | A long march through itself; reversing ranks plus the re-form shuffle gives the cost more simply. |
+
+**Consequences:**
+- `SkirmishSquad` gains a 2D position and a facing; a unit's cell comes from its
+  (rank, column) turned to the facing, replacing `lateral_span`'s mirroring.
+- Squads gain a turning state with a wheel time and an about-face pause.
+- The feel-test scene draws squads at their 2D cells and facings.

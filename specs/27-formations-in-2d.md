@@ -1,7 +1,7 @@
 # Spec 27: Formations in 2D
 
 Decisions 73 (the formation model is the game's simulation), 70 (stands), 52 (squads on a
-2D cell grid) and 69 (light control, unit AI).
+2D cell grid), 69 (light control, unit AI) and 74 (position and facing).
 
 ## Purpose
 
@@ -17,8 +17,24 @@ Wave templates are painted in stands (Decision 70).
 
 ## Status
 
-**Design conversation not started.** The user takes design questions one subject at a
-time. The agenda below is a starting point, not decided.
+**Design conversation under way.** The user takes design questions one subject at a
+time. Subject 1 is agreed (see Agreed below); the rest of the agenda is a starting point,
+not decided.
+
+## Agreed
+
+1. **Position and facing (Decision 74, a baseline to feel-test).**
+   - A squad's position is the centre of its front edge, in cells. Units keep their
+     painted (rank, column) in the squad's frame, turned to its facing.
+   - Four facings (N, E, S, W). A squad marching at an angle sidles, keeping the facing
+     nearest its heading.
+   - A quarter turn wheels on the front centre, taking the time the outer end needs to
+     march its quarter arc at the slowest unit's speed.
+   - An about-face turns in place after a short pause (placeholder 1 s); the back rank
+     becomes the front and the re-form shuffle moves front-preferrers forward.
+   - Turns rotate, never mirror: the left flank stays left.
+   - A turning squad neither advances nor strikes, and blows on it count as flank blows.
+   - Units face their squad's way (individual turning is subject 3).
 
 ## Agenda for the design conversation
 
