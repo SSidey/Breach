@@ -171,3 +171,30 @@ Decision 86's round 2 plus Decision 87, in four stacked PRs:
    until it sees a friend fighting; "Send together" times both to reach the line at once.
 
 Signals beyond sight come with the tech work; morale, shock and leadership are round 3.
+
+### Round 3: morale, rout and leaders (built; feel test pending)
+
+Decisions 81, 82 and 87, in four stacked PRs (numbers are placeholders, morale 0 to 100):
+1. **Morale and shock** (`FormationMorale`): a ceiling of mean courage plus 10 per point of
+   the best leader's leadership; side (15), rear (30) and wing (10) impact; 4 per own loss,
+   10 per point of a fallen leader's leadership; pressure each second by sides fought on
+   (two 3, three 9, four 18), less where a friend covers a side; recovery out of contact.
+   Shaken squads send no wings; wavering ones strike half again more slowly.
+2. **Rout** (`FormationRout`): at 0 a formation breaks; its units flee home along the
+   route, strike nothing and are struck from behind; they crush friends they run through
+   (and panic them), rally into a led formation, or re-form round their own leader with no
+   enemy near; routers reaching home leave the field (the player's return to the reserve).
+3. **Leaders**: units gain tactics; the grem chieftain (leadership 3, coordinated). A
+   coordinated leader waiting to see its partner times its departure to arrive with it.
+4. **The scene**: the kingdom's reserve holds on the hill; route B's wave carries a
+   chieftain; "B waits for A" waits to see A's wave and lets the chieftain time the flank;
+   morale bars, leaders and faded routers are drawn.
+
+With the content's grems, militia and chieftain (12-militia line, 6-militia reserve):
+
+| Case | Line left | Reserve left | Grems died | Outcome |
+|---|---|---|---|---|
+| A alone | 10 | 6 | 8 | A loses; the line holds |
+| B alone (flank only) | 7 | 6 | 3 | a slow grind, unfinished |
+| B waits, chieftain times it | 0 | 0 | 7 | the line routs into its reserve, which breaks too |
+| Sent together | 0 | 0 | 6 | the same |

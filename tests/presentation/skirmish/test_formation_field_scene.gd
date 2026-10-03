@@ -22,7 +22,7 @@ func test_the_scene_builds_the_field_with_the_kingdom_line() -> void:
 
 	assert_object(scene.field()).is_not_null()
 	assert_array(scene.field().routes.keys()).contains_exactly(["A", "B"])
-	assert_int(scene.field().sim.squads().size()).is_equal(1)
+	assert_int(scene.field().sim.squads().size()).is_equal(2)  # the line and its reserve
 
 
 func test_a_sent_wave_marches_down_its_route_in_2d() -> void:
@@ -33,8 +33,8 @@ func test_a_sent_wave_marches_down_its_route_in_2d() -> void:
 	scene.run_ticks(20)
 
 	var squads := scene.field().sim.squads()
-	assert_int(squads.size()).is_equal(2)
-	var wave = squads[1]
+	assert_int(squads.size()).is_equal(3)
+	var wave = squads[2]
 	assert_float(wave.position.y).is_equal_approx(32.0, 0.01)
 	assert_float(wave.position.x).is_greater(0.0)
 	for unit in wave.living():
@@ -50,4 +50,4 @@ func test_waves_can_be_sent_together_and_b_can_wait() -> void:
 	scene.run_ticks(5)
 
 	assert_int(sent.size()).is_equal(2)
-	assert_bool(sent[1].staging.is_empty()).is_false()
+	assert_bool(scene.field().waves["B"].staging.is_empty()).is_false()
