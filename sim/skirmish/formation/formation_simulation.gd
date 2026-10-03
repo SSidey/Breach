@@ -147,7 +147,7 @@ func step() -> Array:
 	_bury(events)
 	FormationEdges.prune(_squads, _tick, events)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
-	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds))
+	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain))
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
 	FormationMarch.sync_units(_squads)
@@ -199,7 +199,7 @@ func _move(events: Array) -> void:
 			mover.wait_ticks -= 1
 			continue
 		var paced := [TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE, tick_seconds]
-		if FormationStaging.holds(mover, _squads, _tick, events, paced):
+		if FormationStaging.holds(mover, _squads, _tick, events, paced, terrain):
 			continue
 		if mover.order == SkirmishUnit.Order.HOLD or FormationContact.skirmishing(mover, _squads):
 			mover.state = SkirmishSquad.State.HOLDING
@@ -250,7 +250,8 @@ func _fight(events: Array) -> void:
 	for entry in _squads:
 		for unit in entry.living():
 			unit.target_id = 0
-	var blows := FormationMelee.blows(_squads, _attack_interval_ticks(), _tick, walk_wings)
+	var interval := _attack_interval_ticks()
+	var blows := FormationMelee.blows(_squads, interval, _tick, walk_wings, terrain)
 	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks())
 	for shot in shots:
 		shot[1].hp -= shot[2]

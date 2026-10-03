@@ -79,6 +79,12 @@ func factor(unit_height: float, from: Vector2, to: Vector2) -> float:
 	return share
 
 
+## True if `from` stands at least a quarter-cell higher than `to`: a striker there has
+## the high ground (Decision 85).
+func high_ground(from: Vector2, to: Vector2) -> bool:
+	return height_at(from) > height_at(to)
+
+
 func _index(at: Vector2) -> int:
 	var cell := Vector2i(floori(at.x), floori(at.y))
 	if cell.x < 0 or cell.y < 0 or cell.x >= size.x or cell.y >= size.y:
