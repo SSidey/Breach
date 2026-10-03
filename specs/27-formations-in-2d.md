@@ -124,7 +124,7 @@ Round 1 is being planned.
 
 Decision 86's table sets what each round adds to the one feel-test scene.
 
-### Round 1: squads in 2D (in progress)
+### Round 1: squads in 2D (built; feel test pending)
 
 A squad keeps its distance along its own route (Decision 75) and takes its 2D place and
 facing from it. On a straight east-west route, turning by facing gives exactly the lane's
@@ -143,3 +143,10 @@ are unchanged. Squads on different routes meet through 2D geometry. Four stacked
 4. **The 2D scene:** `FormationField` (one sim, routes A and B, the kingdom line holding on
    A) and a top-down scene. In round 1, route B rejoins A before the line so its wave
    reinforces from behind; round 2 redraws it onto the line's side.
+
+Run it with `godot --path . res://presentation/skirmish/formation_2d/formation_field.tscn`:
+Send A / Send B (or Auto) and watch the waves march, wheel at the bends and meet the
+line. With the content's grems and militia an 8-grem wave just loses to the 8-wide
+militia line (the one-lane balance); route B's longer way means it arrives after A's
+wave has fallen unless both are sent together. Feel-testing in a window is for the user
+or the local agent.
