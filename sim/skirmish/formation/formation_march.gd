@@ -77,3 +77,5 @@ static func sync_units(squads: Array) -> void:
 				+ SquadFrame.right(entry.facing) * swapping.y
 			)
 			unit.position = rect.get_center() + shift
+			if entry.wings.has(unit.id):
+				unit.position = entry.wings[unit.id]["at"]
