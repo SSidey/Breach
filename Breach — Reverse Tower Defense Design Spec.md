@@ -3792,3 +3792,37 @@ are controlled then the full node is controlled, otherwise contested".
   node's area.
 - The sim gains capture and control state per subnode and node, and building and benefit
   follow it.
+
+### Decision 73 — The formation model is the game's one combat simulation
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** The formation feel test (`sim/skirmish/formation/`, spec 22, Decisions
+40–51) already carries:
+- formations, footprints, step-up and flank wrap
+- reinforcing from the back
+- painted wave templates with fold and bank
+- the shared slot pool, presets, and domain-wide builders
+
+It is pure and deterministic. Decision 52 (the same fights indoors and out, squads on a
+2D cell grid) already extends it into structures. The user chose it ("Go with your
+recommendation, the newer formation model") over the spec 21 `SkirmishSimulation` and the
+older `LaneSimulation`.
+- **New gameplay work builds on the formation model:** 2D positioning, stands (Decision
+  70), ranged fire (Decision 71), and structures (spec 20, Decision 52).
+- **The older sims stay** until their uses are moved over, so nothing breaks in the
+  meantime. They aren't extended.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Build on `LaneSimulation` | Lacks formations; everything above would have to be brought over later. |
+| Build on the spec 21 `SkirmishSimulation` | A stepping stone the formation model already replaced. |
+
+**Consequences:**
+- The next work is **2D formation positioning** (spec 27): facing, several fronts, flanks
+  that can be walked round, with stands.
+- Moving the older sims' uses over (the playable map, task forces, scripted beats) is
+  planned separately.
