@@ -4115,7 +4115,7 @@ breaker 1 with slashing?"); and unwieldy as slower or less sure blows, not weake
   |---|---|---|---|---|
   | sword | slashing | 0 | 1 short: half | none |
   | axe | slashing | 1 | full | none |
-  | warhammer | blunt | 2 | 1 short: half | full (weak, so 2) |
+  | warhammer | blunt | 2 | full | full (weak to blunt, so 2) |
   | pickaxe | piercing | 3 | full | full |
 
 - **Unwieldy N slows an item's blows**: its attack interval is longer by N steps
