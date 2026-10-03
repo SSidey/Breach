@@ -12,6 +12,7 @@ const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.g
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
+const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 
 
 ## [[attacker, target, damage, flank], ...]; updates each striker's target and cooldown.
@@ -42,4 +43,5 @@ static func blows(squads: Array, interval: int, tick: int, walk_wings: bool) -> 
 				out.append([fighter, pick[0], FormationCombat.damage(fighter, flank), flank])
 	out.append_array(FormationEdges.blows(squads, interval, tick))
 	out.append_array(FormationWings.blows(squads, interval, tick))
+	out.append_array(FormationRout.blows(squads, interval))
 	return out

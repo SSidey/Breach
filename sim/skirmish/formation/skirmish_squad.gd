@@ -5,7 +5,7 @@ extends RefCounted
 ## block at its slowest unit's speed, and takes orders as a whole. Only the foremost unit
 ## of each column fights; when one falls the ranks behind step up (compact()).
 
-enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DESTROYED, TURNING }
+enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DESTROYED, TURNING, ROUTING }
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
@@ -53,6 +53,9 @@ var wings := {}
 var staging := {}
 ## Its will to fight, 0 to 100 (FormationMorale, Decision 82); -1 until first read.
 var morale := -1
+## Routing (FormationRout): each fleeing unit's place, and ticks with no enemy near.
+var fleeing := {}
+var rally_ticks := 0
 var wait_ticks: int = 0
 ## Re-forming after a reinforcement, and the swaps under way (Decision 46, FormationShuffle):
 ## [[mover, passed units, ticks left, ticks in all], ...].

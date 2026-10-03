@@ -25,6 +25,7 @@ static func can_engage(candidate: SkirmishSquad) -> bool:
 	return (
 		candidate.state != SkirmishSquad.State.DESTROYED
 		and candidate.state != SkirmishSquad.State.ARRIVED
+		and candidate.state != SkirmishSquad.State.ROUTING
 		and candidate.order != SkirmishUnit.Order.RETREAT
 		and candidate.wait_ticks == 0
 	)

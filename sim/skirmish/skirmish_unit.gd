@@ -24,6 +24,9 @@ var detection := 40.0
 ## Formation sim: its courage and leadership (Decisions 81 and 82).
 var courage := 60
 var leadership := 0
+## Formation sim: the definition it was made from (a router fleeing home rejoins the
+## reserve as one of these).
+var definition: Resource = null
 ## Where this unit started: the end it retreats to.
 var home_distance: float = 0.0
 ## +1 advances toward the kingdom's end, -1 toward the player's.
