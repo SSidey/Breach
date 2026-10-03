@@ -168,3 +168,18 @@ func test_crossing_squads_no_longer_pass_through_each_other() -> void:
 
 	assert_int(_of(log, "flanked").size()).is_greater_equal(1)
 	assert_int(_of(log, "arrived").size()).is_equal(0)
+
+
+func test_only_units_in_contact_with_the_face_strike() -> void:
+	var sim := FormationSimulation.new(2.0, TICK)
+	_line(sim)  # one rank deep: its north face is one cell, x 40 to 41
+	var route := _route([Vector2(41, 0), Vector2(41, 64)])
+	var raider := sim.spawn_squad(6, _block(_def(100, 3), 1, 6), "player", true, 0, route)
+
+	var log := _run(sim, 120)
+
+	var strikers := {}
+	for hit in _of(log, "hit").filter(func(h): return h["faction"] == "player"):
+		strikers[hit["unit"]] = true
+	assert_int(raider.living().size()).is_equal(6)
+	assert_int(strikers.size()).is_equal(3)  # the one facing the face and the two at its corners
