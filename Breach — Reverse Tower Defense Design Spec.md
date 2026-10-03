@@ -4141,3 +4141,53 @@ breaker 1 with slashing?"); and unwieldy as slower or less sure blows, not weake
   integrity per eighth.
 - `WeaponDef.damage_type` is checked against the list; items gain breaker and unwieldy.
 - Damage to a face or cell removes eighths, and the load paths settle (Decision 57).
+
+### Decision 80 — Digging squads shore before they pass a material's span, carry their supplies, light their way, and a lone sneaking unit is run by its AI
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-03
+
+**Rationale:** Questions the user raised during spec 27 about mines and a lone assassin;
+the user agreed the recommendations ("All sound good").
+- **Shoring before the span runs out.** A dug cell holds up within its material's span
+  (Decision 57). The dig AI never advances the face past the span from the last support:
+  the ranks behind place shoring as the face moves (Decision 54). The creak and fall of
+  Decision 57 is for damage, burnt props and countermines, not ordinary digging.
+- **Supplies are carried.** A wave can carry supplies (timber for shoring, lamps) from
+  the domain's stockpile; each unit carries a few load units, and the wave painter shows
+  the load. A dig that runs out stops at the span limit and raises an alert (Decision
+  69). Later waves on the lane bring more down the dug tunnel.
+- **Light underground.** Underground darkness is high; units need darksight at least
+  that high, or light (Decision 64):
+  - **torches:** items that glow, carried by some of the wave
+  - **lamps:** placed in the tunnel, lighting it for the waves that follow
+  - Light makes a tunnel easier to detect, and a flame near timber shoring is a fire
+    risk (Decision 66).
+- **Merging per template.** A lane's Auto merge (Decision 51, off by default) can be
+  overridden on a wave template: "never merge" keeps a lone unit from being absorbed by
+  an army it passes.
+- **A lone sneaking unit is run by its AI.** The player gives it:
+  - a squad of one stand, with its own route and waypoints (Decision 75)
+  - a **sneak** order: it moves slowly, keeps out of lit cells and known detection
+    ranges, and doesn't engage unless the order allows, making for a target (a subnode,
+    a person, a gate)
+  - **stealth N against perception N**, a new trait pair (Decision 64)
+  - On being spotted it raises an alert; the player can pause, redraw or recall it.
+  There is no hand control of single units. Infiltrators (deferred in Decision 7) get
+  their own design round.
+- **Pillar check (Decision 58):** no hand control keeps the player planning, not
+  micro-managing; tunnelling stays a key with costs (supplies, light, detection). Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Dig first, shore when it creaks | Turns every dig into a race against collapse for no gain. |
+| Shoring materials from nowhere | Removes the logistics the user wants. |
+| Hand control of a single unit | The step Decision 58 warns makes Breach an RTS. |
+
+**Consequences:**
+- Units gain a carry capacity; waves can be loaded with supplies.
+- Items that glow (torches) and placeable lamps join the item and placement libraries.
+- Wave templates gain a merge override.
+- A sneak order, and the stealth/perception pair, come with the infiltrator round.

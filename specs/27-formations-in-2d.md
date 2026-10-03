@@ -57,6 +57,8 @@ not decided.
      from both edges and strike back at one.
    - A unit in melee uses only melee weapons unless a trait allows otherwise.
    - Two or more fronts strain discipline.
+   - Digging logistics, light and a lone sneaking unit: Decision 80. Workers and
+     logistics have their own agenda in spec 29.
 
 ## Agenda for the design conversation
 
