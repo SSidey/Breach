@@ -3626,6 +3626,7 @@
       (d.hidden_from || []).forEach(function (fid) {
         if (!roster.some(function (f) { return f.id === fid; })) warnings.push("node '" + d.id + "': hidden_from_faction_ids '" + fid + "' is not in this map's factions roster");
       });
+      if (window.BreachPlannerSubnodes) BreachPlannerSubnodes.problems(d.subnodes || []).forEach(function (m) { warnings.push("node '" + d.id + "': " + m); });
       d.garrison_units.forEach(function (u) {
         if (u.faction_id && !roster.some(function (f) { return f.id === u.faction_id; })) {
           warnings.push("node '" + d.id + "': garrison unit faction_id '" + u.faction_id + "' is not in this map's factions roster");
@@ -3639,6 +3640,7 @@
         footprint: footprintOf(k).map(pos),
         structure: structureExport(k, d),
         plan: d.plan || null,
+        subnodes: d.subnodes || [],
         fields: d.fields || {},
         garrison_count: garrisonCount(d),
         garrison_units: d.garrison_units
@@ -3756,6 +3758,7 @@
       structure: structureFromExport(x.structure)
     };
     if (x.plan) d.plan = clone(x.plan);
+    if ((x.subnodes || []).length) d.subnodes = clone(x.subnodes);
     if ((x.footprint || []).length > 1) d.footprint = x.footprint.map(gridKey);
     migrateNode(d);
     return d;

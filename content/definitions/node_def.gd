@@ -17,6 +17,7 @@ enum NodeType { ORIGIN, RESOURCE, FORT, NEUTRAL, WAYPOINT }
 enum ResourceType { FOOD, WOOD, STONE, METAL, CRYSTAL }
 
 const StructurePlanDef = preload("res://content/definitions/structure_plan_def.gd")
+const SubnodeDef = preload("res://content/definitions/subnode_def.gd")
 
 ## Tile value meaning "not placed on a tile" (maps built by hand or imported before
 ## Decision 68): such a node covers no tiles.
@@ -113,6 +114,9 @@ const NO_TILE := Vector2i(-1, -1)
 ## The tiles the node covers, any connected shape including its own tile (Decision 68);
 ## empty means just its own tile.
 @export var footprint: Array[Vector2i] = []
+## The node's objectives (Decision 72, specs/26-subnodes.md), in its local cells. One side
+## holding all of them controls the node; otherwise it is contested.
+@export var subnodes: Array[SubnodeDef] = []
 
 
 ## Every tile the node covers.
@@ -161,6 +165,17 @@ func validate() -> PackedStringArray:
 		errors.append("garrison_units requires garrison > 0, got %d" % garrison)
 	errors.append_array(_validate_garrison_units_and_hidden_from())
 	errors.append_array(_validate_footprint())
+	errors.append_array(_validate_subnodes())
+	return errors
+
+
+## Each subnode on its own, then together on the node's tiles (when it has a tile).
+func _validate_subnodes() -> PackedStringArray:
+	var errors := PackedStringArray()
+	for subnode in subnodes:
+		errors.append_array(subnode.validate())
+	if tile != NO_TILE:
+		errors.append_array(SubnodeDef.validate_in_node(subnodes, covered_tiles(), tile))
 	return errors
 
 

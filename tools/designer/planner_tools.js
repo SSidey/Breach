@@ -148,20 +148,30 @@
 
   // ---------- undo ----------
   // One snapshot per stroke, room or clear; restore() puts a snapshot back into the plan.
-  function History() { this.undos = []; this.redos = []; }
-  History.prototype.record = function (plan) {
-    this.undos.push(JSON.stringify(plan));
+  // Undo and redo as JSON snapshots. With `keys` (e.g. ['plan', 'subnodes']) it snapshots
+  // and restores just those keys of the target (a node); without, the target is a plan.
+  function History(keys) { this.keys = keys || null; this.undos = []; this.redos = []; }
+  History.prototype.snapshot = function (target) {
+    if (!this.keys) return JSON.stringify(target);
+    var picked = {};
+    this.keys.forEach(function (k) { picked[k] = target[k]; });
+    return JSON.stringify(picked);
+  };
+  // Records a snapshot taken earlier (from snapshot) as the latest undo step.
+  History.prototype.push = function (snapshot) {
+    this.undos.push(snapshot);
     if (this.undos.length > HISTORY) this.undos.shift();
     this.redos = [];
   };
-  History.prototype.undo = function (plan) { return this.step(plan, this.undos, this.redos); };
-  History.prototype.redo = function (plan) { return this.step(plan, this.redos, this.undos); };
-  History.prototype.step = function (plan, from, to) {
+  History.prototype.record = function (target) { this.push(this.snapshot(target)); };
+  History.prototype.undo = function (target) { return this.step(target, this.undos, this.redos); };
+  History.prototype.redo = function (target) { return this.step(target, this.redos, this.undos); };
+  History.prototype.step = function (target, from, to) {
     if (!from.length) return false;
-    to.push(JSON.stringify(plan));
+    to.push(this.snapshot(target));
     var snapshot = JSON.parse(from.pop());
-    Object.keys(snapshot).forEach(function (k) { plan[k] = snapshot[k]; });
-    normalise(plan);
+    Object.keys(snapshot).forEach(function (k) { target[k] = snapshot[k]; });
+    normalise(this.keys ? target.plan : target);
     return true;
   };
 

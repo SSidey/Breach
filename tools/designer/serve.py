@@ -46,6 +46,7 @@ STATIC_FILES = {
     "/planner_tools.js": ("planner_tools.js", "text/javascript; charset=utf-8"),
     "/planner_draw.js": ("planner_draw.js", "text/javascript; charset=utf-8"),
     "/planner_examples.js": ("planner_examples.js", "text/javascript; charset=utf-8"),
+    "/planner_subnodes.js": ("planner_subnodes.js", "text/javascript; charset=utf-8"),
     "/planner.js": ("planner.js", "text/javascript; charset=utf-8"),
 }
 MAX_BODY_BYTES = 16 * 1024 * 1024

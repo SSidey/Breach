@@ -72,4 +72,4 @@ ones cover a painted area of tiles.
 ## Notes / open questions
 
 - How the four-times-longer marches feel in play, to be judged in the feel test.
-- Subnode painting within a node is the round after.
+- Subnodes within a node: specs/26-subnodes.md (Decision 72).
