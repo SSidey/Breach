@@ -22,6 +22,8 @@ const StratumDef = preload("res://content/definitions/stratum_def.gd")
 ## The ground (Decisions 53, 54): the load a cell column bears, the most foundations can
 ## raise it to, and how deep the strata go, in cells.
 @export var bearing: int = 0
+## Ground height in cells for a tile of this terrain that sets none (Decision 56).
+@export var default_elevation: int = 0
 @export var foundation_max: int = 0
 @export var dig_depth: int = 0
 ## Cells below the surface where water starts, as a range strata generation picks from;

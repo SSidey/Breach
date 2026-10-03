@@ -72,21 +72,81 @@ Scenario: The viewer shows a tile's ground
 
 ## Round 2: elevation and the surface (Decision 56)
 
-Next, on its own stacked branch:
-- `TileDef.elevation` (cells; -1 = the terrain's default), `TerrainDef.default_elevation`
-  and the map's `ceiling` (default 64).
-- A sim-side ground surface: each cell column's surface height interpolated from tile
-  elevations, the surface cell's corner heights in quarters, the fraction left to dig, and
-  cliffs (a step over one cell).
-- The designer paints elevation; the viewer shades it.
+- **Data:**
+  - `TileDef.elevation` (cells; -1 = the terrain's default), `TerrainDef.default_elevation`
+    and `MapLayoutDef.ceiling` (default 64), with `MapLayoutDef.elevation_at(cell)`.
+  - Seeded heights, stylised and placeholder: swamp, water and ravine 0, fields and desert
+    2, forest 3, Hilly 4, rocky 6, snow 8. A mountain is 64, the default ceiling, so it
+    is capped and blocks flight (Decision 60).
+  - The import reads `elevation_override` per tile, `ceiling` per map and
+    `default_elevation` per terrain.
+- **`GroundSurface`** (`sim/ground/ground_surface.gd`, pure):
+  - It interpolates each cell column's surface between tile centres, staying level
+    beyond the outermost ones.
+  - The surface cell is the highest cell holding any ground. Its shape is the four corner
+    heights in quarters (NW, NE, SE, SW).
+  - `dig_fraction` is the part of that cell left to dig.
+  - `is_cliff` is a step of more than one cell between neighbouring columns.
+  - `is_capped` is ground at or above the ceiling.
+- **Designer:**
+  - Each terrain has a default elevation (in the Ground section).
+  - Each tile has an elevation override, with a warning at or above the ceiling.
+  - The map has a Ceiling field in the toolbar.
+  - A ▲ badge shows on tiles whose height differs from the base terrain's, and is
+    filled when the tile is capped.
+- **Viewer:** the tile details show the elevation and flag it at the ceiling. Shading the
+  board waits for the 3D ground.
+
+```
+Scenario: A slope runs through partial cells
+  Given two tiles at elevations 0 and 4 (a quarter of a cell per cell)
+  Then the column 8 cells in has its surface cell at level 0, shaped [0, 1, 1, 0]
+  And digging it removes an eighth of a cell
+
+Scenario: Flat ground has full surface cells just below its height
+  Given tiles at elevation 4
+  Then each column's surface cell is level 3, full
+
+Scenario: Cliffs and the ceiling
+  Given tiles at 0 and 48
+  Then neighbouring columns between them are cliffs; at 0 and 16 they are not
+  And a tile at 80 under a ceiling of 64 is capped
+
+Scenario: A tile's elevation overrides its terrain's
+  Given Hilly at default elevation 8 and one tile set to 20
+  Then elevation_at gives 8 and 20
+```
+
+A scripted browser run set a tile on the demo map to 70. It showed the ceiling warning,
+a filled ▲70 badge, and `elevation: 70` in the saved draft. Badges appear only on the
+six tiles whose height differs from the base terrain's (water 0, forest 3, mountain 48 at the time; 64 since Decision 60).
+
+## Round 3 (next): relief and carved channels (Decision 59)
+
+- `TerrainDef` gains relief amplitude and scale; maps gain a seed and carved features
+  (a path, width, depth and water level).
+- `GroundSurface` adds seeded relief and carving to the tile height.
+- The designer gains relief per terrain, the seed (lock and re-roll), and a channel tool
+  for rivers, ditches and moats.
+
+## Round 4 (planned): liquid bodies (Decision 62)
+
+- A liquid library (water, lava) beside materials.
+- `TerrainDef.water_table` becomes `liquids`: `[{liquid, min, max, chance,
+  surface_chance}]`. Existing water tables migrate as water at chance 1.
+- The designer edits liquid bodies per terrain like strata, and a lava vent feature
+  joins the natural features.
 
 ## Test-first order
 
 1. `tests/content/definitions/test_terrain_ground.gd`
 2. `tests/content/import/test_designer_ground_import.gd`
-3. `tests/presentation/test_map_details.gd` (the ground lines)
-4. Designer: a scripted browser run of the Terrain view (materials, ground, strata).
-5. Manual: the user tunes the placeholder values in the designer.
+3. `tests/presentation/test_map_details.gd` (the ground lines, and elevation)
+4. `tests/content/definitions/test_map_elevation.gd`, `tests/sim/ground/test_ground_surface.gd`,
+   `tests/content/import/test_designer_elevation_import.gd` (round 2)
+5. Designer: scripted browser runs of the Terrain view (materials, ground, strata) and
+   the Lanes view (elevation, ceiling).
+6. Manual: the user tunes the placeholder values in the designer.
 
 ## Notes / open questions
 
@@ -98,16 +158,16 @@ Next, on its own stacked branch:
 ## Rubric answers (qualitative, spec-baseline)
 
 - `single-noun-phrase`: `material_def.gd` (a material), `stratum_def.gd` (a band of
-  strata).
+  strata), `ground_surface.gd` (the ground's surface).
 - `ocp-extension-point`: a new material or terrain is data in `terrain.json`.
 - `lsp-contract-scope`: not applicable.
 - `isp-fit`: `TerrainLibraryDef` adds one lookup, `material(id)`.
-- `dip-direction`: `content/` definitions only; `presentation/` reads them.
+- `dip-direction`: `content/` definitions; `sim/ground/` and `presentation/` read them.
 
 ## Structured rubric notes
 
 - `spec-type-declared`: `hybrid` (schema and tooling).
 - `tdd-plan-present`: see Scenarios and Test-first order.
-- `no-drift`: implements Decisions 53, 54 and 57's data; Decision 56 in round 2.
+- `no-drift`: implements Decisions 53, 54 and 57's data, and Decision 56 in round 2.
 - `commit-classification-plan`: `docs:` this spec; `feat:` the schema, import, viewer
   and designer; `chore:` the Gate 1 row.

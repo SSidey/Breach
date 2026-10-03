@@ -98,6 +98,16 @@ static func tile_details(map_def: MapDef, cell: Vector2i) -> String:
 	if tile.feature_id:
 		var feature = library.feature(tile.feature_id)
 		lines.append("feature: %s" % (feature.display_name if feature else tile.feature_id))
+	var elevation: int = layout.elevation_at(cell)
+	lines.append(
+		(
+			"elevation %d%s"
+			% [
+				elevation,
+				" (at the ceiling, %d)" % layout.ceiling if elevation >= layout.ceiling else ""
+			]
+		)
+	)
 	if terrain and not terrain.strata.is_empty():
 		lines.append_array(_ground_lines(terrain, library))
 	var capacity: Dictionary = tile.effective_capacity(library, layout.default_terrain_id)

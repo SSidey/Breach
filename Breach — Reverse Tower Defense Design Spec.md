@@ -2916,6 +2916,10 @@ stair inside a wall with no full room, and positioning upgrade elements rather t
 
 ### Decision 56 — The ground has height: tiles carry an elevation in cells, the surface runs through partial cells, and mountains are compressed and capped
 
+> Superseded in part by Decisions 59 and 60 on 2026-10-02: tile elevation is the coarse
+> layer, with per-cell relief and carved channels on top (59); the ceiling is the top of
+> the air as well as the ground, and mountains reach it by default (60).
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-02
 
@@ -2975,6 +2979,10 @@ path along it, and when it is dug we only remove the rest of the surface-level c
 - Strata generation (Decision 54) counts down from the surface.
 
 ### Decision 57 — Walls are solid cells; everything stands on a support check, so digging, damage and burnt shoring can bring ground and structures down
+
+> Superseded in part by Decision 61 on 2026-10-02: walls thinner than a cell stand on
+> faces with a thickness, and support is a load path through every material, not only
+> the ground's bearing.
 
 **Supersedes:** Decision 52, in part (walls as faces)
 **Authorised by:** Simeon Sidey
@@ -3103,4 +3111,186 @@ check** line: "holds", or which pillar it bends and why.
 - Every Decision from 56 on carries a Pillar check line. The run-phase procedure checks
   new Decisions against the pillars.
 - Decisions 56 and 57 are checked above; both hold.
+
+### Decision 59 — Surface height is layered: tile elevation, then seeded relief per cell, then carved features such as river channels
+
+**Supersedes:** Decision 56, in part (elevation per tile only)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user asked whether Decision 56 starts simple before per-cell height:
+"this is what I expected, e.g. hilly tiles actually having hilly terrain, rivers within
+a tile having depth". It does. Tile elevation is the coarse layer, and per-cell height
+builds on it in three layers, each adding to the one below.
+1. **Tile elevation** (Decision 56): the broad shape, interpolated between tile centres.
+2. **Relief:** each terrain has a **relief** amplitude and scale (placeholders: fields
+   ±1 cell, Hilly ±4 over about 6 cells, rocky ±2 and rougher, mountain ±8). Each
+   column's surface gets seeded noise of that size on top of the tile shape, so hills
+   are hilly inside a tile. It is reproducible from the map's seed, and lockable and
+   re-rollable in the designer like strata (Decision 54).
+3. **Carved features:** authored shapes that cut or raise cells below or above the
+   result:
+   - a **river or stream** is a channel with a width and depth in cells along a drawn
+     path, filled with water to a level
+   - a **ditch or moat** is the same, around a structure
+   - a **mound or bank** is the reverse
+   Water in a channel is static (Decision 54): it has a depth, slows or blocks units by
+   their traits, and needs a bridge or ford to cross.
+- The surface cell rules (partial cells in quarters, cliffs, digging what is left) apply
+  to the final height, whatever made it.
+- **Pillar check (Decision 58):** relief and rivers shape the lock (fords, banks,
+  ditches). Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Tile elevation only (Decision 56 as written) | Hills would be smooth ramps, and a river couldn't have depth within a tile. |
+| Authoring every cell's height | Sixteen squared cells per tile; seeded relief gives the texture, and carving covers what must be exact. |
+
+**Consequences:**
+- `TerrainDef` gains relief amplitude and scale. Maps gain a **seed**, and carved
+  features (path, width, depth, water level).
+- `GroundSurface` adds relief and carving to the interpolated tile height, deterministic
+  from the seed.
+- The designer gains relief per terrain, a seed with lock and re-roll, and a channel tool.
+  Rivers become features drawn across tiles.
+
+### Decision 60 — The ceiling is the top of the air as well as the ground; mountains reach it by default and block flight
+
+**Supersedes:** Decision 56, in part (the mountain default and the meaning of the ceiling)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user plans flying units: "I would expect a mountain that reaches our
+map height limit to block flying even, as such cutting early at 48 cells feels
+incorrect". Decision 56 set the mountain default to 48 under a ceiling of 64, which
+would let flyers pass over every mountain.
+- **The ceiling bounds the whole playable volume:** ground, structures and air. Nothing
+  flies above it.
+- **Mountains reach the ceiling by default.** A mountain tile's default elevation is the
+  ceiling, so it is capped and blocks movement, flight and sight. Lower mountains,
+  passes and foothills are authored lower.
+- **Air needs headroom.** Flyers move in the band between the ground (and structures)
+  and the ceiling. A map that wants flight over hills sets its ceiling high enough to
+  leave room; the default stays 64.
+- **Pillar check (Decision 58):** flight itself is not designed here. Flyers that leave
+  routes would bend pillar 5 ("space is routes and faces"), so designing flight is a
+  pivot to authorise then, with its counters (anti-air, roofs, weather) and whether flyers
+  keep to air routes. This Decision only fixes the ceiling. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Mountains below the ceiling (Decision 56) | Flyers would pass over every mountain; the user wants peaks to block flight. |
+| A separate air ceiling above the ground cap | Two limits for one idea; a mountain reaching the top of the world should block everything. |
+
+**Consequences:**
+- The Mountain terrain's default elevation becomes 64, the default ceiling. A mountain
+  default can't follow a map's own ceiling yet: a map with a higher ceiling raises its
+  mountain tiles by hand, until terrain defaults can name "the ceiling".
+- The "vertical planes" direction gains a fixed top: air is a band, not unbounded.
+
+### Decision 61 — Walls can be thinner than a cell; support is a load path through every material, not only the ground
+
+**Supersedes:** Decision 57, in part (walls only as solid cells; support as span and bearing alone)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user: a farmer's house wouldn't have walls a whole cell thick ("a cell
+is effectively an approximation of ~5-6 ft"). Also: "there should be some structural
+load element of neighbouring cells. A wooden wall with no floor doesn't immediately
+collapse… removing a cell under a wall could be fine, but if the wall supported a roof
+with e.g. a ballista on it then that might exceed bearing."
+- **Two kinds of wall.**
+  - **Face walls** stand on the face between cells, with a material and a
+    **thickness** in fractions of a cell (placeholders: wattle or plank 1/8, timber frame
+    1/6, a rubble wall 1/3). They carry weight, HP and load like any element. This is
+    a farmhouse, a partition, a palisade of stakes.
+  - **Cell walls** are solid cells, one or more thick: curtain walls, keeps (Decision
+    57).
+  - Openings (doors, slits) sit in either kind.
+- **Support is a load path.**
+  - Every element (ground cell, cell wall, face wall, floor, roof, emplacement,
+    furnishing) has a **weight** and a **capacity**: the load it can carry, from its
+    material's strength and its thickness.
+  - Load flows down. Each element passes its own weight plus what rests on it to what
+    holds it up: the element beneath, or neighbours within its span (a beam, a lintel, an
+    arch). The ground's bearing (Decision 53) is just the bottom of the path.
+  - An element **fails** when its load exceeds its capacity, or when nothing holds it
+    within its span. Failure then creaks and falls, as in Decision 57.
+  - So a timber wall stands without a floor: it carries only its own weight to its
+    footing. Removing the cell under it can be fine if its span bridges the gap. But a
+    roof with a ballista on it adds load that can then exceed what the remaining path
+    carries, and that wall comes down.
+- **Pillar check (Decision 58):** the load overlay (Decision 57) shows each element's
+  load against its capacity, so a collapse is readable before it happens. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Walls only as whole cells (Decision 57) | A house would have walls 5-6 ft thick. |
+| A support check by span alone | Ignores what a wall carries; a loaded roof should matter. |
+| Full structural physics | Unreadable and hard to keep deterministic; a load path gives the same decisions. |
+
+**Consequences:**
+- Faces gain an optional wall: material, thickness, HP. Materials gain a strength. Every
+  element gains a capacity.
+- The support check (Decision 57) becomes a load computation over the elements a change
+  touches, top-down, still event-driven and local.
+- The parts library gains thin-wall parts sized by thickness.
+
+### Decision 62 — Lava is a seeded liquid like water, commonest under mountains and rocky ground, sometimes reaching the surface
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-02
+
+**Rationale:** The user: lava "would not be exclusive to alternate planes but could have
+a similar seeding to the water", "more prevalent under certain terrain types, e.g.
+mountains/rocky", "with some even reaching the surface".
+- **Liquids are a library,** like materials. Water and lava are the first two. Each liquid
+  has properties (placeholders):
+  - **water:** floods dug cells (Decision 57) and slows or blocks units by their traits
+  - **lava:** harms any unit in or beside it, ignites flammable materials (timber,
+    shoring, peat), and lights its surroundings. It turns to rock where it meets water.
+    It moves slowly when it moves at all.
+  - Both are **static for now**, filling cells to a level. A breach into a body of either
+    floods the connected dug cells below that level over a few ticks (Decisions 54, 57).
+    Lava floods more slowly.
+- **Seeding generalises the water table.** A terrain lists its liquid bodies. Each one is
+  a liquid, a depth range below the surface, and a **chance** that a tile of that
+  terrain has one. Generation picks them from the map's seed, like strata. Placeholders:
+  - fields: water at 12–24, always
+  - rocky: water at 16–32; lava at 32–48, chance 0.2
+  - mountain: lava at 24–48, chance 0.35
+  - desert: water at 20–32, rare
+- **Some reach the surface.** A liquid body can rise in a **vent** to the surface: a lava
+  vent or pool, as a spring is for water. Each liquid entry has a **surface chance**;
+  lava under a mountain reaches the surface rarely (placeholder 0.05). A placed feature
+  (a lava vent, a spring) guarantees one, as a well guarantees water (Decision 54).
+- **Not only other planes.** A plane (such as Hell) differs by having more and shallower
+  lava, which is just different seeding data.
+- **Pillar check (Decision 58):** lava is both lock and key. It can guard a fort's flank,
+  and a tunnel breached into it can flood a basement, or burn the props of the
+  defender's own mine. It is readable on the strata cutaway, and the overlay marks
+  where it will flood. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Lava only on other planes | The user wants volcanic ground on the physical plane too. |
+| A separate lava table beside the water table | Two copies of one rule; a liquid library generalises it. |
+| Flowing lava simulation | Out of scale; static bodies and flood fills give the same decisions (Decision 57). |
+
+**Consequences:**
+- A liquid library (water, lava) joins materials in the terrain library.
+- `TerrainDef`'s water table (spec 23, round 1) becomes a list of liquid bodies, each
+  with a liquid, a depth range, a chance and a surface chance. The existing water tables
+  migrate as water, chance 1, surface chance 0.
+- Lava vent joins the natural features. Lava-related features and planes reuse this
+  seeding.
+- Ignition needs a flammable flag on materials (timber, peat): to add with fire.
 

@@ -122,6 +122,11 @@
   };
   // A terrain with no seeded ground (a custom one) starts from this.
   var GENERIC_GROUND = ground(4, 8, 32, { min: 12, max: 24 }, [['SOIL', 1, 3], ['ROCK', 8, 16]]);
+  // Ground height in cells for a tile that sets none (Decision 56): stylised, not 1:1;
+  // a mountain reaches the default ceiling and blocks flight (Decision 60).
+  var DEFAULT_ELEVATION = { FIELDS: 2, ROCKY: 6, SNOW: 8, DESERT: 2, SWAMP: 0, WATER: 0, FOREST: 3, MOUNTAIN: 64, RAVINE: 0 };
+  GENERIC_GROUND.default_elevation = 4;
+  Object.keys(DEFAULT_GROUND).forEach(function (id) { DEFAULT_GROUND[id].default_elevation = DEFAULT_ELEVATION[id]; });
   DEFAULT_TERRAIN_LIBRARY.materials = DEFAULT_MATERIALS;
   DEFAULT_TERRAIN_LIBRARY.terrains.forEach(function (t) { Object.assign(t, clone(DEFAULT_GROUND[t.id])); });
 
@@ -219,6 +224,8 @@
     if (!terrainLib.materials) terrainLib.materials = clone(DEFAULT_MATERIALS);
     terrainLib.terrains.forEach(function (t) {
       if (t.bearing === undefined) Object.assign(t, clone(DEFAULT_GROUND[t.id] || GENERIC_GROUND));
+      // v15: elevation (Decision 56).
+      if (t.default_elevation === undefined) t.default_elevation = (DEFAULT_GROUND[t.id] || GENERIC_GROUND).default_elevation;
     });
     terrainLib.terrains.forEach(function (t) {
       // v11: basements. Seeded terrains get their default depth; custom ones (e.g. Hilly) get 1.
@@ -305,6 +312,7 @@
     tiles: {},
     roads: [], // [{a:'r,c', b:'r,c'}] - explicit connections between 8-neighbour cells
     defaultTerrain: 'FIELDS',
+    ceiling: 64, // cells; ground above it is taken to continue (Decision 56)
     links: [], // [{a: nodeId, b: nodeId}]
     mapFactionIds: ['player'],
     faction_relations: [], // [{a, b, stance}]
@@ -332,11 +340,16 @@
   function pruneTile(k) {
     var t = state.tiles[k];
     if (!t) return;
-    var empty = !t.terrain && !t.feature && !t.bridge && t.stability == null && t.max_height == null && t.max_width == null && t.max_length == null && t.max_depth == null &&
+    var empty = !t.terrain && !t.feature && !t.bridge && t.elevation == null && t.stability == null && t.max_height == null && t.max_width == null && t.max_length == null && t.max_depth == null &&
       !t.upgrade_slots && !(t.upgrades && t.upgrades.length);
     if (empty) delete state.tiles[k];
   }
   function tileTerrainId(k) { return tileAt(k).terrain || state.defaultTerrain; }
+  // A tile's ground height in cells: its own elevation, else its terrain's (Decision 56).
+  function elevationAt(k) {
+    var t = tileAt(k), d = terrainDef(tileTerrainId(k)) || {};
+    return t.elevation != null ? t.elevation : Number(d.default_elevation) || 0;
+  }
   function capacity(k) {
     var t = tileAt(k), d = terrainDef(tileTerrainId(k)) || {};
     return {
@@ -507,6 +520,7 @@
         Object.keys(state.tiles).forEach(function (k) { delete state.tiles[k].road; pruneTile(k); });
       }
       state.defaultTerrain = parsed.defaultTerrain || 'FIELDS';
+      state.ceiling = parsed.ceiling || 64;
       state.links = parsed.links || [];
       state.mapFactionIds = parsed.mapFactionIds || ['player'];
       state.faction_relations = parsed.faction_relations || [];
@@ -520,7 +534,7 @@
   function safeSave() {
     storeSet(STORE_KEY, JSON.stringify({
       mapName: state.mapName, cols: state.cols, rows: state.rows, cells: state.cells,
-      tiles: state.tiles, roads: state.roads, defaultTerrain: state.defaultTerrain,
+      tiles: state.tiles, roads: state.roads, defaultTerrain: state.defaultTerrain, ceiling: state.ceiling,
       links: state.links, mapFactionIds: state.mapFactionIds, faction_relations: state.faction_relations,
       lossCriteria: state.lossCriteria, nextId: state.nextId
     }));
@@ -537,7 +551,7 @@
     state.cols = 12; state.rows = 5;
     state.mapFactionIds = ['player'];
     state.faction_relations = [];
-    state.defaultTerrain = 'FIELDS';
+    state.defaultTerrain = 'FIELDS'; state.ceiling = 64;
     state.cells = {}; state.tiles = {}; state.roads = [];
 
     function node(id, type, preset, extra) {
@@ -2238,6 +2252,14 @@
           fb.title = fDef ? fDef.label : t.feature;
           cellEl.appendChild(fb);
         }
+        var elev = elevationAt(k);
+        if (elev !== Number((base || {}).default_elevation || 0)) { // only where the ground differs from the base terrain's
+          var eb = document.createElement('div');
+          eb.className = 'elev-badge' + (elev >= state.ceiling ? ' capped' : '');
+          eb.textContent = '▲' + elev;
+          eb.title = 'Elevation ' + elev + ' cells' + (t && t.elevation != null ? '' : ' (terrain default)') + (elev >= state.ceiling ? ' - at the ceiling' : '');
+          cellEl.appendChild(eb);
+        }
         if (t && t.upgrades && t.upgrades.length) {
           var ub = document.createElement('div');
           ub.className = 'upg-badge'; ub.textContent = '+' + t.upgrades.length;
@@ -2495,6 +2517,8 @@
     var html = '<div class="insp-section-label" style="margin-top:0;border-top:none;padding-top:0;">Ground layers</div>';
     html += fieldRow('Terrain', selectInput('t_terrain', terrainLib.terrains.map(function (x) { return x.id; }), t.terrain || '', true,
       function (id) { var d = terrainDef(id); return d ? d.glyph + ' ' + d.label : id; }, 'Map base (' + (base ? base.label : state.defaultTerrain) + ')'));
+    html += fieldRow('Elevation (cells)', numInput('t_elev', t.elevation, 'def ' + (terr.default_elevation || 0))) +
+      (elevationAt(k) >= state.ceiling ? warn('At or above the map ceiling (' + state.ceiling + '): impassable, drawn capped.') : '');
     html += fieldRow('Natural feature', selectInput('t_feature', terrainLib.features.map(function (x) { return x.id; }), t.feature || '', true,
       function (id) { var d = featureDef(id); return d ? d.glyph + ' ' + d.label : id; }));
 
@@ -2568,7 +2592,7 @@
     if (bDemo) bDemo.addEventListener('change', function () { tileAt(k).bridge.demolishable_by_owner = this.checked; safeSave(); });
     var clr = document.getElementById('t_clearRoads');
     if (clr) clr.addEventListener('click', function () { removeRoadsAt(k); refresh(); });
-    [['t_stab', 'stability'], ['t_mh', 'max_height'], ['t_mw', 'max_width'], ['t_md', 'max_depth']].forEach(function (pair) {
+    [['t_elev', 'elevation'], ['t_stab', 'stability'], ['t_mh', 'max_height'], ['t_mw', 'max_width'], ['t_md', 'max_depth']].forEach(function (pair) {
       document.getElementById(pair[0]).addEventListener('change', function () {
         var t = ensureTile(k);
         if (this.value === '') delete t[pair[1]]; else t[pair[1]] = Math.max(0, Number(this.value) || 0);
@@ -3171,6 +3195,7 @@
         '<span>cells</span><button type="button" class="btn small" data-band-remove="' + i + '" aria-label="Remove band ' + (i + 1) + '">×</button></div>';
     }).join('');
     return '<div class="panel-sub">Ground</div><div class="form-grid">' +
+      '<div class="insp-row"><label for="gd_elev">Default elevation (cells)</label><input type="number" min="0" id="gd_elev" value="' + esc(t.default_elevation || 0) + '" /></div>' +
       '<div class="insp-row"><label for="gd_bearing">Bearing (load a column carries)</label><input type="number" min="0" id="gd_bearing" value="' + esc(t.bearing) + '" /></div>' +
       '<div class="insp-row"><label for="gd_found">Foundations raise it to</label><input type="number" min="0" id="gd_found" value="' + esc(t.foundation_max) + '" /></div>' +
       '<div class="insp-row"><label for="gd_dig">Dig depth (cells)</label><input type="number" min="0" id="gd_dig" value="' + esc(t.dig_depth) + '" /></div>' +
@@ -3184,7 +3209,7 @@
   function bindGround(t) {
     var save = function () { saveTerrainLib(); renderTerrainView(); };
     var num = function (el) { return Math.max(0, Number(el.value) || 0); };
-    [['gd_bearing', 'bearing'], ['gd_found', 'foundation_max'], ['gd_dig', 'dig_depth']].forEach(function (pair) {
+    [['gd_elev', 'default_elevation'], ['gd_bearing', 'bearing'], ['gd_found', 'foundation_max'], ['gd_dig', 'dig_depth']].forEach(function (pair) {
       document.getElementById(pair[0]).addEventListener('change', function () { t[pair[1]] = num(this); save(); });
     });
     document.getElementById('gd_water').addEventListener('change', function () {
@@ -3231,6 +3256,8 @@
       max_height_override: t.max_height == null ? null : t.max_height,
       max_width_override: t.max_width == null ? null : t.max_width,
       dig_depth_override: t.max_depth == null ? null : t.max_depth,
+      elevation_override: t.elevation == null ? null : t.elevation,
+      elevation: elevationAt(k),
       effective_capacity: cap,
       upgrade_slots: t.upgrade_slots || 0, upgrades: t.upgrades || []
     };
@@ -3284,6 +3311,7 @@
       map_name: state.mapName,
       grid: { cols: state.cols, rows: state.rows },
       default_terrain: state.defaultTerrain,
+      ceiling: state.ceiling,
       factions: roster,
       faction_relations: state.faction_relations,
       loss_criteria: state.lossCriteria.filter(function (g) { return state.mapFactionIds.indexOf(g.faction_id) !== -1; }),
@@ -3379,7 +3407,7 @@
     if (t.terrain && !t.terrain_is_base) tile.terrain = t.terrain;
     if (t.feature) tile.feature = t.feature;
     if (t.bridge) tile.bridge = clone(t.bridge);
-    [['stability_override', 'stability'], ['max_height_override', 'max_height'], ['max_width_override', 'max_width'], ['dig_depth_override', 'max_depth']].forEach(function (pair) {
+    [['stability_override', 'stability'], ['max_height_override', 'max_height'], ['max_width_override', 'max_width'], ['dig_depth_override', 'max_depth'], ['elevation_override', 'elevation']].forEach(function (pair) {
       if (t[pair[0]] != null) tile[pair[1]] = t[pair[0]];
     });
     if (t.upgrade_slots) tile.upgrade_slots = t.upgrade_slots;
@@ -3413,6 +3441,7 @@
     state.cols = (data.grid && data.grid.cols) || state.cols;
     state.rows = (data.grid && data.grid.rows) || state.rows;
     state.defaultTerrain = data.default_terrain || 'FIELDS';
+    state.ceiling = data.ceiling || 64;
     state.mapFactionIds = (data.factions || []).map(function (f) { return f.id; });
     if (state.mapFactionIds.indexOf('player') === -1) state.mapFactionIds.unshift('player');
     state.faction_relations = clone(data.faction_relations || []);
@@ -3482,6 +3511,9 @@
     state.selectedCell = null;
     safeSave(); renderLanesAll();
   });
+  document.getElementById('ceiling').addEventListener('change', function () {
+    state.ceiling = Math.max(1, Number(this.value) || 64); this.value = state.ceiling; safeSave(); renderGrid(); renderInspector();
+  });
   document.getElementById('defaultTerrain').addEventListener('change', function () {
     state.defaultTerrain = this.value; safeSave(); renderGrid(); renderInspector();
     if (state.bottomTab === 'structure') renderStructureEditor();
@@ -3492,7 +3524,7 @@
     state.cells = {}; state.tiles = {}; state.roads = []; state.links = []; state.selectedCell = null; state.nextId = { NODE: 1 };
     state.mapFactionIds = factionIds; state.lossCriteria = [];
     state.faction_relations = relationsFromDefaults();
-    state.defaultTerrain = baseTerrain;
+    state.defaultTerrain = baseTerrain; state.ceiling = 64;
     state.bottomTab = 'paint'; state.structureSel = null;
     safeSave(); renderLanesAll();
   }
@@ -3538,6 +3570,7 @@
     document.getElementById('cols').value = state.cols;
     document.getElementById('rows').value = state.rows;
     populateTerrainSelect(document.getElementById('defaultTerrain'), state.defaultTerrain);
+    document.getElementById('ceiling').value = state.ceiling;
     renderRoster();
     renderRelations();
     renderRelationSelects();
