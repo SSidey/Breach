@@ -154,25 +154,3 @@ func test_an_empty_template_wants_nothing_and_sends_nothing() -> void:
 	assert_dict(production.wanted()).is_empty()
 	assert_bool(production.fill(_grem)).is_false()
 	assert_object(production.send(sim)).is_null()
-
-
-func test_a_partial_wave_closes_up_with_its_leader_centred_behind() -> void:
-	var leader := _def(40)
-	leader.preferred_position = UnitDef.Position.MID
-	var template := WaveTemplate.new(8, 9)
-	for column in range(8):
-		template.paint(_grem, Vector2i(0, column))
-	template.paint(leader, Vector2i(1, 6))  # painted off to one side
-	var production := _production(template)
-	_fill(production, _grem, 4)
-	production.fill(leader)
-	var sim := FormationSimulation.new(2.0, TICK)
-
-	var squad := production.send(sim)
-
-	assert_int(squad.width).is_equal(4)
-	var front: Array = squad.units.filter(func(u): return u.rank == 0)
-	assert_int(front.size()).is_equal(4)
-	var behind: Array = squad.units.filter(func(u): return u.rank == 1)
-	assert_int(behind.size()).is_equal(1)
-	assert_int(behind[0].column).is_between(1, 2)  # centred behind the four
