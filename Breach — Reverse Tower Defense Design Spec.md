@@ -5273,3 +5273,61 @@ spawn point… A was spinning… before the line even got there".
 to go" ends any withdrawal; one fan-out bound for routs and withdrawals.
 **Order:** not affected. Head-on mirror, 300 seeds each way round: 137 / 149 and 145 /
 142.
+
+### Decision 104 — A formation's terminus is a node: home returns its units to the reserve, a held node keeps them as its garrison, and any held node can run lanes out of its egresses
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after spec 27's round 12: "True behaviour on reaching a
+terminus on retreat would depend on where it was to, retreating home should likely
+return the wave to reserve, to a node should garrison them there if told to stop at next
+node or on taking a node, do we extend our lane management to each node? e.g. if a fort
+has two egresses and we garrison some units there, we can paint new waves to continue
+from there?" The proposal that home is just the first node held was agreed. On the
+open points:
+- **Capacity:** "our units need to go somewhere… they are persistent on the map once
+  leaving the player domain so if at a fort they would need somewhere to be in there and
+  staff it… or else they would just stand idle in the tile".
+- **Capture:** "normal capture rules, we should be able to leave some standing
+  garrison".
+- **Moving units between nodes:** "only by marching, they need to actually get there and
+  yes could be intercepted or suffer from hazards along the way".
+- **Timing:** "spec it for later".
+
+Rules:
+- **A formation at the end of its route joins the node it ends at.** At home its units go
+  back to the domain reserve. At a held node they join its garrison: when told to stop at
+  the next node, when they have taken it, or when a retreat falls back to it. A node not
+  held is an objective: taken, it is held and garrisoned.
+- **Units are persistent.** At a node they staff its structures' places, as the kingdom's
+  garrisons do; any beyond stand on its tiles in the open. Capacity is what a node
+  houses, not a cap on who is there.
+- **A garrison defends its node.** The node changes hands only by the normal capture
+  rules, and the player can leave a standing garrison.
+- **Every held node can run lanes out of its egresses.** Their waves fill from its
+  garrison, shared between its lanes by the domain's rule. Only nodes with builders make
+  units.
+- **Units move between nodes only by marching,** and can be intercepted or meet hazards
+  on the way.
+- **Built as spec 31,** later.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Waves only from home | No forward bases; a captured fort is only ever a waypoint. |
+| A flat garrison cap per node | Units are persistent and must be somewhere: staffing places, or the open tile. |
+| Transfers between nodes | Units must actually get there, and can be intercepted. |
+
+**Consequences:**
+- The withdrawal that holds at home (Decision 103) is a placeholder. Under spec 31 it
+  returns its units to the reserve.
+- Decision 95's objectives and fallbacks name nodes, and gain "stop at next node", "take
+  and hold" and "garrison node X".
+- The wave painter and lane management work per held node, egress by egress.
+
+**Rules over cases:** general. Home is a node like any other; one terminus rule; one
+lane rule for every held node.
+**Order:** not affected. A garrison's lanes share by the domain's rule, which has no list
+order (Decision 97).
