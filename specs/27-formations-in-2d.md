@@ -108,6 +108,9 @@ Round 1 is being planned.
      is a re-form (Decision 92).
    - Battles vary by a battle seed (damage rolls ±25% as a placeholder); a Monte Carlo
      runner measures the spread (Decision 93).
+   - Tactical over strategic: combat, then the route, then re-forming, then the player's
+     order; a formation halted without an order moves to a fight nearby or back to its
+     march (Decision 94).
 
 ## Agenda for the design conversation
 
