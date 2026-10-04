@@ -49,6 +49,8 @@ var engaged_with: int = 0
 var flank_contacts := {}
 ## Its units out on wings round an enemy line's end (FormationWings, Decision 81).
 var wings := {}
+## A hold-until order (FormationStaging, Decision 87); empty when it has none.
+var staging := {}
 var wait_ticks: int = 0
 ## Re-forming after a reinforcement, and the swaps under way (Decision 46, FormationShuffle):
 ## [[mover, passed units, ticks left, ticks in all], ...].

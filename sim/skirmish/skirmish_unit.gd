@@ -19,6 +19,8 @@ var speed: float = 0.0
 var distance: float = 0.0
 ## Formation sim: the centre of the unit's cells on the map (spec 27).
 var position := Vector2.ZERO
+## Formation sim: how far it detects others, in cells (Decision 87).
+var detection := 40.0
 ## Where this unit started: the end it retreats to.
 var home_distance: float = 0.0
 ## +1 advances toward the kingdom's end, -1 toward the player's.
