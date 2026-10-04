@@ -11,13 +11,19 @@ const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const SquadTurn = preload("res://sim/skirmish/formation/squad_turn.gd")
 
 
-## Ticks for a squad `width` wide moving `cells_per_second` to reach `cells` along `route`.
+## Ticks for a squad `width` wide moving `cells_per_second` to reach `cells` along `route`,
+## setting out from `from` cells along it.
 static func ticks_to(
-	route: FormationRoute, cells: float, width: int, cells_per_second: float, tick_seconds: float
+	route: FormationRoute,
+	cells: float,
+	width: int,
+	cells_per_second: float,
+	tick_seconds: float,
+	from: float = 0.0
 ) -> int:
 	var step := cells_per_second * tick_seconds
-	var facing := route.facing_at(0.0, 1, SquadFrame.EAST)
-	var travelled := 0.0
+	var facing := route.facing_at(from, 1, SquadFrame.EAST)
+	var travelled := from
 	var ticks := 0
 	while travelled < cells - 0.000001 and ticks < 1000000:
 		var wanted := route.facing_at(travelled, 1, facing)

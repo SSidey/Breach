@@ -28,6 +28,9 @@ const MAX_FOOTPRINT := 8
 @export var courage: int = 60
 ## How much it steadies a formation it leads (Decision 81); 0 for rank and file.
 @export var leadership: int = 0
+## How it leads (Decision 81), e.g. "coordinated": times a waiting wave's departure from
+## what it sees (Decision 87).
+@export var tactics: Array[String] = []
 ## What it fights with (Decision 47). Without weapons it strikes once for `dmg`.
 @export var weapons: Array[WeaponDef] = []
 

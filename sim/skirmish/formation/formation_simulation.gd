@@ -195,7 +195,8 @@ func _move(events: Array) -> void:
 		if mover.wait_ticks > 0:
 			mover.wait_ticks -= 1
 			continue
-		if FormationStaging.holds(mover, _squads, _tick, events):
+		var paced := [TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE, tick_seconds]
+		if FormationStaging.holds(mover, _squads, _tick, events, paced):
 			continue
 		if mover.order == SkirmishUnit.Order.HOLD or FormationContact.skirmishing(mover, _squads):
 			mover.state = SkirmishSquad.State.HOLDING
