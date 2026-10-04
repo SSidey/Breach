@@ -6,7 +6,8 @@ extends RefCounted
 ## re-lays its places facing the threat at that face (its stance) before contact, and
 ## commits to it: it faces that enemy while it is still a threat, not swinging to another. Its
 ## units walk there at its re-form pace and keep to those places until the threat has
-## gone; it doesn't march meanwhile. A less disciplined squad meets it unit by unit. Pure.
+## gone; it doesn't march meanwhile. A less disciplined squad meets it unit by unit. Two
+## threats equally near: the squads' seeded draw picks, not the list (Decision 97). Pure.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -17,6 +18,7 @@ const FormationDiscipline = preload("res://sim/skirmish/formation/formation_disc
 const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 
 ## How far off (cells) a squad re-forms to meet a threat closing in (placeholder).
 const ANTICIPATE := 12.0
@@ -38,7 +40,12 @@ static func anchor(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 ## A disciplined squad with a free front turns its line to meet a threat it sees closing
 ## in at another face; it lets the stance go once none is and it isn't fighting.
 static func anticipate(
-	squad: SkirmishSquad, squads: Array, tick: int, events: Array, terrain: FormationTerrain
+	squad: SkirmishSquad,
+	squads: Array,
+	tick: int,
+	events: Array,
+	terrain: FormationTerrain,
+	fight_seed: int = 0
 ) -> void:
 	var able := (
 		squad.state
@@ -52,10 +59,10 @@ static func anticipate(
 		return
 	if _committed(squad, squads):
 		return  # it made its call: it faces that enemy while it is still a threat
-	var found := _threat(squad, squads, terrain, true)
+	var found := _threat(squad, squads, [terrain, fight_seed], true)
 	var threat: int = found[0]
 	if threat < 0 or threat == squad.facing:
-		var gone: bool = _threat(squad, squads, terrain, false)[0] < 0
+		var gone: bool = _threat(squad, squads, [terrain, fight_seed], false)[0] < 0
 		var holds := squad.order == SkirmishUnit.Order.HOLD and not gone
 		if squad.state != SkirmishSquad.State.FIGHTING and (not holds or threat == squad.facing):
 			squad.stance = {}  # a holding line keeps it while that enemy is near (Decision 94)
@@ -87,12 +94,11 @@ static func _committed(squad: SkirmishSquad, squads: Array) -> bool:
 
 
 ## [facing, squad id] towards the nearest seen hostile within ANTICIPATE cells - closing
-## in, if `closing` - or [-1, 0].
-static func _threat(
-	squad: SkirmishSquad, squads: Array, terrain: FormationTerrain, closing: bool
-) -> Array:
+## in, if `closing` - or [-1, 0]. `seeing` = [the terrain, the battle seed].
+static func _threat(squad: SkirmishSquad, squads: Array, seeing: Array, closing: bool) -> Array:
+	var terrain: FormationTerrain = seeing[0]
 	var area := SquadEdges.bounds(squad)
-	var best := ANTICIPATE + 0.000001
+	var best := [ANTICIPATE + 0.000001, 0]
 	var facing := -1
 	var foe := 0
 	for other in squads:
@@ -104,7 +110,9 @@ static func _threat(
 			continue
 		if closing and not _closing(other, squad):
 			continue
-		var gap := _gap(squad, other)
+		var gap := [
+			snappedf(_gap(squad, other), 0.000001), ScrumContest.squad_draw(other, seeing[1])
+		]
 		if gap < best:
 			best = gap
 			var theirs := SquadEdges.bounds(other)

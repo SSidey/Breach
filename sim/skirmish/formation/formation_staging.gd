@@ -10,7 +10,9 @@ extends RefCounted
 ## leader it goes as soon as the trigger fires. Led by a **coordinated** leader (Decision
 ## 81), a wave waiting to see its partner times its own departure: from the partner's
 ## distance to the meeting point and its pace, as seen, against its own predicted march,
-## it goes when it would arrive no earlier than the partner. A squad's `staging`: {"at":
+## it goes when it would arrive no earlier than the partner - with no partner named, than
+## every friend it sees firing the trigger, so none is singled out by the order squads are
+## listed in (Decision 97). A squad's `staging`: {"at":
 ## cells along its route, "trigger", "partner": squad id or 0, "fallback": ticks, "then":
 ## "go" or "back", optionally "meet": the meeting point and "meet_cells": how far along its
 ## own route that is}. Pure.
@@ -43,8 +45,9 @@ static func holds(
 ) -> bool:
 	if squad.staging.is_empty() or squad.order != SkirmishUnit.Order.ADVANCE:
 		return false
-	var partner := _triggered(squad, squads, terrain)
-	if partner != null and _time_to_go(squad, partner, pace, terrain):
+	var partners := _triggered(squad, squads, terrain)
+	var ready := partners.all(func(p): return _time_to_go(squad, p, pace, terrain))
+	if not partners.is_empty() and ready:
 		squad.staging = {}
 		events.append(FormationEvents.squad_event("signalled", tick, squad))
 		return false
@@ -92,10 +95,9 @@ static func _coordinated(squad: SkirmishSquad) -> bool:
 	return squad.living().any(func(u): return u.tactics.has("coordinated"))
 
 
-## The friend whose sight fires the trigger, or null.
-static func _triggered(
-	squad: SkirmishSquad, squads: Array, terrain: FormationTerrain
-) -> SkirmishSquad:
+## The friends whose sight fires the trigger (none: it hasn't fired).
+static func _triggered(squad: SkirmishSquad, squads: Array, terrain: FormationTerrain) -> Array:
+	var out := []
 	var partner: int = squad.staging.get("partner", 0)
 	for other in squads:
 		if other == squad or other.faction_id != squad.faction_id:
@@ -108,5 +110,5 @@ static func _triggered(
 			squad.staging["trigger"] == SEES_PARTNER or other.state == SkirmishSquad.State.FIGHTING
 		)
 		if wanted and FormationSight.detects(squad, other, terrain):
-			return other
-	return null
+			out.append(other)
+	return out
