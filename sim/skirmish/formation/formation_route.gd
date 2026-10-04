@@ -65,3 +65,20 @@ func facing_at(distance: float, travel_sign: int, current: int) -> int:
 	if absf(heading.x) > absf(heading.y):
 		return SquadFrame.EAST if heading.x > 0.0 else SquadFrame.WEST
 	return SquadFrame.SOUTH if heading.y > 0.0 else SquadFrame.NORTH
+
+
+## The distance along the route of the point on it nearest `point`.
+func distance_of(point: Vector2) -> float:
+	var best := 0.0
+	var best_gap := INF
+	var walked := 0.0
+	for i in range(1, _points.size()):
+		var from := _points[i - 1]
+		var leg := from.distance_to(_points[i])
+		var along := clampf((point - from).dot((_points[i] - from) / maxf(leg, 0.000001)), 0.0, leg)
+		var gap := point.distance_to(from.lerp(_points[i], along / maxf(leg, 0.000001)))
+		if gap < best_gap:
+			best_gap = gap
+			best = walked + along
+		walked += leg
+	return best

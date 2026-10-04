@@ -2,10 +2,8 @@ class_name ScrumPursuit
 extends RefCounted
 ## Retreat and pursuit (Decision 95, spec 27 round 8). When a formation is ordered to
 ## retreat out of a fight:
-## - **The retreat:** its locks end at once (it turns for home as a re-form, ScrumTurn). A
-##   drilled formation (Decision 92) makes a fighting withdrawal - it steps its formation
-##   back WITHDRAW_CELLS, its units backing away facing the enemy they touch and striking
-##   back, then turns. A ragged one turns and runs, and pays a
+## - **The retreat:** its locks end at once and it withdraws (FormationWithdraw, Decision
+##   99): its units flee from where they stand until it is safe. A ragged one also pays a
 ##   scaled rout: a morale shock in proportion to how far short of drilled it is.
 ## - **Its enemies:** any of their units still touching it strike it as it goes
 ##   (ScrumBlows). A formation ordered to pursue, or led by a leader with the "pursues"
@@ -24,12 +22,9 @@ const FormationDiscipline = preload("res://sim/skirmish/formation/formation_disc
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
-const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
-const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
+const FormationWithdraw = preload("res://sim/skirmish/formation/formation_withdraw.gd")
 const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
 
-## How far (cells) a drilled withdrawal steps its formation back before turning.
-const WITHDRAW_CELLS := 3.0
 ## The scaled rout of a ragged retreat: up to this much shock, for a formation with no
 ## discipline at all (placeholder).
 const RAGGED_SHOCK := 20
@@ -49,30 +44,16 @@ static func retreat(
 	var enemies := squads.filter(func(s): return _fights(s, squad))
 	FormationLocks.release(squad, squads)
 	events.append(FormationEvents.squad_event("disengaged", tick, squad))
-	var discipline := FormationDiscipline.of(squad)
-	if discipline >= FormationDiscipline.MEETS_THREATS:
-		_pull_back(squad)
-	else:
-		var short := 1.0 - float(discipline) / FormationDiscipline.MEETS_THREATS
+	var short := FormationWithdraw.disorder(squad)
+	if short > 0.0:
 		FormationMorale.shock(squad, roundi(RAGGED_SHOCK * short), tick, events)
-		ScrumTurn.begin(squad, -squad.direction, tick, events)  # it turns and runs at once
+	FormationWithdraw.begin(squad, tick, events)
 	for enemy in enemies:
 		if pursues(enemy):
 			FormationPursuit.begin(enemy, squad, tick, events)
 		else:
 			_tempt(enemy, squad, tick, battle_seed, roundi(CHASE_SECONDS / seconds))
 	return events
-
-
-## A drilled withdrawal first steps its formation back out of reach, its units backing to
-## their places facing the enemy, before it turns for home.
-static func _pull_back(squad: SkirmishSquad) -> void:
-	var back := WITHDRAW_CELLS / MapLayoutDef.CELLS_PER_TILE
-	var home: float = squad.home_distance
-	var stepped: float = squad.front_distance - squad.direction * back
-	var lowest := minf(home, squad.front_distance)
-	var highest := maxf(home, squad.front_distance)
-	squad.front_distance = clampf(stepped, lowest, highest)
 
 
 ## True if the squad pursues a retreating enemy: ordered to, or led by a pursuer.
@@ -101,9 +82,10 @@ static func step(squads: Array, tick: int, cells_per_second: float, seconds: flo
 			entry["next"] = entry["at"]
 
 
-## True if the squad's unit is out chasing (its squad leaves it out of regrouping).
-static func chasing(squad: SkirmishSquad, unit_id: int) -> bool:
-	return squad.chasers.has(unit_id)
+## True if the squad's unit is away from its place on its own - chasing, or its squad
+## withdrawing - so its squad leaves it out of regrouping.
+static func away(squad: SkirmishSquad, unit_id: int) -> bool:
+	return squad.chasers.has(unit_id) or not squad.withdraw.is_empty()
 
 
 static func _fights(other: SkirmishSquad, squad: SkirmishSquad) -> bool:

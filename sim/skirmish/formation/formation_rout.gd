@@ -4,8 +4,8 @@ extends RefCounted
 ## - **Breaking:** at 0 morale a formation routs. Every lock on it ends, and friends that
 ##   see it break take a little shock.
 ## - **Flight:** its units flee one by one back along its route towards home at full
-##   speed, keeping their spread across it. They strike nothing; a hostile unit in contact
-##   strikes them from behind (FormationMelee, flank blows).
+##   speed, fanning out from it as they go (RoutFlight, Decision 99). They strike nothing;
+##   a hostile unit in contact strikes them from behind (FormationMelee, flank blows).
 ## - **Crush:** a router running through a friend's cell hurts both (blunt, by its size),
 ##   and that friend's formation takes panic shock.
 ## - **Rally:** a router that reaches a friendly formation with a leader joins its rear
@@ -30,6 +30,7 @@ const FormationContact = preload("res://sim/skirmish/formation/formation_contact
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const RoutFlight = preload("res://sim/skirmish/formation/rout_flight.gd")
 const RoutCatch = preload("res://sim/skirmish/formation/rout_catch.gd")
 const RoutSettle = preload("res://sim/skirmish/formation/rout_settle.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
@@ -61,12 +62,15 @@ static func step(
 	cells_per_second: float,
 	tick_seconds: float,
 	terrain: FormationTerrain = null,
-	one_per_cell := false
+	one_per_cell := false,
+	fight_seed := 0
 ) -> Array:
 	var events := []
 	for squad in squads.duplicate():
 		if squad.state == SkirmishSquad.State.ROUTING:
-			_flee(squad, squads, tick, cells_per_second * tick_seconds, events)
+			_flee(
+				squad, squads, tick, [cells_per_second * tick_seconds, fight_seed, terrain], events
+			)
 			_rally(squad, squads, tick, tick_seconds, events)
 			if one_per_cell:
 				RoutSettle.settle(squad, squads, cells_per_second * tick_seconds, where)
@@ -140,8 +144,9 @@ static func _break(
 				FormationMorale.shock(friend, SEEN_ROUT, tick, events)
 
 
+## `motion` is [pace (cells a tick at speed 1), fight seed, terrain or null].
 static func _flee(
-	squad: SkirmishSquad, squads: Array, tick: int, pace: float, events: Array
+	squad: SkirmishSquad, squads: Array, tick: int, motion: Array, events: Array
 ) -> void:
 	var home := squad.home_distance * CELLS
 	var panicked := {}
@@ -149,7 +154,7 @@ static func _flee(
 		var entry: Dictionary = squad.fleeing[unit.id]
 		if entry.get("caught", 0) > 0:
 			continue  # held by a steady friend it ran into
-		entry["along"] = move_toward(entry["along"], home, unit.speed * pace)
+		RoutFlight.step(squad, unit, entry, home, motion + [where(squad, unit.id), squads])
 		_crush(squad, unit, squads, tick, panicked, events)
 		if is_equal_approx(entry["along"], home):
 			squad.units.erase(unit)

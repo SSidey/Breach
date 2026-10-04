@@ -62,9 +62,11 @@ var chasers := {}
 ## A pursuit under way (FormationPursuit): the enemy, the post it left, and how it held it.
 var pursuit := {}
 var stall_ticks := 0
-## What it is doing (FormationManoeuvre.Kind, Decision 94): 0 combat, 1 its route, 2
-## re-forming, 3 the player's order; it marches only on 3.
-var manoeuvre := 3
+## What it is doing (FormationManoeuvre.Kind, Decisions 94 and 99): 0 combat, 1
+## withdrawing, 2 its route, 3 re-forming, 4 the player's order; it marches only on 4.
+var manoeuvre := 4
+## A withdrawal under way (FormationWithdraw): ticks it has felt safe; empty when none.
+var withdraw := {}
 ## A hold-until order (FormationStaging, Decision 87); empty when it has none.
 var staging := {}
 ## Its will to fight, 0 to 100 (FormationMorale, Decision 82); -1 until first read.

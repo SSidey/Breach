@@ -156,7 +156,7 @@ func step() -> Array:
 		FormationEdges.prune(_squads, _tick, events)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
 	events.append_array(
-		FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, seek_contact)
+		FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, seek_contact, fight_seed)
 	)
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))

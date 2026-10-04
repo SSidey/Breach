@@ -471,3 +471,54 @@ Also from the round 9 feel test, and the two principles the user set (Decisions 
     `swap` option runs a mirror the other way round.
   - Head-on mirror over 400 seeds in each order: first-spawned 383, second 375. By
     side: player 386, kingdom 372.
+
+### Round 10: withdrawal and disorderly flight (built; feel test pending)
+
+From the design questions after round 9 (Decision 99):
+- **A retreat is combat's equal.** `FormationManoeuvre` gains WITHDRAW at the combat tier:
+  a formation deals with an enemy by fighting it or by leaving it. Ordered to retreat
+  out of a fight (`FormationWithdraw`):
+  - Its units flee homeward along the route from where they stand. They no longer walk
+    back to their places first, which is what caught B in round 8.
+  - A drilled unit still touching a foe backs away facing it and strikes back. Any other
+    turns and runs.
+  - When it is **safe**, it re-forms on its route where its units stand, faces home and
+    marches home. Safe uses the test a rout rallies by: no enemy within 6 cells and none
+    pursuing it, for 5 s.
+  - If all its units are home with nowhere further to go, it re-forms there at once and
+    fights like any other formation.
+- **Disorder fans out** (`RoutFlight`). A fleeing unit makes for the nearest safety:
+  - If a standing friendly formation lies between it and home, it steers for that
+    friend, which catches it (Decision 98).
+  - Otherwise each unit fans out from the route by its own seeded angle: up to 45° for a
+    rout and scaled by disorder for a ragged retreat (none for a drilled one). It goes
+    up to 6 cells out (placeholders), unless ground it can't cross stops it.
+- **Pursuit follows units, not frames.** A pursuer measures the enemy by where its units
+  stand. A withdrawing formation's frame stays put while its units flee.
+- **Retreat cost on the field** (retreat 3 s after contact, 20 seeds, mean losses after
+  the order; round 8's numbers in brackets):
+
+| Retreating | Line pursues | Lost after the order |
+|---|---|---|
+| A (grems, ragged) | no | 0 of 4.2 (1.0 of 4) |
+| A (grems, ragged) | yes | 1.4 of 4.2 (2.5 of 4) |
+| B (chieftain, drilled) | no | 0.65 of 9 (0.5 of 9) |
+| B (chieftain, drilled) | yes | 1.0 of 9 (8.7 of 9) |
+
+- **Drilled vs ragged** (8 v 8 head-on, damage taken while withdrawing, 20 seeds):
+  - Against a ragged enemy whose units break ranks to chase, drilled takes 26–28 and
+    ragged 37–40, across turn rates and backward paces.
+  - Against an enemy that pursues as a whole at equal speed, the ragged runners get away
+    almost free. Drilled units backing away slowly stay in contact: with a brute's turn
+    rate and backward pace they take 40, against 4.5 for ragged.
+  - Open question for the user (below).
+- **Flank strength trials** (an equal force onto the side of a holding line, 200 seeds):
+  - A line that can't turn loses every time: flankers lose 2.6, the line 8. The flank
+    bonus doesn't change that (1.5 or 1.25). It comes from geometry, because only the
+    line's end units can fight.
+  - A line that turns to meet it (drilled, or led by a captain) loses 65%: 6.3 lost
+    against 7.2, at a bonus of 1.5. At 1.25 it loses 62%. The edge left is the flanker's
+    initiative: the line is caught turning.
+  - The flank stays as it is (Decision 81: flanking is a leader's tactic).
+- Head-on mirror, 300 seeds each way round: player first 139 / 142, kingdom first 142 /
+  141.

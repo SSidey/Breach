@@ -4,7 +4,8 @@ extends RefCounted
 ## led by a pursuer, when its enemy retreats it stays locked on it and its frame advances
 ## along its own route after it, no faster than its units keep up, its units seeking
 ## contact as they go at the march pace. When
-## the enemy is out of PURSUIT_REACH, gone, or no longer retreating, it gives up: it marches
+## the enemy - where its units stand - is out of PURSUIT_REACH, gone, or no longer
+## retreating, it gives up: it marches
 ## back to the post it held and turns to face the way it held it, taking up its order
 ## again. Squads keep `pursuit` ({"foe", "post", "home", "direction", "order",
 ## "returning"}). Pure over the squads it is given.
@@ -13,6 +14,7 @@ const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const SquadEdges = preload("res://sim/skirmish/formation/squad_edges.gd")
+const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
@@ -69,9 +71,7 @@ static func _given_up(squad: SkirmishSquad, foe: SkirmishSquad) -> bool:
 
 ## Its frame moves along its route towards the enemy while the enemy is ahead.
 static func _advance(squad: SkirmishSquad, foe: SkirmishSquad, step_cells: float) -> void:
-	var ahead := (SquadEdges.bounds(foe).get_center() - squad.position).dot(
-		SquadFrame.forward(squad.facing)
-	)
+	var ahead := (_spread(foe).get_center() - squad.position).dot(SquadFrame.forward(squad.facing))
 	if ahead <= CLOSE_ENOUGH or _lagging(squad):
 		return
 	var tiles := minf(squad.speed() * step_cells, ahead - CLOSE_ENOUGH)
@@ -114,7 +114,19 @@ static func _arrive(squad: SkirmishSquad, tick: int, events: Array) -> void:
 
 
 static func _gap(squad: SkirmishSquad, foe: SkirmishSquad) -> float:
-	var mine := SquadEdges.bounds(squad)
-	var theirs := SquadEdges.bounds(foe)
+	var mine := _spread(squad)
+	var theirs := _spread(foe)
 	var near := theirs.get_center().clamp(mine.position, mine.end)
 	return near.distance_to(near.clamp(theirs.position, theirs.end))
+
+
+## The cells a squad's units cover where they actually stand - in its frame, loose in a
+## fight or fleeing a withdrawal - not where its frame is.
+static func _spread(squad: SkirmishSquad) -> Rect2:
+	var living := squad.living()
+	if living.is_empty():
+		return SquadEdges.bounds(squad)
+	var out := ScrumReach.area(squad, living[0])
+	for unit in living:
+		out = out.merge(ScrumReach.area(squad, unit))
+	return out
