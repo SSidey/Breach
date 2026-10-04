@@ -75,4 +75,6 @@ func test_waves_on_routes_of_different_lengths_arrive_together() -> void:
 
 	assert_int(waits["long"]).is_equal(0)
 	assert_int(waits["short"]).is_greater(0)
-	assert_int(absi(arrived["short"] - arrived["long"])).is_less_equal(2)
+	# The routes share their last 20 cells: the wave ahead where they merge goes first and
+	# the other queues behind where it stood, whichever spawned first (Decision 97).
+	assert_int(absi(arrived["short"] - arrived["long"])).is_less_equal(3)

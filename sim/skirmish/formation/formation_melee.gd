@@ -27,7 +27,7 @@ const SCRUM := 2
 
 
 ## [[attacker, target, damage, flank], ...]; updates each striker's target and cooldown.
-## `fight_seed` breaks ties between equal targets in the scrum.
+## `fight_seed` breaks ties between equal targets (Decision 97).
 static func blows(
 	squads: Array,
 	interval: int,
@@ -39,7 +39,7 @@ static func blows(
 	var out := (
 		ScrumBlows.blows(squads, interval, fight_seed)
 		if mode == SCRUM
-		else _lines(squads, interval, tick, mode)
+		else _lines(squads, interval, tick, mode, fight_seed)
 	)
 	out.append_array(FormationRout.blows(squads, interval))
 	if terrain != null:
@@ -49,7 +49,7 @@ static func blows(
 	return out
 
 
-static func _lines(squads: Array, interval: int, tick: int, mode: int) -> Array:
+static func _lines(squads: Array, interval: int, tick: int, mode: int, fight_seed: int) -> Array:
 	var walk_wings := mode == WINGS
 	var by_id := {}
 	for entry in squads:
@@ -75,6 +75,6 @@ static func _lines(squads: Array, interval: int, tick: int, mode: int) -> Array:
 				fighter.attack_cooldown = pace
 				var flank: bool = pick[1] or foe.state == SkirmishSquad.State.TURNING
 				out.append([fighter, pick[0], FormationCombat.damage(fighter, flank), flank])
-	out.append_array(FormationEdges.blows(squads, interval, tick))
-	out.append_array(FormationWings.blows(squads, interval, tick))
+	out.append_array(FormationEdges.blows(squads, interval, tick, fight_seed))
+	out.append_array(FormationWings.blows(squads, interval, tick, fight_seed))
 	return out
