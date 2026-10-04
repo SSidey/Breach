@@ -4588,9 +4588,14 @@ course we could assign some random id to each unit".
 - **Every unit seeks contact.** A unit with no enemy in reach moves to the nearest open
   cell next to an enemy unit, in any of the 8 directions (diagonals count). Wings, rear
   attacks and wraps are what this looks like; no rule names them.
-- **The order sets the leash, not leadership.** How far a unit may stray from its place
-  is set by its squad's order (hold: short; charge: long; placeholders). A shaken squad
-  doesn't seek contact (Decision 82).
+- **No leash keeps a unit out of the fight.** The user, while it was being built: "even
+  a high leadership formation should seek to meet combat with a force (potentially
+  preemptively getting into position such that they will be ready)… there shouldn't be
+  any 'leash' issue that prevents the far end of the formation from seeking melee". Every
+  unit in a fight may seek anywhere within the route's leash of its place (Decision 75,
+  16 cells), whatever its order; the order only decides what the squad does when the fight
+  ends. Front-band units seek, back-band units too once no front-band unit is left; only
+  a wavering squad stops seeking (Decision 82).
 - **Contested cells.** When units want one cell, the order is the key
   `(arrival time, roll + initiative, initiative, speed, unit's draw)`, compared item by
   item, not packed into one number (no digit overflow, no float precision limit).
@@ -4601,8 +4606,9 @@ course we could assign some random id to each unit".
   - The unit's draw is a seeded value unique within the fight, so the order never ties.
   - Initiative is a unit stat, placeholder equal for all until spec 28.
 - **Leadership sets cohesion.** A well-led squad reacts sooner (shorter reaction delay)
-  and shifts as a line: when contact comes on an unexpected face, it wheels or bends its
-  threatened end back as one, and its ranks fill the places units leave. A poorly led
+  and shifts as a line: when it sees an enemy coming at a face other than its front, it
+  re-lays its places facing the threat at that face **before contact**, from further off
+  the better it is led (placeholder: 4 cells plus 4 per point of leadership). A poorly led
   squad moves unit by unit and leaves gaps; a gap is an open cell next to an enemy, so the
   enemy steps into it. Leadership is the squad's best (Decision 81).
 - **Facing is per unit.** Each unit faces the enemy it fights; a blow from outside a
@@ -4636,9 +4642,11 @@ course we could assign some random id to each unit".
 **Rationale:** Raised by the user after feel-testing spec 27's round 4: enemy routers did
 not stop with their allies. Round 3 let routers rally only to a formation with a leader,
 or round their own leader; leaderless militia ran home.
-- A router that passes within reach (placeholder 6 cells) of a steady friendly formation
-  rallies to it, less reliably than to a leader: it takes longer (placeholder 3 s near
-  it), comes back only to shaken, and joins that formation's rear.
+- A router that runs into a steady friendly formation (within a cell, crushing as it
+  does, Decision 82) is caught there: it stops and, after a while (placeholder 3 s),
+  joins that formation's rear. A shaken formation doesn't stop it. As built, morale is
+  the formation's, so a caught router takes the formation's morale; "back only to
+  shaken" (as first agreed) has no separate meaning for a lone unit.
 - Rallying to a leader (Decision 82) stays quicker and restores more.
 
 **Alternatives:**
