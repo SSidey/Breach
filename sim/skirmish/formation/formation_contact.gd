@@ -46,20 +46,12 @@ static func nearest_hostile(from: SkirmishSquad, squads: Array) -> SkirmishSquad
 	return best
 
 
-## The furthest an advancing squad may get this tick, wanting to reach `next`. With
-## `started` (squad id -> front distance at the tick's start) two hostile squads marching
-## at each other move as if at once: each closes at most half the gap that stood between
-## them, so where they meet doesn't hang on which moved first.
-static func limit(
-	mover: SkirmishSquad, squads: Array, next: float, started: Dictionary = {}
-) -> float:
+## The furthest an advancing squad may get this tick, wanting to reach `next`.
+static func limit(mover: SkirmishSquad, squads: Array, next: float) -> float:
 	for other in squads:
 		if other == mover or not can_engage(other):
 			continue
 		var room := _room(mover, other)
-		if not started.is_empty() and room != INF and _closing_on(mover, other):
-			if is_equal_approx(other.front_distance, started.get(other.id, INF)):
-				room /= 2.0  # it moves after the mover: the mover takes only its half
 		if room == INF:
 			continue
 		var reachable := mover.front_distance + mover.direction * maxf(room, 0.0)
@@ -144,16 +136,6 @@ static func _room(mover: SkirmishSquad, other: SkirmishSquad) -> float:
 	if other.faction_id != mover.faction_id:
 		return SquadGeometry.gap(mover, other) - MELEE_REACH
 	return SquadGeometry.gap(mover, other) - _depth(other)
-
-
-## True if `other` is a hostile marching at the mover, face to face.
-static func _closing_on(mover: SkirmishSquad, other: SkirmishSquad) -> bool:
-	return (
-		other.faction_id != mover.faction_id
-		and SquadGeometry.facing_off(mover, other)
-		and other.order == SkirmishUnit.Order.ADVANCE
-		and other.state == SkirmishSquad.State.MOVING
-	)
 
 
 static func _accepts(mover: SkirmishSquad, leader: SkirmishSquad) -> bool:

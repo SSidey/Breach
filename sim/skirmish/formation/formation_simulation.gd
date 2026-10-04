@@ -197,7 +197,6 @@ func _engage(events: Array) -> void:
 
 func _move(events: Array) -> void:
 	var joins := []  # [leader, joining]
-	var started := _fronts() if seek_contact else {}  # marching at each other as if at once
 	for mover in _squads:
 		if FormationTurning.step(mover, _tick, events):
 			continue
@@ -224,7 +223,7 @@ func _move(events: Array) -> void:
 		var step := FormationMarch.pace(mover, terrain, open_step, _tick, events)
 		var next := clampf(mover.front_distance + travel * step, 0.0, end)
 		if advancing:
-			next = FormationContact.limit(mover, _squads, next, started)
+			next = FormationContact.limit(mover, _squads, next)
 		mover.front_distance = next
 		var leader := FormationContact.joinable(mover, _squads) if advancing else null
 		if leader != null:
@@ -232,13 +231,6 @@ func _move(events: Array) -> void:
 		FormationMarch.check_ends(mover, end, _tick, events)
 	for pair in joins:
 		_join(pair[0], pair[1], events)
-
-
-func _fronts() -> Dictionary:
-	var out := {}
-	for entry in _squads:
-		out[entry.id] = entry.front_distance
-	return out
 
 
 ## True if the squad must turn before moving `travel` along its route: it starts the turn.

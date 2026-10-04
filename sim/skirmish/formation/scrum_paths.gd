@@ -23,7 +23,7 @@ const STEPS := [
 ]
 
 
-## cell -> {faction: true} for every cell a standing unit covers.
+## cell -> faction for every cell a standing unit covers.
 static func occupancy(squads: Array) -> Dictionary:
 	var cells := {}
 	for squad in squads:
@@ -31,9 +31,7 @@ static func occupancy(squads: Array) -> Dictionary:
 			continue
 		for unit in squad.living():
 			for spot in cells_of(ScrumReach.area(squad, unit)):
-				if not cells.has(spot):
-					cells[spot] = {}
-				cells[spot][squad.faction_id] = true  # every side on it, whoever came last
+				cells[spot] = squad.faction_id
 	return cells
 
 
@@ -80,7 +78,7 @@ static func path(
 			var next: Vector2i = here + offset
 			if first.has(next) or _distance(next, home) > bound:
 				continue
-			if cells.get(next, {}).keys().any(func(f): return f != walker.faction_id):
+			if cells.get(next, walker.faction_id) != walker.faction_id:
 				continue  # an enemy stands there
 			if not _passable(terrain, walker, here, next):
 				continue
