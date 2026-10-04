@@ -43,13 +43,18 @@ static func anticipate(
 		squad.state
 		in [SkirmishSquad.State.HOLDING, SkirmishSquad.State.MOVING, SkirmishSquad.State.FIGHTING]
 	)
-	if not able or squad.engaged_with != 0 or not FormationDiscipline.meets_threats(squad):
+	if not able or squad.engaged_with != 0:
+		return
+	if not FormationDiscipline.meets_threats(squad):
+		if squad.state != SkirmishSquad.State.FIGHTING:
+			squad.stance = {}  # it can't hold a re-formed line: back to its places
 		return
 	var threat := _threat(squad, squads, terrain, true)
 	if threat < 0 or threat == squad.facing:
 		var gone := _threat(squad, squads, terrain, false) < 0
-		if squad.state != SkirmishSquad.State.FIGHTING and (gone or threat == squad.facing):
-			squad.stance = {}  # held while the enemy that started it is still near
+		var holds := squad.order == SkirmishUnit.Order.HOLD and not gone
+		if squad.state != SkirmishSquad.State.FIGHTING and (not holds or threat == squad.facing):
+			squad.stance = {}  # a holding line keeps it while that enemy is near (Decision 94)
 		return
 	if not squad.stance.is_empty() and squad.stance["facing"] == threat:
 		return

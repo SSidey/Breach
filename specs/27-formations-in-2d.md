@@ -343,3 +343,23 @@ breaks:
   facings wait on the feel test.
 - Not built yet: planned rendezvous still times a turn as a wheel (off by up to half a
   second), and formation contests (Decision 92) have no case in the field yet.
+
+### Round 7: tactical over strategic (built; feel test pending)
+
+Decision 94, raised by the round 6 feel test: a disciplined B re-forming at its corner as
+A engaged took the line (facing A, so "towards" B) for a threat closing in, turned to
+meet it and stayed there, off its route.
+- `FormationManoeuvre`: every formation always has a current manoeuvre, the
+  highest-priority one that applies, settled each tick (the user: no list of exceptions,
+  "an army should always have a current manoeuvre"):
+  0. **combat:** locked in melee, front or flank, or skirmishing with an enemy in range;
+     contact mid-re-form goes straight here
+  1. **route** and 2. **re-form:** its units walk back to their places on its route at
+     its discipline's pace - after a fight, a turn, narrowing at a gap (now a re-form, not
+     a fixed 1 s hold), or to face a threat
+  3. **order:** march, hold, retreat or wait; it marches only on this
+- Facing a threat is a re-form held only while that enemy keeps closing in (or, under a
+  hold order, is still near); any formation lets go of it otherwise, so a wave re-forms
+  and marches on rather than standing off its route.
+- Open: whether a retreat order can pull a formation out of melee (today it disengages at
+  once).
