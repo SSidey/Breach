@@ -554,6 +554,13 @@ first, and only what still happened there was fixed (Decision 100):
     reinforces it. The list-order audit fixed how waves queue on one road.
   - A pursuing captain running far ahead: since #88 a pursuer follows the enemy's
     units, and no unit gets more than half a cell ahead of its formation.
+- **A gap in front of the captain** (seed 680655, from testing #89). A captained line
+  turning to a flank left the front-rank unit before its captain stuck a cell short of
+  its place. The unit crossed into the captain's cell and was parted from it, and its
+  own body still covered its place cell, so parting sent it back while re-forming pulled
+  it on. A unit's own body no longer blocks the cell it is looking for.
+- **B alone against the line** loses most battles: 17 of 100 field runs won, 9 against
+  the kingdom's 12 plus a reserve of 6. The field is built for A and B together.
 - **Open:** a wavering line doesn't seek contact (Decision 88), so a lone chieftain
   fights its way down a broken line one unit at a time (seed 678788). This is a question
   for the user.

@@ -38,10 +38,22 @@ static func step(squads: Array, pace: float, fight_seed: int) -> void:
 			first[spot] = true
 	if crowded.is_empty():
 		return
-	var cells := ScrumPaths.occupancy(squads)
+	var cells := _held(squads)
 	var taken := {}
 	for pair in crowded:
 		_step_aside(pair[0], pair[1], cells, taken, pace)
+
+
+## cell -> how many standing units cover it.
+static func _held(squads: Array) -> Dictionary:
+	var out := {}
+	for squad in squads:
+		if squad.state in [SkirmishSquad.State.ROUTING, SkirmishSquad.State.DESTROYED]:
+			continue
+		for unit in squad.living():
+			for spot in ScrumPaths.cells_of(ScrumReach.area(squad, unit)):
+				out[spot] = out.get(spot, 0) + 1
+	return out
 
 
 ## A unit's claim on the cell it stands in: lower is stronger.
@@ -61,14 +73,18 @@ static func _step_aside(
 		return  # passing through on its way to a cell it is seeking, or holding its foe
 	var at: Vector2 = entry["at"]
 	var ahead := UnitMotion.vector(unit.bearing)
-	var spot := _free_near(at, ScrumStance.anchor(squad, unit), ahead, cells, taken)
+	var others := cells.duplicate()  # its own body never blocks the cell it looks for
+	for own in ScrumPaths.cells_of(ScrumReach.area(squad, unit)):
+		others[own] = others.get(own, 0) - 1
+	var spot := _free_near(at, ScrumStance.anchor(squad, unit), ahead, others, taken)
 	entry["at"] = at.move_toward(spot, unit.speed * pace)
 	entry["next"] = entry["at"]
 
 
-## The centre of a free cell next to `at` (or `at` if none): the nearest, ties going to the
-## one nearest the unit's own place, then the one furthest behind it (`ahead` is its
-## bearing), so neither side steps towards the other by default.
+## The centre of a free cell next to `at` (`cells`: cell -> other units covering it), or
+## `at` if none: the nearest, ties going to the one nearest the unit's own place, then the
+## one furthest behind it (`ahead` is its bearing), so neither side steps towards the
+## other by default.
 static func _free_near(
 	at: Vector2, place: Vector2, ahead: Vector2, cells: Dictionary, taken: Dictionary
 ) -> Vector2:
@@ -78,7 +94,7 @@ static func _free_near(
 	for dy in range(-RING, RING + 1):
 		for dx in range(-RING, RING + 1):
 			var spot := home + Vector2i(dx, dy)
-			if cells.has(spot) or taken.has(spot):
+			if cells.get(spot, 0) > 0 or taken.has(spot):
 				continue
 			var centre := ScrumReach.centre(spot)
 			var key := [

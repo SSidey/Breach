@@ -7,6 +7,8 @@ extends GdUnitTestSuite
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
+const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
+const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const ScrumSpacing = preload("res://sim/skirmish/formation/scrum_spacing.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -26,6 +28,19 @@ func _line(count: int) -> Array:
 	for column in range(count):
 		placements.append([_def(), Vector2i(0, column)])
 	return placements
+
+
+## The feel test's field with its content units, the kingdom's line led by a captain.
+func _captained_field(battle_seed: int) -> FormationField:
+	return FormationField.new(
+		0.1,
+		load("res://content/units/grem.tres"),
+		8,
+		load("res://content/units/kingdom_militia.tres"),
+		load("res://content/units/grem_chieftain.tres"),
+		load("res://content/units/kingdom_captain.tres"),
+		battle_seed
+	)
 
 
 func _cell(at: Vector2) -> Vector2i:
@@ -79,15 +94,7 @@ func test_units_resting_in_one_cell_step_apart() -> void:
 
 
 func test_a_captained_line_makes_one_call_between_two_waves() -> void:
-	var field := FormationField.new(
-		0.1,
-		load("res://content/units/grem.tres"),
-		8,
-		load("res://content/units/kingdom_militia.tres"),
-		load("res://content/units/grem_chieftain.tres"),
-		load("res://content/units/kingdom_captain.tres"),
-		2
-	)
+	var field := _captained_field(2)
 	for _i in range(3000):
 		if field.waves["A"].built() == 8 and field.waves["B"].built() == 9:
 			break
@@ -101,3 +108,23 @@ func test_a_captained_line_makes_one_call_between_two_waves() -> void:
 				faced.append(event["facing"])
 
 	assert_int(faced.size()).is_less_equal(1)
+
+
+func test_a_captained_line_turning_to_a_flank_fills_its_front_rank() -> void:
+	var field := _captained_field(680655)
+	for _i in range(2000):
+		if field.waves["B"].built() == 9:
+			break
+		field.step()
+	field.send("B")
+	var line := field.kingdom_line
+	for _i in range(400):
+		if field.step().any(func(e): return e["type"] == "faced" and e["squad"] == line.id):
+			break
+	for _i in range(15):
+		field.step()
+
+	assert_int(line.state).is_not_equal(SkirmishSquad.State.FIGHTING)
+	for unit in line.living():  # none stuck short of its place, as one was in front of the captain
+		var at := ScrumReach.at(line, unit)
+		assert_float(at.distance_to(ScrumStance.anchor(line, unit))).is_less(0.05)
