@@ -56,6 +56,10 @@ var loose := {}
 var stance := {}
 var fight_since := -1
 var stall_ticks := 0
+## Ticks it has stood still though ordered to march (FormationIntent, Decision 94), and
+## where its front stood last tick.
+var halted_ticks := 0
+var last_front := -1.0
 ## A hold-until order (FormationStaging, Decision 87); empty when it has none.
 var staging := {}
 ## Its will to fight, 0 to 100 (FormationMorale, Decision 82); -1 until first read.

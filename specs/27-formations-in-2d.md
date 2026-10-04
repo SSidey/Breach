@@ -340,3 +340,17 @@ breaks:
   facings wait on the feel test.
 - Not built yet: planned rendezvous still times a turn as a wheel (off by up to half a
   second), and formation contests (Decision 92) have no case in the field yet.
+
+### Round 7: tactical over strategic (built; feel test pending)
+
+Decision 94, raised by the round 6 feel test: a disciplined B re-forming at its corner as
+A engaged took the line (facing A, so "towards" B) for a threat closing in, turned to
+meet it and stayed there, off its route.
+- `FormationIntent`: a formation ordered to march that has stood still 2 s for no order of
+  the player's (not holding, staged, waiting, fighting, skirmishing at range, blocked or
+  done) moves to combat if it detects an enemy within 12 cells; otherwise it lets go of
+  its re-formed line, returns to its route, re-forms and marches on.
+- A re-formed line is held while its enemy is near only under a hold order; a marching
+  formation keeps it only while the enemy is still closing in.
+- Open: whether a retreat order can pull a formation out of melee (today it disengages at
+  once).

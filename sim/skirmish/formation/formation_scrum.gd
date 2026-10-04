@@ -16,6 +16,8 @@ extends RefCounted
 ## - **Regrouping:** when the fight ends the squad closes ranks over its dead (SquadRanks),
 ##   its units walk to their places at its re-form pace (FormationDiscipline), and it moves
 ##   on once all are back.
+## - **Halted without an order:** a marching formation that has stood still moves to a
+##   fight nearby, or back to its march (FormationIntent, Decision 94).
 ## - **A stalled fight** (no unit on either side touching or seeking for STALL_SECONDS) is
 ##   released, so it can't freeze.
 ## Squads keep `loose`, `stance`, `fight_since` and `stall_ticks`. Pure over the squads.
@@ -28,6 +30,7 @@ const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
 const ScrumPaths = preload("res://sim/skirmish/formation/scrum_paths.gd")
 const ScrumEngage = preload("res://sim/skirmish/formation/scrum_engage.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
+const FormationIntent = preload("res://sim/skirmish/formation/formation_intent.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
@@ -55,6 +58,7 @@ static func step(
 		_prepare(squad, tick)
 	for squad in squads:
 		ScrumStance.anticipate(squad, squads, tick, events, terrain)
+	events.append_array(FormationIntent.step(squads, tick, tick_seconds, terrain))
 	var ctx := {
 		"squads": squads,
 		"tick": tick,

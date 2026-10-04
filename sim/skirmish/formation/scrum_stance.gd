@@ -48,8 +48,9 @@ static func anticipate(
 	var threat := _threat(squad, squads, terrain, true)
 	if threat < 0 or threat == squad.facing:
 		var gone := _threat(squad, squads, terrain, false) < 0
-		if squad.state != SkirmishSquad.State.FIGHTING and (gone or threat == squad.facing):
-			squad.stance = {}  # held while the enemy that started it is still near
+		var holds := squad.order == SkirmishUnit.Order.HOLD and not gone
+		if squad.state != SkirmishSquad.State.FIGHTING and (not holds or threat == squad.facing):
+			squad.stance = {}  # a holding line keeps it while that enemy is near (Decision 94)
 		return
 	if not squad.stance.is_empty() and squad.stance["facing"] == threat:
 		return
