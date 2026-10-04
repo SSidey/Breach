@@ -221,3 +221,18 @@ func test_the_wood_hides_deep_inside_but_not_at_its_edge() -> void:
 		)
 		. is_true()
 	)
+
+
+func test_a_captained_line_turns_to_meet_b_before_it_strikes() -> void:
+	var captain := _def(60, 2)
+	captain.leadership = 2
+	var field := FormationField.new(TICK, _def(200, 3), 8, _def(400, 2), null, captain)
+	_run(field, func(log): return field.waves["B"].built() == 8)
+
+	field.send("B")
+	var log := _run(field, _has("flanked"))
+
+	var faced: Array = log.filter(func(e): return e["type"] == "faced")
+	assert_bool(faced.is_empty()).is_false()
+	assert_int(faced[0]["squad"]).is_equal(field.kingdom_line.id)
+	assert_int(faced[0]["facing"]).is_equal(SquadFrame.NORTH)

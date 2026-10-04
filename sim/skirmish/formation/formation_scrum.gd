@@ -200,6 +200,8 @@ static func _regroup(squads: Array, pace: float) -> void:
 	for squad in squads:
 		if squad.state in [SkirmishSquad.State.FIGHTING, SkirmishSquad.State.ROUTING]:
 			continue
+		if squad.state == SkirmishSquad.State.MOVING and not squad.loose.is_empty():
+			squad.state = SkirmishSquad.State.HOLDING  # it stands while its units regroup
 		for unit_id in squad.loose.keys():
 			var entry: Dictionary = squad.loose[unit_id]
 			var unit: SkirmishUnit = entry["unit"]
