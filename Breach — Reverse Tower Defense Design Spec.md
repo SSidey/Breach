@@ -4837,15 +4837,18 @@ decisions".
   3. **The player's order:** retreat, halt or march (and hold-until, Decision 87).
 - **Tactical over strategic:** 0 to 2 are the formation's own decisions, made from its
   leadership, discipline, morale and traits; 3 is the player's.
-- **Halted without an order:** a formation that has stopped though its order is to march
-  (not holding, not waiting at a staging point, not queued for a hold-until) moves, from
-  the next tick, to combat if one is available - an enemy it detects within reach
-  (placeholder 12 cells) - and otherwise returns to its route, re-forms and marches on.
-  The user: a 2 s wait "feels like quite a long time… would we not just check on next
-  tick". Its own short manoeuvres are not halts: re-forming after a turn, narrowing at a
-  gap, receiving an enemy still closing in, skirmishing at range.
-- **A threat that stops closing in** no longer holds a marching formation in its
-  re-formed line: it engages that enemy if it is near, or marches on.
+- **Every formation always has a current manoeuvre** - the highest-priority one that
+  applies, settled each tick; no list of exceptions. The user: "an army should always
+  have a current manoeuvre and depending on what it claims to be doing vs priority of the
+  overall manoeuvre set". So:
+  - re-forming after a turn, or narrowing at a gap, is re-forming (2) at the formation's
+    discipline's pace; contact meanwhile goes straight to combat (0), and the order (3)
+    waits until the re-form is done
+  - meeting an enemy closing in is a re-form to face it; the formation itself decides to
+    halt rather than march while that enemy keeps closing in, and goes straight to combat
+    if it arrives mid-re-form
+  - ranged units in range of an enemy are already in combat (0)
+  - a formation stands still on a march only when blocked or queued behind a friend
 - **Open:** whether a retreat order can pull a formation out of melee, or melee holds it
   (as today a retreat disengages at once).
 
@@ -4857,5 +4860,5 @@ decisions".
 | The player's order first | A halt order would freeze a formation in melee; units fight for themselves. |
 
 **Consequences:**
-- The formation sim gains a check for formations halted without an order.
+- The formation sim settles each formation's current manoeuvre by priority each tick.
 - Spec 27's next round builds it; the retreat question goes to the user.
