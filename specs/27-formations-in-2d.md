@@ -172,10 +172,23 @@ militia line (the one-lane balance); route B's longer way means it arrives after
 wave has fallen unless both are sent together. Feel-testing in a window is for the user
 or the local agent.
 
-### Round 2 (next): fronts, wings and coordination
+### Round 2: fronts, wings and coordination (built; feel test pending)
 
-Decision 86's round 2 (fronts on four edges, wings, step-up per edge; route B redrawn
-onto the line's side), plus Decision 87: a detection range per unit type, hold-until
-orders (seeing the partner or the fight, with a fallback timer) and planned rendezvous
-timing. Route B's wave holds in the wood until it sees route A's wave engage, then
-strikes the flank. Signals beyond sight come with the tech work.
+Decision 86's round 2 plus Decision 87, in four stacked PRs:
+1. **Fronts on four edges** (Decision 78): `SquadEdges` and `FormationEdges`. A squad whose
+   front reaches a hostile's side or rear locks onto that edge; the edge's units turn and
+   strike back; the first interval's blows are flank blows; a corner strikes back at one
+   foe; the edge is whoever is outermost on it, and the attacker re-engages as it falls
+   back. Advancers stop at sides and rears instead of passing through.
+2. **Wings** (Decision 81): `FormationWings`, on with `walk_wings` (the one-lane test keeps
+   its wrap). Front units past a narrower line's end walk round onto its sides, one per
+   rank of its depth, strike on arrival (flank for one interval), draw the edge round, and
+   walk back after. Side reach only until discipline.
+3. **Coordination** (Decision 87): a detection range per unit type (`FormationSight`);
+   hold-until staging (`FormationStaging`: sees partner, sees fight, fallback go or back);
+   planned rendezvous (`FormationRendezvous`: the march predicted as run, wheels included).
+4. **The scene:** route B runs through the wood and south onto the line's north side; the
+   line is 6 wide so an 8-wide wave sends wings; "B waits for A" stages B in the wood
+   until it sees a friend fighting; "Send together" times both to reach the line at once.
+
+Signals beyond sight come with the tech work; morale, shock and leadership are round 3.

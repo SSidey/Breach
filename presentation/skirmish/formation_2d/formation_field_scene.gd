@@ -1,10 +1,11 @@
 class_name FormationFieldScene
 extends Node2D
-## The 2D formation feel test (Decision 86, spec 27 round 1): a top-down view of the
+## The 2D formation feel test (Decision 86, spec 27 rounds 1 and 2): a top-down view of the
 ## FormationField - the kingdom's line across the middle, the player's routes A and B with
 ## their corridors, and every unit drawn in its cells, turned to its squad's facing and
-## eased between ticks. Send a route's wave, or let it depart when full. Engine glue - the
-## rules live in sim/skirmish/formation/.
+## eased between ticks. Send a route's wave, let it depart when full, send both timed to
+## arrive together, or have B wait in the wood (its detection range ringed) until it sees
+## A engage (Decision 87). Engine glue - the rules live in sim/skirmish/formation/.
 ##
 ##   godot --path . res://presentation/skirmish/formation_2d/formation_field.tscn
 
@@ -29,6 +30,8 @@ const COLOURS := {
 	"player": Color(0.6, 0.3, 0.75),
 	"the_kingdom": Color(0.3, 0.5, 0.9),
 	"flash": Color(1, 0.2, 0.2),
+	"staging": Color(1, 1, 1, 0.8),
+	"sight": Color(1, 1, 1, 0.25),
 }
 
 var _clock := SkirmishClock.new()
@@ -90,6 +93,7 @@ func _draw() -> void:
 	for key in _field.routes:
 		_draw_route(key)
 	var fraction := 1.0 if _clock.is_paused() else _clock.fraction()
+	_draw_staging()
 	for squad in _field.sim.squads():
 		for unit in squad.living():
 			_draw_unit(squad, unit, fraction)
@@ -124,6 +128,30 @@ func _draw_unit(squad, unit, fraction: float) -> void:
 		draw_circle(front, 1.5, Color.WHITE)
 
 
+## The staging point in the wood, and a ring of detection round any wave waiting there.
+func _draw_staging() -> void:
+	if _field.waves["B"].staging.is_empty():
+		return
+	var point := ORIGIN + FormationField.STAGING * CELL_PX
+	draw_colored_polygon(
+		PackedVector2Array(
+			[
+				point + Vector2(0, -5),
+				point + Vector2(5, 0),
+				point + Vector2(0, 5),
+				point + Vector2(-5, 0)
+			]
+		),
+		COLOURS["staging"]
+	)
+	for squad in _field.sim.squads():
+		if squad.staging.is_empty() or squad.living().is_empty():
+			continue
+		var reach: float = squad.living().map(func(u): return u.detection).max()
+		var centre := ORIGIN + squad.position * CELL_PX
+		draw_arc(centre, reach * CELL_PX, 0.0, TAU, 64, COLOURS["sight"], 1.5)
+
+
 func _cells(area: Rect2) -> Rect2:
 	return Rect2(ORIGIN + area.position * CELL_PX, area.size * CELL_PX)
 
@@ -151,6 +179,14 @@ func _build_hud() -> void:
 		auto.text = "Auto %s" % key
 		auto.toggled.connect(func(on): _field.set_auto(key, on))
 		bar.add_child(auto)
+	var together := Button.new()
+	together.text = "Send together"
+	together.pressed.connect(func(): _field.send_together(["A", "B"]))
+	bar.add_child(together)
+	var wait := CheckBox.new()
+	wait.text = "B waits for A"
+	wait.toggled.connect(func(on): _field.set_wait(on))
+	bar.add_child(wait)
 	var pause := Button.new()
 	pause.text = "Pause (Space)"
 	pause.pressed.connect(_toggle_pause)
