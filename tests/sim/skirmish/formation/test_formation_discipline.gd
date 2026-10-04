@@ -103,13 +103,17 @@ func test_a_marching_formation_stops_to_meet_a_flank() -> void:
 	var south := FormationRoute.new(PackedVector2Array([Vector2(44, 16), Vector2(44, 64)]))
 	var raiders := sim.spawn_squad(2, _row(_def(30), 2), "the_kingdom", true, 0, south)
 
-	var log := _run(sim, 60)
-
-	var faced := _of(log, "faced")
+	var faced := []
+	for _i in range(60):
+		faced = _of(sim.step(), "faced")
+		if not faced.is_empty():
+			break
 	assert_bool(faced.is_empty()).is_false()
 	assert_int(faced[0]["squad"]).is_equal(column.id)
 	assert_int(faced[0]["facing"]).is_equal(SquadFrame.NORTH)
-	assert_float(column.position.x).is_less(44.0)  # it stopped short to meet them
+	var halted_at := column.position.x
+	_run(sim, 8)  # the raiders are still closing in: it holds to receive them
+	assert_float(column.position.x).is_equal_approx(halted_at, 1.0)
 	assert_bool(raiders.is_destroyed()).is_false()
 
 

@@ -10,7 +10,8 @@ extends RefCounted
 ##   and that friend's formation takes panic shock.
 ## - **Rally:** a router that reaches a friendly formation with a leader joins its rear
 ##   ranks. One that runs into a steady friendly formation without a leader (Decision 89)
-##   is caught there: it stops, and after STEADY_RALLY_SECONDS joins that formation's rear.
+##   is caught there: it stops (with contact-seeking, in the nearest free cell: RoutSettle),
+##   and after STEADY_RALLY_SECONDS joins that formation's rear, walking to its place.
 ##   A routing formation whose own leader lives, with no enemy near for a few seconds,
 ##   re-forms where its leader stands and holds there.
 ## - **Home:** routers that reach home leave the field ("fled_home"; the player's routers
@@ -28,6 +29,7 @@ const FormationContact = preload("res://sim/skirmish/formation/formation_contact
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const RoutSettle = preload("res://sim/skirmish/formation/rout_settle.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 const CELLS := float(MapLayoutDef.CELLS_PER_TILE)
@@ -56,13 +58,16 @@ static func step(
 	tick: int,
 	cells_per_second: float,
 	tick_seconds: float,
-	terrain: FormationTerrain = null
+	terrain: FormationTerrain = null,
+	one_per_cell := false
 ) -> Array:
 	var events := []
 	for squad in squads.duplicate():
 		if squad.state == SkirmishSquad.State.ROUTING:
 			_flee(squad, squads, tick, cells_per_second * tick_seconds, events)
 			_rally(squad, squads, tick, tick_seconds, events)
+			if one_per_cell:
+				RoutSettle.settle(squad, squads, cells_per_second * tick_seconds, where)
 		elif _breaks(squad):
 			_break(squad, squads, tick, events, terrain)
 	return events
@@ -230,6 +235,7 @@ static func _friend_near(
 static func _join(
 	squad: SkirmishSquad, unit: SkirmishUnit, leader: SkirmishSquad, tick: int, events: Array
 ) -> void:
+	var settled = squad.fleeing.get(unit.id, {}).get("settled_at")
 	squad.units.erase(unit)
 	squad.fleeing.erase(unit.id)
 	unit.rank = 0
@@ -238,6 +244,8 @@ static func _join(
 	var single := SkirmishSquad.new(-1, squad.faction_id, leader.direction, 0.0, 1, members)
 	FormationContact.reinforce(leader, single)
 	leader.reforming = true
+	if settled != null:
+		RoutSettle.walk_in(leader, unit, settled)  # it walks to its place in the ranks
 	events.append(FormationEvents.unit_event("rallied", tick, squad, unit, {"into": leader.id}))
 	if squad.living().is_empty():
 		squad.state = SkirmishSquad.State.DESTROYED

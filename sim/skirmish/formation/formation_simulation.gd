@@ -155,7 +155,9 @@ func step() -> Array:
 	if not seek_contact:  # the scrum ends stalled fights itself
 		FormationEdges.prune(_squads, _tick, events)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
-	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain))
+	events.append_array(
+		FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, seek_contact)
+	)
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
 	FormationMarch.sync_units(_squads)
