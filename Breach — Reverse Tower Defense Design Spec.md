@@ -5241,3 +5241,35 @@ collisions… consider total war". Of the options put to them, the user chose:
 **Rules over cases:** general. One no-overlap rule for every unit, moving or still.
 **Order:** contests keep the seeded key, and separation must be decided from one
 snapshot (Decision 97).
+
+### Decision 103 — A formation pursues as a body; a withdrawal that reaches home has done its retreat
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** From the user's feel test of spec 27 round 12 (#90): "line's commander runs
+ahead, strange bug with them pursuing also, they actually pursued all the way to A's
+spawn point… A was spinning… before the line even got there".
+- **Pursuing as a body:** a pursuing formation's frame advances only while none of its
+  units lags more than a little (placeholder 2 cells) behind its place. Before, the frame
+  advanced while its foremost unit kept up, so a leader walking to his place was dragged
+  ahead of his men, and kept the pursuit within reach as he went.
+- **Reaching home:** a withdrawal (Decision 99) whose units are all home has done its
+  retreat. It re-forms there facing out, the way it will hold, and holds.
+- **Fan-out:** a withdrawal fans out no further than a rout, scaled by its disorder.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Leash each pursuing unit to the frame | A special case for pursuits; the user rejected leashes on seeking (Decision 88). |
+| Keep the retreat order standing at home | Its march fights the re-form: the spinning. |
+
+**Consequences:**
+- On the field, the captained line gives up its pursuit about 16 cells out, its units
+  within 6 cells of each other. A retreating wave holds at its spawn facing the enemy.
+
+**Rules over cases:** general. One body rule for a pursuing formation; "nowhere further
+to go" ends any withdrawal; one fan-out bound for routs and withdrawals.
+**Order:** not affected. Head-on mirror, 300 seeds each way round: 137 / 149 and 145 /
+142.
