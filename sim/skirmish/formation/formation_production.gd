@@ -11,6 +11,7 @@ extends RefCounted
 
 enum Departure { MANUAL, AUTO_WHEN_FULL }
 
+const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
 const WaveTemplate = preload("res://sim/skirmish/formation/wave_template.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -91,7 +92,8 @@ func step(sim: FormationSimulation) -> Array:
 	return events
 
 
-## Deploys the filled places as one squad (the painted layout), setting out after
+## Deploys the filled places as one squad (the painted layout; a partial wave closes up
+## into a solid block as wide as its built front band, SquadRanks), setting out after
 ## `wait_ticks` (a planned rendezvous, Decision 87), and restarts the same template, empty;
 ## null when nothing is filled.
 func send(sim: FormationSimulation, wait_ticks: int = 0) -> SkirmishSquad:
@@ -107,6 +109,11 @@ func send(sim: FormationSimulation, wait_ticks: int = 0) -> SkirmishSquad:
 	)
 	squad.merges = auto_merge
 	squad.staging = staging.duplicate()
+	if not _is_full():  # its unbuilt places are holes: it closes up, as over its dead
+		var front: Array = squad.units.filter(func(u): return u.preferred_position == 0)
+		var span: int = front.reduce(func(total, u): return total + u.footprint_width, 0)
+		squad.width = clampi(span, 1, squad.width)
+		SquadRanks.close(squad)
 	_centre(squad)
 	_filled.fill(false)
 	_announced = false
