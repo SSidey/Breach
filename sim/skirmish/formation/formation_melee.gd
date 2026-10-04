@@ -14,7 +14,7 @@ const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.g
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
-const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
+const RoutBlows = preload("res://sim/skirmish/formation/rout_blows.gd")
 const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 
@@ -41,7 +41,7 @@ static func blows(
 		if mode == SCRUM
 		else _lines(squads, interval, tick, mode, fight_seed)
 	)
-	out.append_array(FormationRout.blows(squads, interval))
+	out.append_array(RoutBlows.blows(squads, interval, fight_seed))
 	if terrain != null:
 		for blow in out:
 			if terrain.high_ground(blow[0].position, blow[1].position):
