@@ -42,8 +42,11 @@ var about_facing := false
 var width: int
 var order: SkirmishUnit.Order = SkirmishUnit.Order.ADVANCE
 var state: State = State.MOVING
-## The squad this one is fighting; 0 = none.
+## The squad this one is fighting with its front; 0 = none.
 var engaged_with: int = 0
+## Hostile squads fighting it on its other edges (Decision 78): SquadEdges edge ->
+## {"foe": squad id, "since": tick the contact began}.
+var flank_contacts := {}
 var wait_ticks: int = 0
 ## Re-forming after a reinforcement, and the swaps under way (Decision 46, FormationShuffle):
 ## [[mover, passed units, ticks left, ticks in all], ...].

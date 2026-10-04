@@ -18,15 +18,21 @@ static func lock(squad: SkirmishSquad, foe: SkirmishSquad) -> void:
 		unit.attack_cooldown = 1  # the first blows land this tick
 
 
-## Ends a squad's fight and frees every squad that was fighting it.
+## Ends a squad's fight and frees every squad that was fighting it, front or flank.
 static func release(released: SkirmishSquad, squads: Array) -> void:
 	_free(released)
 	for other in squads:
 		if other.engaged_with == released.id:
 			_free(other)
+		for edge in other.flank_contacts.keys():
+			if other.flank_contacts[edge]["foe"] == released.id:
+				other.flank_contacts.erase(edge)
+		if other.flank_contacts.is_empty() and other.engaged_with == 0:
+			if other.state == SkirmishSquad.State.FIGHTING:
+				other.state = SkirmishSquad.State.MOVING
 
 
 static func _free(squad: SkirmishSquad) -> void:
 	squad.engaged_with = 0
-	if squad.state == SkirmishSquad.State.FIGHTING:
+	if squad.state == SkirmishSquad.State.FIGHTING and squad.flank_contacts.is_empty():
 		squad.state = SkirmishSquad.State.MOVING
