@@ -107,6 +107,7 @@ func send(sim: FormationSimulation, wait_ticks: int = 0) -> SkirmishSquad:
 	)
 	squad.merges = auto_merge
 	squad.staging = staging.duplicate()
+	_centre(squad)
 	_filled.fill(false)
 	_announced = false
 	return squad
@@ -144,3 +145,15 @@ func _event(kind: String, sim: FormationSimulation, extra: Dictionary) -> Dictio
 	var event := {"type": kind, "tick": sim.tick_number(), "faction": faction_id}
 	event.merge(extra)
 	return event
+
+
+## A partial wave keeps its painted columns: shifts it so its units stand centred on the
+## route, not off to one side of it.
+static func _centre(squad: SkirmishSquad) -> void:
+	var low := INF
+	var high := -INF
+	for unit in squad.living():
+		low = minf(low, unit.column)
+		high = maxf(high, unit.column + unit.footprint_width)
+	if low < INF:
+		squad.centre_shift = squad.width / 2.0 - (low + high) / 2.0
