@@ -228,7 +228,7 @@ func _move(events: Array) -> void:
 			continue
 		var open_step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		var step := FormationMarch.pace(mover, terrain, open_step, _tick, events)
-		var next := clampf(mover.front_distance + travel * step, 0.0, end)
+		var next := FormationMarch.toward(mover, travel * step, end)
 		if advancing:
 			next = FormationContact.limit(mover, _squads, next, started)
 		mover.front_distance = next

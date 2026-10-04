@@ -3,13 +3,14 @@ extends RefCounted
 ## Retreat and pursuit (Decision 95, spec 27 round 8). When a formation is ordered to
 ## retreat out of a fight:
 ## - **The retreat:** its locks end at once (it turns for home as a re-form, ScrumTurn). A
-##   drilled formation (Decision 92) makes a fighting withdrawal - its units back away
-##   facing the enemy they touch, and strike back. A ragged one turns and runs, and pays a
+##   drilled formation (Decision 92) makes a fighting withdrawal - it steps its formation
+##   back WITHDRAW_CELLS, its units backing away facing the enemy they touch and striking
+##   back, then turns. A ragged one turns and runs, and pays a
 ##   scaled rout: a morale shock in proportion to how far short of drilled it is.
 ## - **Its enemies:** any of their units still touching it strike it as it goes
 ##   (ScrumBlows). A formation ordered to pursue, or led by a leader with the "pursues"
-##   tactic (Decision 81), follows it as a whole - its units keep seeking contact until
-##   none can reach it. Otherwise it returns to formation, though each of its units may
+##   tactic (Decision 81), follows it as a whole, then returns to its post
+##   (FormationPursuit). Otherwise it returns to formation, though each of its units may
 ##   break ranks to chase a little way first: decided per unit, by its discipline and a
 ##   seeded roll, for CHASE_SECONDS.
 ## Squads keep `pursues` and `chasers` (unit id -> {"foe", "until"}). Pure over the squads.
@@ -23,8 +24,12 @@ const FormationDiscipline = preload("res://sim/skirmish/formation/formation_disc
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
+const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
+const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
 
+## How far (cells) a drilled withdrawal steps its formation back before turning.
+const WITHDRAW_CELLS := 3.0
 ## The scaled rout of a ragged retreat: up to this much shock, for a formation with no
 ## discipline at all (placeholder).
 const RAGGED_SHOCK := 20
@@ -45,17 +50,29 @@ static func retreat(
 	FormationLocks.release(squad, squads)
 	events.append(FormationEvents.squad_event("disengaged", tick, squad))
 	var discipline := FormationDiscipline.of(squad)
-	if discipline < FormationDiscipline.MEETS_THREATS:
+	if discipline >= FormationDiscipline.MEETS_THREATS:
+		_pull_back(squad)
+	else:
 		var short := 1.0 - float(discipline) / FormationDiscipline.MEETS_THREATS
 		FormationMorale.shock(squad, roundi(RAGGED_SHOCK * short), tick, events)
 		ScrumTurn.begin(squad, -squad.direction, tick, events)  # it turns and runs at once
 	for enemy in enemies:
 		if pursues(enemy):
-			FormationLocks.lock(enemy, squad)
-			events.append(FormationEvents.squad_event("pursuing", tick, enemy, {"of": squad.id}))
+			FormationPursuit.begin(enemy, squad, tick, events)
 		else:
 			_tempt(enemy, squad, tick, battle_seed, roundi(CHASE_SECONDS / seconds))
 	return events
+
+
+## A drilled withdrawal first steps its formation back out of reach, its units backing to
+## their places facing the enemy, before it turns for home.
+static func _pull_back(squad: SkirmishSquad) -> void:
+	var back := WITHDRAW_CELLS / MapLayoutDef.CELLS_PER_TILE
+	var home: float = squad.home_distance
+	var stepped: float = squad.front_distance - squad.direction * back
+	var lowest := minf(home, squad.front_distance)
+	var highest := maxf(home, squad.front_distance)
+	squad.front_distance = clampf(stepped, lowest, highest)
 
 
 ## True if the squad pursues a retreating enemy: ordered to, or led by a pursuer.

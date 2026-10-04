@@ -7,6 +7,7 @@ extends GdUnitTestSuite
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
+const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -115,3 +116,31 @@ func test_undisciplined_units_break_ranks_to_chase_one_by_one() -> void:
 
 	assert_int(most).is_greater(0)
 	assert_int(most).is_less(ragged.living().size())  # some chase, not all
+
+
+func test_a_pursuing_formation_follows_as_a_body_then_returns_to_its_post() -> void:
+	var sim := FormationSimulation.new(2.0, 0.1)
+	sim.seek_contact = true
+	var route := FormationRoute.new(PackedVector2Array([Vector2(0, 32), Vector2(128, 32)]))
+	var me := sim.spawn_squad(8, _row(_def(20)), "player", true, 0, route)
+	var line := sim.spawn_squad(8, _row(_def(60)), "the_kingdom", false, 0, route)
+	line.front_distance = 80.0 / 64.0
+	sim.order(line.id, SkirmishUnit.Order.HOLD)
+	line.pursues = true
+	for _i in range(400):
+		if sim.step().any(func(e): return e["type"] == "engaged"):
+			break
+	for _i in range(20):
+		sim.step()
+	sim.order(me.id, SkirmishUnit.Order.RETREAT)
+	var furthest := line.position.x
+	var log := []
+	for _i in range(900):
+		log.append_array(sim.step())
+		furthest = minf(furthest, line.position.x)
+
+	assert_float(furthest).is_less(70.0)  # the formation itself followed
+	assert_bool(log.any(func(e): return e["type"] == "pursuit_ended")).is_true()
+	assert_float(line.position.x).is_greater(76.0)  # and went back to its post
+	assert_int(line.order).is_equal(SkirmishUnit.Order.HOLD)
+	assert_bool(line.pursuit.is_empty()).is_true()

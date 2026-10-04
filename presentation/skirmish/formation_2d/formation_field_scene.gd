@@ -80,7 +80,7 @@ func _ready() -> void:
 	add_child(_hud)
 	_hud.build(self)
 	var camera := Camera2D.new()
-	camera.position = ORIGIN + Vector2(FormationField.SIZE) * CELL_PX * 0.5 - Vector2(0, 20)
+	camera.position = ORIGIN + Vector2(FormationField.SIZE) * CELL_PX * 0.5 - Vector2(0, 40)
 	add_child(camera)
 
 

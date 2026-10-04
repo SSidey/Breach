@@ -402,6 +402,27 @@ after the order over 20 seeds):
 | drilled (60) | pursuing | 8.0 (all) |
 | drilled (60) | ragged (10), not pursuing, up to 5 chasing | 7.25 |
 
-Pursuit by equally fast troops is deadly, and so is a crowd of chasers; both want
-tuning once played. Objectives, fallbacks and retreat conditions come with nodes and
+Those numbers are from a mirror of equal-speed units, not the field. The feel test showed
+pursuit in the field did nothing: only units chased, within reach of their places, and
+the slower militia couldn't catch grems. Since then:
+- A pursuing formation moves as a body (`FormationPursuit`): its frame advances along its
+  route after the enemy, no faster than its units keep up, its units chasing at the march
+  pace. It gives up 16 cells off (placeholder), marches back to its post and faces the
+  way it held it.
+- A march never passes its target: a squad marching back to a post mid-route stops there.
+- A drilled withdrawal steps its formation back 3 cells (placeholder) before turning.
+
+Retreat cost on the field (retreat 3 s after contact, 20 seeds, mean losses after the
+order):
+
+| Retreating | Line pursues | Lost after the order |
+|---|---|---|
+| A (grems, ragged) | no | 1.0 of 4 |
+| A (grems, ragged) | yes | 2.5 of 4 |
+| B (chieftain, drilled) | no | 0.5 of 9 |
+| B (chieftain, drilled) | yes | 8.7 of 9 |
+
+B is caught out of formation: its units spread up to 8 cells ahead of its frame in the
+fight, and walk back to their places at the corner (turning, backs to the militia) while
+the line chases at full pace. Objectives, fallbacks and retreat conditions come with nodes and
 routes.

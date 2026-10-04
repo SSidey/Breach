@@ -33,6 +33,7 @@ const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
+const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
@@ -74,6 +75,7 @@ static func step(
 	_seek(ctx)
 	_regroup(squads, ctx["pace"], tick_seconds)
 	ScrumPursuit.step(squads, tick, cells_per_second, tick_seconds)
+	FormationPursuit.step(squads, tick, cells_per_second, tick_seconds, events)
 	_stall(squads, ctx["active"], tick, tick_seconds, events)
 	return events
 
@@ -142,8 +144,8 @@ static func _seek(ctx: Dictionary) -> void:
 	var fighting: Array = ctx["squads"].filter(
 		func(s): return s.state == SkirmishSquad.State.FIGHTING
 	)
-	for squad in fighting:
-		_walk(squad, ctx["pace"] * CROWDING)
+	for squad in fighting:  # in the crush, but at the march pace in a pursuit
+		_walk(squad, ctx["pace"] * (CROWDING if squad.pursuit.is_empty() else 1.0))
 	for squad in fighting:  # after everyone has moved, so a unit stepped up to is seen
 		_face(squad, ctx)
 
