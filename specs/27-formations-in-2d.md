@@ -112,6 +112,9 @@ test of the whole stack is next.
    - Tactical over strategic: combat, then the route, then re-forming, then the player's
      order; a formation halted without an order moves to a fight nearby or back to its
      march (Decision 94).
+   - Units turn at a rate and move slower off their facing (8 facings); a retreat breaks
+     contact at a cost scaled by discipline; pursuit is ordered or a leader's, breaking
+     ranks per unit; objectives and fallbacks come with nodes (Decision 95).
 
 ## Agenda for the design conversation
 

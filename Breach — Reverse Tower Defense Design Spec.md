@@ -4862,3 +4862,68 @@ decisions".
 **Consequences:**
 - The formation sim settles each formation's current manoeuvre by priority each tick.
 - Spec 27's next round builds it; the retreat question goes to the user.
+
+### Decision 95 — Units turn at a rate and move slower off their facing; a retreat breaks contact at a cost, scaled by discipline; pursuit is ordered or a leader's, breaking ranks is per unit; objectives and fallbacks come with nodes
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after spec 27's round 7 was built, on whether a retreat
+order can pull a formation out of melee: "If a retreat order can be articulated (or is
+planned before departure… e.g. commander given the criteria to retreat if their
+formation power is < X) then they should attempt to retreat immediately, a more
+controlled rout"; the enemy's response, pursuit or holding, "could be set by departure or
+decided by the commander"; and "each formation has an objective and fallback once
+complete". On the cost of fleeing: "They should be open to attacks, see it as 'time to
+turn'… Ultimately it should cost the retreating force to flee." The user chose, of the
+models offered, speed by facing with a turn rate, "so long as there is variance in
+between unit types (e.g. a grem is more nimble than a brute) defined by their stats",
+with low-discipline retreats paying "scaled versions of a rout", and, for a holding
+formation's undisciplined units breaking ranks to pursue, "it should be per unit to see
+which ones do".
+- **Movement by facing (model C):** a unit may move any way, at a speed set by the angle
+  between its facing and its heading - full ahead, down to its **backward pace** straight
+  back (placeholder 0.4 of its speed) - and its facing turns towards where it is going (or
+  stays on a foe it is backing away from) at its **turn rate**. Units have 8 facings (45
+  degree steps); a placeholder rate of 45 degrees a tick turns 90 in 2 ticks, 180 in 4.
+  Turn rate and backward pace are unit stats: a grem is nimbler than a brute. Turning is
+  exposure: a blow from outside a unit's front is a flank blow (Decision 88).
+- **Retreat is a manoeuvre that breaks contact,** and an ordered or triggered retreat
+  outranks combat (Decision 94): the formation pulls out of melee at once. Enemies still
+  touching it strike as it goes.
+  - **Drilled** (discipline at or above the threshold, Decision 92): a fighting
+    withdrawal - its units back away facing the enemy until clear, then turn and go.
+  - **Ragged:** its units turn and run at once, and the retreat costs it a scaled rout:
+    morale shock and the panic of a flight in proportion to how far short of drilled it
+    is (placeholders).
+  - A retreat can be ordered (if the order can reach it, Decision 87) or set before
+    departure as a condition (strength below X, a morale band, the leader falling).
+- **Pursuit:**
+  - A formation ordered to pursue, or led by a leader with the **pursues** tactic
+    (Decision 81), follows the retreating enemy as a whole, striking as it goes, until
+    the enemy is out of its reach; then it returns to its order (a held position: it
+    re-forms there).
+  - Otherwise it returns to formation. Each of its units may break ranks to chase a
+    little way first - decided per unit, by its discipline and a seeded roll - and then
+    returns.
+  - Ranged units keep shooting at anything in range.
+- **Objectives and fallbacks** (to come with nodes and player-assigned routes, Decisions
+  75 and 90): a formation leaves with an objective (default: proceed down the lane and
+  take the next node) and a fallback once it is done or abandoned (default: return to
+  base; or repeat the objective, hold position, return to the last controlled node, to
+  the core, or to node X). A retreat abandons the objective for the fallback.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Turn, then move | Every unit pays alike; no fighting withdrawal. |
+| Turning slows movement (blended) | Exposure only from the end facing; drilled and ragged look alike. |
+| A retreat is a player order below combat | A formation could never break off a fight it is losing. |
+
+**Consequences:**
+- Unit types gain a turn rate and a backward pace (spec 28 sets real values); units gain
+  8 facings.
+- The formation sim gains retreat as a contact-breaking manoeuvre, a scaled rout for
+  ragged retreats, pursuit by order or trait, and per-unit chasing.
+- Objectives, fallbacks and retreat conditions are built with nodes and routes.
