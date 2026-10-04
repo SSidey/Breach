@@ -129,7 +129,9 @@ static func _field(scenario: String, battle_seed: int, options: Dictionary) -> D
 		battle_seed
 	)
 	field.sim.damage_band = options.get("band", FormationField.DAMAGE_BAND)
-	for _i in range(400):
+	for _i in range(LIMIT_TICKS):
+		if field.waves["A"].built() == 8 and field.waves["B"].built() == 9:  # B's chieftain
+			break
 		field.step()
 	var lost := {"player": 0, "the_kingdom": 0}
 	var events := _send(field, scenario)

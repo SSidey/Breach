@@ -284,3 +284,56 @@ The comparison (1500 ticks after sending; line /12, reserve /6, grems lost):
   the reserve catches its routers instead of being swept away by them.
 - A lone B flank no longer freezes; it loses to a line half again its size. A captained
   line meets it as a line and loses only two.
+
+### Round 6: after the round 5 feel test (built; feel test pending)
+
+The fixes and Decisions 92 and 93, raised by the user's round 5 feel test, in four
+stacked PRs:
+1. **Fixes:**
+   - a partial wave is centred on its route; it no longer marches in its painted columns
+     beside the line
+   - with contact-seeking, squads whose units come within a cell of each other fight,
+     whatever their faces (`ScrumEngage`)
+   - a waiting wave ignores waves on its own route as partners
+   - a squad closes ranks over its dead when its fight ends (`SquadRanks`)
+   - a squad re-forms only for an enemy closing in, not one holding its ground; this
+     fixes the merged B stuck facing the reserve
+2. **Variance** (Decision 93):
+   - every random draw comes from the battle seed
+   - each blow's damage rolls ±25% (placeholder)
+   - `BattleTrials` and `tools/formation_trials.gd` fight a scenario once per seed and
+     report the spread, including mirror scenarios
+3. **Discipline** (Decision 92):
+   - units have discipline (placeholder 30); a formation's is its mean plus 10 per point
+     of leadership
+   - at 50 or more it re-forms as a whole to meet an enemy closing in within 12 cells,
+     marching or holding
+   - nothing waits before acting; re-forming runs at 40% to 150% of the march pace by
+     discipline
+   - a turn is a re-form: the squad takes its new facing and its units walk to their new
+     places (`ScrumTurn`)
+4. **The scene** (`FormationFieldHud`):
+   - Reset, with a battle seed typed in or random, keeping the ticked options
+   - the seed in the status row
+   - leaders counted apart ("B 8/8 + leader 1/1")
+   - "A goes via C": a slanted route (2 across for every 3 up) onto A's lane
+
+Trials (30 seeds each, ±25% damage). Losses in the field are counted until the line
+breaks:
+
+| Scenario | Wins (player / kingdom) | Player lost | Kingdom lost |
+|---|---|---|---|
+| 8 v 8 head-on | 13 / 15 (2 both wiped out) | 6.8 ± 1.5 | 7.0 ± 1.3 |
+| 8 onto the side of a line of 8 | 30 / 0 | 2.9 ± 1.1 | 8.0 |
+| Field: A alone | 0 / 30 | 8.0 | 3.4 ± 0.7 |
+| Field: B alone | 4 / 26 | 8.9 ± 0.3 | 8.6 ± 2.7 |
+| Field: B alone, line captained | 0 / 30 | 9.0 | 3.6 ± 0.9 |
+| Field: B waits | 30 / 0 | 6.8 ± 1.0 | 8.9 ± 2.3 |
+| Field: together | 30 / 0 | 1.8 ± 1.2 | 7.9 ± 0.5 |
+
+- Head-on mirrors are even. A flank on a line that doesn't turn to meet it wins every time
+  for a third of the losses. That is the measure of the flank, and the case for discipline.
+- On the slant, a squad keeps its nearest facing and steps sideways along the route; more
+  facings wait on the feel test.
+- Not built yet: planned rendezvous still times a turn as a wheel (off by up to half a
+  second), and formation contests (Decision 92) have no case in the field yet.
