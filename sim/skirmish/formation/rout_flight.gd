@@ -11,6 +11,7 @@ extends RefCounted
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
+const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const RoutCatch = preload("res://sim/skirmish/formation/rout_catch.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 
@@ -40,7 +41,7 @@ static func step(
 	)
 	var side := heading.orthogonal()
 	var at: Vector2 = motion[3]
-	var refuge = _refuge(squad, at, entry["along"], home, motion[4])
+	var refuge = _refuge(squad, at, [entry["along"], home, motion[1]], motion[4])
 	if refuge != null:  # it makes for the friend, as fast as it may turn aside
 		var most := sin(deg_to_rad(FAN_DEGREES)) * full
 		aside = clampf((refuge - at).dot(side), -most, most)
@@ -53,20 +54,26 @@ static func step(
 	entry["along"] = move_toward(entry["along"], home, sqrt(full * full - aside * aside))
 
 
-## The unit of a standing friendly formation nearest `at`, among those between `along`
-## and `home` on the route (cells), or null if there is none.
-static func _refuge(squad: SkirmishSquad, at: Vector2, along: float, home: float, squads: Array):
+## The unit of a standing friendly formation nearest `at`, among those between the
+## router and home on the route - `along` is [its distance along it, home's, the fight
+## seed] - or null if there is none. Equally near ones go by their draws (Decision 97).
+static func _refuge(squad: SkirmishSquad, at: Vector2, along: Array, squads: Array):
 	if squad.route == null:
 		return null
 	var best = null
-	var best_gap := INF
+	var best_key := []
 	for friend in squads:
 		if friend == squad or friend.faction_id != squad.faction_id or not RoutCatch.stands(friend):
 			continue
 		for unit in friend.living():
 			var there := ScrumReach.at(friend, unit)
-			var ahead := (squad.route.distance_of(there) - along) * (home - along) > 0.0
-			if ahead and there.distance_to(at) < best_gap:
+			var ahead: bool = (
+				(squad.route.distance_of(there) - along[0]) * (along[1] - along[0]) > 0.0
+			)
+			var key := [
+				snappedf(there.distance_to(at), 0.000001), ScrumContest.draw(unit, along[2])
+			]
+			if ahead and (best == null or key < best_key):
 				best = there
-				best_gap = there.distance_to(at)
+				best_key = key
 	return best

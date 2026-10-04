@@ -11,6 +11,8 @@ extends RefCounted
 ##   (FormationPursuit). Otherwise it returns to formation, though each of its units may
 ##   break ranks to chase a little way first: decided per unit, by its discipline and a
 ##   seeded roll, for CHASE_SECONDS.
+## Chasers all pick their quarry before any moves: the nearest unit, ties by its seeded
+## draw (Decision 97).
 ## Squads keep `pursues` and `chasers` (unit id -> {"foe", "until"}). Pure over the squads.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -23,6 +25,7 @@ const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd"
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationWithdraw = preload("res://sim/skirmish/formation/formation_withdraw.gd")
+const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
 
 ## The scaled rout of a ragged retreat: up to this much shock, for a formation with no
@@ -63,10 +66,13 @@ static func pursues(squad: SkirmishSquad) -> bool:
 
 ## One tick of chasing: each chaser walks at the march pace after the nearest unit of the
 ## enemy it chases; when its time is up, or that enemy is gone, it returns to its place.
-static func step(squads: Array, tick: int, cells_per_second: float, seconds: float) -> void:
+static func step(
+	squads: Array, tick: int, cells_per_second: float, seconds: float, fight_seed: int = 0
+) -> void:
 	var by_id := {}
 	for entry in squads:
 		by_id[entry.id] = entry
+	var walks := []  # [unit, its place in the scrum, where it heads]
 	for squad in squads:
 		for unit_id in squad.chasers.keys():
 			var chase: Dictionary = squad.chasers[unit_id]
@@ -76,10 +82,12 @@ static func step(squads: Array, tick: int, cells_per_second: float, seconds: flo
 				squad.chasers.erase(unit_id)
 				continue
 			var entry: Dictionary = squad.loose[unit_id]
-			var target := _nearest(entry["at"], foe)
-			var full := unit.speed * cells_per_second * seconds
-			entry["at"] = UnitMotion.walk(unit, entry["at"], target, full, seconds)
-			entry["next"] = entry["at"]
+			walks.append([unit, entry, _nearest(entry["at"], foe, fight_seed)])
+	for walk in walks:
+		var entry: Dictionary = walk[1]
+		var full: float = walk[0].speed * cells_per_second * seconds
+		entry["at"] = UnitMotion.walk(walk[0], entry["at"], walk[2], full, seconds)
+		entry["next"] = entry["at"]
 
 
 ## True if the squad's unit is away from its place on its own - chasing, or its squad
@@ -101,7 +109,7 @@ static func _tempt(
 ) -> void:
 	for unit in enemy.living():
 		var at := ScrumReach.at(enemy, unit)
-		if _nearest(at, squad).distance_to(at) > TEMPTED_WITHIN:
+		if _nearest(at, squad, battle_seed).distance_to(at) > TEMPTED_WITHIN:
 			continue
 		var chance := float(FormationDiscipline.MEETS_THREATS - unit.discipline) / 100.0
 		if BattleRolls.uniform(battle_seed, [tick, unit.id, "chase"]) >= chance:
@@ -111,12 +119,14 @@ static func _tempt(
 		enemy.chasers[unit.id] = {"unit": unit, "foe": squad.id, "until": tick + ticks}
 
 
-static func _nearest(at: Vector2, squad: SkirmishSquad) -> Vector2:
+## Where the squad's unit nearest `at` stands (ties by the units' draws); `at` if none.
+static func _nearest(at: Vector2, squad: SkirmishSquad, fight_seed: int) -> Vector2:
 	var best := at
-	var gap := INF
+	var best_key := []
 	for unit in squad.living():
 		var there := ScrumReach.at(squad, unit)
-		if there.distance_to(at) < gap:
-			gap = there.distance_to(at)
+		var key := [snappedf(there.distance_to(at), 0.000001), ScrumContest.draw(unit, fight_seed)]
+		if best_key.is_empty() or key < best_key:
+			best_key = key
 			best = there
 	return best

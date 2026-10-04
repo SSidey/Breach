@@ -16,6 +16,8 @@ extends RefCounted
 ##   and its units walk to their places at its re-form pace; it moves on once all are back.
 ## - **Manoeuvres:** settled each tick by priority (FormationManoeuvre, Decision 94).
 ## - **A stalled fight** (nobody touching or seeking for STALL_SECONDS) is released.
+## Each phase decides from where units stood before it began, never letting a squad listed
+## earlier move first and change what a later one sees (Decision 97).
 ## Squads keep `loose`, `stance`, `fight_since` and `stall_ticks`. Pure over the squads.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -25,8 +27,8 @@ const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
 const ScrumPaths = preload("res://sim/skirmish/formation/scrum_paths.gd")
 const ScrumEngage = preload("res://sim/skirmish/formation/scrum_engage.gd")
+const ScrumRegroup = preload("res://sim/skirmish/formation/scrum_regroup.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
-const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
 const FormationWithdraw = preload("res://sim/skirmish/formation/formation_withdraw.gd")
@@ -54,11 +56,11 @@ static func step(
 	fight_seed: int,
 	terrain: FormationTerrain = null
 ) -> Array:
-	var events := ScrumEngage.step(squads, tick)
+	var events := ScrumEngage.step(squads, tick, fight_seed)
 	for squad in squads:
 		_prepare(squad, tick)
 	for squad in squads:
-		ScrumStance.anticipate(squad, squads, tick, events, terrain)
+		ScrumStance.anticipate(squad, squads, tick, events, terrain, fight_seed)
 	FormationManoeuvre.step(squads)
 	var ctx := {
 		"squads": squads,
@@ -71,8 +73,8 @@ static func step(
 		"active": {},
 	}
 	_seek(ctx)
-	_regroup(squads, ctx["pace"], tick_seconds, fight_seed)
-	ScrumPursuit.step(squads, tick, cells_per_second, tick_seconds)
+	ScrumRegroup.step(squads, ctx["pace"], tick_seconds, fight_seed)
+	ScrumPursuit.step(squads, tick, cells_per_second, tick_seconds, fight_seed)
 	FormationWithdraw.step(squads, tick, ctx["pace"], tick_seconds, fight_seed, terrain, events)
 	ScrumSpacing.step(squads, ctx["pace"], fight_seed)
 	FormationPursuit.step(squads, tick, cells_per_second, tick_seconds, events)
@@ -219,41 +221,6 @@ static func _face(squad: SkirmishSquad, ctx: Dictionary) -> void:
 		if look != null:
 			var wanted := UnitMotion.bearing_to(entry["at"], look, unit.bearing)
 			UnitMotion.turn(unit, wanted, ctx["seconds"])
-
-
-## Units of squads out of the fight walk to their places (in the stance, if any) at the
-## march pace; back in place they rejoin the squad's frame unless it holds a stance.
-static func _regroup(squads: Array, pace: float, seconds: float, fight_seed: int) -> void:
-	for squad in squads:
-		if squad.state in [SkirmishSquad.State.FIGHTING, SkirmishSquad.State.ROUTING]:
-			continue
-		if squad.state == SkirmishSquad.State.MOVING and not squad.loose.is_empty():
-			squad.state = SkirmishSquad.State.HOLDING  # it stands while its units regroup
-		var withdrawing: bool = (
-			squad.order == SkirmishUnit.Order.RETREAT and FormationDiscipline.meets_threats(squad)
-		)
-		var hostiles: Array = ScrumBlows.hostile_units(squad, squads) if withdrawing else []
-		for unit_id in squad.loose.keys():
-			if ScrumPursuit.away(squad, unit_id):
-				continue
-			var entry: Dictionary = squad.loose[unit_id]
-			var unit: SkirmishUnit = entry["unit"]
-			var place := ScrumStance.anchor(squad, unit)
-			var foe_at = (
-				ScrumBlows.nearest_touching(squad, unit, hostiles, fight_seed)
-				if withdrawing
-				else null
-			)
-			var step := unit.speed * pace * FormationDiscipline.reform_pace(squad)
-			var arrived: bool = entry["at"].distance_to(place) < 0.000001
-			if not arrived:  # a drilled retreat backs away facing the foe it touches
-				entry["at"] = UnitMotion.walk(unit, entry["at"], place, step, seconds, foe_at)
-			entry["next"] = entry["at"]
-			entry["goal"] = null
-			var facing: int = squad.facing if squad.stance.is_empty() else squad.stance["facing"]
-			var faced := arrived and UnitMotion.turn(unit, UnitMotion.of_facing(facing), seconds)
-			if squad.stance.is_empty() and faced:
-				squad.loose.erase(unit_id)  # in its place and facing the squad's way
 
 
 ## Releases fights where nobody on either side has touched or sought a foe for a while.

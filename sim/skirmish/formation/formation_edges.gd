@@ -7,6 +7,9 @@ extends RefCounted
 ## on the victim's front rank that is fighting its front foe strikes only there (a corner
 ## strikes back at one foe). A flank lock ends when the attacker's front no longer reaches
 ## the face (the edge's units fell back inward), and the attacker advances to it again.
+## Nothing hangs on list order (Decision 97): every attacker picks the nearest face it
+## reaches from one snapshot; two reaching one edge at once, the nearer holds it; a unit
+## overlapping two targets equally strikes by the seeded draw (ScrumContest).
 ## Pure over the squads it is given; FormationSimulation calls it each tick.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -19,6 +22,7 @@ const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.g
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
+const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 
 const EPSILON := 0.000001
 ## How far past a face's end (cells) a unit still meets it: only units in contact strike,
@@ -26,30 +30,54 @@ const EPSILON := 0.000001
 const CONTACT_SLACK := 0.5
 
 
-## Free attackers whose fronts reach a hostile's side or rear lock on.
-static func engage(squads: Array, tick: int, events: Array) -> void:
+## Free attackers whose fronts reach a hostile's side or rear lock on, all decided before
+## any lands: nearest first, so the nearest attacker holds an edge two reach at once.
+static func engage(squads: Array, tick: int, events: Array, fight_seed: int = 0) -> void:
+	var picks := []  # [key, attacker, victim]
 	for attacker in squads:
-		if not _free(attacker):
+		if _free(attacker):
+			var pick := _target(attacker, squads, fight_seed)
+			if not pick.is_empty():
+				picks.append(pick)
+	picks.sort_custom(func(a, b): return a[0] < b[0])
+	var held := {}  # [victim, edge] -> true: edges taken this tick
+	for pick in picks:
+		_lock_on(pick[1], pick[2], tick, events, held)
+
+
+## [key, attacker, victim] for the nearest side or rear face the attacker reaches (ties by
+## the squads' draws), or [].
+static func _target(attacker: SkirmishSquad, squads: Array, fight_seed: int) -> Array:
+	var best := []
+	var mine := ScrumContest.squad_draw(attacker, fight_seed)
+	for victim in squads:
+		if victim.faction_id == attacker.faction_id or not _reaches(attacker, victim):
 			continue
-		for victim in squads:
-			if victim.faction_id == attacker.faction_id or not _reaches(attacker, victim):
-				continue
-			var edge := SquadEdges.edge_hit(victim, attacker.facing)
-			FormationLocks.lock(attacker, victim)
-			victim.flank_contacts[edge] = {"foe": attacker.id, "since": tick}
-			if victim.state != SkirmishSquad.State.TURNING:
-				victim.state = SkirmishSquad.State.FIGHTING
-			for unit in SquadEdges.edge_units(victim, edge):
-				unit.attack_cooldown = 1
-			var extra := {"by": attacker.id, "edge": edge}
-			events.append(FormationEvents.squad_event("flanked", tick, victim, extra))
-			var impact := (
-				FormationMorale.REAR_IMPACT
-				if edge == SquadEdges.REAR
-				else FormationMorale.SIDE_IMPACT
-			)
-			FormationMorale.shock(victim, impact, tick, events)
-			break
+		var gap := snappedf(SquadEdges.face_gap(attacker, victim), EPSILON)
+		var key := [gap, mine, ScrumContest.squad_draw(victim, fight_seed)]
+		if best.is_empty() or key < best[0]:
+			best = [key, attacker, victim]
+	return best
+
+
+static func _lock_on(
+	attacker: SkirmishSquad, victim: SkirmishSquad, tick: int, events: Array, held: Dictionary
+) -> void:
+	var edge := SquadEdges.edge_hit(victim, attacker.facing)
+	FormationLocks.lock(attacker, victim)
+	if not held.has([victim, edge]):  # a nearer attacker already holds it this tick
+		held[[victim, edge]] = true
+		victim.flank_contacts[edge] = {"foe": attacker.id, "since": tick}
+	if victim.state != SkirmishSquad.State.TURNING:
+		victim.state = SkirmishSquad.State.FIGHTING
+	for unit in SquadEdges.edge_units(victim, edge):
+		unit.attack_cooldown = 1
+	var extra := {"by": attacker.id, "edge": edge}
+	events.append(FormationEvents.squad_event("flanked", tick, victim, extra))
+	var impact := (
+		FormationMorale.REAR_IMPACT if edge == SquadEdges.REAR else FormationMorale.SIDE_IMPACT
+	)
+	FormationMorale.shock(victim, impact, tick, events)
 
 
 ## True if the attacker's lock on `foe` is a flank lock.
@@ -58,7 +86,7 @@ static func is_flanking(attacker: SkirmishSquad, foe: SkirmishSquad) -> bool:
 
 
 ## This tick's blows on every flanked edge, both ways: [[attacker, target, damage, flank]].
-static func blows(squads: Array, interval: int, tick: int) -> Array:
+static func blows(squads: Array, interval: int, tick: int, fight_seed: int = 0) -> Array:
 	var by_id := {}
 	for entry in squads:
 		by_id[entry.id] = entry
@@ -76,7 +104,7 @@ static func blows(squads: Array, interval: int, tick: int) -> Array:
 			var on_edge := SquadEdges.edge_units(victim, edge)
 			var facing: int = attacker.facing
 			for fighter in attacker.fighters():
-				var aim := [on_edge, victim, facing]
+				var aim := [on_edge, victim, facing, fight_seed]
 				_strike(
 					fighter, attacker, aim, fresh, FormationMorale.interval(attacker, interval), out
 				)
@@ -84,7 +112,7 @@ static func blows(squads: Array, interval: int, tick: int) -> Array:
 				if struck.has(unit) or _busy_in_front(victim, unit):
 					continue
 				struck[unit] = true
-				var back := [attacker.fighters(), attacker, facing]
+				var back := [attacker.fighters(), attacker, facing, fight_seed]
 				_strike(unit, victim, back, false, FormationMorale.interval(victim, interval), out)
 	return out
 
@@ -148,8 +176,9 @@ static func _busy_in_front(squad: SkirmishSquad, unit: SkirmishUnit) -> bool:
 
 
 ## One unit's strike. aim = [targets, their squad, the facing whose lateral axis matches
-## them]: it strikes the target it overlaps most across that axis, or one whose corner it
-## touches; with none in contact it doesn't strike. Counts down its cooldown and adds a
+## them, the battle seed]: it strikes the target it overlaps most across that axis, or one
+## whose corner it touches (ties by the targets' draws); with none in contact it doesn't
+## strike. Counts down its cooldown and adds a
 ## blow when it lands.
 static func _strike(
 	unit: SkirmishUnit, own: SkirmishSquad, aim: Array, flank: bool, interval: int, out: Array
@@ -169,15 +198,16 @@ static func _pick(unit: SkirmishUnit, own: SkirmishSquad, aim: Array) -> Skirmis
 	var facing: int = aim[2]
 	var span := SquadFrame.lateral_interval(_rect(own, unit), facing)
 	var best: SkirmishUnit = null
-	var best_key := INF
+	var best_key := [INF]
 	for target in aim[0]:
 		var other := SquadFrame.lateral_interval(_rect(aim[1], target), facing)
 		var overlap := minf(span.y, other.y) - maxf(span.x, other.x)
-		var key := -overlap if overlap > EPSILON else maxf(other.x - span.y, span.x - other.y)
-		if key < best_key - EPSILON:
+		var apart := -overlap if overlap > EPSILON else maxf(other.x - span.y, span.x - other.y)
+		var key := [snappedf(apart, EPSILON), ScrumContest.draw(target, aim[3])]
+		if best == null or key < best_key:
 			best = target
 			best_key = key
-	return best if best_key <= CONTACT_SLACK + EPSILON else null
+	return best if best_key[0] <= CONTACT_SLACK + EPSILON else null
 
 
 static func _rect(squad: SkirmishSquad, unit: SkirmishUnit) -> Rect2:

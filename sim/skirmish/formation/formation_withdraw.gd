@@ -61,6 +61,7 @@ static func step(
 	terrain: FormationTerrain,
 	events: Array
 ) -> void:
+	var withdrawing := []  # decided from where everyone stands, then moved (Decision 97)
 	for squad in squads:
 		if squad.withdraw.is_empty():
 			continue
@@ -68,10 +69,12 @@ static func step(
 			squad.withdraw = {}
 			continue
 		var foes := ScrumBlows.hostile_units(squad, squads)
+		withdrawing.append([squad, _faced(squad, foes, fight_seed), _safe(squad, squads, foes)])
+	for entry in withdrawing:
+		var squad: SkirmishSquad = entry[0]
 		for unit in squad.living():
-			_flee(squad, unit, foes, [pace, seconds, fight_seed], terrain)
-		var safe := _safe(squad, squads, foes)
-		squad.withdraw["safe_ticks"] = squad.withdraw["safe_ticks"] + 1 if safe else 0
+			_flee(squad, unit, entry[1].get(unit.id), [pace, seconds, fight_seed], terrain)
+		squad.withdraw["safe_ticks"] = squad.withdraw["safe_ticks"] + 1 if entry[2] else 0
 		var long_enough: bool = (
 			squad.withdraw["safe_ticks"] * seconds >= FormationRout.RALLY_SECONDS
 		)
@@ -79,10 +82,19 @@ static func step(
 			_reform_here(squad, tick, events)
 
 
+## unit id -> where the foe it touches stands, for a drilled squad's units ({} otherwise):
+## they back away facing it.
+static func _faced(squad: SkirmishSquad, foes: Array, fight_seed: int) -> Dictionary:
+	var out := {}
+	if not FormationDiscipline.meets_threats(squad):
+		return out
+	for unit in squad.living():
+		out[unit.id] = ScrumBlows.nearest_touching(squad, unit, foes, fight_seed)
+	return out
+
+
 ## `motion` is [pace (cells a tick at speed 1), seconds, fight seed].
-static func _flee(
-	squad: SkirmishSquad, unit: SkirmishUnit, foes: Array, motion: Array, terrain
-) -> void:
+static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, foe_at, motion: Array, terrain) -> void:
 	var entry: Dictionary = squad.loose[unit.id]
 	var at: Vector2 = entry["at"]
 	var along := squad.route.distance_of(at)
@@ -96,9 +108,6 @@ static func _flee(
 		heading = homeward  # it can't fan that way: it keeps to the line
 	if terrain != null:
 		full *= terrain.factor(unit.height, at, at + heading)
-	var foe_at = null
-	if FormationDiscipline.meets_threats(squad):
-		foe_at = ScrumBlows.nearest_touching(squad, unit, foes, motion[2])
 	var to := at + heading * maxf(full, 0.000001)
 	entry["at"] = UnitMotion.walk(unit, at, to, full, motion[1], foe_at)
 	entry["next"] = entry["at"]

@@ -56,6 +56,11 @@ An id names a unit or squad. It never ranks one. Ids are handed out in spawn ord
    for `mirror_flank` if flanks are touched. Compare the first-spawned side's wins
    across both orders. A gap beyond about 2 standard deviations (sd ≈ √n / 2 over n
    decided battles) is a bias: find it before committing. Report the numbers in the PR.
+4. **Reverse the lists:** a list-order tie can hide inside the trial's noise. The
+   reversed-lists tests (`test_formation_list_order.gd`, `test_formation_rout_order.gd`)
+   step a battle twice, the second with every squad and unit list reversed (same ids,
+   same seed), and require the same state each tick. Add a case there for any new
+   situation your change decides.
 
 Write the answer to the spec's `order-independent` row, or an **Order** line in the
 Decision.

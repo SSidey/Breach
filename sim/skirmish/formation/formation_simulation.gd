@@ -1,8 +1,9 @@
 class_name FormationSimulation
 extends RefCounted
 ## The formation fight (specs/22-formation-feel-test.md, Decision 40): squads of both
-## factions, each on its route (spec 27). Deterministic - every phase iterates squads and
-## units in id order, and blows land simultaneously.
+## factions, each on its route (spec 27). Deterministic, and no outcome hangs on the order
+## squads were spawned or are listed in (Decision 97): each phase decides from one
+## snapshot, then applies; ties go to where things stand, then to the seeded draws.
 ##
 ## step() runs one tick in this fixed order:
 ##   1. orders  - queued wave orders apply (a retreat disengages at once)
@@ -10,9 +11,10 @@ extends RefCounted
 ##                free squad whose front reaches a hostile's side or rear locks onto that
 ##                edge (FormationEdges, Decision 78)
 ##   3. move    - a squad turns first if it must (Decision 74); a staged one holds until
-##                its trigger (Decision 87); free squads move as a block at their slowest
-##                unit's pace, stopping at contact or behind a friend, or join a friend
-##                from the back (Decisions 44, 51); wings walk round (Decision 81), or with
+##                its trigger (Decision 87); free squads move together as blocks at their
+##                slowest unit's pace, stopping at contact or behind where a friend stood,
+##                or join a friend from the back (Decisions 44, 51, FormationJoins); wings
+##                walk round (Decision 81), or with
 ##                seek_contact units seek contact (FormationScrum, Decision 88)
 ##   4. combat  - melee blows (FormationMelee) and ranged blows (Decision 46)
 ##   5. deaths  - the fallen die, the ranks behind step up, an empty squad is destroyed
@@ -43,6 +45,8 @@ const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationNarrowing = preload("res://sim/skirmish/formation/formation_narrowing.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
+const FormationFronts = preload("res://sim/skirmish/formation/formation_fronts.gd")
+const FormationJoins = preload("res://sim/skirmish/formation/formation_joins.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 const MELEE_REACH := FormationContact.MELEE_REACH
@@ -190,31 +194,22 @@ func _apply_orders(events: Array) -> void:
 
 
 func _engage(events: Array) -> void:
-	for attacker in _squads:
-		if not FormationContact.can_engage(attacker) or attacker.engaged_with != 0:
-			continue
-		if attacker.state == SkirmishSquad.State.TURNING:
-			continue  # it turns first (Decision 74)
-		var foe := FormationContact.nearest_hostile(attacker, _squads)
-		if foe == null:
-			continue
-		FormationLocks.lock(attacker, foe)
-		if foe.engaged_with == 0:
-			FormationLocks.lock(foe, attacker)
-		events.append(FormationEvents.squad_event("engaged", _tick, attacker, {"with": foe.id}))
-	FormationEdges.engage(_squads, _tick, events)
+	FormationFronts.engage(_squads, _tick, fight_seed, events)
+	FormationEdges.engage(_squads, _tick, events, fight_seed)
 
 
+## Every squad decides its move from where all stood as the tick began, then all moves
+## land together (Decision 97).
 func _move(events: Array) -> void:
-	var joins := []  # [leader, joining]
-	var started := _fronts() if seek_contact else {}  # marching at each other as if at once
+	var marching := {}  # squad id -> [mover, where it wants to get, its route's end]
+	var waiting := []
 	for mover in _squads:
 		if FormationTurning.step(mover, _tick, events):
 			continue
 		if mover.state in STANDING or FormationScrum.regrouping(mover):
 			continue
 		if mover.wait_ticks > 0:
-			mover.wait_ticks -= 1
+			waiting.append(mover)
 			continue
 		var paced := [TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE, tick_seconds]
 		if FormationStaging.holds(mover, _squads, _tick, events, paced, terrain):
@@ -223,7 +218,6 @@ func _move(events: Array) -> void:
 			mover.state = SkirmishSquad.State.HOLDING
 			continue
 		mover.state = SkirmishSquad.State.MOVING
-		var advancing := mover.order == SkirmishUnit.Order.ADVANCE
 		var end := FormationMarch.length(mover, route_length)
 		var travel := FormationMarch.travel_sign(mover, end)
 		if _turns_first(mover, travel, events):
@@ -232,23 +226,32 @@ func _move(events: Array) -> void:
 			continue
 		var open_step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		var step := FormationMarch.pace(mover, terrain, open_step, _tick, events)
-		var next := FormationMarch.toward(mover, travel * step, end)
-		if advancing:
-			next = FormationContact.limit(mover, _squads, next, started)
-		mover.front_distance = next
-		var leader := FormationContact.joinable(mover, _squads) if advancing else null
-		if leader != null:
-			joins.append([leader, mover])
-		FormationMarch.check_ends(mover, end, _tick, events)
-	for pair in joins:
-		_join(pair[0], pair[1], events)
+		marching[mover.id] = [mover, FormationMarch.toward(mover, travel * step, end), end]
+	_march(marching, events)
+	for mover in waiting:
+		mover.wait_ticks -= 1
 
 
-func _fronts() -> Dictionary:
-	var out := {}
-	for entry in _squads:
-		out[entry.id] = entry.front_distance
-	return out
+## Lands every move: an advancing squad stops at contact or behind a friend, as they stood
+## at the tick's start; then arrivals, and waves that reached a friend join it.
+func _march(marching: Dictionary, events: Array) -> void:
+	var advancing := {}
+	for squad_id in marching:
+		if marching[squad_id][0].order == SkirmishUnit.Order.ADVANCE:
+			advancing[squad_id] = true
+	var landing := {}
+	for squad_id in marching:
+		var plan: Array = marching[squad_id]
+		var next: float = plan[1]
+		if advancing.has(squad_id):
+			next = FormationContact.limit(plan[0], _squads, next, advancing)
+		landing[plan[0]] = next
+	for mover in landing:
+		mover.front_distance = landing[mover]
+	for squad_id in marching:
+		FormationMarch.check_ends(marching[squad_id][0], marching[squad_id][2], _tick, events)
+	var joiners := advancing.keys().map(func(squad_id): return marching[squad_id][0])
+	FormationJoins.join(_squads, joiners, _tick, fight_seed, events)
 
 
 ## True if the squad must turn before moving `travel` along its route: it starts the turn.
@@ -263,19 +266,6 @@ func _turns_first(mover: SkirmishSquad, travel: int, events: Array) -> bool:
 	return true
 
 
-## A wave reaching a friendly squad in combat becomes its rear ranks (Decision 44); one
-## merging on the march does the same (Decision 51).
-func _join(leader: SkirmishSquad, joining: SkirmishSquad, events: Array) -> void:
-	var kind := "reinforced" if leader.state == SkirmishSquad.State.FIGHTING else "merged"
-	events.append(FormationEvents.squad_event(kind, _tick, joining, {"into": leader.id}))
-	for moved in FormationContact.reinforce(leader, joining):
-		events.append(
-			FormationEvents.unit_event("stepped_up", _tick, leader, moved, {"rank": moved.rank})
-		)
-	_squads.erase(joining)
-	leader.reforming = true
-
-
 func _fight(events: Array) -> void:
 	for entry in _squads:
 		for unit in entry.living():
@@ -283,7 +273,7 @@ func _fight(events: Array) -> void:
 	var interval := _attack_interval_ticks()
 	var mode := FormationMelee.SCRUM if seek_contact else int(walk_wings)
 	var blows := FormationMelee.blows(_squads, interval, _tick, mode, fight_seed, terrain)
-	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks())
+	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks(), fight_seed)
 	for shot in shots:
 		shot[2] = BattleRolls.damage(shot[2], damage_band, fight_seed, [_tick, shot[0].id, 1])
 		shot[1].hp -= shot[2]

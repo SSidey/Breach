@@ -125,3 +125,36 @@ func test_withdrawals_replay_the_same() -> void:
 		logs.append(log)
 
 	assert_array(logs[1]).is_equal(logs[0])
+
+
+## Both sides of a ragged head-on fight ordered to retreat together, stepped with every
+## squad and unit list reversed each tick if `reversed`. Returns each tick's state.
+func _both_retreat(reversed: bool) -> Array:
+	var sim := FormationSimulation.new(2.0, 0.1)
+	sim.seek_contact = true
+	sim.fight_seed = 7
+	var me := sim.spawn_squad(8, _row(_def(10)), "player", true)
+	var foe := sim.spawn_squad(8, _row(_def(10)), "the_kingdom", false)
+	var states := []
+	for tick in range(260):
+		if tick == 120:
+			sim.order(me.id, SkirmishUnit.Order.RETREAT)
+			sim.order(foe.id, SkirmishUnit.Order.RETREAT)
+		if reversed:
+			sim.squads().reverse()
+			for squad in sim.squads():
+				squad.units.reverse()
+		sim.step()
+		var state := []
+		for squad in [me, foe]:
+			for unit in squad.living():
+				state.append(
+					[unit.id, unit.hp, ScrumReach.at(squad, unit).snapped(Vector2.ONE * 0.0001)]
+				)
+		state.sort()
+		states.append(state)
+	return states
+
+
+func test_withdrawals_do_not_hang_on_list_order() -> void:
+	assert_array(_both_retreat(true)).is_equal(_both_retreat(false))
