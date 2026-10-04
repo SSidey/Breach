@@ -11,15 +11,13 @@ extends RefCounted
 ## - **Cohesion:** a disciplined squad whose front is free re-forms its line to meet an
 ##   enemy closing in at another face, before contact (ScrumStance); a less disciplined one
 ##   meets it unit by unit, leaving gaps.
-## - **Engaging:** squads whose units come within reach fight, whatever their faces
-##   (ScrumEngage).
+## - **Engaging:** squads whose units come within reach fight, whatever their faces.
 ## - **Regrouping:** when the fight ends the squad closes ranks over its dead (SquadRanks),
 ##   its units walk to their places at its re-form pace (FormationDiscipline), and it moves
 ##   on once all are back.
 ## - **Manoeuvres:** each squad's current one is settled each tick, combat first, then its
 ##   route, re-forming and the player's order (FormationManoeuvre, Decision 94).
-## - **A stalled fight** (no unit on either side touching or seeking for STALL_SECONDS) is
-##   released, so it can't freeze.
+## - **A stalled fight** (nobody touching or seeking for STALL_SECONDS) is released.
 ## Squads keep `loose`, `stance`, `fight_since` and `stall_ticks`. Pure over the squads.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -74,7 +72,7 @@ static func step(
 		"active": {},
 	}
 	_seek(ctx)
-	_regroup(squads, ctx["pace"], tick_seconds)
+	_regroup(squads, ctx["pace"], tick_seconds, fight_seed)
 	ScrumPursuit.step(squads, tick, cells_per_second, tick_seconds)
 	ScrumSpacing.step(squads, ctx["pace"], fight_seed)
 	FormationPursuit.step(squads, tick, cells_per_second, tick_seconds, events)
@@ -215,7 +213,7 @@ static func _face(squad: SkirmishSquad, ctx: Dictionary) -> void:
 	var foes := _foe_units(squad, ctx["squads"])
 	for unit in squad.living():
 		var entry: Dictionary = squad.loose[unit.id]
-		var look = ScrumBlows.nearest_touching(squad, unit, foes)
+		var look = ScrumBlows.nearest_touching(squad, unit, foes, ctx["seed"])
 		if look == null:
 			look = entry.get("toward")
 		if look != null:
@@ -225,7 +223,7 @@ static func _face(squad: SkirmishSquad, ctx: Dictionary) -> void:
 
 ## Units of squads out of the fight walk to their places (in the stance, if any) at the
 ## march pace; back in place they rejoin the squad's frame unless it holds a stance.
-static func _regroup(squads: Array, pace: float, seconds: float) -> void:
+static func _regroup(squads: Array, pace: float, seconds: float, fight_seed: int) -> void:
 	for squad in squads:
 		if squad.state in [SkirmishSquad.State.FIGHTING, SkirmishSquad.State.ROUTING]:
 			continue
@@ -241,7 +239,11 @@ static func _regroup(squads: Array, pace: float, seconds: float) -> void:
 			var entry: Dictionary = squad.loose[unit_id]
 			var unit: SkirmishUnit = entry["unit"]
 			var place := ScrumStance.anchor(squad, unit)
-			var foe_at = ScrumBlows.nearest_touching(squad, unit, hostiles) if withdrawing else null
+			var foe_at = (
+				ScrumBlows.nearest_touching(squad, unit, hostiles, fight_seed)
+				if withdrawing
+				else null
+			)
 			var step := unit.speed * pace * FormationDiscipline.reform_pace(squad)
 			var arrived: bool = entry["at"].distance_to(place) < 0.000001
 			if not arrived:  # a drilled retreat backs away facing the foe it touches

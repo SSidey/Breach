@@ -2,11 +2,11 @@ class_name ScrumBlows
 extends RefCounted
 ## Melee blows in the scrum (Decisions 88 and 95, spec 27 rounds 5 and 8): every unit of a
 ## fighting squad - and of any squad, at a retreating enemy - strikes one enemy it touches
-## (ScrumReach), on a face or a corner: one in its front first, then the nearest, then the
-## lowest id. A blow from outside the target's front, or
-## on a turning squad, is a flank blow. Blows land together. Units turn to their foes at
-## their turn rate as they move (FormationScrum, UnitMotion), so a unit fighting one foe is
-## flanked by a second, and a unit turning away is struck from behind.
+## (ScrumReach), on a face or a corner: one in its front first, then the nearest, then by
+## the battle's seeded draw (ScrumContest; never by id, Decision 97). A blow from outside
+## the target's front, or on a turning squad, is a flank blow. Blows land together. Units
+## turn to their foes at their turn rate as they move (FormationScrum, UnitMotion), so a
+## unit fighting one foe is flanked by a second, and one turning away is struck from behind.
 ## Routing squads are left to FormationRout. Pure over the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -15,11 +15,12 @@ const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
+const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 
 
 ## This tick's blows: [[attacker, target, damage, flank], ...]. Updates each striker's
 ## target and cooldown.
-static func blows(squads: Array, interval: int) -> Array:
+static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 	var out := []
 	for squad in squads:
 		var foes := _struck_by(squad, squads)
@@ -27,7 +28,7 @@ static func blows(squads: Array, interval: int) -> Array:
 			continue
 		var pace := FormationMorale.interval(squad, interval)
 		for unit in squad.living():
-			var pick := _pick(squad, unit, foes)
+			var pick := _pick(squad, unit, foes, fight_seed)
 			if pick.is_empty():
 				continue
 			var target: SkirmishUnit = pick[0]
@@ -89,7 +90,7 @@ static func _hostile(squad: SkirmishSquad, squads: Array) -> Array:
 
 
 ## [target, its squad, where it stands] for the enemy the unit strikes; [] if it touches none.
-static func _pick(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array) -> Array:
+static func _pick(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array, fight_seed: int) -> Array:
 	var mine := ScrumReach.area(squad, unit)
 	var where := ScrumReach.at(squad, unit)
 	var best := []
@@ -100,7 +101,7 @@ static func _pick(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array) -> Arra
 			continue
 		var there := ScrumReach.at(entry[1], other)
 		var front := 0 if ScrumReach.in_front(unit.bearing, where, there) else 1
-		var key := [front, where.distance_to(there), other.id]
+		var key := [front, where.distance_to(there), ScrumContest.draw(other, fight_seed)]
 		if best.is_empty() or key < best_key:
 			best = [other, entry[1], there]
 			best_key = key
@@ -108,6 +109,8 @@ static func _pick(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array) -> Arra
 
 
 ## Where the nearest enemy the unit touches stands, or null if it touches none.
-static func nearest_touching(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array):
-	var pick := _pick(squad, unit, foes)
+static func nearest_touching(
+	squad: SkirmishSquad, unit: SkirmishUnit, foes: Array, fight_seed: int
+):
+	var pick := _pick(squad, unit, foes, fight_seed)
 	return null if pick.is_empty() else pick[2]

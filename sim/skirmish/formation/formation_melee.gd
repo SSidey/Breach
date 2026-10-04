@@ -27,11 +27,17 @@ const SCRUM := 2
 
 
 ## [[attacker, target, damage, flank], ...]; updates each striker's target and cooldown.
+## `fight_seed` breaks ties between equal targets in the scrum.
 static func blows(
-	squads: Array, interval: int, tick: int, mode: int, terrain: FormationTerrain = null
+	squads: Array,
+	interval: int,
+	tick: int,
+	mode: int,
+	fight_seed: int,
+	terrain: FormationTerrain = null
 ) -> Array:
 	var out := (
-		ScrumBlows.blows(squads, interval)
+		ScrumBlows.blows(squads, interval, fight_seed)
 		if mode == SCRUM
 		else _lines(squads, interval, tick, mode)
 	)
