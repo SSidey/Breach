@@ -89,14 +89,18 @@ func test_a_wave_on_route_b_strikes_the_lines_side() -> void:
 	assert_int(log.filter(func(e): return e["type"] == "turned").size()).is_greater_equal(1)
 
 
-func test_a_wider_wave_sends_wings_round_the_line() -> void:
+func test_a_wider_waves_overhanging_units_fight_the_lines_corners() -> void:
 	var field := _field(400, 200)
 	_run(field, _has("wave_full"))
 
 	field.send("A")
-	var log := _run(field, _has("wing_arrived"))
+	var log := _run(field, func(_log): return false, 400)
 
-	assert_bool(log.any(func(e): return e["type"] == "wing_arrived")).is_true()
+	var strikers := {}
+	for hit in log.filter(func(e): return e["type"] == "hit" and e["faction"] == "player"):
+		strikers[hit["unit"]] = true
+	# more strike than the line's 6-wide face: the ends reach its corners (Decision 88)
+	assert_int(strikers.size()).is_greater(FormationField.KINGDOM_WIDTH)
 
 
 func test_b_waits_in_the_wood_until_it_sees_a_engage_then_flanks() -> void:

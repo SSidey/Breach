@@ -15,15 +15,36 @@ const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd"
 const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
+const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 
 const HIGH_GROUND := 1.25
+## Modes: lines wrap abstractly (0), wings walk round (1), or units seek contact (Decision
+## 88; ScrumBlows replaces the frontal, edge and wing blows).
+const WRAP := 0
+const WINGS := 1
+const SCRUM := 2
 
 
 ## [[attacker, target, damage, flank], ...]; updates each striker's target and cooldown.
 static func blows(
-	squads: Array, interval: int, tick: int, walk_wings: bool, terrain: FormationTerrain = null
+	squads: Array, interval: int, tick: int, mode: int, terrain: FormationTerrain = null
 ) -> Array:
+	var out := (
+		ScrumBlows.blows(squads, interval)
+		if mode == SCRUM
+		else _lines(squads, interval, tick, mode)
+	)
+	out.append_array(FormationRout.blows(squads, interval))
+	if terrain != null:
+		for blow in out:
+			if terrain.high_ground(blow[0].position, blow[1].position):
+				blow[2] = roundi(blow[2] * HIGH_GROUND)
+	return out
+
+
+static func _lines(squads: Array, interval: int, tick: int, mode: int) -> Array:
+	var walk_wings := mode == WINGS
 	var by_id := {}
 	for entry in squads:
 		by_id[entry.id] = entry
@@ -50,9 +71,4 @@ static func blows(
 				out.append([fighter, pick[0], FormationCombat.damage(fighter, flank), flank])
 	out.append_array(FormationEdges.blows(squads, interval, tick))
 	out.append_array(FormationWings.blows(squads, interval, tick))
-	out.append_array(FormationRout.blows(squads, interval))
-	if terrain != null:
-		for blow in out:
-			if terrain.high_ground(blow[0].position, blow[1].position):
-				blow[2] = roundi(blow[2] * HIGH_GROUND)
 	return out

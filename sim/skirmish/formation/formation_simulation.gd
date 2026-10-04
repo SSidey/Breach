@@ -9,22 +9,14 @@ extends RefCounted
 ##   2. engage  - hostile squads whose fronts are within MELEE_REACH lock together, and a
 ##                free squad whose front reaches a hostile's side or rear locks onto that
 ##                edge (FormationEdges, Decision 78)
-##   3. move    - a squad that must face another way turns first (Decision 74); a staged
-##                one holds until its trigger (Decision 87); free squads move as a block
-##                at their slowest unit's pace (skirmishers hold in ranged reach), stopping
-##                at contact or behind a friend; one reaching a friend in combat (or
-##                merging) joins it from the back (Decisions 44, 51); wings walk round
-##                (Decision 81); reaching the enemy end is arrival
-##   4. combat  - front-rank fighters strike the enemy fighter they overlap, or past a
-##                narrower line's end wrap as a flank attack (x FLANK_BONUS) unless wings
-##                walk; flank locks and wings strike edges (FormationEdges, FormationWings);
-##                ranged units strike the nearest enemy in range (Decision 46)
-##   5. deaths  - the fallen die, the ranks behind step up, and a squad with no one left
-##                is destroyed, freeing whoever fought it
-##   6. re-form - a reinforced squad's units swap toward their preferred places, and in a
-##                fight its joined units spread across the combat width (FormationShuffle,
-##                Decisions 46 and 51)
-## Timing constants match the spec 21 SkirmishSimulation, so a 1v1 plays out the same.
+##   3. move    - a squad turns first if it must (Decision 74); a staged one holds until
+##                its trigger (Decision 87); free squads move as a block at their slowest
+##                unit's pace, stopping at contact or behind a friend, or join a friend
+##                from the back (Decisions 44, 51); wings walk round (Decision 81), or with
+##                seek_contact units seek contact (FormationScrum, Decision 88)
+##   4. combat  - melee blows (FormationMelee) and ranged blows (Decision 46)
+##   5. deaths  - the fallen die, the ranks behind step up, an empty squad is destroyed
+##   6. re-form - units swap toward their preferred places (FormationShuffle, Decision 46)
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -39,6 +31,7 @@ const FormationTurning = preload("res://sim/skirmish/formation/formation_turning
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
+const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
 const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
 const FormationMelee = preload("res://sim/skirmish/formation/formation_melee.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
@@ -67,6 +60,10 @@ var tick_seconds: float
 var combat_width := 0
 ## Overlapping front units walk round an enemy line's end (Decision 81) rather than wrap.
 var walk_wings := false
+## Both sides' units seek contact in a fight (Decision 88), in place of edges and wings;
+## fight_seed seeds their contests for cells.
+var seek_contact := false
+var fight_seed := 0
 ## The ground (Decision 85); null is open, level ground everywhere.
 var terrain: FormationTerrain = null
 
@@ -144,9 +141,13 @@ func step() -> Array:
 	var pace := TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
 	if walk_wings:
 		events.append_array(FormationWings.march(_squads, _tick, pace, tick_seconds))
+	if seek_contact:
+		var scrum := FormationScrum.step(_squads, _tick, pace, tick_seconds, fight_seed, terrain)
+		events.append_array(scrum)
 	_fight(events)
 	_bury(events)
-	FormationEdges.prune(_squads, _tick, events)
+	if not seek_contact:  # the scrum ends stalled fights itself
+		FormationEdges.prune(_squads, _tick, events)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
 	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain))
 	for entry in _squads:
@@ -194,7 +195,7 @@ func _move(events: Array) -> void:
 	for mover in _squads:
 		if FormationTurning.step(mover, _tick, events):
 			continue
-		if mover.state in STANDING:
+		if mover.state in STANDING or FormationScrum.regrouping(mover):
 			continue
 		if mover.wait_ticks > 0:
 			mover.wait_ticks -= 1
@@ -254,7 +255,8 @@ func _fight(events: Array) -> void:
 		for unit in entry.living():
 			unit.target_id = 0
 	var interval := _attack_interval_ticks()
-	var blows := FormationMelee.blows(_squads, interval, _tick, walk_wings, terrain)
+	var mode := FormationMelee.SCRUM if seek_contact else int(walk_wings)
+	var blows := FormationMelee.blows(_squads, interval, _tick, mode, terrain)
 	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks())
 	for shot in shots:
 		shot[1].hp -= shot[2]
@@ -284,7 +286,7 @@ func _bury(events: Array) -> void:
 				)
 			)
 		fallen_squad.reforming = true  # front units may close gaps (Decision 49)
-		if not is_equal_approx(front_before, fallen_squad.front_distance):
+		if not is_equal_approx(front_before, fallen_squad.front_distance) and not seek_contact:
 			# Its front fell: the enemy must advance (Decision 47).
 			FormationLocks.release(fallen_squad, _squads)
 			events.append(FormationEvents.squad_event("front_fell", _tick, fallen_squad))
