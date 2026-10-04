@@ -40,6 +40,8 @@ const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd"
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
 const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
+const FormationMelee = preload("res://sim/skirmish/formation/formation_melee.gd")
+const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -94,6 +96,7 @@ func spawn_squad(
 	squad.route = path
 	FormationMarch.face(squad)
 	squad.wait_ticks = wait_ticks
+	squad.morale = FormationMorale.ceiling(squad)
 	squad.combat_width = combat_width
 	_squads.append(squad)
 	FormationMarch.sync_units(_squads)
@@ -132,6 +135,7 @@ func step() -> Array:
 	_fight(events)
 	_bury(events)
 	FormationEdges.prune(_squads, _tick, events)
+	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
 	FormationMarch.sync_units(_squads)
@@ -234,29 +238,7 @@ func _fight(events: Array) -> void:
 	for entry in _squads:
 		for unit in entry.living():
 			unit.target_id = 0
-	var blows := []  # [attacker, target, damage, flank]
-	for attacker_squad in _squads:
-		if attacker_squad.state != SkirmishSquad.State.FIGHTING:
-			continue
-		var foe := squad(attacker_squad.engaged_with)
-		if foe == null or foe.is_destroyed() or FormationEdges.is_flanking(attacker_squad, foe):
-			continue
-		var foe_fighters := foe.fighters()
-		for fighter in attacker_squad.fighters():
-			var pick := FormationCombat.pick_target(attacker_squad, fighter, foe, foe_fighters)
-			if pick.is_empty() or FormationWings.is_wing(attacker_squad, fighter):
-				continue
-			if pick[1] and walk_wings:
-				continue  # past the line's end: it walks round instead (FormationWings)
-			fighter.target_id = pick[0].id
-			fighter.attack_cooldown -= 1
-			if fighter.attack_cooldown <= 0:
-				fighter.attack_cooldown = _attack_interval_ticks()
-				var flank: bool = pick[1] or foe.state == SkirmishSquad.State.TURNING
-				var damage := FormationCombat.damage(fighter, flank)
-				blows.append([fighter, pick[0], damage, flank])
-	blows.append_array(FormationEdges.blows(_squads, _attack_interval_ticks(), _tick))
-	blows.append_array(FormationWings.blows(_squads, _attack_interval_ticks(), _tick))
+	var blows := FormationMelee.blows(_squads, _attack_interval_ticks(), _tick, walk_wings)
 	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks())
 	for shot in shots:
 		shot[1].hp -= shot[2]
@@ -269,14 +251,15 @@ func _fight(events: Array) -> void:
 
 func _bury(events: Array) -> void:
 	for fallen_squad in _squads:
-		var deaths := 0
+		var fallen := []
 		for unit in fallen_squad.living():
 			if unit.hp <= 0:
 				unit.state = SkirmishUnit.State.DEAD
-				deaths += 1
+				fallen.append(unit)
 				events.append(FormationEvents.unit_event("died", _tick, fallen_squad, unit))
-		if deaths == 0:
+		if fallen.is_empty():
 			continue
+		FormationMorale.losses(fallen_squad, fallen, _tick, events)
 		var front_before := fallen_squad.front_distance
 		for moved in fallen_squad.compact():
 			events.append(

@@ -18,6 +18,7 @@ const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
+const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 ## Walking within a fight is slowed by the crush (Decision 48; FormationShuffle.CROWDING).
@@ -58,6 +59,8 @@ static func march(squads: Array, tick: int, cells_per_second: float, tick_second
 			elif wing["since"] < 0:
 				wing["since"] = tick
 				events.append(_event("wing_arrived", tick, squad, wing))
+				if foe != null:
+					FormationMorale.shock(foe, FormationMorale.WING_IMPACT, tick, events)
 	return events
 
 
@@ -101,6 +104,8 @@ static func _frontal(squad: SkirmishSquad, foe: SkirmishSquad) -> bool:
 
 ## Gives each front unit past the foe's line ends a free place beside the foe's side.
 static func _set_out(squad: SkirmishSquad, foe: SkirmishSquad) -> void:
+	if FormationMorale.band(squad) != FormationMorale.Band.STEADY:
+		return  # a shaken squad sends no wings (Decision 82)
 	var ahead := SquadFrame.forward(squad.facing)
 	var across := SquadFrame.right(squad.facing)
 	var area := SquadEdges.bounds(foe)

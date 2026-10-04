@@ -24,6 +24,10 @@ const MAX_FOOTPRINT := 8
 ## How far it detects others, in cells (Decision 87; placeholder). Line of sight and light
 ## come with terrain.
 @export var detection_range: float = 40.0
+## Its will to fight (Decision 82): a formation's morale ceiling is its units' mean courage.
+@export var courage: int = 60
+## How much it steadies a formation it leads (Decision 81); 0 for rank and file.
+@export var leadership: int = 0
 ## What it fights with (Decision 47). Without weapons it strikes once for `dmg`.
 @export var weapons: Array[WeaponDef] = []
 

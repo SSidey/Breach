@@ -23,6 +23,8 @@ static func make(
 	unit.preferred_position = unit_def.preferred_position
 	unit.position_priority = unit_def.position_priority
 	unit.detection = unit_def.detection_range
+	unit.courage = unit_def.courage
+	unit.leadership = unit_def.leadership
 	var ranged := unit_def.ranged_weapon()
 	if ranged != null:
 		unit.attack_range = ranged.attack_range

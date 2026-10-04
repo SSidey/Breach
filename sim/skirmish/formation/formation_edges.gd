@@ -18,6 +18,7 @@ const FormationContact = preload("res://sim/skirmish/formation/formation_contact
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
+const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 
 const EPSILON := 0.000001
 ## How far past a face's end (cells) a unit still meets it: only units in contact strike,
@@ -42,6 +43,12 @@ static func engage(squads: Array, tick: int, events: Array) -> void:
 				unit.attack_cooldown = 1
 			var extra := {"by": attacker.id, "edge": edge}
 			events.append(FormationEvents.squad_event("flanked", tick, victim, extra))
+			var impact := (
+				FormationMorale.REAR_IMPACT
+				if edge == SquadEdges.REAR
+				else FormationMorale.SIDE_IMPACT
+			)
+			FormationMorale.shock(victim, impact, tick, events)
 			break
 
 
@@ -70,13 +77,15 @@ static func blows(squads: Array, interval: int, tick: int) -> Array:
 			var facing: int = attacker.facing
 			for fighter in attacker.fighters():
 				var aim := [on_edge, victim, facing]
-				_strike(fighter, attacker, aim, fresh, interval, out)
+				_strike(
+					fighter, attacker, aim, fresh, FormationMorale.interval(attacker, interval), out
+				)
 			for unit in on_edge:
 				if struck.has(unit) or _busy_in_front(victim, unit):
 					continue
 				struck[unit] = true
 				var back := [attacker.fighters(), attacker, facing]
-				_strike(unit, victim, back, false, interval, out)
+				_strike(unit, victim, back, false, FormationMorale.interval(victim, interval), out)
 	return out
 
 
