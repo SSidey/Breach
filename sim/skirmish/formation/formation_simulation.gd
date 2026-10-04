@@ -41,6 +41,7 @@ const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd"
 const FormationTurning = preload("res://sim/skirmish/formation/formation_turning.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
+const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -54,6 +55,8 @@ var tick_seconds: float
 ## The lane's width, which squads spawned from now on may spread to (Decision 51); 0 keeps
 ## each squad within its own columns.
 var combat_width := 0
+## Overlapping front units walk round an enemy line's end (Decision 81) rather than wrap.
+var walk_wings := false
 
 var _route: FormationRoute
 var _squads: Array[SkirmishSquad] = []
@@ -125,6 +128,9 @@ func step() -> Array:
 	_apply_orders(events)
 	_engage(events)
 	_move(events)
+	if walk_wings:
+		var pace := TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
+		events.append_array(FormationWings.march(_squads, _tick, pace, tick_seconds))
 	_fight(events)
 	_bury(events)
 	FormationEdges.prune(_squads, _tick, events)
@@ -238,8 +244,10 @@ func _fight(events: Array) -> void:
 		var foe_fighters := foe.fighters()
 		for fighter in attacker_squad.fighters():
 			var pick := FormationCombat.pick_target(attacker_squad, fighter, foe, foe_fighters)
-			if pick.is_empty():
+			if pick.is_empty() or FormationWings.is_wing(attacker_squad, fighter):
 				continue
+			if pick[1] and walk_wings:
+				continue  # past the line's end: it walks round instead (FormationWings)
 			fighter.target_id = pick[0].id
 			fighter.attack_cooldown -= 1
 			if fighter.attack_cooldown <= 0:
@@ -248,6 +256,7 @@ func _fight(events: Array) -> void:
 				var damage := FormationCombat.damage(fighter, flank)
 				blows.append([fighter, pick[0], damage, flank])
 	blows.append_array(FormationEdges.blows(_squads, _attack_interval_ticks(), _tick))
+	blows.append_array(FormationWings.blows(_squads, _attack_interval_ticks(), _tick))
 	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks())
 	for shot in shots:
 		shot[1].hp -= shot[2]

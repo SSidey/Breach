@@ -47,6 +47,8 @@ var engaged_with: int = 0
 ## Hostile squads fighting it on its other edges (Decision 78): SquadEdges edge ->
 ## {"foe": squad id, "since": tick the contact began}.
 var flank_contacts := {}
+## Its units out on wings round an enemy line's end (FormationWings, Decision 81).
+var wings := {}
 var wait_ticks: int = 0
 ## Re-forming after a reinforcement, and the swaps under way (Decision 46, FormationShuffle):
 ## [[mover, passed units, ticks left, ticks in all], ...].
