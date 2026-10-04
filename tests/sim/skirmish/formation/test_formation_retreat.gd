@@ -72,9 +72,9 @@ func test_a_retreat_breaks_contact_at_once_and_heads_home() -> void:
 func test_a_drilled_withdrawal_costs_less_than_a_ragged_flight() -> void:
 	var drilled := 0
 	var ragged := 0
-	for battle_seed in range(1, 6):  # from a ragged enemy, whose units break ranks to chase
-		drilled += _retreat(_def(60), _def(0), battle_seed)[6]
-		ragged += _retreat(_def(20), _def(0), battle_seed)[6]
+	for battle_seed in range(1, 6):  # from an enemy pursuing as a body (Decision 101)
+		drilled += _retreat(_def(60), _def(60), battle_seed, true)[6]
+		ragged += _retreat(_def(20), _def(60), battle_seed, true)[6]
 
 	assert_int(drilled).is_less(ragged)
 

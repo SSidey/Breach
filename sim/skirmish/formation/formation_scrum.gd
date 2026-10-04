@@ -5,7 +5,8 @@ extends RefCounted
 ## - **Seeking:** a unit touching no foe walks to the nearest open cell next to one, round
 ##   friends and the enemy (never through an enemy), anywhere within the route's leash of
 ##   its place (Decision 75) - the far end of a wide line comes too. Only front-band units
-##   of a squad not yet wavering seek; the rest keep to their places. Contested cells go by
+##   seek, at any morale short of a rout (Decision 101: a shaken squad strikes softer, not
+##   less); the rest keep to their places. Contested cells go by
 ##   ScrumContest's key, so the earliest arrival takes a cell and the rest look further.
 ## - **No delay:** a squad's units seek as soon as its fight begins (Decision 92).
 ## - **Cohesion:** a disciplined squad whose front is free re-forms its line to meet an
@@ -162,7 +163,6 @@ static func _seekers_of(squad: SkirmishSquad, ctx: Dictionary) -> Array:
 	for entry in foes:
 		for spot in ScrumPaths.cells_of(ScrumReach.area(entry[1], entry[0])):
 			foe_cells[spot] = true
-	var steady := FormationMorale.band(squad) < FormationMorale.Band.WAVERING
 	var out := []
 	for unit in squad.living():
 		var entry: Dictionary = squad.loose[unit.id]
@@ -172,7 +172,7 @@ static func _seekers_of(squad: SkirmishSquad, ctx: Dictionary) -> Array:
 			entry["next"] = entry["at"]
 			ctx["active"][squad.id] = true
 			continue
-		if not (steady and _may_seek(squad, unit)) or foe_cells.is_empty():
+		if not _may_seek(squad, unit) or foe_cells.is_empty():
 			entry["goal"] = null
 			continue
 		var arrival := (

@@ -197,3 +197,22 @@ func test_the_scrum_replays_the_same() -> void:
 		logs.append(_run(sim, 400))
 
 	assert_array(logs[1]).is_equal(logs[0])
+
+
+func test_a_wavering_line_still_meets_its_enemy_but_strikes_softer() -> void:
+	var sim := _sim()
+	var line := _line(sim, 8, 400)
+	_from_north(sim, 2, 400, 1)
+	var far: SkirmishUnit = line.units[0]  # column 0: the south end, far from the flank
+	sim.step()
+	var start := far.position
+	var log := []
+	for _i in range(250):
+		line.morale = 24  # wavering throughout (Decision 101), short of a rout
+		log.append_array(sim.step())
+
+	assert_float(far.position.y).is_less(start.y - 2.0)
+	var blows: Array = _of(log, "hit").filter(func(e): return e["faction"] == "the_kingdom")
+	assert_bool(blows.is_empty()).is_false()
+	for blow in blows:  # 60% while wavering: 2 a blow (3 on a flank) at full heart
+		assert_int(blow["dmg"]).is_equal(2 if blow["flank"] else 1)

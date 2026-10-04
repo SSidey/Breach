@@ -4,15 +4,22 @@ extends RefCounted
 ## enemy, as fighting is, so it shares combat's priority (FormationManoeuvre). Ordered to
 ## retreat out of a fight, it leaves from where its units stand - no walking back to their
 ## places first:
-## - **Flight:** each unit heads for home along its route at its full pace. One of a drilled
-##   formation still touching a foe backs away facing it, striking back (ScrumBlows); any
-##   other turns and runs, exposed as it turns. The less ordered the formation, the wider
-##   its units fan out from the route's line: up to RoutFlight.FAN_DEGREES either side,
-##   by a seeded angle per unit, for one with no discipline. Ground it can't cross holds it.
+## - **Disengaging, then flight:** each unit turns for home and heads there along its
+##   route. Disengaging is a manoeuvre whose efficacy its formation's discipline sets, as
+##   re-forming is (Decisions 92 and 101): until clear of the foes it touches, a unit turns
+##   at its turn rate, and steps away at its pace, times the re-form pace - a disciplined
+##   formation breaks off quickly and cleanly, a ragged one slowly, backing off and exposed
+##   (flank blows) while it turns. Once clear it is in flight, at its full pace. Until it
+##   has turned, a unit still facing a foe it touches strikes it (ScrumBlows). The less
+##   ordered the formation, the wider its units fan out from the route's line: up to
+##   RoutFlight.FAN_DEGREES either side, by a seeded angle per unit, for one with no
+##   discipline. Ground it can't cross holds it.
 ## - **Safe:** with no enemy within FormationRout.ENEMY_NEAR of it, and none pursuing it,
 ##   for FormationRout.RALLY_SECONDS - the test a rout rallies by - it re-forms on its route
 ##   where its units stand, facing home, and marches home (its order). One whose units are
-##   all home, with nowhere further to go, re-forms there at once, and fights as any other.
+##   all home, with nowhere further to go, re-forms there at once, facing out the way it
+##   will hold, and fights as any other. Its units fan out no further than a rout's, by its
+##   disorder.
 ## Squads keep `withdraw` ({"safe_ticks"}). Pure over the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -69,12 +76,16 @@ static func step(
 			squad.withdraw = {}
 			continue
 		var foes := ScrumBlows.hostile_units(squad, squads)
-		withdrawing.append([squad, _faced(squad, foes, fight_seed), _safe(squad, squads, foes)])
+		var engaged := {}  # units still touching a foe: disengaging, not yet in flight
+		for unit in squad.living():
+			if ScrumBlows.touches_any(squad, unit, foes):
+				engaged[unit.id] = true
+		withdrawing.append([squad, _safe(squad, squads, foes), engaged])
 	for entry in withdrawing:
 		var squad: SkirmishSquad = entry[0]
 		for unit in squad.living():
-			_flee(squad, unit, entry[1].get(unit.id), [pace, seconds, fight_seed], terrain)
-		squad.withdraw["safe_ticks"] = squad.withdraw["safe_ticks"] + 1 if entry[2] else 0
+			_flee(squad, unit, [pace, seconds, fight_seed, entry[2].has(unit.id)], terrain)
+		squad.withdraw["safe_ticks"] = squad.withdraw["safe_ticks"] + 1 if entry[1] else 0
 		var long_enough: bool = (
 			squad.withdraw["safe_ticks"] * seconds >= FormationRout.RALLY_SECONDS
 		)
@@ -82,19 +93,10 @@ static func step(
 			_reform_here(squad, tick, events)
 
 
-## unit id -> where the foe it touches stands, for a drilled squad's units ({} otherwise):
-## they back away facing it.
-static func _faced(squad: SkirmishSquad, foes: Array, fight_seed: int) -> Dictionary:
-	var out := {}
-	if not FormationDiscipline.meets_threats(squad):
-		return out
-	for unit in squad.living():
-		out[unit.id] = ScrumBlows.nearest_touching(squad, unit, foes, fight_seed)
-	return out
-
-
-## `motion` is [pace (cells a tick at speed 1), seconds, fight seed].
-static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, foe_at, motion: Array, terrain) -> void:
+## `motion` is [pace (cells a tick at speed 1), seconds, fight seed, still disengaging].
+## Disengaging is a manoeuvre, as re-forming is: until it is clear of the foes it touches,
+## a unit turns and steps away at its formation's re-form pace; then it is in flight.
+static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, motion: Array, terrain) -> void:
 	var entry: Dictionary = squad.loose[unit.id]
 	var at: Vector2 = entry["at"]
 	var along := squad.route.distance_of(at)
@@ -104,12 +106,19 @@ static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, foe_at, motion: Arra
 	var homeward: Vector2 = squad.route.heading_at(along) * signf(home - along)
 	var full: float = unit.speed * motion[0]
 	var heading := homeward.rotated(RoutFlight.fan(unit, motion[2]) * disorder(squad))
+	var side := homeward.orthogonal()
+	var aside: float = (at - squad.route.point_at(along)).dot(side)
+	if absf(aside) >= RoutFlight.FAN_CELLS * disorder(squad) and heading.dot(side) * aside > 0.0:
+		heading = homeward  # fanned out as far as its disorder takes it (a rout's at most)
 	if terrain != null and terrain.factor(unit.height, at, at + heading) <= 0.0:
 		heading = homeward  # it can't fan that way: it keeps to the line
 	if terrain != null:
 		full *= terrain.factor(unit.height, at, at + heading)
 	var to := at + heading * maxf(full, 0.000001)
-	entry["at"] = UnitMotion.walk(unit, at, to, full, motion[1], foe_at)
+	var efficacy := FormationDiscipline.reform_pace(squad)
+	var turning: float = motion[1] * efficacy  # a turn is a re-form
+	var step: float = full * minf(efficacy, 1.0) if motion[3] else full
+	entry["at"] = UnitMotion.walk(unit, at, to, step, turning)
 	entry["next"] = entry["at"]
 	entry["goal"] = null
 
@@ -148,5 +157,13 @@ static func _reform_here(squad: SkirmishSquad, tick: int, events: Array) -> void
 	var highest := maxf(squad.home_distance, squad.front_distance)
 	squad.front_distance = clampf(mean, lowest, highest)
 	squad.withdraw = {}
-	ScrumTurn.begin(squad, -1 if squad.home_distance < squad.front_distance else 1, tick, events)
+	var homeward := -1 if squad.home_distance < squad.front_distance else 1
+	var arrived := _home(squad)
+	if arrived:  # nowhere further to go: its retreat is done, and it holds facing out
+		homeward = 1 if is_zero_approx(squad.home_distance) else -1
+		squad.front_distance = squad.home_distance
+	ScrumTurn.begin(squad, homeward, tick, events)
 	events.append(FormationEvents.squad_event("regrouping", tick, squad))
+	if arrived:
+		squad.order = SkirmishUnit.Order.HOLD
+		events.append(FormationEvents.squad_event("returned", tick, squad))

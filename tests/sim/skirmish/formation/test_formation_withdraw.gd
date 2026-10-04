@@ -7,6 +7,8 @@ extends GdUnitTestSuite
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
+const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
+const RoutFlight = preload("res://sim/skirmish/formation/rout_flight.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -158,3 +160,67 @@ func _both_retreat(reversed: bool) -> Array:
 
 func test_withdrawals_do_not_hang_on_list_order() -> void:
 	assert_array(_both_retreat(true)).is_equal(_both_retreat(false))
+
+
+## The feel test's field (captained line, seed 606531, from the user's test of #90): A is
+## sent and, 3 s into its fight, ordered home with the line set to pursue. Returns [field,
+## A, the log from the order on].
+func _a_retreats_from_a_pursuing_line() -> Array:
+	var field := FormationField.new(
+		0.1,
+		load("res://content/units/grem.tres"),
+		8,
+		load("res://content/units/kingdom_militia.tres"),
+		load("res://content/units/grem_chieftain.tres"),
+		load("res://content/units/kingdom_captain.tres"),
+		606531
+	)
+	for _i in range(2000):
+		if field.waves["A"].built() == 8:
+			break
+		field.step()
+	field.kingdom_line.pursues = true
+	var wave := field.send("A")
+	for _i in range(400):
+		if field.step().any(func(e): return e["type"] == "engaged"):
+			break
+	for _i in range(30):
+		field.step()
+	field.sim.order(wave.id, SkirmishUnit.Order.RETREAT)
+	return [field, wave, []]
+
+
+func test_a_pursuit_moves_as_a_body_and_gives_up_out_of_reach() -> void:
+	var setup := _a_retreats_from_a_pursuing_line()
+	var line: SkirmishSquad = setup[0].kingdom_line
+	var furthest := INF
+	var spread := 0.0
+	var log := []
+	for _i in range(400):
+		log.append_array(setup[0].step())
+		var xs: Array = line.living().map(func(u): return ScrumReach.at(line, u).x)
+		if not line.pursuit.is_empty() and not line.pursuit["returning"]:
+			spread = maxf(spread, xs.max() - xs.min())
+		furthest = minf(furthest, xs.min())
+
+	assert_float(spread).is_less(6.0)  # its captain no longer runs ahead of its units
+	assert_bool(log.any(func(e): return e["type"] == "pursuit_ended")).is_true()
+	assert_float(furthest).is_greater(20.0)  # not all the way to A's spawn
+
+
+func test_a_withdrawal_home_holds_there_facing_out() -> void:
+	var setup := _a_retreats_from_a_pursuing_line()
+	var wave: SkirmishSquad = setup[1]
+	var lateral := 0.0
+	var log := []
+	for _i in range(400):
+		log.append_array(setup[0].step())
+		for unit in wave.living():
+			lateral = maxf(lateral, absf(ScrumReach.at(wave, unit).y - 32.0))
+
+	var mine: Array = log.filter(func(e): return e.get("squad") == wave.id)
+	var home: int = mine.filter(func(e): return e["type"] == "returned")[0]["tick"]
+	var turns: Array = mine.filter(func(e): return e["type"] == "turning" and e["tick"] > home)
+	assert_int(turns.size()).is_equal(0)  # it doesn't spin at its spawn
+	assert_int(wave.order).is_equal(SkirmishUnit.Order.HOLD)
+	assert_float(lateral).is_less_equal(RoutFlight.FAN_CELLS + 4.0)  # route A's line is y 32

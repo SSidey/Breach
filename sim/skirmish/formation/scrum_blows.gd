@@ -14,7 +14,6 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
-const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 
 
@@ -27,6 +26,7 @@ static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 		if foes.is_empty():
 			continue
 		var pace := FormationMorale.interval(squad, interval)
+		var share: float = FormationMorale.BLOW_SHARE[FormationMorale.band(squad)]
 		for unit in squad.living():
 			var pick := _pick(squad, unit, foes, fight_seed)
 			if pick.is_empty():
@@ -40,11 +40,17 @@ static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 				continue
 			unit.attack_cooldown = pace
 			var target_squad: SkirmishSquad = pick[1]
+			if (
+				squad.order == SkirmishUnit.Order.RETREAT
+				and not ScrumReach.in_front(unit.bearing, where, target_at)
+			):
+				continue  # turned away: it no longer strikes
 			var flank := (
 				target_squad.state == SkirmishSquad.State.TURNING
 				or not ScrumReach.in_front(target.bearing, target_at, where)
 			)
-			out.append([unit, target, FormationCombat.damage(unit, flank), flank])
+			var blow := maxi(1, roundi(FormationCombat.damage(unit, flank) * share))
+			out.append([unit, target, blow, flank])
 	return out
 
 
@@ -59,8 +65,9 @@ static func touches_any(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array) -
 
 ## [[unit, squad], ...] for the living units of squads hostile to `squad`, but not routing.
 ## The enemies the squad's units strike when they touch them: any, for a squad fighting;
-## for one retreating, any if it is drilled (a fighting withdrawal), else none; for any
-## other, only the units of retreating squads - a retreat is struck as it goes (Decision 95).
+## for one retreating, any still in a unit's front until it has turned away (Decision 101);
+## for any other, only the units of retreating squads - a retreat is struck as it goes
+## (Decision 95).
 static func _struck_by(squad: SkirmishSquad, squads: Array) -> Array:
 	if squad.state in [SkirmishSquad.State.ROUTING, SkirmishSquad.State.DESTROYED]:
 		return []
@@ -68,7 +75,7 @@ static func _struck_by(squad: SkirmishSquad, squads: Array) -> Array:
 	if squad.state == SkirmishSquad.State.FIGHTING:
 		return all
 	if squad.order == SkirmishUnit.Order.RETREAT:
-		return all if FormationDiscipline.meets_threats(squad) else []
+		return all  # but only a foe still in its front (blows)
 	return all.filter(func(e): return e[1].order == SkirmishUnit.Order.RETREAT)
 
 

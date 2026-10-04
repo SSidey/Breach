@@ -5,7 +5,9 @@ extends RefCounted
 ## - **Ceiling:** its living units' mean courage, plus 10 for each point of its best
 ##   living leader's leadership (Decision 81), at most 100. A fallen leader lowers it.
 ## - **Bands:** steady, shaken (wings don't set out), wavering (strikes half again more
-##   slowly) and routing at 0.
+##   slowly) and routing at 0. Short of a rout, a formation still meets its enemy at every
+##   band (Decision 101), but the more shaken it is the softer its blows land: BLOW_SHARE
+##   of their damage, by band.
 ## - **Shock** drains it: impact when struck on a side (15) or the rear (30) or by an
 ##   arriving wing (10); 4 for each unit of its own that falls; 10 per point of leadership
 ##   when a leader falls.
@@ -15,6 +17,9 @@ extends RefCounted
 ## Pure over the squads it is given; the simulation, edges and wings call it.
 
 enum Band { STEADY, SHAKEN, WAVERING, ROUTING }
+
+## The share of its blows' damage a formation lands, by band (placeholders).
+const BLOW_SHARE := [1.0, 0.8, 0.6, 0.0]
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")

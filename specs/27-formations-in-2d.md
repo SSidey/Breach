@@ -564,3 +564,49 @@ first, and only what still happened there was fixed (Decision 100):
 - **Open:** a wavering line doesn't seek contact (Decision 88), so a lone chieftain
   fights its way down a broken line one unit at a time (seed 678788). This is a question
   for the user.
+
+### Round 12: morale and discipline as efficacy (built; feel test pending)
+
+The user's answers to round 11's open questions (Decision 101):
+- **Every formation short of a rout meets its enemy.** Before, a wavering formation
+  didn't seek contact, so a lone chieftain fought his way down a broken line one unit at a
+  time. Now morale doesn't stop a formation engaging; it weakens how well it fights.
+  - Its blows land at `FormationMorale.BLOW_SHARE` of their damage: steady 100%, shaken
+    80%, wavering 60% (placeholders).
+  - A wavering formation also still strikes half again more slowly, as before.
+- **Re-forming and disengaging are manoeuvres whose efficacy discipline sets.**
+  - A withdrawing unit turns for home and leaves. Until it is clear of the foes it
+    touches, it turns at its turn rate, and steps away at its pace, times its
+    formation's re-form pace: a disciplined formation breaks off quickly and cleanly, a
+    ragged one slowly, exposed while it turns. Once clear it is in flight at full pace.
+  - Until it has turned, a unit still facing a foe it touches strikes it. The less
+    ordered the formation, the wider it fans out, and a ragged one still takes its
+    scaled rout.
+  - This replaces round 8's rule that drilled units back away facing the enemy, and only
+    drilled ones strike back.
+  - Damage taken while withdrawing, 8 v 8, 20 seeds:
+
+| Enemy | Unit stats (turn rate, backward pace) | Drilled (60) | Ragged (20) |
+|---|---|---|---|
+| pursuing as a body | 720°/s, 0.6 | 0.0 | 9.5 |
+| pursuing as a body | 360°/s, 0.4 | 0.15 | 11.4 |
+| pursuing as a body | 270°/s, 0.25 | 5.6 | 17.5 |
+| ragged, breaking ranks to chase | any | 36–38 | 36–42 |
+
+  Chasers stay on any fleeing unit for their 2 s, whatever its discipline.
+- Head-on mirror, 300 seeds each way round: player first 137 / 149, kingdom first
+  145 / 142. Flank mirror: the same in both orders.
+- **From the user's test of #90** (seed 606531: A retreats from a captained line set to
+  pursue; Decision 103):
+  - **A pursuit moves as a body.** The pursuer's frame advanced while its *foremost* unit
+    kept up. Its captain, walking to his place rather than seeking, was dragged ahead of
+    the militia, up to 13 cells. Because he stayed near A, the pursuit never ran out of
+    reach, and the line chased all the way to A's spawn. Now the frame waits while any
+    unit lags more than 2 cells behind its place. The line stays within 6 cells across
+    and gives up 16 cells out.
+  - **A withdrawal that reaches home has done its retreat.** It re-formed facing home
+    with its retreat order still standing, so the march turned it back and forth across
+    the home point every 5 ticks: the spinning in the clip. Now it re-forms facing out
+    and holds there.
+  - **A withdrawal fans out no further than a rout,** scaled by its disorder. One A unit
+    had drifted 21 cells off its route.
