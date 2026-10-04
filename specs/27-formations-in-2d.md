@@ -103,8 +103,11 @@ Round 1 is being planned.
    - Merging needs a merge order at a shared node, led by the best leader (Decision 90).
    - A tile is its ground plus cover features, which spill with soft edges and clearings
      (Decision 91).
-   - A formation acts by its own initiative: leadership sets how fast it decides,
-     discipline how cleanly it re-forms (Decision 92; built after the round 5 feel test).
+   - A formation's discipline, bolstered by leadership, decides whether it re-forms to
+     meet a flank closing in (marching or holding) and how long re-forming takes; a turn
+     is a re-form (Decision 92).
+   - Battles vary by a battle seed (damage rolls ±25% as a placeholder); a Monte Carlo
+     runner measures the spread (Decision 93).
 
 ## Agenda for the design conversation
 
