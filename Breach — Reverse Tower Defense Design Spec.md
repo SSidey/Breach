@@ -5041,3 +5041,102 @@ released.
 **Rules over cases:** general: any standing friend catches, and steadiness sets when
 routers join; this replaces the "steady only" case.
 **Order:** the nearest friend catches, not the first listed.
+
+### Decision 99 — A retreat is combat's equal: flee until safe, rejoin the route, re-form, march home; disorder fans out
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after spec 27's round 9, on round 8's finding that a
+drilled wave pursued as it retreated lost almost everything. Its units, spread from their
+places in the fight, walked back to them first, with their backs to the enemy. The
+user's words: "reformation comes later for them, this ought to mean engaging in melee
+and retreating have the same priority in our order of manoeuvres, so they would flee
+until no longer pursued and they consider themselves 'safe', rejoin their route if
+necessary, reform as a formation, march back to their origin". On routs and ragged
+retreats: "could we allow them to fan out if entirely disorderly?"
+- **Retreat shares combat's priority** (Decision 94). A formation deals with an enemy by
+  fighting it or by leaving it. Ordered or triggered to retreat out of a fight, it
+  withdraws.
+- **Flight from where they stand:** each unit heads homeward along its route. A drilled
+  unit still touching a foe backs away facing it, striking back. Any other turns and runs.
+- **Safe:** no enemy within reach of it (placeholder 6 cells) and none pursuing it, for a
+  while (placeholder 5 s). It is the same test a rout rallies by. Then it rejoins its
+  route where its units stand, re-forms there and marches home. If its units are all
+  home, with nowhere further to go, it re-forms there at once.
+- **Disorder fans out:** a fleeing unit makes for the nearest safety. If a standing
+  friendly formation lies between it and home, it steers for that friend, which catches
+  it (Decision 98). Otherwise it fans out from the route by its own seeded angle: wholly
+  for a rout (placeholder 45° and up to 6 cells out), scaled by disorder for a ragged
+  retreat, and not at all for a drilled one. Ground it can't cross stops it fanning out.
+- **Pursuit measures the enemy by where its units stand,** not where its formation's
+  frame is.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Re-form first, then leave | The cost the user saw: backs to the enemy while walking to places. |
+| A reaction delay for pursuers | A delay set by leadership was rejected (Decision 92). |
+| Routs keep to the route's line | Not how a disorderly flight looks; the user asked for fanning out. |
+
+**Consequences:**
+- The manoeuvre priorities gain WITHDRAW at the combat tier.
+- A pursued retreat on the field now costs about 1 of 9 (round 8: 8.7 of 9).
+- Open: against an enemy pursuing as a whole at equal speed, ragged runners get away
+  almost free while drilled units backing away slowly stay in contact. The user is to
+  decide whether a drilled unit should run once it is pursued.
+- Objectives and fallbacks (Decision 95) will replace "home" as where a withdrawal goes.
+
+**Rules over cases:** general. One manoeuvre for any retreat; one safety test shared with
+rallying routs; one fan-out rule scaled by disorder.
+**Order:** fan angles are seeded per battle and unit; a refuge is the nearest friend
+unit, not the first listed. Head-on mirror, 300 seeds each way round: 139 / 142 and
+142 / 141.
+
+### Decision 100 — Units arrive facing their task; routers form up behind the friend that catches them; a partial wave closes up
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** From the user's feel test of spec 27 round 9 (#85):
+- "the line with captain still oscillated between facings". The line's formation facing
+  held, but its units spun the long way round, turning to face where they walked as
+  they took their places.
+- "they clumped to the front of the hill defenders instead of forming up behind", and
+  routers "moving with units overlapping".
+- A partial B wave left with "4 grem in column 1 then captain in an unoccupied row",
+  and had to re-form before fording.
+
+Rules:
+- **Arriving facing:** a unit taking its place, or seeking a cell next to a foe, arrives
+  facing its squad's way or that foe, by the quicker of two ways: shuffling there facing
+  it at the pace its bearing allows (Decision 95), or turning to walk and turning back.
+- **Routers form up behind:** a router is safe once a friend stands between it and the
+  enemy. It is caught only once it has got behind a friend, running through the friend's
+  ranks (Decision 82's crush), and it settles at the friend's back. It steers for a
+  friend only if it would otherwise miss the friend's ranks. Routers sharing a cell in
+  flight step apart across their route. This refines Decision 98.
+- **A partial wave closes up:** its unbuilt places are holes, closed as a squad's dead
+  are. It leaves as a solid block as wide as its built front band, with the rest centred
+  behind. A full wave keeps its painted shape.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Units always face where they walk | Spins a whole line round to step back a cell. |
+| Routers caught at the friend's front (Decision 98 as built) | The user expects a backline. |
+| Partial waves keep painted places | Holes and a stranded leader; re-forms at the first gap. |
+
+**Consequences:**
+- Every router that runs through a friend crushes it, so a friend that catches routers is
+  often shaken. It holds them until it steadies.
+- Open: a wavering formation doesn't seek contact (Decision 88), so a lone enemy can
+  fight its way down a broken line. This is for the user.
+
+**Rules over cases:** general. One arrival rule for any unit taking a place or a foe;
+"safe once a friend stands between it and the enemy" for any router; the existing
+close-ranks rule for any partial wave.
+**Order:** ties go to the seeded draw. Head-on mirror, 300 seeds each way round: 138 /
+151 and 143 / 146.
