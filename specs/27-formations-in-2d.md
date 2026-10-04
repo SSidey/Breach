@@ -426,3 +426,24 @@ B is caught out of formation: its units spread up to 8 cells ahead of its frame 
 fight, and walk back to their places at the corner (turning, backs to the militia) while
 the line chases at full pace. Objectives, fallbacks and retreat conditions come with nodes and
 routes.
+
+### Round 9: one call, one cell (built; feel test pending)
+
+From the round 8 feel test:
+- **One call on two waves.** A led line sent A and B together swung its facing from B to
+  A and back. Now a stance is a commitment (`ScrumStance`). The line keeps the facing it
+  re-formed to while that foe is alive, within anticipation range, not routing, and
+  still pressing: fighting it, or marching at it. Only then does it weigh another
+  threat. Over 5 field seeds the captained line makes one "faced" call a battle.
+- **One unit to a cell** (`ScrumSpacing`, `RoutSettle`):
+  - Routers caught by a friendly formation settle into free cells next to where they
+    stop, then walk in to their places in it. They no longer pile up mid-cell.
+  - In the scrum, a loose unit that comes to rest on a friend's cell steps to the
+    nearest free cell at the march pace. Ties go towards its own place, then backwards.
+  - A unit holding a foe stands, and units on their way to a cell may pass through
+    friends.
+  - The unit nearer the cell's centre keeps it. An exact tie goes by the battle-seeded
+    draw.
+  - Fairness: deciding by id order gave whichever squad spawned second 54% of head-on
+    mirrors, and stepping units in contact aside also cost tempo. Fixed, the head-on
+    mirror over 751 seeds in each order is first-spawned 374, second 377.
