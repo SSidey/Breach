@@ -33,6 +33,8 @@ a Decisions or Notes section), not a bare pass/fail claim.
 | `lsp-contract-scope` | For any new implementation of an existing contract, does the spec identify which shared contract-test suite it must pass? |
 | `isp-fit` | Does any interface a step introduces force an implementer to depend on methods it doesn't need? |
 | `dip-direction` | Does the spec introduce any import of a low-level/infrastructure module from high-level/domain logic? |
+| `general-over-special` | Does every new behaviour come from a general rule, not a special case? For any special case, is the human owner's reason recorded with its Decision (`principles/rules-over-cases.md`, Principle 1)? |
+| `order-independent` | Would any outcome change if the same things were created, or listed, in the opposite order (`principles/rules-over-cases.md`, Principle 2)? |
 | `project-agnostic-language` | (Policy specs affecting shared principle documents only) Does the change avoid embedding project-specific paths, languages, or tooling names into a document meant to stay stack-agnostic? |
 
 A specification may proceed to implementation once every Structured row passes and every

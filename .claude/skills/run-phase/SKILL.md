@@ -81,7 +81,9 @@ entry to `Breach — Reverse Tower Defense Design Spec.md`'s `## Decisions` sect
 `AI_First_Development_Kit/templates/decision-entry.md` — never edit a prior Decision's
 text, only append (mark superseded ones per `decision-ledger.md` if applicable).
 Every new Decision ends with a **Pillar check** line against Decision 58's design
-pillars: "holds", or which pillar it bends and why. A Decision that bends a pillar is a
+pillars: "holds", or which pillar it bends and why, and with the **Rules over cases** and
+**Order** lines from the `design-check` skill (Decisions 96 and 97): run that skill on
+every design decision and every change to simulation outcomes. A Decision that bends a pillar is a
 pivot: say so to the user and get their explicit authorisation before recording it.
 
 ## 4. Commit as you go
@@ -102,7 +104,7 @@ hard, and not skippable:
 2. Run the static checks directly (they also run in `pre-commit`/CI, but run them here
    first to catch anything before pushing): `check_function_length.py`,
    `check_generic_naming.py`, `check_isp.py`, `check_dependency_direction.py`,
-   `check_helper_promotion.py`, `check_ocp_shotgun_surgery.py origin/main`,
+   `check_helper_promotion.py`, `check_id_order.py`, `check_ocp_shotgun_surgery.py origin/main`,
    `check_context_locality.py origin/main` (informational — read its output, it won't
    fail the gate, but a large touched-file count that *isn't* the schema-plus-consumer
    pattern Decision 12 covers is worth a second look before opening the PR), plus
