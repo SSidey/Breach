@@ -43,6 +43,7 @@ const FormationStaging = preload("res://sim/skirmish/formation/formation_staging
 const FormationMelee = preload("res://sim/skirmish/formation/formation_melee.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
+const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -65,6 +66,8 @@ var tick_seconds: float
 var combat_width := 0
 ## Overlapping front units walk round an enemy line's end (Decision 81) rather than wrap.
 var walk_wings := false
+## The ground (Decision 85); null is open, level ground everywhere.
+var terrain: FormationTerrain = null
 
 var _route: FormationRoute
 var _squads: Array[SkirmishSquad] = []
@@ -205,9 +208,10 @@ func _move(events: Array) -> void:
 		var advancing := mover.order == SkirmishUnit.Order.ADVANCE
 		var end := FormationMarch.length(mover, route_length)
 		var travel := FormationMarch.travel_sign(mover, end)
-		var step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		if _turns_first(mover, travel, events):
 			continue
+		var open_step := mover.speed() * TRAVEL_SCALE * tick_seconds
+		var step := FormationMarch.pace(mover, terrain, open_step, _tick, events)
 		var next := clampf(mover.front_distance + travel * step, 0.0, end)
 		if advancing:
 			next = FormationContact.limit(mover, _squads, next)
