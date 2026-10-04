@@ -1,9 +1,9 @@
 extends GdUnitTestSuite
-## Retreat and pursuit, per Decision 95 and spec 27 round 8: an ordered retreat breaks
-## contact at once; a drilled formation withdraws fighting and gets away cheaply, a ragged
-## one turns and runs, takes a scaled rout and pays in losses; an enemy ordered to pursue,
-## or led by a pursuer, follows; one that isn't returns to formation, though its
-## undisciplined units may break ranks to chase, decided unit by unit.
+## Retreat and pursuit, per Decisions 95 and 99 and spec 27 rounds 8 and 10: an ordered
+## retreat breaks contact at once; a drilled formation withdraws fighting and gets away
+## cheaply, a ragged one turns and runs, takes a scaled rout and pays in losses; an enemy
+## ordered to pursue, or led by a pursuer, follows; one that isn't returns to formation,
+## though its undisciplined units may break ranks to chase, decided unit by unit.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
@@ -31,8 +31,8 @@ func _row(unit_def: UnitDef) -> Array:
 
 
 ## A head-on fight of 8 v 8; 3 s in, the player's squad is ordered to retreat. Returns
-## [sim, mine, theirs, log after the order, the player's losses after it, the morale it lost
-## on the order's tick].
+## [sim, mine, theirs, log of its withdrawal, the player's losses in it, the morale it lost
+## on the order's tick, the damage it took in it].
 func _retreat(mine: UnitDef, theirs: UnitDef, battle_seed: int = 1, pursue := false) -> Array:
 	var sim := FormationSimulation.new(2.0, 0.1)
 	sim.seek_contact = true
@@ -50,10 +50,14 @@ func _retreat(mine: UnitDef, theirs: UnitDef, battle_seed: int = 1, pursue := fa
 	var before := me.morale
 	var log := sim.step()
 	var shock := before - me.morale
-	for _i in range(400):
+	for _i in range(400):  # until it is safe and re-forms (Decision 99)
 		log.append_array(sim.step())
+		if me.withdraw.is_empty():
+			break
 	var lost := log.filter(func(e): return e["type"] == "died" and e["faction"] == "player")
-	return [sim, me, foe, log, lost.size(), shock]
+	var hits := log.filter(func(e): return e["type"] == "hit" and e["faction"] == "the_kingdom")
+	var taken: int = hits.reduce(func(total, e): return total + e["dmg"], 0)
+	return [sim, me, foe, log, lost.size(), shock, taken]
 
 
 func test_a_retreat_breaks_contact_at_once_and_heads_home() -> void:
@@ -68,9 +72,9 @@ func test_a_retreat_breaks_contact_at_once_and_heads_home() -> void:
 func test_a_drilled_withdrawal_costs_less_than_a_ragged_flight() -> void:
 	var drilled := 0
 	var ragged := 0
-	for battle_seed in range(1, 6):
-		drilled += _retreat(_def(60), _def(60), battle_seed)[4]
-		ragged += _retreat(_def(20), _def(60), battle_seed)[4]
+	for battle_seed in range(1, 6):  # from a ragged enemy, whose units break ranks to chase
+		drilled += _retreat(_def(60), _def(0), battle_seed)[6]
+		ragged += _retreat(_def(20), _def(0), battle_seed)[6]
 
 	assert_int(drilled).is_less(ragged)
 

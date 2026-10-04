@@ -12,11 +12,9 @@ extends RefCounted
 ##   enemy closing in at another face, before contact (ScrumStance); a less disciplined one
 ##   meets it unit by unit, leaving gaps.
 ## - **Engaging:** squads whose units come within reach fight, whatever their faces.
-## - **Regrouping:** when the fight ends the squad closes ranks over its dead (SquadRanks),
-##   its units walk to their places at its re-form pace (FormationDiscipline), and it moves
-##   on once all are back.
-## - **Manoeuvres:** each squad's current one is settled each tick, combat first, then its
-##   route, re-forming and the player's order (FormationManoeuvre, Decision 94).
+## - **Regrouping:** when the fight ends the squad closes ranks over its dead (SquadRanks)
+##   and its units walk to their places at its re-form pace; it moves on once all are back.
+## - **Manoeuvres:** settled each tick by priority (FormationManoeuvre, Decision 94).
 ## - **A stalled fight** (nobody touching or seeking for STALL_SECONDS) is released.
 ## Each phase decides from where units stood before it began, never letting a squad listed
 ## earlier move first and change what a later one sees (Decision 97).
@@ -33,6 +31,7 @@ const ScrumRegroup = preload("res://sim/skirmish/formation/scrum_regroup.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
+const FormationWithdraw = preload("res://sim/skirmish/formation/formation_withdraw.gd")
 const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
 const ScrumSpacing = preload("res://sim/skirmish/formation/scrum_spacing.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
@@ -76,6 +75,7 @@ static func step(
 	_seek(ctx)
 	ScrumRegroup.step(squads, ctx["pace"], tick_seconds, fight_seed)
 	ScrumPursuit.step(squads, tick, cells_per_second, tick_seconds, fight_seed)
+	FormationWithdraw.step(squads, tick, ctx["pace"], tick_seconds, fight_seed, terrain, events)
 	ScrumSpacing.step(squads, ctx["pace"], fight_seed)
 	FormationPursuit.step(squads, tick, cells_per_second, tick_seconds, events)
 	_stall(squads, ctx["active"], tick, tick_seconds, events)

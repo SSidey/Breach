@@ -6,7 +6,8 @@ extends RefCounted
 ## way. A drilled retreat's units back away facing the foe they touch (a fighting
 ## withdrawal, Decision 95). Every squad's units face the foes they touched as the phase
 ## began, so no squad listed earlier moves first and changes what a later one sees
-## (Decision 97). Chasers are left to ScrumPursuit. Pure over the squads it is given.
+## (Decision 97). Chasers and withdrawing units are left to ScrumPursuit and
+## FormationWithdraw. Pure over the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -47,7 +48,7 @@ static func _foes_faced(squad: SkirmishSquad, squads: Array, fight_seed: int) ->
 
 static func _walk_back(squad: SkirmishSquad, foes: Dictionary, pace: float, seconds: float) -> void:
 	for unit_id in squad.loose.keys():
-		if ScrumPursuit.chasing(squad, unit_id):
+		if ScrumPursuit.away(squad, unit_id):
 			continue
 		var entry: Dictionary = squad.loose[unit_id]
 		var unit: SkirmishUnit = entry["unit"]

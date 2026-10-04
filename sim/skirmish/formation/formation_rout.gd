@@ -4,8 +4,8 @@ extends RefCounted
 ## - **Breaking:** at 0 morale a formation routs. Every lock on it ends, and friends that
 ##   see it break take a little shock.
 ## - **Flight:** its units flee one by one back along its route towards home at full
-##   speed, keeping their spread across it. They strike nothing; a hostile unit in contact
-##   strikes them from behind (RoutBlows, flank blows).
+##   speed, fanning out from it as they go (RoutFlight, Decision 99). They strike nothing;
+##   a hostile unit in contact strikes them from behind (RoutBlows, flank blows).
 ## - **Crush:** a router running through a friend's cell hurts both (blunt, by its size),
 ##   and that friend's formation takes panic shock.
 ## - **Rally:** a router that reaches a friendly formation with a leader joins its rear
@@ -33,6 +33,7 @@ const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd"
 const FormationContact = preload("res://sim/skirmish/formation/formation_contact.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const RoutFlight = preload("res://sim/skirmish/formation/rout_flight.gd")
 const RoutCatch = preload("res://sim/skirmish/formation/rout_catch.gd")
 const RoutSettle = preload("res://sim/skirmish/formation/rout_settle.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
@@ -75,7 +76,7 @@ static func step(
 	var routing := squads.filter(func(s): return s.state == SkirmishSquad.State.ROUTING)
 	var pace := cells_per_second * tick_seconds
 	for squad in routing:
-		_flee(squad, squads, tick, pace, events, fight_seed)
+		_flee(squad, squads, tick, [pace, fight_seed, terrain], events)
 	var joins := []
 	for squad in routing:
 		joins.append_array(_rallies(squad, squads, tick_seconds, fight_seed))
@@ -127,8 +128,9 @@ static func _break(
 				FormationMorale.shock(friend, SEEN_ROUT, tick, events)
 
 
+## `motion` is [pace (cells a tick at speed 1), fight seed, terrain or null].
 static func _flee(
-	squad: SkirmishSquad, squads: Array, tick: int, pace: float, events: Array, fight_seed: int
+	squad: SkirmishSquad, squads: Array, tick: int, motion: Array, events: Array
 ) -> void:
 	var home := squad.home_distance * CELLS
 	var panicked := {}
@@ -136,8 +138,8 @@ static func _flee(
 		var entry: Dictionary = squad.fleeing[unit.id]
 		if entry.get("caught", 0) > 0:
 			continue  # held by a steady friend it ran into
-		entry["along"] = move_toward(entry["along"], home, unit.speed * pace)
-		_crush([squad, unit, fight_seed], squads, tick, panicked, events)
+		RoutFlight.step(squad, unit, entry, home, motion + [where(squad, unit.id), squads])
+		_crush([squad, unit, motion[1]], squads, tick, panicked, events)
 		if is_equal_approx(entry["along"], home):
 			squad.units.erase(unit)
 			squad.fleeing.erase(unit.id)
