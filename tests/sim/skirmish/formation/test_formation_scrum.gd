@@ -11,6 +11,7 @@ const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd"
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -81,10 +82,11 @@ func test_units_touch_on_faces_and_corners_but_not_across_a_gap() -> void:
 func test_a_units_front_is_the_three_cells_ahead() -> void:
 	var at := Vector2(0.5, 0.5)
 
-	assert_bool(ScrumReach.in_front(SquadFrame.EAST, at, Vector2(1.5, 0.5))).is_true()
-	assert_bool(ScrumReach.in_front(SquadFrame.EAST, at, Vector2(1.5, 1.5))).is_true()
-	assert_bool(ScrumReach.in_front(SquadFrame.EAST, at, Vector2(0.5, 1.5))).is_false()
-	assert_bool(ScrumReach.in_front(SquadFrame.EAST, at, Vector2(-0.5, 0.5))).is_false()
+	var east := UnitMotion.of_facing(SquadFrame.EAST)
+	assert_bool(ScrumReach.in_front(east, at, Vector2(1.5, 0.5))).is_true()
+	assert_bool(ScrumReach.in_front(east, at, Vector2(1.5, 1.5))).is_true()
+	assert_bool(ScrumReach.in_front(east, at, Vector2(0.5, 1.5))).is_false()
+	assert_bool(ScrumReach.in_front(east, at, Vector2(-0.5, 0.5))).is_false()
 
 
 func test_contests_go_to_the_earliest_then_the_readiest() -> void:

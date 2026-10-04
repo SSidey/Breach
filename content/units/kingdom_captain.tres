@@ -14,4 +14,6 @@ preferred_position = 1
 position_priority = 2
 courage = 65
 leadership = 2
+turn_rate = 360.0
+backward_pace = 0.4
 weapons = Array[ExtResource("2_ary88")]([ExtResource("3_5ht27")])

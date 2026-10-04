@@ -11,4 +11,6 @@ dmg = 5
 speed = 0.8
 build_seconds = 5.0
 position_priority = 1
+turn_rate = 360.0
+backward_pace = 0.4
 weapons = Array[ExtResource("2_ary88")]([ExtResource("3_5ht27")])

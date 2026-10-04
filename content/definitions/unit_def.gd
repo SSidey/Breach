@@ -40,6 +40,10 @@ const MAX_FOOTPRINT := 8
 ## formation's mean, bolstered by its leader, decides whether it re-forms as a whole to meet
 ## a flank and how fast it re-forms.
 @export var discipline: int = 30
+## How it turns and backs away (Decision 95; placeholders until spec 28): degrees a second
+## it turns, and the share of its speed it makes moving straight back (sideways is between).
+@export var turn_rate: float = 450.0
+@export var backward_pace: float = 0.4
 ## What it fights with (Decision 47). Without weapons it strikes once for `dmg`.
 @export var weapons: Array[WeaponDef] = []
 

@@ -10,6 +10,7 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
@@ -102,6 +103,6 @@ static func sync_units(squads: Array) -> void:
 			if entry.loose.has(unit.id):
 				unit.position = entry.loose[unit.id]["at"]
 			else:
-				unit.facing = entry.facing
+				unit.bearing = UnitMotion.of_facing(entry.facing)
 			if entry.fleeing.has(unit.id):
 				unit.position = FormationRout.where(entry, unit.id)

@@ -20,6 +20,7 @@ const FormationSimulation = preload("res://sim/skirmish/formation/formation_simu
 const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const FormationRendezvous = preload("res://sim/skirmish/formation/formation_rendezvous.gd")
+const FormationRehearsal = preload("res://sim/skirmish/formation/formation_rehearsal.gd")
 const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
 const DomainProduction = preload("res://sim/skirmish/formation/domain_production.gd")
 const WavePresets = preload("res://sim/skirmish/formation/wave_presets.gd")
@@ -71,7 +72,6 @@ var waves := {}  # "A" / "B" -> FormationProduction
 var kingdom_line: SkirmishSquad
 var kingdom_reserve: SkirmishSquad
 
-var _wave_unit: UnitDef
 var _tick := 0
 
 
@@ -102,7 +102,6 @@ func _init(
 	battle_seed: int = 0
 ) -> void:
 	tick_seconds = seconds_per_tick
-	_wave_unit = wave_unit
 	sim = FormationSimulation.new(float(SIZE.x) / MapLayoutDef.CELLS_PER_TILE, seconds_per_tick)
 	sim.combat_width = WAVE_WIDTH
 	sim.seek_contact = true
@@ -150,18 +149,17 @@ func send(key: String) -> SkirmishSquad:
 
 
 ## Sends the routes' waves now, each waiting so that all reach the line together (planned
-## rendezvous, Decision 87). Returns the squads sent.
+## rendezvous, Decision 87), their marches timed by rehearsal (FormationRehearsal).
+## Returns the squads sent.
 func send_together(keys: Array) -> Array:
 	var predicted := {}
-	var cells_per_second := _wave_unit.speed * FormationSimulation.TRAVEL_SCALE * 64.0
 	for key in keys:
-		predicted[key] = FormationRendezvous.ticks_to(
-			routes[key],
-			contact_cells()[key],
+		predicted[key] = FormationRehearsal.ticks_to(
+			FormationRehearsal.placements_of(waves[key].preview()),
 			WAVE_WIDTH,
-			cells_per_second,
+			waves[key].route,
+			contact_cells()[key],
 			tick_seconds,
-			0.0,
 			sim.terrain
 		)
 	var waits := FormationRendezvous.waits(predicted)

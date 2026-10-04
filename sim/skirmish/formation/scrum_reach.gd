@@ -8,11 +8,12 @@ extends RefCounted
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 
 ## How far apart (cells) two units' cells may be and still touch: a unit stepping between
 ## cells still reaches the one it is leaving.
 const CONTACT := 0.25
-## A point lies in a unit's front when its direction is within 45 degrees of its facing.
+## A point lies in a unit's front when its direction is within 60 degrees of its bearing.
 const FRONT_ARC := 0.5
 
 
@@ -37,12 +38,12 @@ static func touching(a: Rect2, b: Rect2) -> bool:
 	return maxf(gap_x, gap_y) <= CONTACT
 
 
-## True if `point` lies in the front of a unit at `from` facing `facing`.
-static func in_front(facing: int, from: Vector2, point: Vector2) -> bool:
+## True if `point` lies in the front of a unit at `from` on `bearing` (UnitMotion).
+static func in_front(bearing: int, from: Vector2, point: Vector2) -> bool:
 	var direction := point - from
 	if direction.length() < 0.000001:
 		return true
-	return direction.normalized().dot(SquadFrame.forward(facing)) >= FRONT_ARC - 0.000001
+	return direction.normalized().dot(UnitMotion.vector(bearing)) >= FRONT_ARC - 0.000001
 
 
 ## The facing nearest the way from `from` to `to` (ties: along x).

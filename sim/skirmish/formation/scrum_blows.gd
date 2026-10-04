@@ -3,8 +3,9 @@ extends RefCounted
 ## Melee blows in the scrum (Decision 88, spec 27 round 5): every unit of a fighting squad
 ## strikes one enemy it touches (ScrumReach), on a face or a corner - one in its front
 ## first, then the nearest, then the lowest id. A blow from outside the target's front, or
-## on a turning squad, is a flank blow. Blows land together; then each unit whose target
-## stood outside its front turns to it, so a unit fighting one foe is flanked by a second.
+## on a turning squad, is a flank blow. Blows land together. Units turn to their foes at
+## their turn rate as they move (FormationScrum, UnitMotion), so a unit fighting one foe is
+## flanked by a second, and a unit turning away is struck from behind.
 ## Routing squads are left to FormationRout. Pure over the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -15,10 +16,9 @@ const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.g
 
 
 ## This tick's blows: [[attacker, target, damage, flank], ...]. Updates each striker's
-## target, cooldown and facing.
+## target and cooldown.
 static func blows(squads: Array, interval: int) -> Array:
 	var out := []
-	var turns := []  # [unit, facing]
 	for squad in squads:
 		if squad.state != SkirmishSquad.State.FIGHTING:
 			continue
@@ -31,8 +31,6 @@ static func blows(squads: Array, interval: int) -> Array:
 			var target: SkirmishUnit = pick[0]
 			var where := ScrumReach.at(squad, unit)
 			var target_at: Vector2 = pick[2]
-			if not ScrumReach.in_front(unit.facing, where, target_at):
-				turns.append([unit, ScrumReach.facing_to(where, target_at)])
 			unit.target_id = target.id
 			unit.attack_cooldown -= 1
 			if unit.attack_cooldown > 0:
@@ -41,11 +39,9 @@ static func blows(squads: Array, interval: int) -> Array:
 			var target_squad: SkirmishSquad = pick[1]
 			var flank := (
 				target_squad.state == SkirmishSquad.State.TURNING
-				or not ScrumReach.in_front(target.facing, target_at, where)
+				or not ScrumReach.in_front(target.bearing, target_at, where)
 			)
 			out.append([unit, target, FormationCombat.damage(unit, flank), flank])
-	for turn in turns:
-		turn[0].facing = turn[1]
 	return out
 
 
@@ -82,9 +78,15 @@ static func _pick(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array) -> Arra
 		if not ScrumReach.touching(mine, ScrumReach.area(entry[1], other)):
 			continue
 		var there := ScrumReach.at(entry[1], other)
-		var front := 0 if ScrumReach.in_front(unit.facing, where, there) else 1
+		var front := 0 if ScrumReach.in_front(unit.bearing, where, there) else 1
 		var key := [front, where.distance_to(there), other.id]
 		if best.is_empty() or key < best_key:
 			best = [other, entry[1], there]
 			best_key = key
 	return best
+
+
+## Where the nearest enemy the unit touches stands, or null if it touches none.
+static func nearest_touching(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array):
+	var pick := _pick(squad, unit, foes)
+	return null if pick.is_empty() else pick[2]

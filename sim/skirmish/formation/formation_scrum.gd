@@ -29,6 +29,7 @@ const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
 const ScrumPaths = preload("res://sim/skirmish/formation/scrum_paths.gd")
 const ScrumEngage = preload("res://sim/skirmish/formation/scrum_engage.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
@@ -70,7 +71,7 @@ static func step(
 		"active": {},
 	}
 	_seek(ctx)
-	_regroup(squads, ctx["pace"])
+	_regroup(squads, ctx["pace"], tick_seconds)
 	_stall(squads, ctx["active"], tick, tick_seconds, events)
 	return events
 
@@ -136,9 +137,13 @@ static func _seek(ctx: Dictionary) -> void:
 		if entry["goal"] != null:
 			claimed[entry["goal"]] = true
 			ctx["active"][squad.id] = true
-	for squad in ctx["squads"]:
-		if squad.state == SkirmishSquad.State.FIGHTING:
-			_walk(squad, ctx["pace"] * CROWDING)
+	var fighting: Array = ctx["squads"].filter(
+		func(s): return s.state == SkirmishSquad.State.FIGHTING
+	)
+	for squad in fighting:
+		_walk(squad, ctx["pace"] * CROWDING)
+	for squad in fighting:  # after everyone has moved, so a unit stepped up to is seen
+		_face(squad, ctx)
 
 
 ## [[key, squad, unit, foe cells], ...] for the squad's units free to seek; the rest stand
@@ -186,18 +191,35 @@ static func _may_seek(squad: SkirmishSquad, unit: SkirmishUnit) -> bool:
 static func _walk(squad: SkirmishSquad, pace: float) -> void:
 	for unit in squad.living():
 		var entry: Dictionary = squad.loose[unit.id]
+		var full: float = unit.speed * pace
+		entry["toward"] = null
 		if entry["goal"] != null:
-			entry["at"] = entry["at"].move_toward(entry["next"], unit.speed * pace)
+			entry["toward"] = entry["next"]
+			entry["at"] = UnitMotion.move(unit, entry["at"], entry["next"], full)
 		elif not entry.get("touch", false):
-			entry["at"] = entry["at"].move_toward(
-				ScrumStance.anchor(squad, unit), unit.speed * pace
-			)
+			var place := ScrumStance.anchor(squad, unit)
+			entry["toward"] = place
+			entry["at"] = UnitMotion.move(unit, entry["at"], place, full)
 			entry["next"] = entry["at"]
+
+
+## Each unit turns once a tick, at its turn rate: towards the nearest foe it touches, or
+## else the way it walked.
+static func _face(squad: SkirmishSquad, ctx: Dictionary) -> void:
+	var foes := _foe_units(squad, ctx["squads"])
+	for unit in squad.living():
+		var entry: Dictionary = squad.loose[unit.id]
+		var look = ScrumBlows.nearest_touching(squad, unit, foes)
+		if look == null:
+			look = entry.get("toward")
+		if look != null:
+			var wanted := UnitMotion.bearing_to(entry["at"], look, unit.bearing)
+			UnitMotion.turn(unit, wanted, ctx["seconds"])
 
 
 ## Units of squads out of the fight walk to their places (in the stance, if any) at the
 ## march pace; back in place they rejoin the squad's frame unless it holds a stance.
-static func _regroup(squads: Array, pace: float) -> void:
+static func _regroup(squads: Array, pace: float, seconds: float) -> void:
 	for squad in squads:
 		if squad.state in [SkirmishSquad.State.FIGHTING, SkirmishSquad.State.ROUTING]:
 			continue
@@ -208,12 +230,15 @@ static func _regroup(squads: Array, pace: float) -> void:
 			var unit: SkirmishUnit = entry["unit"]
 			var place := ScrumStance.anchor(squad, unit)
 			var step := unit.speed * pace * FormationDiscipline.reform_pace(squad)
-			entry["at"] = entry["at"].move_toward(place, step)
+			var arrived: bool = entry["at"].distance_to(place) < 0.000001
+			if not arrived:
+				entry["at"] = UnitMotion.walk(unit, entry["at"], place, step, seconds)
 			entry["next"] = entry["at"]
 			entry["goal"] = null
-			unit.facing = squad.facing if squad.stance.is_empty() else squad.stance["facing"]
-			if squad.stance.is_empty() and entry["at"].distance_to(place) < 0.000001:
-				squad.loose.erase(unit_id)
+			var facing: int = squad.facing if squad.stance.is_empty() else squad.stance["facing"]
+			var faced := arrived and UnitMotion.turn(unit, UnitMotion.of_facing(facing), seconds)
+			if squad.stance.is_empty() and faced:
+				squad.loose.erase(unit_id)  # in its place and facing the squad's way
 
 
 ## Releases fights where nobody on either side has touched or sought a foe for a while.
