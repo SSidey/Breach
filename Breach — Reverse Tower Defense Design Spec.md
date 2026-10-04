@@ -4812,3 +4812,48 @@ the simulation had no randomness of its own.
 - The formation sim draws its random numbers from a battle seed; the scene shows it.
 - Spec 28 designs how variance comes from units (skill, weapons, conditions).
 - Tuning is checked with the Monte Carlo runner, not single runs.
+
+### Decision 94 — Tactical decisions override strategic orders: combat, then the route, then re-forming, then the player's order; a formation halted without an order moves to a fight nearby or back to its march
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after feel-testing spec 27's round 6: a disciplined wave
+re-forming at a corner turned to face the line (fighting another wave) and stayed there,
+off its route. The user: "we need priority of manoeuvres with lowest being the
+overriding… committing to combat should be priority 0, priority 1 should [be] returning
+to their route, priority 2 should be reforming the formation, priority 3 is
+retreat/halt/march… If we have committed to melee we must seek contact, not halt
+position, if we haven't engaged melee but are halted without the command given then we
+return to our route, reform and march, if we have engaged but find ourselves halted (and
+we are melee seeking units) then we move to engage… tactical decisions override strategic
+with tactical decided by the units at the time… and strategic being the player
+decisions".
+- **Priorities, lowest overriding:**
+  0. **Combat:** a formation committed to melee seeks contact (Decision 88); it does not
+     hold its place.
+  1. **Its route:** out of combat, its units return to its route.
+  2. **Re-forming:** they take up their places (Decision 92).
+  3. **The player's order:** retreat, halt or march (and hold-until, Decision 87).
+- **Tactical over strategic:** 0 to 2 are the formation's own decisions, made from its
+  leadership, discipline, morale and traits; 3 is the player's.
+- **Halted without an order:** a formation that has stopped though its order is to march
+  (not holding, not waiting at a staging point, not queued for a hold-until) for a moment
+  (placeholder 2 s) moves to combat if one is available - an enemy it detects within
+  reach (placeholder 12 cells) - and otherwise returns to its route, re-forms and
+  marches on.
+- **A threat that stops closing in** no longer holds a marching formation in its
+  re-formed line: it engages that enemy if it is near, or marches on.
+- **Open:** whether a retreat order can pull a formation out of melee, or melee holds it
+  (as today a retreat disengages at once).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Separate rules per situation | Each new case (turning, narrowing, queueing) can strand a formation; one priority order covers them. |
+| The player's order first | A halt order would freeze a formation in melee; units fight for themselves. |
+
+**Consequences:**
+- The formation sim gains a check for formations halted without an order.
+- Spec 27's next round builds it; the retreat question goes to the user.
