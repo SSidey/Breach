@@ -52,5 +52,18 @@ follow-ups, on top of the spec 27 stack (#90).
 3. **Unit bearings:** keep 8 steps, or turn freely?
 4. **The frame on bends:** how a formation's facing follows a curving route (turn as a
    re-form at each bend, Decision 92, or sweep with the route).
-5. **Tests to carry over:** which cell-exact tests become footprint tests, and the
+5. **Ties in the unit's own frame:** whenever two points or slots are equally good, the
+   tie goes by the unit's own frame (most ahead along its bearing, then nearest its
+   place, then its seeded draw), never by a world direction or a scan order. A
+   mirror-geometry test checks it: the same battle reflected left to right must give
+   reflected results. The reversed-lists tests can't see a world-direction bias. (From
+   #91, closed: the cell-scan ties it found, in `ScrumPaths.path`,
+   `ScrumSpacing._free_near` and `RoutSettle.free_spot`, go with the cells.)
+6. **Retire the old combat modes:** move the one-lane scene (`FormationLane`,
+   `FormationBattle`, spec 22) onto the scrum, then remove the wrap, edge and walking-wing
+   modes (`FormationEdges`, `FormationWings`, `FormationMelee._lines`). The field, the
+   trials and the rehearsals already use the scrum. (From #92, closed: a second attacker
+   reaching an edge already held is locked on but not recorded, fights as if frontal and
+   is never released; it exists only in the edge mode.)
+7. **Tests to carry over:** which cell-exact tests become footprint tests, and the
    fairness checks (mirrors both ways round, reversed lists) to run throughout.
