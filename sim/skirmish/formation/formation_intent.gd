@@ -3,12 +3,13 @@ extends RefCounted
 ## Tactical over strategic (Decision 94, spec 27 round 7). A formation's own decisions come
 ## before the player's order: 0 combat (seek contact, Decision 88), 1 its route, 2
 ## re-forming (Decision 92), 3 the order (retreat, halt, march, hold-until). This keeps the
-## one case the other rules miss: a formation ordered to march that has stood still for
-## HALTED_SECONDS - not holding, waiting at a staging point, fighting, skirmishing at
-## range (a tactical choice) or done -
-## moves to combat if it detects an enemy within ENGAGE_REACH, and otherwise lets go of
-## any re-formed line so it returns to its route, re-forms and marches on. Squads keep
-## `halted_ticks` and `last_front`. Pure over the squads it is given.
+## one case the other rules miss, checked every tick: a formation ordered to march that
+## stood still this tick for no order of the player's (not holding, staged, waiting,
+## fighting, skirmishing at range, blocked or done) and isn't in the middle of a manoeuvre
+## of its own (re-forming after a turn, narrowing at a gap, or receiving an enemy still
+## closing in) moves to combat if it detects an enemy within ENGAGE_REACH, and otherwise
+## lets go of any re-formed line so it returns to its route, re-forms and marches on.
+## Squads keep `last_front`. Pure over the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -18,34 +19,41 @@ const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd"
 const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 
-const HALTED_SECONDS := 2.0
 ## How near (cells, between their extents) an enemy must be to count as a fight to join.
 const ENGAGE_REACH := 12.0
 
 
-## One tick: counts formations halted without an order and sends those halted long enough
-## to a fight nearby, or back to their march. Returns "engaged" events.
-static func step(
-	squads: Array, tick: int, tick_seconds: float, terrain: FormationTerrain = null
-) -> Array:
+## One tick: sends formations halted without an order to a fight nearby, or back to their
+## march. Returns "engaged" events.
+static func step(squads: Array, tick: int, terrain: FormationTerrain = null) -> Array:
 	var events := []
 	for squad in squads:
-		if not _uncommanded_halt(squad) or FormationContact.skirmishing(squad, squads):
-			squad.halted_ticks = 0
-			squad.last_front = squad.front_distance
+		if not _uncommanded_halt(squad) or _manoeuvring(squad, squads, terrain):
 			continue
-		squad.halted_ticks += 1
-		if squad.halted_ticks < roundi(HALTED_SECONDS / tick_seconds):
-			continue
-		squad.halted_ticks = 0
 		var foe := _nearest_foe(squad, squads, terrain)
 		if foe != null:
 			FormationLocks.lock(squad, foe)
+			if foe.engaged_with == 0 and foe.state != SkirmishSquad.State.FIGHTING:
+				FormationLocks.lock(foe, squad)  # both join the fight together
 			events.append(FormationEvents.squad_event("engaged", tick, squad, {"with": foe.id}))
 		else:
 			squad.stance = {}  # back to its route and its places, then on
 	return events
+
+
+## True if it stands still for a manoeuvre of its own, about to move on or to fight:
+## skirmishing at range, re-forming after a turn, narrowing at a gap, or receiving an
+## enemy still closing in.
+static func _manoeuvring(squad: SkirmishSquad, squads: Array, terrain: FormationTerrain) -> bool:
+	var turning: bool = squad.stance.is_empty() and not squad.loose.is_empty()
+	return (
+		turning
+		or squad.narrow_ticks > 0
+		or ScrumStance.receiving(squad, squads, terrain)
+		or FormationContact.skirmishing(squad, squads)
+	)
 
 
 ## True if the squad is ordered to march but stood still this tick for no order of the

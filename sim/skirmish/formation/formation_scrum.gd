@@ -54,11 +54,11 @@ static func step(
 	terrain: FormationTerrain = null
 ) -> Array:
 	var events := ScrumEngage.step(squads, tick)
+	events.append_array(FormationIntent.step(squads, tick, terrain))
 	for squad in squads:
 		_prepare(squad, tick)
 	for squad in squads:
 		ScrumStance.anticipate(squad, squads, tick, events, terrain)
-	events.append_array(FormationIntent.step(squads, tick, tick_seconds, terrain))
 	var ctx := {
 		"squads": squads,
 		"tick": tick,

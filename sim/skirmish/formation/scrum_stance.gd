@@ -61,6 +61,13 @@ static func anticipate(
 	events.append(FormationEvents.squad_event("faced", tick, squad, {"facing": threat}))
 
 
+## True if the squad holds a re-formed line towards an enemy still closing in on it.
+static func receiving(squad: SkirmishSquad, squads: Array, terrain: FormationTerrain) -> bool:
+	if squad.stance.is_empty():
+		return false
+	return _threat(squad, squads, terrain, true) == squad.stance["facing"]
+
+
 ## The facing towards the nearest seen hostile within ANTICIPATE cells - closing in, if
 ## `closing` - or -1.
 static func _threat(

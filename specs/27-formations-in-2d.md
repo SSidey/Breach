@@ -346,10 +346,13 @@ breaks:
 Decision 94, raised by the round 6 feel test: a disciplined B re-forming at its corner as
 A engaged took the line (facing A, so "towards" B) for a threat closing in, turned to
 meet it and stayed there, off its route.
-- `FormationIntent`: a formation ordered to march that has stood still 2 s for no order of
-  the player's (not holding, staged, waiting, fighting, skirmishing at range, blocked or
-  done) moves to combat if it detects an enemy within 12 cells; otherwise it lets go of
-  its re-formed line, returns to its route, re-forms and marches on.
+- `FormationIntent`, checked every tick (the user: 2 s "feels like quite a long time"): a
+  formation ordered to march that stood still this tick for no order of the player's (not
+  holding, staged, waiting, fighting, blocked or done) and isn't mid-manoeuvre
+  (re-forming after a turn, narrowing at a gap, receiving an enemy still closing in, or
+  skirmishing at range) moves to combat if it detects an enemy within 12 cells, both
+  sides locking together; otherwise it lets go of its re-formed line, returns to its
+  route, re-forms and marches on.
 - A re-formed line is held while its enemy is near only under a hold order; a marching
   formation keeps it only while the enemy is still closing in.
 - Open: whether a retreat order can pull a formation out of melee (today it disengages at

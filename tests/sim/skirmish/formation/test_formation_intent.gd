@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## Tactical over strategic, per Decision 94 and spec 27 round 7: a formation ordered to
-## march that stands still for no order of the player's moves to a fight nearby, or else
-## lets go of its re-formed line and marches on; one ordered to hold stays put.
+## march that stands still for no order of the player's moves at once to a fight nearby, or
+## else lets go of its re-formed line and marches on; one ordered to hold stays put.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
@@ -59,7 +59,7 @@ func test_halted_near_an_enemy_it_goes_to_fight() -> void:
 	var foe := sim.spawn_squad(4, _row(4), "the_kingdom", true, 0, hold)
 	sim.order(foe.id, SkirmishUnit.Order.HOLD)
 
-	var log := _run(sim, 80)
+	var log := _run(sim, 3)  # it acts the tick after it stops, not after a wait
 
 	var engaged := log.filter(func(e): return e["type"] == "engaged" and e["squad"] == squad.id)
 	assert_bool(engaged.is_empty()).is_false()
