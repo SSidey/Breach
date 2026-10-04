@@ -97,6 +97,19 @@ func test_a_squad_that_fits_does_not_narrow() -> void:
 	assert_float(setup[1].position.x).is_greater(25.0)
 
 
+func test_a_small_squad_off_to_one_side_of_the_ford_moves_into_it() -> void:
+	# a partial wave keeps its painted columns: one unit in column 0 of an 8-wide line
+	# stands 3.5 cells off the route, outside a 4-cell ford, though it is narrower than it
+	var setup := _crossing([[_def(), Vector2i(0, 0)]], 8, 4)
+	var squad: SkirmishSquad = setup[1]
+
+	var log := _run(setup[0], 120)
+
+	assert_int(_of(log, "narrowed").size()).is_equal(1)
+	assert_int(_of(log, "blocked").size()).is_equal(0)
+	assert_float(squad.position.x).is_greater(25.0)
+
+
 func test_a_unit_too_wide_for_the_gap_halts_the_squad() -> void:
 	var placements := [[_def(0, 2), Vector2i(0, 0)], [_def(), Vector2i(0, 2)]]
 	var setup := _crossing(placements, 3, 1)

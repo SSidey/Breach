@@ -2,7 +2,7 @@ class_name FormationNarrowing
 extends RefCounted
 ## Gaps narrower than a squad (Decision 85, spec 27 round 4). Looking a few cells ahead,
 ## a squad measures the passable run of ground across its facing, centred on its route.
-## - **Narrowing:** if the run is narrower than its line, it narrows into a column that
+## - **Narrowing:** if its line doesn't lie within the run, it narrows into a column that
 ##   fits: front band first and nearest the centre first, the extra columns folding into
 ##   the ranks behind (the fold of Decision 42). It keeps its painted places, and holds
 ##   while it re-forms (a thin front is what makes a chokepoint dangerous).
@@ -38,8 +38,8 @@ static func holds(
 		return true
 	var gap := gap_ahead(squad, terrain)
 	if squad.painted.is_empty():
-		if gap.x < 1.0 or gap.x >= _line_width(squad) - 0.0001:
-			return false  # open enough, or no way through at all (FormationMarch.pace halts it)
+		if gap.x < 1.0 or _inside(squad, gap):
+			return false  # it fits, or no way through at all (FormationMarch.pace halts it)
 		return _narrow(squad, gap, tick, tick_seconds, events)
 	if gap.x >= squad.painted_width - 0.0001 and _open_for_painted(squad, terrain):
 		_widen(squad, tick, tick_seconds, events)
@@ -164,9 +164,15 @@ static func _widen(squad: SkirmishSquad, tick: int, tick_seconds: float, events:
 	events.append(FormationEvents.squad_event("widened", tick, squad, {"width": squad.width}))
 
 
-static func _line_width(squad: SkirmishSquad) -> float:
-	var span := SquadGeometry.lateral(squad)
-	return span.y - span.x
+## True if the squad's living line lies within the gap, not only narrower than it: a
+## partial wave keeps its painted columns and can stand off to one side of a ford.
+static func _inside(squad: SkirmishSquad, gap: Vector2) -> bool:
+	var line := SquadGeometry.lateral(squad)
+	var right := SquadFrame.right(squad.facing)
+	var near := squad.position + right * (gap.y - gap.x / 2.0)
+	var far := squad.position + right * (gap.y + gap.x / 2.0)
+	var span := SquadFrame.lateral_interval(Rect2(near.min(far), (far - near).abs()), squad.facing)
+	return line.x >= span.x - 0.0001 and line.y <= span.y + 0.0001
 
 
 ## The shortest living unit's height: the gap must pass all of them.
