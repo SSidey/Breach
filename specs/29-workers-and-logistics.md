@@ -46,6 +46,7 @@ below, nothing is decided.
 5. Loadouts by duty and the item stock.
 6. Wagons and other logistics tech.
 7. Danger: raids on crews, and escorts.
+8. Medics: support units that heal formations over time (with spec 28's healing trait).
 
 ## Rounds
 
