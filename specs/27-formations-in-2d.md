@@ -363,3 +363,66 @@ meet it and stayed there, off its route.
   and marches on rather than standing off its route.
 - Open: whether a retreat order can pull a formation out of melee (today it disengages at
   once).
+
+### Round 8: movement by facing, retreat and pursuit (built; feel test pending)
+
+Decision 95, in two stacked PRs:
+1. **Movement by facing** (`UnitMotion`, model C):
+   - Units face one of 8 bearings and turn at their turn rate. In the scrum they move at
+     a pace set by the angle between bearing and heading, down to their backward pace
+     straight back, and turn once a tick after everyone has moved.
+   - Per type (placeholders): grem and spitter 720°/s and 0.6, chieftain 540 and 0.5,
+     brute 270 and 0.25, militia and captain 360 and 0.4.
+   - Re-forming includes turning to the squad's facing.
+   - "Send A+B" is timed by rehearsing each wave's march (`FormationRehearsal`).
+   - Fairness: two hostile squads marching at each other each close at most half the
+     gap between them, and a cell records every side on it. The head-on mirror had come
+     to favour whichever squad was stepped first; it is even again over 400 seeds in each
+     order.
+2. **Retreat and pursuit** (`ScrumPursuit`):
+   - An ordered retreat ends the fight at once.
+   - A drilled formation withdraws fighting: it backs away facing the foe it touches,
+     and strikes back.
+   - A ragged one turns and runs, and takes a scaled rout: up to 20 morale, by how far
+     short of drilled it is.
+   - Enemies still touching a retreating formation strike it.
+   - A formation ordered to pursue, or led by a "pursues" leader, follows the retreating
+     one.
+   - Otherwise its units near the retreat break ranks to chase for 2 s, each with a
+     chance of (50 - its discipline) / 100, a seeded roll.
+   - The scene adds "Retreat A" and "Retreat B", and "Line pursues".
+
+Retreat cost (8 v 8 head-on, retreat ordered 3 s into the fight; mean player losses
+after the order over 20 seeds):
+
+| Retreating | Enemy | Lost after the order |
+|---|---|---|
+| drilled (60) | disciplined (60), not pursuing | 0.25 |
+| ragged (20) | disciplined (60), not pursuing | 6.7 |
+| drilled (60) | pursuing | 8.0 (all) |
+| drilled (60) | ragged (10), not pursuing, up to 5 chasing | 7.25 |
+
+Those numbers are from a mirror of equal-speed units, not the field. The feel test showed
+pursuit in the field did nothing: only units chased, within reach of their places, and
+the slower militia couldn't catch grems. Since then:
+- A pursuing formation moves as a body (`FormationPursuit`): its frame advances along its
+  route after the enemy, no faster than its units keep up, its units chasing at the march
+  pace. It gives up 16 cells off (placeholder), marches back to its post and faces the
+  way it held it.
+- A march never passes its target: a squad marching back to a post mid-route stops there.
+- A drilled withdrawal steps its formation back 3 cells (placeholder) before turning.
+
+Retreat cost on the field (retreat 3 s after contact, 20 seeds, mean losses after the
+order):
+
+| Retreating | Line pursues | Lost after the order |
+|---|---|---|
+| A (grems, ragged) | no | 1.0 of 4 |
+| A (grems, ragged) | yes | 2.5 of 4 |
+| B (chieftain, drilled) | no | 0.5 of 9 |
+| B (chieftain, drilled) | yes | 8.7 of 9 |
+
+B is caught out of formation: its units spread up to 8 cells ahead of its frame in the
+fight, and walk back to their places at the corner (turning, backs to the militia) while
+the line chases at full pace. Objectives, fallbacks and retreat conditions come with nodes and
+routes.

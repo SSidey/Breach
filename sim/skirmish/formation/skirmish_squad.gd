@@ -55,6 +55,12 @@ var wings := {}
 var loose := {}
 var stance := {}
 var fight_since := -1
+## Pursuit (ScrumPursuit, Decision 95): whether it is ordered to pursue a retreating enemy,
+## and its units out chasing one (unit id -> {"unit", "foe", "until"}).
+var pursues := false
+var chasers := {}
+## A pursuit under way (FormationPursuit): the enemy, the post it left, and how it held it.
+var pursuit := {}
 var stall_ticks := 0
 ## What it is doing (FormationManoeuvre.Kind, Decision 94): 0 combat, 1 its route, 2
 ## re-forming, 3 the player's order; it marches only on 3.

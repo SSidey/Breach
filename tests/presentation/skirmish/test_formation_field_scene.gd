@@ -72,3 +72,16 @@ func test_reset_starts_a_fresh_field_under_a_seed() -> void:
 	assert_object(scene.field()).is_not_same(before)
 	assert_int(scene.field().sim.fight_seed).is_equal(42)
 	assert_int(scene.field().sim.tick_number()).is_equal(0)
+
+
+func test_a_sent_wave_can_be_ordered_to_retreat() -> void:
+	var scene := _scene()
+	scene.run_ticks(100)
+	scene._on_send("A")
+	scene.run_ticks(5)
+
+	scene.retreat("A")
+	scene.run_ticks(1)
+
+	var wave = scene.field().sim.squads()[2]
+	assert_int(wave.order).is_equal(2)  # SkirmishUnit.Order.RETREAT

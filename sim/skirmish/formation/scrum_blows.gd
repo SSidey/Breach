@@ -1,8 +1,9 @@
 class_name ScrumBlows
 extends RefCounted
-## Melee blows in the scrum (Decision 88, spec 27 round 5): every unit of a fighting squad
-## strikes one enemy it touches (ScrumReach), on a face or a corner - one in its front
-## first, then the nearest, then the lowest id. A blow from outside the target's front, or
+## Melee blows in the scrum (Decisions 88 and 95, spec 27 rounds 5 and 8): every unit of a
+## fighting squad - and of any squad, at a retreating enemy - strikes one enemy it touches
+## (ScrumReach), on a face or a corner: one in its front first, then the nearest, then the
+## lowest id. A blow from outside the target's front, or
 ## on a turning squad, is a flank blow. Blows land together. Units turn to their foes at
 ## their turn rate as they move (FormationScrum, UnitMotion), so a unit fighting one foe is
 ## flanked by a second, and a unit turning away is struck from behind.
@@ -13,6 +14,7 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
+const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 
 
 ## This tick's blows: [[attacker, target, damage, flank], ...]. Updates each striker's
@@ -20,10 +22,10 @@ const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.g
 static func blows(squads: Array, interval: int) -> Array:
 	var out := []
 	for squad in squads:
-		if squad.state != SkirmishSquad.State.FIGHTING:
+		var foes := _struck_by(squad, squads)
+		if foes.is_empty():
 			continue
 		var pace := FormationMorale.interval(squad, interval)
-		var foes := _hostile(squad, squads)
 		for unit in squad.living():
 			var pick := _pick(squad, unit, foes)
 			if pick.is_empty():
@@ -55,6 +57,25 @@ static func touches_any(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array) -
 
 
 ## [[unit, squad], ...] for the living units of squads hostile to `squad`, but not routing.
+## The enemies the squad's units strike when they touch them: any, for a squad fighting;
+## for one retreating, any if it is drilled (a fighting withdrawal), else none; for any
+## other, only the units of retreating squads - a retreat is struck as it goes (Decision 95).
+static func _struck_by(squad: SkirmishSquad, squads: Array) -> Array:
+	if squad.state in [SkirmishSquad.State.ROUTING, SkirmishSquad.State.DESTROYED]:
+		return []
+	var all := _hostile(squad, squads)
+	if squad.state == SkirmishSquad.State.FIGHTING:
+		return all
+	if squad.order == SkirmishUnit.Order.RETREAT:
+		return all if FormationDiscipline.meets_threats(squad) else []
+	return all.filter(func(e): return e[1].order == SkirmishUnit.Order.RETREAT)
+
+
+## [[unit, squad], ...] for the living units of squads hostile to `squad`, not routing.
+static func hostile_units(squad: SkirmishSquad, squads: Array) -> Array:
+	return _hostile(squad, squads)
+
+
 static func _hostile(squad: SkirmishSquad, squads: Array) -> Array:
 	var out := []
 	for other in squads:

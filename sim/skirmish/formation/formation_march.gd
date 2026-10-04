@@ -41,6 +41,18 @@ static func pace(
 	return step * worst
 
 
+## Where the squad's front gets moving `delta` tiles along its route of `route_end` tiles:
+## never past either end, nor past the point its order takes it to.
+static func toward(squad: SkirmishSquad, delta: float, route_end: float) -> float:
+	var next := clampf(squad.front_distance + delta, 0.0, route_end)
+	var enemy_end := route_end if is_zero_approx(squad.home_distance) else 0.0
+	var target := squad.home_distance if squad.order == SkirmishUnit.Order.RETREAT else enemy_end
+	var before := signf(target - squad.front_distance)
+	if before != 0.0 and signf(target - next) != before:
+		return target  # it would pass its target: it stops there
+	return next
+
+
 ## Which way the squad's order takes it along its route: +1 up it, -1 down it. Advancing
 ## heads for the end away from home, retreating for home.
 static func travel_sign(squad: SkirmishSquad, route_end: float) -> int:
