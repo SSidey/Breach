@@ -51,23 +51,31 @@ static func holds(
 ## within LOOK cells ahead of its front (cells; the offset along its right hand).
 static func gap_ahead(squad: SkirmishSquad, terrain: FormationTerrain) -> Vector2:
 	var ahead := SquadFrame.forward(squad.facing)
-	var right := SquadFrame.right(squad.facing)
-	var tallest := _shortest(squad)
 	var best := Vector2(INF, 0.0)
 	for step in range(1, LOOK + 1):
 		var centre := squad.position + ahead * (step - 0.5)
-		var sides := [0, 0]
-		for side in [0, 1]:
-			var sign := 1.0 if side == 0 else -1.0
-			while sides[side] < REACH:
-				var at: Vector2 = centre + right * sign * (sides[side] + 0.5)
-				if terrain.factor(tallest, at - ahead, at) <= 0.0:
-					break
-				sides[side] += 1
-		var width := float(sides[0] + sides[1])
-		if width < best.x:
-			best = Vector2(width, (sides[0] - sides[1]) / 2.0)
+		var run := run_across(terrain, centre, squad.facing, _shortest(squad))
+		if run.x < best.x:
+			best = run
 	return best
+
+
+## [width, centre offset] of the passable run through `centre` across `facing` for units
+## `height` tall (cells; the offset along the facing's right hand).
+static func run_across(
+	terrain: FormationTerrain, centre: Vector2, facing: int, height: float
+) -> Vector2:
+	var ahead := SquadFrame.forward(facing)
+	var right := SquadFrame.right(facing)
+	var sides := [0, 0]
+	for side in [0, 1]:
+		var sign := 1.0 if side == 0 else -1.0
+		while sides[side] < REACH:
+			var at: Vector2 = centre + right * sign * (sides[side] + 0.5)
+			if terrain.factor(height, at - ahead, at) <= 0.0:
+				break
+			sides[side] += 1
+	return Vector2(float(sides[0] + sides[1]), (sides[0] - sides[1]) / 2.0)
 
 
 static func _narrow(

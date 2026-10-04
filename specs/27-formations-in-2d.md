@@ -219,3 +219,28 @@ With the content's grems, militia and chieftain (12-militia line, 6-militia rese
 | B alone (flank only) | 7 | 6 | 3 | a slow grind, unfinished |
 | B waits, chieftain times it | 0 | 0 | 7 | the line routs into its reserve, which breaks too |
 | Sent together | 0 | 0 | 6 | the same |
+
+### Round 4: terrain (built; feel test pending)
+
+Decision 85 and Decision 87's woods, in four stacked PRs (numbers are placeholders):
+1. **Pace** (`FormationTerrain`): cells with a move cost, a height in quarters, a liquid
+   depth and whether they block sight. Pace is the cost, less 10% per quarter-cell risen
+   (more than a cell is a cliff), and slower in liquid by bands of the unit's height
+   (under a quarter free, to a half 0.6, to its height 0.3, deeper impassable). A squad
+   keeps the pace of the worst cell its front rank steps into; one that can't go on halts
+   ("blocked").
+2. **Sight and high ground**: a sight line crossing more than two sight-blocking cells is
+   blocked (a wood's edge sees out; its depths hide); a striker higher than its target
+   hits x1.25.
+3. **Narrowing** (`FormationNarrowing`): a squad wider than the passable run ahead folds
+   into a column that fits (front band first), holds a second, passes, and widens back to
+   its painted places; a unit too wide for the gap halts it ("too_wide").
+4. **The field**: the wood (half pace, blocks sight), route B along its southern edge, a
+   stream too deep for grems with a 4-cell ford on route B, and the hill under the
+   reserve. B's 8-wide wave narrows through the ford; it waits at the wood's edge where it
+   can see out. Planned rendezvous and coordinated leaders predict marches over terrain,
+   narrowing included.
+
+The comparison holds on terrain: A alone loses and the line holds; B alone grinds; B
+waiting (chieftain-timed) or both sent together break the line into its reserve, for 6
+grems.
