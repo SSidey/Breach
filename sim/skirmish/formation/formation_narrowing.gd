@@ -113,7 +113,8 @@ static func _fold(squad: SkirmishSquad, columns: int) -> void:
 				return a.preferred_position < b.preferred_position
 			var da := absf(a.column + a.footprint_width / 2.0 - middle)
 			var db := absf(b.column + b.footprint_width / 2.0 - middle)
-			return da < db or (is_equal_approx(da, db) and a.id < b.id)
+			var level := is_equal_approx(da, db)
+			return da < db or (level and [a.rank, a.column] < [b.rank, b.column])
 	)
 	var rank := 0
 	var column := 0

@@ -37,7 +37,7 @@ func test_new_seeds_vary_a_battle() -> void:
 
 
 func test_a_mirror_fight_is_even_and_a_mirror_flank_is_not() -> void:
-	var headon := BattleTrials.summary(BattleTrials.run("mirror_headon", 12))
+	var headon := BattleTrials.summary(BattleTrials.run("mirror_headon", 40))  # 12 swing by chance
 	var flank := BattleTrials.summary(BattleTrials.run("mirror_flank", 6))
 
 	var lost: Dictionary = headon["lost"]

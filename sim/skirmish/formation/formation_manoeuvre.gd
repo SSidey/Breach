@@ -1,10 +1,12 @@
 class_name FormationManoeuvre
 extends RefCounted
-## A formation's current manoeuvre (Decision 94, spec 27 round 7): it always has one, and
-## the highest-priority one that applies wins - tactical decisions, its own, before the
-## player's order:
+## A formation's current manoeuvre (Decisions 94 and 99, spec 27 rounds 7 and 10): it
+## always has one, and the highest-priority one that applies wins - tactical decisions, its
+## own, before the player's order:
 ## - **COMBAT (0):** locked in melee, front or flank, or skirmishing with an enemy in range.
 ##   Its units seek contact (Decision 88), even mid-re-form.
+## - **WITHDRAW (1):** combat's equal (Decision 99): dealing with the enemy by leaving it.
+##   Ordered to retreat from a fight, its units flee until it is safe (FormationWithdraw).
 ## - **ROUTE (1):** its units return to its route. Its frame never leaves the route, so its
 ##   units walking back from wherever a fight took them is this and RE_FORM in one.
 ## - **RE_FORM (2):** its units take up their places at its discipline's pace (Decision 92):
@@ -13,12 +15,12 @@ extends RefCounted
 ## - **ORDER (3):** the player's order - march, hold, retreat, or wait (hold-until).
 ## A formation marches only when its manoeuvre is ORDER. Squads keep `manoeuvre`. Pure.
 
-enum Kind { COMBAT, ROUTE, RE_FORM, ORDER }
+enum Kind { COMBAT, WITHDRAW, ROUTE, RE_FORM, ORDER }
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const FormationContact = preload("res://sim/skirmish/formation/formation_contact.gd")
 
-const NAMES := ["combat", "route", "re-form", "order"]
+const NAMES := ["combat", "withdraw", "route", "re-form", "order"]
 
 
 ## Settles each squad's manoeuvre this tick. A gap's narrowing becomes a re-form: its
@@ -33,6 +35,8 @@ static func step(squads: Array) -> void:
 
 ## The highest-priority manoeuvre that applies to the squad now.
 static func current(squad: SkirmishSquad, squads: Array) -> Kind:
+	if not squad.withdraw.is_empty():
+		return Kind.WITHDRAW
 	var fighting := (
 		squad.state == SkirmishSquad.State.FIGHTING
 		or squad.engaged_with != 0

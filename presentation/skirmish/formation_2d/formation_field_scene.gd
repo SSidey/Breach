@@ -15,6 +15,7 @@ extends Node2D
 const SkirmishClock = preload("res://sim/skirmish/skirmish_clock.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 
 const GREM := preload("res://content/units/grem.tres")
 const MILITIA := preload("res://content/units/kingdom_militia.tres")
@@ -22,6 +23,7 @@ const CHIEFTAIN := preload("res://content/units/grem_chieftain.tres")
 const CAPTAIN := preload("res://content/units/kingdom_captain.tres")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
+const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationFieldHud = preload("res://presentation/skirmish/formation_2d/formation_field_hud.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
@@ -78,7 +80,7 @@ func _ready() -> void:
 	add_child(_hud)
 	_hud.build(self)
 	var camera := Camera2D.new()
-	camera.position = ORIGIN + Vector2(FormationField.SIZE) * CELL_PX * 0.5 - Vector2(0, 20)
+	camera.position = ORIGIN + Vector2(FormationField.SIZE) * CELL_PX * 0.5 - Vector2(0, 40)
 	add_child(camera)
 
 
@@ -160,7 +162,7 @@ func _draw_unit(squad, unit, fraction: float) -> void:
 		colour.a = 0.45  # routers flee one by one
 	draw_rect(Rect2(centre - size * 0.5, size), colour)
 	if unit.rank == 0 or squad.loose.has(unit.id):
-		var front := centre + SquadFrame.forward(unit.facing) * size * 0.5
+		var front := centre + UnitMotion.vector(unit.bearing) * size * 0.5
 		draw_circle(front, 1.5, Color.WHITE)
 
 
@@ -214,6 +216,13 @@ func _snapshot() -> void:
 
 func _on_send(key: String) -> void:
 	_field.send(key)
+
+
+## Orders every wave out on a route to retreat home (Decision 95).
+func retreat(key: String) -> void:
+	for squad in _field.sim.squads():
+		if squad.faction_id == "player" and squad.route == _field.waves[key].route:
+			_field.sim.order(squad.id, SkirmishUnit.Order.RETREAT)
 
 
 func toggle_pause() -> void:

@@ -11,6 +11,7 @@ const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd"
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -81,10 +82,11 @@ func test_units_touch_on_faces_and_corners_but_not_across_a_gap() -> void:
 func test_a_units_front_is_the_three_cells_ahead() -> void:
 	var at := Vector2(0.5, 0.5)
 
-	assert_bool(ScrumReach.in_front(SquadFrame.EAST, at, Vector2(1.5, 0.5))).is_true()
-	assert_bool(ScrumReach.in_front(SquadFrame.EAST, at, Vector2(1.5, 1.5))).is_true()
-	assert_bool(ScrumReach.in_front(SquadFrame.EAST, at, Vector2(0.5, 1.5))).is_false()
-	assert_bool(ScrumReach.in_front(SquadFrame.EAST, at, Vector2(-0.5, 0.5))).is_false()
+	var east := UnitMotion.of_facing(SquadFrame.EAST)
+	assert_bool(ScrumReach.in_front(east, at, Vector2(1.5, 0.5))).is_true()
+	assert_bool(ScrumReach.in_front(east, at, Vector2(1.5, 1.5))).is_true()
+	assert_bool(ScrumReach.in_front(east, at, Vector2(0.5, 1.5))).is_false()
+	assert_bool(ScrumReach.in_front(east, at, Vector2(-0.5, 0.5))).is_false()
 
 
 func test_contests_go_to_the_earliest_then_the_readiest() -> void:
@@ -195,3 +197,22 @@ func test_the_scrum_replays_the_same() -> void:
 		logs.append(_run(sim, 400))
 
 	assert_array(logs[1]).is_equal(logs[0])
+
+
+func test_a_wavering_line_still_meets_its_enemy_but_strikes_softer() -> void:
+	var sim := _sim()
+	var line := _line(sim, 8, 400)
+	_from_north(sim, 2, 400, 1)
+	var far: SkirmishUnit = line.units[0]  # column 0: the south end, far from the flank
+	sim.step()
+	var start := far.position
+	var log := []
+	for _i in range(250):
+		line.morale = 24  # wavering throughout (Decision 101), short of a rout
+		log.append_array(sim.step())
+
+	assert_float(far.position.y).is_less(start.y - 2.0)
+	var blows: Array = _of(log, "hit").filter(func(e): return e["faction"] == "the_kingdom")
+	assert_bool(blows.is_empty()).is_false()
+	for blow in blows:  # 60% while wavering: 2 a blow (3 on a flank) at full heart
+		assert_int(blow["dmg"]).is_equal(2 if blow["flank"] else 1)

@@ -7,8 +7,10 @@ extends RefCounted
 ## - **field_a / field_b / field_b_waits / field_together:** the feel test's field, with
 ##   its content units, sent as in the scene.
 ## Options: "band" (damage band, default the field's), "flank_bonus", "captain" (the
-## kingdom's line is led), "first_seed". A run's result: {"lost": {faction: units},
-## "winner": faction or "", "ticks"}; the player wins a field run by breaking the line.
+## kingdom's line is led), "first_seed", "swap" (a mirror's sides spawn the other way
+## round: its results must agree with the usual order within noise, Decision 97).
+## A run's result: {"lost": {faction: units}, "winner": faction or "", "ticks"}; the
+## player wins a field run by breaking the line.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
@@ -76,21 +78,34 @@ static func _row(unit_def: UnitDef, columns: int) -> Array:
 	return placements
 
 
+## The scenario's spawns, in its usual order, as callables.
+static func _mirror_spawns(scenario: String, sim: FormationSimulation) -> Array:
+	var grem := _grem()
+	if scenario == "mirror_headon":
+		return [
+			func(): sim.spawn_squad(8, _row(grem, 8), "player", true),
+			func(): sim.spawn_squad(8, _row(grem, 8), "the_kingdom", false),
+		]
+	var hold := FormationRoute.new(PackedVector2Array([Vector2(64, 32), Vector2(0, 32)]))
+	var down := FormationRoute.new(PackedVector2Array([Vector2(64.5, 0), Vector2(64.5, 64)]))
+	return [
+		func():
+			var line := sim.spawn_squad(8, _row(grem, 8), "the_kingdom", true, 0, hold)
+			sim.order(line.id, SkirmishUnit.Order.HOLD),
+		func(): sim.spawn_squad(8, _row(grem, 8), "player", true, 0, down),
+	]
+
+
 static func _mirror(scenario: String, battle_seed: int, options: Dictionary) -> Dictionary:
 	var sim := FormationSimulation.new(2.0, TICK)
 	sim.seek_contact = true
 	sim.fight_seed = battle_seed
 	sim.damage_band = options.get("band", FormationField.DAMAGE_BAND)
-	var grem := _grem()
-	if scenario == "mirror_headon":
-		sim.spawn_squad(8, _row(grem, 8), "player", true)
-		sim.spawn_squad(8, _row(grem, 8), "the_kingdom", false)
-	else:
-		var hold := FormationRoute.new(PackedVector2Array([Vector2(64, 32), Vector2(0, 32)]))
-		var line := sim.spawn_squad(8, _row(grem, 8), "the_kingdom", true, 0, hold)
-		sim.order(line.id, SkirmishUnit.Order.HOLD)
-		var down := FormationRoute.new(PackedVector2Array([Vector2(64.5, 0), Vector2(64.5, 64)]))
-		sim.spawn_squad(8, _row(grem, 8), "player", true, 0, down)
+	var spawns := _mirror_spawns(scenario, sim)
+	if options.get("swap", false):
+		spawns.reverse()  # the other side first: outcomes must not move (Decision 97)
+	for spawn in spawns:
+		spawn.call()
 	var lost := {"player": 0, "the_kingdom": 0}
 	for tick in range(LIMIT_TICKS):
 		for event in sim.step():

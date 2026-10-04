@@ -14,7 +14,7 @@ const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.g
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
-const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
+const RoutBlows = preload("res://sim/skirmish/formation/rout_blows.gd")
 const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 
@@ -27,15 +27,21 @@ const SCRUM := 2
 
 
 ## [[attacker, target, damage, flank], ...]; updates each striker's target and cooldown.
+## `fight_seed` breaks ties between equal targets (Decision 97).
 static func blows(
-	squads: Array, interval: int, tick: int, mode: int, terrain: FormationTerrain = null
+	squads: Array,
+	interval: int,
+	tick: int,
+	mode: int,
+	fight_seed: int,
+	terrain: FormationTerrain = null
 ) -> Array:
 	var out := (
-		ScrumBlows.blows(squads, interval)
+		ScrumBlows.blows(squads, interval, fight_seed)
 		if mode == SCRUM
-		else _lines(squads, interval, tick, mode)
+		else _lines(squads, interval, tick, mode, fight_seed)
 	)
-	out.append_array(FormationRout.blows(squads, interval))
+	out.append_array(RoutBlows.blows(squads, interval, fight_seed))
 	if terrain != null:
 		for blow in out:
 			if terrain.high_ground(blow[0].position, blow[1].position):
@@ -43,7 +49,7 @@ static func blows(
 	return out
 
 
-static func _lines(squads: Array, interval: int, tick: int, mode: int) -> Array:
+static func _lines(squads: Array, interval: int, tick: int, mode: int, fight_seed: int) -> Array:
 	var walk_wings := mode == WINGS
 	var by_id := {}
 	for entry in squads:
@@ -69,6 +75,6 @@ static func _lines(squads: Array, interval: int, tick: int, mode: int) -> Array:
 				fighter.attack_cooldown = pace
 				var flank: bool = pick[1] or foe.state == SkirmishSquad.State.TURNING
 				out.append([fighter, pick[0], FormationCombat.damage(fighter, flank), flank])
-	out.append_array(FormationEdges.blows(squads, interval, tick))
-	out.append_array(FormationWings.blows(squads, interval, tick))
+	out.append_array(FormationEdges.blows(squads, interval, tick, fight_seed))
+	out.append_array(FormationWings.blows(squads, interval, tick, fight_seed))
 	return out

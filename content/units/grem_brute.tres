@@ -14,4 +14,6 @@ footprint_depth = 2
 footprint_width = 2
 build_seconds = 4.0
 position_priority = 2
+turn_rate = 270.0
+backward_pace = 0.25
 weapons = Array[ExtResource("2_k78dx")]([ExtResource("3_3k071"), ExtResource("4_fyq4l")])

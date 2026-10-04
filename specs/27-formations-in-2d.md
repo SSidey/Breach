@@ -363,3 +363,250 @@ meet it and stayed there, off its route.
   and marches on rather than standing off its route.
 - Open: whether a retreat order can pull a formation out of melee (today it disengages at
   once).
+
+### Round 8: movement by facing, retreat and pursuit (built; feel test pending)
+
+Decision 95, in two stacked PRs:
+1. **Movement by facing** (`UnitMotion`, model C):
+   - Units face one of 8 bearings and turn at their turn rate. In the scrum they move at
+     a pace set by the angle between bearing and heading, down to their backward pace
+     straight back, and turn once a tick after everyone has moved.
+   - Per type (placeholders): grem and spitter 720°/s and 0.6, chieftain 540 and 0.5,
+     brute 270 and 0.25, militia and captain 360 and 0.4.
+   - Re-forming includes turning to the squad's facing.
+   - "Send A+B" is timed by rehearsing each wave's march (`FormationRehearsal`).
+   - Fairness: two hostile squads marching at each other each close at most half the
+     gap between them, and a cell records every side on it. The head-on mirror had come
+     to favour whichever squad was stepped first; it is even again over 400 seeds in each
+     order.
+2. **Retreat and pursuit** (`ScrumPursuit`):
+   - An ordered retreat ends the fight at once.
+   - A drilled formation withdraws fighting: it backs away facing the foe it touches,
+     and strikes back.
+   - A ragged one turns and runs, and takes a scaled rout: up to 20 morale, by how far
+     short of drilled it is.
+   - Enemies still touching a retreating formation strike it.
+   - A formation ordered to pursue, or led by a "pursues" leader, follows the retreating
+     one.
+   - Otherwise its units near the retreat break ranks to chase for 2 s, each with a
+     chance of (50 - its discipline) / 100, a seeded roll.
+   - The scene adds "Retreat A" and "Retreat B", and "Line pursues".
+
+Retreat cost (8 v 8 head-on, retreat ordered 3 s into the fight; mean player losses
+after the order over 20 seeds):
+
+| Retreating | Enemy | Lost after the order |
+|---|---|---|
+| drilled (60) | disciplined (60), not pursuing | 0.25 |
+| ragged (20) | disciplined (60), not pursuing | 6.7 |
+| drilled (60) | pursuing | 8.0 (all) |
+| drilled (60) | ragged (10), not pursuing, up to 5 chasing | 7.25 |
+
+Those numbers are from a mirror of equal-speed units, not the field. The feel test showed
+pursuit in the field did nothing: only units chased, within reach of their places, and
+the slower militia couldn't catch grems. Since then:
+- A pursuing formation moves as a body (`FormationPursuit`): its frame advances along its
+  route after the enemy, no faster than its units keep up, its units chasing at the march
+  pace. It gives up 16 cells off (placeholder), marches back to its post and faces the
+  way it held it.
+- A march never passes its target: a squad marching back to a post mid-route stops there.
+- A drilled withdrawal steps its formation back 3 cells (placeholder) before turning.
+
+Retreat cost on the field (retreat 3 s after contact, 20 seeds, mean losses after the
+order):
+
+| Retreating | Line pursues | Lost after the order |
+|---|---|---|
+| A (grems, ragged) | no | 1.0 of 4 |
+| A (grems, ragged) | yes | 2.5 of 4 |
+| B (chieftain, drilled) | no | 0.5 of 9 |
+| B (chieftain, drilled) | yes | 8.7 of 9 |
+
+B is caught out of formation: its units spread up to 8 cells ahead of its frame in the
+fight, and walk back to their places at the corner (turning, backs to the militia) while
+the line chases at full pace. Objectives, fallbacks and retreat conditions come with nodes and
+routes.
+
+### Round 9: one call, one cell (built; feel test pending)
+
+From the round 8 feel test:
+- **One call on two waves.** A led line sent A and B together swung its facing from B to
+  A and back. Now a stance is a commitment (`ScrumStance`). The line keeps the facing it
+  re-formed to while that foe is alive, within anticipation range, not routing, and
+  still pressing: fighting it, or marching at it. Only then does it weigh another
+  threat. Over 5 field seeds the captained line makes one "faced" call a battle.
+- **One unit to a cell** (`ScrumSpacing`, `RoutSettle`):
+  - Routers caught by a friendly formation settle into free cells next to where they
+    stop, then walk in to their places in it. They no longer pile up mid-cell.
+  - In the scrum, a loose unit that comes to rest on a friend's cell steps to the
+    nearest free cell at the march pace. Ties go towards its own place, then backwards.
+  - A unit holding a foe stands, and units on their way to a cell may pass through
+    friends.
+  - The unit nearer the cell's centre keeps it. An exact tie goes by the battle-seeded
+    draw.
+  - Fairness: deciding by id order gave whichever squad spawned second 54% of head-on
+    mirrors, and stepping units in contact aside also cost tempo. Fixed, the head-on
+    mirror over 751 seeds in each order is first-spawned 374, second 377.
+
+Also from the round 9 feel test, and the two principles the user set (Decisions 96–98):
+- **Routers form up with the friend they hit** (Decision 98). Two kingdom routers ran
+  through the reserve and home (field, A and B together, seeds 2 and 6) for two reasons.
+  The routers' own crushes shook the reserve, and only a steady formation caught
+  routers. And a caught router stepping to a free cell could leave the 1-cell catch
+  reach, which released it.
+  - Now any standing friend catches a router (`RoutCatch`), and the nearest one if
+    there are several. It holds the router wherever it steps until the router joins or
+    the friend itself routs.
+  - The router joins after the friend has been steady for 3 s.
+  - In both seeds every router now either rallies or falls.
+- **No ids in outcomes** (Decision 97). The remaining id tie-breaks are gone:
+  - Target picking goes to a seeded draw.
+  - Narrowing and wing order go to rank and column in the squad's frame.
+  - Closing ranks needs no tie-break.
+  - The contest draw is 62 bits wide instead of using an id fallback.
+  - Orders given on the same tick are judged from one snapshot. Before, two sides
+    ordering a retreat together left the second "not fighting" and spared it the
+    retreat's cost.
+  - `check_id_order.py` (pre-commit) catches new id tie-breaks, and the trials tool's
+    `swap` option runs a mirror the other way round.
+  - Head-on mirror over 400 seeds in each order: first-spawned 383, second 375. By
+    side: player 386, kingdom 372.
+
+### Round 10: withdrawal and disorderly flight (built; feel test pending)
+
+From the design questions after round 9 (Decision 99):
+- **A retreat is combat's equal.** `FormationManoeuvre` gains WITHDRAW at the combat tier:
+  a formation deals with an enemy by fighting it or by leaving it. Ordered to retreat
+  out of a fight (`FormationWithdraw`):
+  - Its units flee homeward along the route from where they stand. They no longer walk
+    back to their places first, which is what caught B in round 8.
+  - A drilled unit still touching a foe backs away facing it and strikes back. Any other
+    turns and runs.
+  - When it is **safe**, it re-forms on its route where its units stand, faces home and
+    marches home. Safe uses the test a rout rallies by: no enemy within 6 cells and none
+    pursuing it, for 5 s.
+  - If all its units are home with nowhere further to go, it re-forms there at once and
+    fights like any other formation.
+- **Disorder fans out** (`RoutFlight`). A fleeing unit makes for the nearest safety:
+  - If a standing friendly formation lies between it and home, it steers for that
+    friend, which catches it (Decision 98).
+  - Otherwise each unit fans out from the route by its own seeded angle: up to 45° for a
+    rout and scaled by disorder for a ragged retreat (none for a drilled one). It goes
+    up to 6 cells out (placeholders), unless ground it can't cross stops it.
+- **Pursuit follows units, not frames.** A pursuer measures the enemy by where its units
+  stand. A withdrawing formation's frame stays put while its units flee.
+- **Retreat cost on the field** (retreat 3 s after contact, 20 seeds, mean losses after
+  the order; round 8's numbers in brackets):
+
+| Retreating | Line pursues | Lost after the order |
+|---|---|---|
+| A (grems, ragged) | no | 0 of 4.2 (1.0 of 4) |
+| A (grems, ragged) | yes | 1.4 of 4.2 (2.5 of 4) |
+| B (chieftain, drilled) | no | 0.65 of 9 (0.5 of 9) |
+| B (chieftain, drilled) | yes | 1.0 of 9 (8.7 of 9) |
+
+- **Drilled vs ragged** (8 v 8 head-on, damage taken while withdrawing, 20 seeds):
+  - Against a ragged enemy whose units break ranks to chase, drilled takes 26–28 and
+    ragged 37–40, across turn rates and backward paces.
+  - Against an enemy that pursues as a whole at equal speed, the ragged runners get away
+    almost free. Drilled units backing away slowly stay in contact: with a brute's turn
+    rate and backward pace they take 40, against 4.5 for ragged.
+  - Open question for the user (below).
+- **Flank strength trials** (an equal force onto the side of a holding line, 200 seeds):
+  - A line that can't turn loses every time: flankers lose 2.6, the line 8. The flank
+    bonus doesn't change that (1.5 or 1.25). It comes from geometry, because only the
+    line's end units can fight.
+  - A line that turns to meet it (drilled, or led by a captain) loses 65%: 6.3 lost
+    against 7.2, at a bonus of 1.5. At 1.25 it loses 62%. The edge left is the flanker's
+    initiative: the line is caught turning.
+  - The flank stays as it is (Decision 81: flanking is a leader's tactic).
+- Head-on mirror, 300 seeds each way round: player first 139 / 142, kingdom first 142 /
+  141.
+
+### Round 11: after the round 9 feel test (built; feel test pending)
+
+The user tested #85. Each report was reproduced on the current top of the stack (#88)
+first, and only what still happened there was fixed (Decision 100):
+- **Units arrive facing their task** (`UnitShuffle`).
+  - Report: a captained line meeting A and B "oscillated between facings".
+  - Finding: the line's formation facing changed once and held. Its *units* spun round
+    the long way, turning to face where they walked as they shuffled to their places,
+    then turning back.
+  - Now a unit taking its place, or seeking a cell next to a foe, arrives facing its
+    squad's way or that foe, by the quicker of two ways: shuffling there facing it, or
+    turning to walk and turning back.
+- **Routers form up behind friends** (Decision 98, refined).
+  - Report: routers clumped at the reserve's front. On seeds 584265 and 786851 they
+    stopped 3 cells in front of it.
+  - Now a router is caught only once it has got behind a friend, with the friend between
+    it and the enemy. It runs through the friend's ranks to get there, crushing as
+    Decision 82 has it, and settles in a free cell at the friend's back.
+  - A router steers for a friend only if it would miss its ranks, so routers no longer
+    converge on one friendly unit.
+  - Routers that share a cell in flight step apart across their route. Shared cells in
+    flight drop from about 20 unit-ticks to 4–6.
+- **A partial wave closes up.** A wave sent before it is full leaves as a solid block,
+  as wide as its built front band, with its other units centred behind. That is the
+  rule a squad closing ranks over its dead already follows. A full wave keeps its
+  painted shape.
+- **Already fixed on #88, no change:**
+  - A second B wave stuck at the corner (seed 723653) now reaches the first and
+    reinforces it. The list-order audit fixed how waves queue on one road.
+  - A pursuing captain running far ahead: since #88 a pursuer follows the enemy's
+    units, and no unit gets more than half a cell ahead of its formation.
+- **A gap in front of the captain** (seed 680655, from testing #89). A captained line
+  turning to a flank left the front-rank unit before its captain stuck a cell short of
+  its place. The unit crossed into the captain's cell and was parted from it, and its
+  own body still covered its place cell, so parting sent it back while re-forming pulled
+  it on. A unit's own body no longer blocks the cell it is looking for.
+- **B alone against the line** loses most battles: 17 of 100 field runs won, 9 against
+  the kingdom's 12 plus a reserve of 6. The field is built for A and B together.
+- **Open:** a wavering line doesn't seek contact (Decision 88), so a lone chieftain
+  fights its way down a broken line one unit at a time (seed 678788). This is a question
+  for the user.
+
+### Round 12: morale and discipline as efficacy (built; feel test pending)
+
+The user's answers to round 11's open questions (Decision 101):
+- **Every formation short of a rout meets its enemy.** Before, a wavering formation
+  didn't seek contact, so a lone chieftain fought his way down a broken line one unit at a
+  time. Now morale doesn't stop a formation engaging; it weakens how well it fights.
+  - Its blows land at `FormationMorale.BLOW_SHARE` of their damage: steady 100%, shaken
+    80%, wavering 60% (placeholders).
+  - A wavering formation also still strikes half again more slowly, as before.
+- **Re-forming and disengaging are manoeuvres whose efficacy discipline sets.**
+  - A withdrawing unit turns for home and leaves. Until it is clear of the foes it
+    touches, it turns at its turn rate, and steps away at its pace, times its
+    formation's re-form pace: a disciplined formation breaks off quickly and cleanly, a
+    ragged one slowly, exposed while it turns. Once clear it is in flight at full pace.
+  - Until it has turned, a unit still facing a foe it touches strikes it. The less
+    ordered the formation, the wider it fans out, and a ragged one still takes its
+    scaled rout.
+  - This replaces round 8's rule that drilled units back away facing the enemy, and only
+    drilled ones strike back.
+  - Damage taken while withdrawing, 8 v 8, 20 seeds:
+
+| Enemy | Unit stats (turn rate, backward pace) | Drilled (60) | Ragged (20) |
+|---|---|---|---|
+| pursuing as a body | 720°/s, 0.6 | 0.0 | 9.5 |
+| pursuing as a body | 360°/s, 0.4 | 0.15 | 11.4 |
+| pursuing as a body | 270°/s, 0.25 | 5.6 | 17.5 |
+| ragged, breaking ranks to chase | any | 36–38 | 36–42 |
+
+  Chasers stay on any fleeing unit for their 2 s, whatever its discipline.
+- Head-on mirror, 300 seeds each way round: player first 137 / 149, kingdom first
+  145 / 142. Flank mirror: the same in both orders.
+- **From the user's test of #90** (seed 606531: A retreats from a captained line set to
+  pursue; Decision 103):
+  - **A pursuit moves as a body.** The pursuer's frame advanced while its *foremost* unit
+    kept up. Its captain, walking to his place rather than seeking, was dragged ahead of
+    the militia, up to 13 cells. Because he stayed near A, the pursuit never ran out of
+    reach, and the line chased all the way to A's spawn. Now the frame waits while any
+    unit lags more than 2 cells behind its place. The line stays within 6 cells across
+    and gives up 16 cells out.
+  - **A withdrawal that reaches home has done its retreat.** It re-formed facing home
+    with its retreat order still standing, so the march turned it back and forth across
+    the home point every 5 ticks: the spinning in the clip. Now it re-forms facing out
+    and holds there.
+  - **A withdrawal fans out no further than a rout,** scaled by its disorder. One A unit
+    had drifted 21 cells off its route.

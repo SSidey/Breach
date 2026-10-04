@@ -1,7 +1,8 @@
 extends GdUnitTestSuite
-## Leaderless rally, per Decision 89 and spec 27 round 5: routers that run into a steady
-## friendly formation without a leader are caught there, crushing on the way, and join its
-## rear after a while; a shaken formation doesn't stop them.
+## Leaderless rally, per Decisions 89 and 98 and spec 27 rounds 5 and 9: routers that run
+## into a friendly formation without a leader are caught there, crushing on the way, and
+## join its rear after it has been steady a while; a shaken formation holds them until it
+## steadies.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
@@ -56,7 +57,7 @@ func _rout_past_a_friend(friend_morale: int) -> Array:
 
 
 func test_routers_are_caught_by_a_steady_friend_and_join_it() -> void:
-	var setup := _rout_past_a_friend(60)
+	var setup := _rout_past_a_friend(75)  # steady still, once its routers have crashed through
 	var friend: SkirmishSquad = setup[2]
 
 	var caught := _run(setup[0], 20)
@@ -71,10 +72,17 @@ func test_routers_are_caught_by_a_steady_friend_and_join_it() -> void:
 	assert_int(_of(caught + log, "fled_home").size()).is_equal(0)
 
 
-func test_a_shaken_friend_does_not_stop_them() -> void:
+func test_a_shaken_friend_holds_them_until_it_steadies() -> void:
 	var setup := _rout_past_a_friend(30)
+	var friend: SkirmishSquad = setup[2]
 
-	var log := _run(setup[0], 80)
+	var held := _run(setup[0], 80)
+	assert_int(_of(held, "fled_home").size()).is_equal(0)
+	assert_int(_of(held, "rallied").size()).is_equal(0)  # not while it is shaken
+	friend.morale = 60  # it steadies
+	var log := _run(setup[0], roundi(FormationRout.STEADY_RALLY_SECONDS / TICK) + 5)
 
-	assert_int(_of(log, "rallied").size()).is_equal(0)
-	assert_bool(_of(log, "fled_home").is_empty()).is_false()
+	assert_int(_of(log, "fled_home").size()).is_equal(0)
+	var rallied := _of(log, "rallied")
+	assert_bool(rallied.is_empty()).is_false()
+	assert_int(rallied[0]["into"]).is_equal(friend.id)

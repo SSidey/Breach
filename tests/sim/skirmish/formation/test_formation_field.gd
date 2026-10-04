@@ -132,9 +132,7 @@ func test_waves_sent_together_reach_the_line_together() -> void:
 
 	var engaged: int = log.filter(func(e): return e["type"] == "engaged")[0]["tick"]
 	var flanked: int = log.filter(func(e): return e["type"] == "flanked")[0]["tick"]
-	# within half a second: the prediction times a turn as a wheel, while a turn is now a
-	# re-form at the wave's own pace (Decision 92)
-	assert_int(absi(engaged - flanked)).is_less_equal(5)
+	assert_int(absi(engaged - flanked)).is_less_equal(3)  # timed by rehearsal
 
 
 func test_waves_depart_on_their_own_when_set_to() -> void:
@@ -186,7 +184,12 @@ func test_a_flank_timed_by_the_chieftain_breaks_the_line_into_its_reserve() -> v
 	assert_bool(flanked.is_empty()).is_false()
 	assert_int(flanked[0]["tick"] - engaged).is_less_equal(30)  # the flank lands with A
 	assert_bool(log.any(func(e): return e["type"] == "routed" and e["squad"] == line)).is_true()
-	assert_bool(log.any(func(e): return e["type"] == "crushed" and e["squad"] == reserve)).is_true()
+	var reached := func(e):
+		return (
+			(e["type"] == "crushed" and e["squad"] == reserve)
+			or (e["type"] == "rallied" and e["into"] == reserve)
+		)
+	assert_bool(log.any(reached)).is_true()  # its routers run into the reserve
 
 
 func test_route_bs_wave_narrows_through_the_ford_and_widens_after() -> void:

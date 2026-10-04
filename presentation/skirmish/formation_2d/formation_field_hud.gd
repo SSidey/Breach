@@ -1,8 +1,9 @@
 class_name FormationFieldHud
 extends CanvasLayer
-## The 2D feel test's controls and status (spec 27): a row of buttons - send each route's
-## wave or let it go when full, send A down the slanted route C, send A and B together,
-## have B wait for A, give the line a captain, reset with a seed, pause - and a status row
+## The 2D feel test's controls and status (spec 27): two rows of buttons - send each route's
+## wave or let it go when full, or retreat it; send A down the slanted route C, send A and
+## B together, have B wait for A, give the line a captain, have it pursue, reset with a
+## seed, pause - and a status row
 ## under it: waves built (leaders counted apart), the line, the reserve and the battle
 ## seed. Reset starts a fresh field, with the seed typed in or a random one, keeping the
 ## ticked options. Engine glue.
@@ -16,6 +17,7 @@ var _scene: Node
 var _autos := {}  # route key -> CheckBox
 var _wait: CheckBox
 var _via_c: CheckBox
+var _pursues: CheckBox
 var _captain: CheckBox
 var _seed: LineEdit
 var _status: Label
@@ -32,16 +34,20 @@ func build(scene: Node) -> void:
 	for key in ["A", "B"]:
 		_button(bar, "Send %s" % key, func(): scene.field().send(key))
 		_autos[key] = _check(bar, "Auto %s" % key, func(on): scene.field().set_auto(key, on))
-	_via_c = _check(bar, "A goes via C", func(on): _route_a(on))
+		_button(bar, "Retreat %s" % key, func(): scene.retreat(key))
 	_button(bar, "Send A+B", func(): scene.field().send_together(["A", "B"]))
-	_wait = _check(bar, "B waits for A", func(on): scene.field().set_wait(on))
-	_captain = _check(bar, "Line has a captain", func(_on): reset())
+	var options := HBoxContainer.new()  # a second row, so the controls fit the window
+	rows.add_child(options)
+	_via_c = _check(options, "A goes via C", func(on): _route_a(on))
+	_wait = _check(options, "B waits for A", func(on): scene.field().set_wait(on))
+	_captain = _check(options, "Line has a captain", func(_on): reset())
+	_pursues = _check(options, "Line pursues", func(on): _line_pursues(on))
 	_seed = LineEdit.new()
 	_seed.placeholder_text = "seed (random)"
 	_seed.custom_minimum_size = Vector2(110, 0)
-	bar.add_child(_seed)
-	_button(bar, "Reset", reset)
-	_button(bar, "Pause (Space)", scene.toggle_pause)
+	options.add_child(_seed)
+	_button(options, "Reset", reset)
+	_button(options, "Pause (Space)", scene.toggle_pause)
 	_status = Label.new()
 	rows.add_child(_status)
 
@@ -55,6 +61,13 @@ func reset() -> void:
 		_scene.field().set_auto(key, _autos[key].button_pressed)
 	_scene.field().set_wait(_wait.button_pressed)
 	_route_a(_via_c.button_pressed)
+	_line_pursues(_pursues.button_pressed)
+
+
+## The kingdom's line and reserve follow a retreating wave (Decision 95), or hold.
+func _line_pursues(on: bool) -> void:
+	_scene.field().kingdom_line.pursues = on
+	_scene.field().kingdom_reserve.pursues = on
 
 
 ## Sends A's waves down route C (the slanted path) or back down route A.
