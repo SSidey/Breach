@@ -136,4 +136,46 @@ func test_waves_depart_on_their_own_when_set_to() -> void:
 	var log := _run(field, _has("departed"))
 
 	assert_bool(log.any(func(e): return e["type"] == "departed")).is_true()
-	assert_int(field.sim.squads().size()).is_equal(2)
+	assert_int(field.sim.squads().size()).is_equal(3)  # the line, its reserve and the wave
+
+
+func _content_field() -> FormationField:
+	return FormationField.new(
+		TICK,
+		load("res://content/units/grem.tres"),
+		8,
+		load("res://content/units/kingdom_militia.tres"),
+		load("res://content/units/grem_chieftain.tres")
+	)
+
+
+func test_a_frontal_attack_alone_does_not_break_the_line() -> void:
+	var field := _content_field()
+	_run(field, _has("wave_full"))
+
+	field.send("A")
+	var log := _run(field, func(log): return false, 1200)
+
+	assert_bool(log.any(func(e): return e["type"] == "routed")).is_false()
+	assert_int(field.kingdom_line.living().size()).is_greater(6)
+
+
+func test_a_flank_timed_by_the_chieftain_breaks_the_line_into_its_reserve() -> void:
+	var field := _content_field()
+	field.set_wait(true)
+	_run(field, func(log): return field.waves["B"].built() == 9 and field.waves["A"].built() == 8)
+	field.send("B")
+	_run(field, _has("staged"))
+
+	field.send("A")
+	var log := _run(field, _has("routed"), 1500)
+	log.append_array(_run(field, func(log): return false, 100))
+
+	var line := field.kingdom_line.id
+	var reserve := field.kingdom_reserve.id
+	var engaged: int = log.filter(func(e): return e["type"] == "engaged")[0]["tick"]
+	var flanked: Array = log.filter(func(e): return e["type"] == "flanked")
+	assert_bool(flanked.is_empty()).is_false()
+	assert_int(flanked[0]["tick"] - engaged).is_less_equal(30)  # the flank lands with A
+	assert_bool(log.any(func(e): return e["type"] == "routed" and e["squad"] == line)).is_true()
+	assert_bool(log.any(func(e): return e["type"] == "crushed" and e["squad"] == reserve)).is_true()

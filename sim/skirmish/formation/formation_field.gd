@@ -5,11 +5,13 @@ extends RefCounted
 ## the middle, facing the player. The player's waves come from the west on two routes:
 ## - **A**, straight at the line over open grass
 ## - **B**, north through the wood (and its ford), then south onto the line's north side
-## A wave on B can wait in the wood until it sees A's wave engage, then strike the flank
-## (Decision 87's hold-until), or both can be sent together, timed to arrive at once
-## (planned rendezvous). Wings walk round the line's ends (Decision 81). The wood, ford
-## and hill are drawn only until terrain arrives (round 4). The player's domain builders
-## fill both waves in turn. Pure.
+## A wave on B can wait in the wood until it sees A's wave, its chieftain timing the flank
+## to land with A's attack (Decision 87's hold-until, coordinated by a leader), or both can
+## be sent together, timed to arrive at once (planned rendezvous). Wings walk round the
+## line's ends (Decision 81). A broken line routs east into the kingdom's reserve on the
+## hill (Decision 82); the player's routers who reach home go back to the reserve. The
+## wood, ford and hill are drawn only until terrain arrives (round 4). The player's
+## domain builders fill both waves in turn. Pure.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
@@ -28,6 +30,9 @@ const SIZE := Vector2i(128, 64)
 const LINE_AT := 80.0
 const KINGDOM_WIDTH := 6
 const KINGDOM_RANKS := 2
+## The kingdom's reserve holds behind the line, on the hill.
+const RESERVE_AT := 96.0
+const RESERVE_WIDTH := 6
 const WAVE_WIDTH := 8
 ## Where route B turns south onto the line's side, and where its wave waits in the wood.
 const FLANK_X := 81.0
@@ -45,6 +50,7 @@ var player := DomainProduction.new("player")
 var routes := {}  # "A" / "B" -> FormationRoute
 var waves := {}  # "A" / "B" -> FormationProduction
 var kingdom_line: SkirmishSquad
+var kingdom_reserve: SkirmishSquad
 
 var _wave_unit: UnitDef
 var _tick := 0
@@ -63,8 +69,13 @@ static func contact_cells() -> Dictionary:
 	return {"A": LINE_AT - 1.0, "B": FLANK_X + (north_face - 1.0 - 10.0)}
 
 
+## `leader_unit`, if given, leads route B's wave from its second rank.
 func _init(
-	seconds_per_tick: float, wave_unit: UnitDef, builders: int, kingdom_unit: UnitDef
+	seconds_per_tick: float,
+	wave_unit: UnitDef,
+	builders: int,
+	kingdom_unit: UnitDef,
+	leader_unit: UnitDef = null
 ) -> void:
 	tick_seconds = seconds_per_tick
 	_wave_unit = wave_unit
@@ -76,9 +87,15 @@ func _init(
 		routes[key] = FormationRoute.new(points[key], WAVE_WIDTH / 2.0)
 		var wave := FormationProduction.new("player", true)
 		wave.route = routes[key]
-		wave.set_template(WavePresets.line(wave_unit, WAVE_WIDTH, WAVE_WIDTH))
+		var template := WavePresets.line(wave_unit, WAVE_WIDTH, WAVE_WIDTH)
+		if key == "B" and leader_unit != null:
+			template.slot_limit += 1
+			template.paint(leader_unit, Vector2i(1, WAVE_WIDTH / 2))
+		wave.set_template(template)
 		waves[key] = wave
 	player.set_builders(wave_unit, builders)
+	if leader_unit != null:
+		player.set_builders(leader_unit, 1)
 	player.prefer("")  # round robin (Decision 51)
 	_hold_the_line(kingdom_unit)
 
@@ -89,7 +106,11 @@ func step() -> Array:
 	var events := player.step(waves, tick_seconds, _tick)
 	for key in waves:
 		events.append_array(waves[key].step(sim))
-	events.append_array(sim.step())
+	var fought := sim.step()
+	for event in fought:
+		if event["type"] == "fled_home" and event["faction"] == "player":
+			player.bank([event["definition"]])  # back to the reserve
+	events.append_array(fought)
 	_tick += 1
 	return events
 
@@ -125,17 +146,21 @@ func set_auto(key: String, automatic: bool) -> void:
 	)
 
 
-## Makes route B's waves wait in the wood until they see a friend fighting (or the wait
-## runs out), then go (Decision 87); false sends them straight on.
+## Makes route B's waves wait in the wood until they see route A's wave (Decision 87). A
+## coordinated chieftain then times the flank to land as A reaches the line's front;
+## without one the wave goes on sight. After the wait runs out it goes anyway. False sends
+## them straight on.
 func set_wait(waiting: bool) -> void:
 	waves["B"].staging = {}
 	if waiting:
 		waves["B"].staging = {
 			"at": STAGING.x,
-			"trigger": FormationStaging.SEES_FIGHT,
+			"trigger": FormationStaging.SEES_PARTNER,
 			"partner": 0,
 			"fallback": roundi(WAIT_SECONDS / tick_seconds),
 			"then": "go",
+			"meet": Vector2(contact_cells()["A"], 32),
+			"meet_cells": contact_cells()["B"],
 		}
 
 
@@ -145,6 +170,11 @@ func _hold_the_line(unit_def: UnitDef) -> void:
 		for column in range(KINGDOM_WIDTH):
 			placements.append([unit_def, Vector2i(rank, column)])
 	kingdom_line = sim.spawn_squad(KINGDOM_WIDTH, placements, "the_kingdom", false, 0, routes["A"])
-	kingdom_line.front_distance = LINE_AT / MapLayoutDef.CELLS_PER_TILE
-	kingdom_line.home_distance = kingdom_line.front_distance
+	kingdom_line.front_distance = LINE_AT / MapLayoutDef.CELLS_PER_TILE  # home: the far end
 	sim.order(kingdom_line.id, SkirmishUnit.Order.HOLD)
+	var reserve := []
+	for column in range(RESERVE_WIDTH):
+		reserve.append([unit_def, Vector2i(0, column)])
+	kingdom_reserve = sim.spawn_squad(RESERVE_WIDTH, reserve, "the_kingdom", false, 0, routes["A"])
+	kingdom_reserve.front_distance = RESERVE_AT / MapLayoutDef.CELLS_PER_TILE
+	sim.order(kingdom_reserve.id, SkirmishUnit.Order.HOLD)

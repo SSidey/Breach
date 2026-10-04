@@ -15,6 +15,9 @@ const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 
 const GREM := preload("res://content/units/grem.tres")
 const MILITIA := preload("res://content/units/kingdom_militia.tres")
+const CHIEFTAIN := preload("res://content/units/grem_chieftain.tres")
+const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
+const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 
 const CELL_PX := 8.0
 const ORIGIN := Vector2(16, 56)
@@ -30,6 +33,7 @@ const COLOURS := {
 	"player": Color(0.6, 0.3, 0.75),
 	"the_kingdom": Color(0.3, 0.5, 0.9),
 	"flash": Color(1, 0.2, 0.2),
+	"leader": Color(0.35, 0.1, 0.45),
 	"staging": Color(1, 1, 1, 0.8),
 	"sight": Color(1, 1, 1, 0.25),
 }
@@ -60,7 +64,7 @@ func run_ticks(count: int) -> void:
 
 
 func _ready() -> void:
-	_field = FormationField.new(_clock.tick_seconds, GREM, BUILDERS, MILITIA)
+	_field = FormationField.new(_clock.tick_seconds, GREM, BUILDERS, MILITIA, CHIEFTAIN)
 	_snapshot()
 	_build_hud()
 	var camera := Camera2D.new()
@@ -97,6 +101,7 @@ func _draw() -> void:
 	for squad in _field.sim.squads():
 		for unit in squad.living():
 			_draw_unit(squad, unit, fraction)
+		_draw_morale(squad)
 
 
 func _draw_route(key: String) -> void:
@@ -122,6 +127,10 @@ func _draw_unit(squad, unit, fraction: float) -> void:
 	)
 	var size := cells * CELL_PX - Vector2.ONE
 	var colour: Color = COLOURS["flash"] if _flashes.has(unit.id) else COLOURS[squad.faction_id]
+	if unit.leadership > 0 and not _flashes.has(unit.id):
+		colour = COLOURS["leader"]
+	if squad.state == SkirmishSquad.State.ROUTING:
+		colour.a = 0.45  # routers flee one by one
 	draw_rect(Rect2(centre - size * 0.5, size), colour)
 	if unit.rank == 0:
 		var front := centre + SquadFrame.forward(squad.facing) * size * 0.5
@@ -150,6 +159,18 @@ func _draw_staging() -> void:
 		var reach: float = squad.living().map(func(u): return u.detection).max()
 		var centre := ORIGIN + squad.position * CELL_PX
 		draw_arc(centre, reach * CELL_PX, 0.0, TAU, 64, COLOURS["sight"], 1.5)
+
+
+## A bar over the squad's front: its morale, coloured by band (Decision 82).
+func _draw_morale(squad: SkirmishSquad) -> void:
+	if squad.living().is_empty() or squad.state == SkirmishSquad.State.ROUTING:
+		return
+	var band_colours := [Color(0.3, 0.9, 0.3), Color(0.95, 0.85, 0.2), Color(1, 0.5, 0.1)]
+	var band: int = FormationMorale.band(squad)
+	var colour: Color = band_colours[band] if band < band_colours.size() else Color.RED
+	var top := ORIGIN + squad.position * CELL_PX + Vector2(-12, -6 * CELL_PX)
+	draw_rect(Rect2(top, Vector2(24, 3)), Color(0, 0, 0, 0.5))
+	draw_rect(Rect2(top, Vector2(24 * squad.morale / 100.0, 3)), colour)
 
 
 func _cells(area: Rect2) -> Rect2:
@@ -211,7 +232,10 @@ func _describe() -> String:
 	for key in _field.waves:
 		built.append("%s %d/%d" % [key, _field.waves[key].built(), FormationField.WAVE_WIDTH])
 	var line := _field.kingdom_line
+	var state: String = SkirmishSquad.State.keys()[line.state].to_lower()
+	var paused := "   (paused)" if _clock.is_paused() else ""
+	var reserve := _field.kingdom_reserve.living().size()
 	return (
-		"  Waves: %s   Kingdom line: %d left%s"
-		% [", ".join(built), line.living().size(), "   (paused)" if _clock.is_paused() else ""]
+		"  Waves: %s   Line: %d (%s)   Reserve: %d%s"
+		% [", ".join(built), line.living().size(), state, reserve, paused]
 	)
