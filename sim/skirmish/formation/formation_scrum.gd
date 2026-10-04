@@ -55,7 +55,7 @@ static func step(
 	fight_seed: int,
 	terrain: FormationTerrain = null
 ) -> Array:
-	var events := ScrumEngage.step(squads, tick)
+	var events := ScrumEngage.step(squads, tick, fight_seed)
 	for squad in squads:
 		_prepare(squad, tick)
 	for squad in squads:
