@@ -30,8 +30,11 @@ is done.
 6. **Progression:** what the overlord's tech unlocks per unit type, and what a map grants.
 7. **Leaders:** commanders (built, rolled tactic traits), heroes (promoted from regular
    units, rolled tactic traits) and lords (named, authored); leadership N and tactic
-   traits (Decision 81).
-8. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
+   traits (Decision 81); how leadership scales a squad's cohesion when it meets contact
+   (Decision 88).
+8. **Initiative and contests:** initiative as a stat, the contest die size (a unit's
+   seeded variance), and whether initiative also orders blows within a tick (Decision 88).
+9. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
    wave painter shows it.
 
 ## Rounds
