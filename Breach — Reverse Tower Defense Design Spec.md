@@ -4738,10 +4738,25 @@ formation (treating as 1 entity) initiative?"
     re-forms (turns, about-faces, units walking to new places), and whether it moves as
     one block or unit by unit. A drilled leaderless formation still pivots as a line,
     later; a led but undrilled one decides quickly but turns raggedly, leaving gaps.
-- **One delay, not separate formulas:** the time from detecting a threat to the
-  formation acting, and the time it takes to do it, both come from formation initiative.
-  It replaces round 5's placeholders (reaction 1.5 s divided by one plus leadership;
-  anticipation 4 cells plus 4 per leadership).
+- **Amended after the round 5 feel test.** The user: "it shouldn't depend on
+  holding/marching, if a flank is coming in as an army marches with leadership (or
+  discipline? a highly disciplined force even without an army should be enough to cause
+  them to engage in a better fashion, leadership just bolstering discipline?) enough then
+  it should reform to meet the incoming flank", and on turning: "a turn is essentially a
+  reform action then lower leadership and discipline would cause a longer time to get
+  into the new formation, not necessarily the start of the turn".
+  - **Discipline is the base, leadership bolsters it:** a formation's discipline is its
+    units' mean discipline plus a bonus per point of its best leadership (placeholders:
+    rank and file 30, drilled 60; +10 per leadership).
+  - **Meeting a flank:** a formation disciplined enough (placeholder 50) that detects an
+    enemy closing in on a face other than its front re-forms to meet it, marching or
+    holding. One that isn't meets it unit by unit. An enemy that isn't closing in (a
+    reserve holding its ground) is no reason to re-form.
+  - **No delay before acting; re-forming takes time.** A formation starts at once; how
+    long it takes to stand in its new formation follows its discipline (units walk to
+    their new places faster or slower). A turn (wheel or about-face) is such a re-form,
+    not a rotation after a fixed wait. This replaces round 5's placeholders (a reaction
+    delay before seeking; anticipation by leadership).
 - **Formation contests:** when formations manoeuvre at once (turning to face each other,
   racing for the same ground), they act in the order of
   `(time, roll + formation initiative, formation initiative, ...)`, as unit contests do
@@ -4761,3 +4776,39 @@ formation (treating as 1 entity) initiative?"
 - The formation sim gains formation initiative, used for reaction, anticipation,
   re-forming pace and turning as a line; built after the round 5 feel test.
 - Spec 28's agenda adds formation initiative beside unit initiative.
+
+### Decision 93 — Battles vary within reason by a battle seed; each blow's damage rolls in a band; a Monte Carlo runner measures the spread
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after the round 5 feel test: outcomes varied between
+runs, while the simulation was called deterministic. "Which is it?… I would like for some
+unpredictability (within reason) as it can be boring to know the outcome for certain…
+is there a way we could [run] the tests N times and view the variability in output…
+Could we introduce a Monte Carlo simulation to view the impact of tuning certain
+inputs?" The variation seen came from the player's clicks landing on different ticks;
+the simulation had no randomness of its own.
+- **Deterministic and replayable, but not predictable.** Each battle draws a **battle
+  seed** when it starts; every random draw in it (damage rolls, contests for cells) comes
+  from that seed. The same seed and the same orders replay the battle exactly; a new seed
+  gives a different, plausible battle.
+- **Damage rolls:** each blow's damage is rolled within a band round its value
+  (placeholder ±25%). How variance attaches to unit characteristics (skill, weapons,
+  conditions) is designed with spec 28.
+- **Monte Carlo runner:** a headless tool runs a scenario across N seeds and reports the
+  spread (losses, winners, routs, time), with inputs overridable for tuning. **Mirror
+  scenarios** (equal forces head-on, and an equal force flanking a line) measure what a
+  rule such as flanking is worth with unit differences removed.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Fully deterministic outcomes | The user: knowing the result for certain is boring. |
+| Unseeded randomness | Battles couldn't be replayed or tested. |
+
+**Consequences:**
+- The formation sim draws its random numbers from a battle seed; the scene shows it.
+- Spec 28 designs how variance comes from units (skill, weapons, conditions).
+- Tuning is checked with the Monte Carlo runner, not single runs.
