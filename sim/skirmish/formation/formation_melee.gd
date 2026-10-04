@@ -5,6 +5,8 @@ extends RefCounted
 ## narrower line's end wrap onto it as a flank attack (x FLANK_BONUS) unless wings walk;
 ## blows on a turning squad are flank blows; flank locks and wings strike edges
 ## (FormationEdges, FormationWings). A wavering squad strikes more slowly (FormationMorale).
+## A striker on higher ground hits harder (Decision 85; x HIGH_GROUND, a placeholder until
+## spec 28 defines a step of damage).
 ## Pure over the squads it is given; FormationSimulation applies the blows.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -13,10 +15,15 @@ const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd"
 const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
+const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+
+const HIGH_GROUND := 1.25
 
 
 ## [[attacker, target, damage, flank], ...]; updates each striker's target and cooldown.
-static func blows(squads: Array, interval: int, tick: int, walk_wings: bool) -> Array:
+static func blows(
+	squads: Array, interval: int, tick: int, walk_wings: bool, terrain: FormationTerrain = null
+) -> Array:
 	var by_id := {}
 	for entry in squads:
 		by_id[entry.id] = entry
@@ -44,4 +51,8 @@ static func blows(squads: Array, interval: int, tick: int, walk_wings: bool) -> 
 	out.append_array(FormationEdges.blows(squads, interval, tick))
 	out.append_array(FormationWings.blows(squads, interval, tick))
 	out.append_array(FormationRout.blows(squads, interval))
+	if terrain != null:
+		for blow in out:
+			if terrain.high_ground(blow[0].position, blow[1].position):
+				blow[2] = roundi(blow[2] * HIGH_GROUND)
 	return out

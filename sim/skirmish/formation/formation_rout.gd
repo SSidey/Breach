@@ -25,6 +25,7 @@ const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd"
 const FormationContact = preload("res://sim/skirmish/formation/formation_contact.gd")
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
+const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 const CELLS := float(MapLayoutDef.CELLS_PER_TILE)
@@ -44,14 +45,20 @@ const STRIKE_REACH := 1.5
 
 ## One tick of routs: formations at 0 morale break, routers flee (crushing friends in the
 ## way), rally, re-form or reach home. `cells_per_second` is the pace at speed 1.
-static func step(squads: Array, tick: int, cells_per_second: float, tick_seconds: float) -> Array:
+static func step(
+	squads: Array,
+	tick: int,
+	cells_per_second: float,
+	tick_seconds: float,
+	terrain: FormationTerrain = null
+) -> Array:
 	var events := []
 	for squad in squads.duplicate():
 		if squad.state == SkirmishSquad.State.ROUTING:
 			_flee(squad, squads, tick, cells_per_second * tick_seconds, events)
 			_rally(squad, squads, tick, tick_seconds, events)
 		elif _breaks(squad):
-			_break(squad, squads, tick, events)
+			_break(squad, squads, tick, events, terrain)
 	return events
 
 
@@ -99,7 +106,9 @@ static func _breaks(squad: SkirmishSquad) -> bool:
 	)
 
 
-static func _break(squad: SkirmishSquad, squads: Array, tick: int, events: Array) -> void:
+static func _break(
+	squad: SkirmishSquad, squads: Array, tick: int, events: Array, terrain: FormationTerrain
+) -> void:
 	FormationLocks.release(squad, squads)
 	squad.flank_contacts.clear()
 	squad.wings.clear()
@@ -114,7 +123,7 @@ static func _break(squad: SkirmishSquad, squads: Array, tick: int, events: Array
 	events.append(FormationEvents.squad_event("routed", tick, squad))
 	for friend in squads:
 		if friend != squad and friend.faction_id == squad.faction_id and not friend.is_destroyed():
-			if FormationSight.detects(friend, squad):
+			if FormationSight.detects(friend, squad, terrain):
 				FormationMorale.shock(friend, SEEN_ROUT, tick, events)
 
 

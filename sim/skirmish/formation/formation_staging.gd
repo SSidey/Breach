@@ -18,6 +18,7 @@ const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
+const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationRendezvous = preload("res://sim/skirmish/formation/formation_rendezvous.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -30,12 +31,18 @@ const SLACK_TICKS := 2
 ## True if the squad holds this tick: it is at its staging point and its trigger hasn't
 ## fired. Emits "staged" when it first holds, then "signalled" or "gave_up".
 ## `pace` = [cells a second at speed 1, seconds a tick].
+## `terrain`, if given, can block sight.
 static func holds(
-	squad: SkirmishSquad, squads: Array, tick: int, events: Array, pace: Array = [8.0, 0.1]
+	squad: SkirmishSquad,
+	squads: Array,
+	tick: int,
+	events: Array,
+	pace: Array = [8.0, 0.1],
+	terrain: FormationTerrain = null
 ) -> bool:
 	if squad.staging.is_empty() or squad.order != SkirmishUnit.Order.ADVANCE:
 		return false
-	var partner := _triggered(squad, squads)
+	var partner := _triggered(squad, squads, terrain)
 	if partner != null and _time_to_go(squad, partner, pace):
 		squad.staging = {}
 		events.append(FormationEvents.squad_event("signalled", tick, squad))
@@ -82,7 +89,9 @@ static func _coordinated(squad: SkirmishSquad) -> bool:
 
 
 ## The friend whose sight fires the trigger, or null.
-static func _triggered(squad: SkirmishSquad, squads: Array) -> SkirmishSquad:
+static func _triggered(
+	squad: SkirmishSquad, squads: Array, terrain: FormationTerrain
+) -> SkirmishSquad:
 	var partner: int = squad.staging.get("partner", 0)
 	for other in squads:
 		if other == squad or other.faction_id != squad.faction_id:
@@ -92,6 +101,6 @@ static func _triggered(squad: SkirmishSquad, squads: Array) -> SkirmishSquad:
 		var wanted: bool = (
 			squad.staging["trigger"] == SEES_PARTNER or other.state == SkirmishSquad.State.FIGHTING
 		)
-		if wanted and FormationSight.detects(squad, other):
+		if wanted and FormationSight.detects(squad, other, terrain):
 			return other
 	return null
