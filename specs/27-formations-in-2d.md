@@ -104,6 +104,8 @@ test of the whole stack is next.
    - Merging needs a merge order at a shared node, led by the best leader (Decision 90).
    - A tile is its ground plus cover features, which spill with soft edges and clearings
      (Decision 91).
+   - A formation acts by its own initiative: leadership sets how fast it decides,
+     discipline how cleanly it re-forms (Decision 92; built after the round 5 feel test).
 
 ## Agenda for the design conversation
 
