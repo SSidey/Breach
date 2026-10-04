@@ -92,7 +92,7 @@ func _init(
 	_wave_unit = wave_unit
 	sim = FormationSimulation.new(float(SIZE.x) / MapLayoutDef.CELLS_PER_TILE, seconds_per_tick)
 	sim.combat_width = WAVE_WIDTH
-	sim.walk_wings = true
+	sim.seek_contact = true
 	sim.terrain = _ground()
 	var points := route_points()
 	for key in points:

@@ -49,6 +49,13 @@ var engaged_with: int = 0
 var flank_contacts := {}
 ## Its units out on wings round an enemy line's end (FormationWings, Decision 81).
 var wings := {}
+## The scrum (FormationScrum, Decision 88): its units' places while it fights (unit id ->
+## {"at", "next", "goal"}), the line it re-faced to {"anchor", "facing"}, the tick its fight
+## began (-1: none) and ticks with nobody able to strike.
+var loose := {}
+var stance := {}
+var fight_since := -1
+var stall_ticks := 0
 ## A hold-until order (FormationStaging, Decision 87); empty when it has none.
 var staging := {}
 ## Its will to fight, 0 to 100 (FormationMorale, Decision 82); -1 until first read.

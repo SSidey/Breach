@@ -26,6 +26,10 @@ var courage := 60
 var leadership := 0
 var tactics: Array[String] = []
 var height := 1.0
+## Formation sim: how quickly it acts, and which way it faces (SquadFrame) - its squad's
+## way, or its foe's in the scrum (Decision 88).
+var initiative := 10
+var facing := 1
 ## Formation sim: the definition it was made from (a router fleeing home rejoins the
 ## reserve as one of these).
 var definition: Resource = null

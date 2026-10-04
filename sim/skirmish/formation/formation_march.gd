@@ -99,5 +99,9 @@ static func sync_units(squads: Array) -> void:
 			unit.position = rect.get_center() + shift
 			if entry.wings.has(unit.id):
 				unit.position = entry.wings[unit.id]["at"]
+			if entry.loose.has(unit.id):
+				unit.position = entry.loose[unit.id]["at"]
+			else:
+				unit.facing = entry.facing
 			if entry.fleeing.has(unit.id):
 				unit.position = FormationRout.where(entry, unit.id)
