@@ -28,6 +28,7 @@ static func make(
 	unit.tactics = unit_def.tactics.duplicate()
 	unit.height = unit_def.height
 	unit.initiative = unit_def.initiative
+	unit.discipline = unit_def.discipline
 	unit.definition = unit_def
 	var ranged := unit_def.ranged_weapon()
 	if ranged != null:

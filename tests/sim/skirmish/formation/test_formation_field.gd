@@ -132,7 +132,9 @@ func test_waves_sent_together_reach_the_line_together() -> void:
 
 	var engaged: int = log.filter(func(e): return e["type"] == "engaged")[0]["tick"]
 	var flanked: int = log.filter(func(e): return e["type"] == "flanked")[0]["tick"]
-	assert_int(absi(engaged - flanked)).is_less_equal(3)
+	# within half a second: the prediction times a turn as a wheel, while a turn is now a
+	# re-form at the wave's own pace (Decision 92)
+	assert_int(absi(engaged - flanked)).is_less_equal(5)
 
 
 func test_waves_depart_on_their_own_when_set_to() -> void:

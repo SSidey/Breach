@@ -1,23 +1,24 @@
 class_name ScrumStance
 extends RefCounted
-## A led squad meets a threat as a line (Decision 88, spec 27 round 5): with its front
-## free, when it sees an enemy coming at another face it re-lays its places facing the
-## threat at that face (its stance) before contact, from further off the better it is led.
-## Its units keep to those places until the threat has gone. Pure.
+## A disciplined squad meets a threat as a line (Decisions 88 and 92, spec 27 rounds 5
+## and 6): marching or holding, with its front free, when it sees an enemy closing in on
+## another face within ANTICIPATE cells and is disciplined enough (FormationDiscipline), it
+## re-lays its places facing the threat at that face (its stance) before contact. Its
+## units walk there at its re-form pace and keep to those places until the threat has
+## gone; it doesn't march meanwhile. A less disciplined squad meets it unit by unit. Pure.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const SquadEdges = preload("res://sim/skirmish/formation/squad_edges.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
-const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
+const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 
-## How far off (cells) a led squad turns to meet a threat: 4 plus 4 per point of leadership.
-const ANTICIPATE := 4.0
-const ANTICIPATE_PER_LEADERSHIP := 4.0
+## How far off (cells) a squad re-forms to meet a threat closing in (placeholder).
+const ANTICIPATE := 12.0
 
 
 ## The place a unit keeps to: in its squad's stance if it has one.
@@ -33,20 +34,22 @@ static func anchor(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 	return place.get_center()
 
 
-## A led squad with a free front turns its line to meet a threat it sees coming at
-## another face; it lets the stance go once none is near and it isn't fighting.
+## A disciplined squad with a free front turns its line to meet a threat it sees closing
+## in at another face; it lets the stance go once none is and it isn't fighting.
 static func anticipate(
 	squad: SkirmishSquad, squads: Array, tick: int, events: Array, terrain: FormationTerrain
 ) -> void:
-	var standing := squad.state in [SkirmishSquad.State.HOLDING, SkirmishSquad.State.FIGHTING]
-	var led := FormationMorale.leadership(squad)
-	if not standing or squad.engaged_with != 0 or led < 1:
+	var able := (
+		squad.state
+		in [SkirmishSquad.State.HOLDING, SkirmishSquad.State.MOVING, SkirmishSquad.State.FIGHTING]
+	)
+	if not able or squad.engaged_with != 0 or not FormationDiscipline.meets_threats(squad):
 		return
-	var reach := ANTICIPATE + ANTICIPATE_PER_LEADERSHIP * led
-	var threat := _threat(squad, squads, terrain, reach)
+	var threat := _threat(squad, squads, terrain, true)
 	if threat < 0 or threat == squad.facing:
-		if squad.state != SkirmishSquad.State.FIGHTING:
-			squad.stance = {}
+		var gone := _threat(squad, squads, terrain, false) < 0
+		if squad.state != SkirmishSquad.State.FIGHTING and (gone or threat == squad.facing):
+			squad.stance = {}  # held while the enemy that started it is still near
 		return
 	if not squad.stance.is_empty() and squad.stance["facing"] == threat:
 		return
@@ -57,19 +60,22 @@ static func anticipate(
 	events.append(FormationEvents.squad_event("faced", tick, squad, {"facing": threat}))
 
 
-## The facing towards the nearest seen hostile closing in within `reach` cells, or -1.
+## The facing towards the nearest seen hostile within ANTICIPATE cells - closing in, if
+## `closing` - or -1.
 static func _threat(
-	squad: SkirmishSquad, squads: Array, terrain: FormationTerrain, reach: float
+	squad: SkirmishSquad, squads: Array, terrain: FormationTerrain, closing: bool
 ) -> int:
 	var area := SquadEdges.bounds(squad)
-	var best := reach + 0.000001
+	var best := ANTICIPATE + 0.000001
 	var facing := -1
 	for other in squads:
 		if other.faction_id == squad.faction_id or other.is_destroyed():
 			continue
 		if other.state == SkirmishSquad.State.ROUTING:
 			continue
-		if not FormationSight.detects(squad, other, terrain) or not _closing(other, area):
+		if not FormationSight.detects(squad, other, terrain):
+			continue
+		if closing and not _closing(other, area):
 			continue
 		var theirs := SquadEdges.bounds(other)
 		var nearest := theirs.get_center().clamp(area.position, area.end)

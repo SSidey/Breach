@@ -7,16 +7,15 @@ extends RefCounted
 ##   its place (Decision 75) - the far end of a wide line comes too. Only front-band units
 ##   of a squad not yet wavering seek; the rest keep to their places. Contested cells go by
 ##   ScrumContest's key, so the earliest arrival takes a cell and the rest look further.
-## - **Reaction:** a squad's units start seeking REACTION_SECONDS after its fight begins,
-##   divided by one plus its leadership.
-## - **Cohesion:** a led squad whose front is free and that sees an enemy coming at
-##   another face turns its line to meet it before contact - its places re-laid facing the
-##   threat at that face (its stance) - from further off the better it is led. A leaderless
-##   squad meets it unit by unit, leaving gaps.
+## - **No delay:** a squad's units seek as soon as its fight begins (Decision 92).
+## - **Cohesion:** a disciplined squad whose front is free re-forms its line to meet an
+##   enemy closing in at another face, before contact (ScrumStance); a less disciplined one
+##   meets it unit by unit, leaving gaps.
 ## - **Engaging:** squads whose units come within reach fight, whatever their faces
 ##   (ScrumEngage).
 ## - **Regrouping:** when the fight ends the squad closes ranks over its dead (SquadRanks),
-##   its units walk to their places at the march pace, and it moves on once all are back.
+##   its units walk to their places at its re-form pace (FormationDiscipline), and it moves
+##   on once all are back.
 ## - **A stalled fight** (no unit on either side touching or seeking for STALL_SECONDS) is
 ##   released, so it can't freeze.
 ## Squads keep `loose`, `stance`, `fight_since` and `stall_ticks`. Pure over the squads.
@@ -28,6 +27,7 @@ const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
 const ScrumPaths = preload("res://sim/skirmish/formation/scrum_paths.gd")
 const ScrumEngage = preload("res://sim/skirmish/formation/scrum_engage.gd")
+const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
@@ -35,7 +35,6 @@ const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.g
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 
-const REACTION_SECONDS := 1.5
 const STALL_SECONDS := 2.0
 ## Walking within a fight is slowed by the crush (Decision 48; FormationShuffle.CROWDING).
 const CROWDING := 0.2
@@ -146,9 +145,6 @@ static func _seekers_of(squad: SkirmishSquad, ctx: Dictionary) -> Array:
 	for entry in foes:
 		for spot in ScrumPaths.cells_of(ScrumReach.area(entry[1], entry[0])):
 			foe_cells[spot] = true
-	var waited: bool = ctx["tick"] - squad.fight_since >= _reaction_ticks(squad, ctx["seconds"])
-	if not waited:
-		ctx["active"][squad.id] = true
 	var steady := FormationMorale.band(squad) < FormationMorale.Band.WAVERING
 	var out := []
 	for unit in squad.living():
@@ -159,7 +155,7 @@ static func _seekers_of(squad: SkirmishSquad, ctx: Dictionary) -> Array:
 			entry["next"] = entry["at"]
 			ctx["active"][squad.id] = true
 			continue
-		if not (waited and steady and _may_seek(squad, unit)) or foe_cells.is_empty():
+		if not (steady and _may_seek(squad, unit)) or foe_cells.is_empty():
 			entry["goal"] = null
 			continue
 		var arrival := (
@@ -179,11 +175,6 @@ static func _may_seek(squad: SkirmishSquad, unit: SkirmishUnit) -> bool:
 		and unit.footprint_depth == 1
 		and squad.order != SkirmishUnit.Order.RETREAT
 	)
-
-
-static func _reaction_ticks(squad: SkirmishSquad, tick_seconds: float) -> int:
-	var seconds := REACTION_SECONDS / (1.0 + FormationMorale.leadership(squad))
-	return roundi(seconds / tick_seconds)
 
 
 ## Fighting units walk a step to their goal, or back towards their place if they have none
@@ -212,7 +203,8 @@ static func _regroup(squads: Array, pace: float) -> void:
 			var entry: Dictionary = squad.loose[unit_id]
 			var unit: SkirmishUnit = entry["unit"]
 			var place := ScrumStance.anchor(squad, unit)
-			entry["at"] = entry["at"].move_toward(place, unit.speed * pace)
+			var step := unit.speed * pace * FormationDiscipline.reform_pace(squad)
+			entry["at"] = entry["at"].move_toward(place, step)
 			entry["next"] = entry["at"]
 			entry["goal"] = null
 			unit.facing = squad.facing if squad.stance.is_empty() else squad.stance["facing"]
