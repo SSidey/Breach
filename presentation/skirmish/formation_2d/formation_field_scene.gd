@@ -5,19 +5,27 @@ extends Node2D
 ## their corridors, and every unit drawn in its cells, turned to its squad's facing and
 ## eased between ticks. Send a route's wave, let it depart when full, send both timed to
 ## arrive together, or have B wait in the wood (its detection range ringed) until it sees
-## A engage (Decision 87). Engine glue - the rules live in sim/skirmish/formation/.
+## A engage (Decision 87). In a fight units seek contact and face their own foes (Decision
+## 88); "Line has a captain" restarts with a led line that turns to meet a flank; Reset
+## starts afresh under a battle seed (Decision 93). Controls: FormationFieldHud.
+## Engine glue - the rules live in sim/skirmish/formation/.
 ##
 ##   godot --path . res://presentation/skirmish/formation_2d/formation_field.tscn
 
 const SkirmishClock = preload("res://sim/skirmish/skirmish_clock.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 
 const GREM := preload("res://content/units/grem.tres")
 const MILITIA := preload("res://content/units/kingdom_militia.tres")
 const CHIEFTAIN := preload("res://content/units/grem_chieftain.tres")
+const CAPTAIN := preload("res://content/units/kingdom_captain.tres")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
+const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const FormationFieldHud = preload("res://presentation/skirmish/formation_2d/formation_field_hud.gd")
+const UnitDef = preload("res://content/definitions/unit_def.gd")
 
 const CELL_PX := 8.0
 const ORIGIN := Vector2(16, 56)
@@ -26,10 +34,12 @@ const FLASH_SECONDS := 0.3
 const COLOURS := {
 	"grass": Color(0.33, 0.45, 0.25),
 	"wood": Color(0.16, 0.3, 0.14),
-	"ford": Color(0.25, 0.45, 0.7),
+	"stream": Color(0.18, 0.35, 0.65),
+	"ford": Color(0.45, 0.62, 0.8),
 	"hill": Color(0.5, 0.45, 0.3),
 	"A": Color(0.95, 0.85, 0.3),
 	"B": Color(0.95, 0.55, 0.2),
+	"C": Color(0.85, 0.4, 0.7),
 	"player": Color(0.6, 0.3, 0.75),
 	"the_kingdom": Color(0.3, 0.5, 0.9),
 	"flash": Color(1, 0.2, 0.2),
@@ -43,7 +53,8 @@ var _field: FormationField
 var _previous := {}  # unit id -> position (cells) at the previous tick
 var _current := {}  # unit id -> position (cells) at the latest tick
 var _flashes := {}  # unit id -> seconds left
-var _status: Label
+var _hud: FormationFieldHud
+var _battle_seed := 0
 
 
 func field() -> FormationField:
@@ -64,12 +75,26 @@ func run_ticks(count: int) -> void:
 
 
 func _ready() -> void:
-	_field = FormationField.new(_clock.tick_seconds, GREM, BUILDERS, MILITIA, CHIEFTAIN)
-	_snapshot()
-	_build_hud()
+	restart(false, randi() % 1000000)
+	_hud = FormationFieldHud.new()
+	add_child(_hud)
+	_hud.build(self)
 	var camera := Camera2D.new()
-	camera.position = ORIGIN + Vector2(FormationField.SIZE) * CELL_PX * 0.5 - Vector2(0, 20)
+	camera.position = ORIGIN + Vector2(FormationField.SIZE) * CELL_PX * 0.5 - Vector2(0, 40)
 	add_child(camera)
+
+
+## A fresh field, its line led by a captain or not, its battle under `battle_seed`
+## (Decision 93: the same seed and orders replay a battle).
+func restart(captained: bool, battle_seed: int) -> void:
+	_battle_seed = battle_seed
+	var captain: UnitDef = CAPTAIN if captained else null
+	_field = FormationField.new(
+		_clock.tick_seconds, GREM, BUILDERS, MILITIA, CHIEFTAIN, captain, battle_seed
+	)
+	_previous = {}
+	_current = {}
+	_snapshot()
 
 
 func _process(delta: float) -> void:
@@ -79,20 +104,24 @@ func _process(delta: float) -> void:
 		_flashes[unit_id] -= delta
 		if _flashes[unit_id] <= 0.0:
 			_flashes.erase(unit_id)
-	_status.text = _describe()
+	if _hud != null:
+		_hud.show_status(_field, _clock.is_paused(), _battle_seed)
 	queue_redraw()
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
-		_toggle_pause()
+		toggle_pause()
 
 
 func _draw() -> void:
 	var size := Vector2(FormationField.SIZE) * CELL_PX
 	draw_rect(Rect2(ORIGIN, size), COLOURS["grass"])
-	for scenery in [["wood", FormationField.WOOD], ["hill", FormationField.HILL]]:
-		draw_rect(_cells(scenery[1]), COLOURS[scenery[0]])
+	draw_rect(_cells(FormationField.WOOD), COLOURS["wood"])
+	for ring in range(FormationField.HILL_QUARTERS):
+		var shade: Color = COLOURS["hill"].lightened(ring * 0.05)
+		draw_rect(_cells(FormationField.HILL.grow(-ring)), shade)
+	draw_rect(_cells(FormationField.STREAM), COLOURS["stream"])
 	draw_rect(_cells(FormationField.FORD), COLOURS["ford"])
 	for key in _field.routes:
 		_draw_route(key)
@@ -132,8 +161,8 @@ func _draw_unit(squad, unit, fraction: float) -> void:
 	if squad.state == SkirmishSquad.State.ROUTING:
 		colour.a = 0.45  # routers flee one by one
 	draw_rect(Rect2(centre - size * 0.5, size), colour)
-	if unit.rank == 0:
-		var front := centre + SquadFrame.forward(squad.facing) * size * 0.5
+	if unit.rank == 0 or squad.loose.has(unit.id):
+		var front := centre + UnitMotion.vector(unit.bearing) * size * 0.5
 		draw_circle(front, 1.5, Color.WHITE)
 
 
@@ -185,57 +214,19 @@ func _snapshot() -> void:
 			_current[unit.id] = unit.position
 
 
-func _build_hud() -> void:
-	var layer := CanvasLayer.new()
-	add_child(layer)
-	var bar := HBoxContainer.new()
-	bar.position = Vector2(12, 8)
-	layer.add_child(bar)
-	for key in ["A", "B"]:
-		var send := Button.new()
-		send.text = "Send %s" % key
-		send.pressed.connect(_on_send.bind(key))
-		bar.add_child(send)
-		var auto := CheckBox.new()
-		auto.text = "Auto %s" % key
-		auto.toggled.connect(func(on): _field.set_auto(key, on))
-		bar.add_child(auto)
-	var together := Button.new()
-	together.text = "Send together"
-	together.pressed.connect(func(): _field.send_together(["A", "B"]))
-	bar.add_child(together)
-	var wait := CheckBox.new()
-	wait.text = "B waits for A"
-	wait.toggled.connect(func(on): _field.set_wait(on))
-	bar.add_child(wait)
-	var pause := Button.new()
-	pause.text = "Pause (Space)"
-	pause.pressed.connect(_toggle_pause)
-	bar.add_child(pause)
-	_status = Label.new()
-	bar.add_child(_status)
-
-
 func _on_send(key: String) -> void:
 	_field.send(key)
 
 
-func _toggle_pause() -> void:
+## Orders every wave out on a route to retreat home (Decision 95).
+func retreat(key: String) -> void:
+	for squad in _field.sim.squads():
+		if squad.faction_id == "player" and squad.route == _field.waves[key].route:
+			_field.sim.order(squad.id, SkirmishUnit.Order.RETREAT)
+
+
+func toggle_pause() -> void:
 	if _clock.is_paused():
 		_clock.resume()
 	else:
 		_clock.pause()
-
-
-func _describe() -> String:
-	var built := []
-	for key in _field.waves:
-		built.append("%s %d/%d" % [key, _field.waves[key].built(), FormationField.WAVE_WIDTH])
-	var line := _field.kingdom_line
-	var state: String = SkirmishSquad.State.keys()[line.state].to_lower()
-	var paused := "   (paused)" if _clock.is_paused() else ""
-	var reserve := _field.kingdom_reserve.living().size()
-	return (
-		"  Waves: %s   Line: %d (%s)   Reserve: %d%s"
-		% [", ".join(built), line.living().size(), state, reserve, paused]
-	)

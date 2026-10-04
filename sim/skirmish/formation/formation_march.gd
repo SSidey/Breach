@@ -10,6 +10,7 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
@@ -38,6 +39,18 @@ static func pace(
 		events.append(FormationEvents.squad_event("blocked", tick, squad))
 	squad.blocked = worst <= 0.0
 	return step * worst
+
+
+## Where the squad's front gets moving `delta` tiles along its route of `route_end` tiles:
+## never past either end, nor past the point its order takes it to.
+static func toward(squad: SkirmishSquad, delta: float, route_end: float) -> float:
+	var next := clampf(squad.front_distance + delta, 0.0, route_end)
+	var enemy_end := route_end if is_zero_approx(squad.home_distance) else 0.0
+	var target := squad.home_distance if squad.order == SkirmishUnit.Order.RETREAT else enemy_end
+	var before := signf(target - squad.front_distance)
+	if before != 0.0 and signf(target - next) != before:
+		return target  # it would pass its target: it stops there
+	return next
 
 
 ## Which way the squad's order takes it along its route: +1 up it, -1 down it. Advancing
@@ -99,5 +112,9 @@ static func sync_units(squads: Array) -> void:
 			unit.position = rect.get_center() + shift
 			if entry.wings.has(unit.id):
 				unit.position = entry.wings[unit.id]["at"]
+			if entry.loose.has(unit.id):
+				unit.position = entry.loose[unit.id]["at"]
+			else:
+				unit.bearing = UnitMotion.of_facing(entry.facing)
 			if entry.fleeing.has(unit.id):
 				unit.position = FormationRout.where(entry, unit.id)

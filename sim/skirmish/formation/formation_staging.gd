@@ -3,13 +3,16 @@ extends RefCounted
 ## Hold-until orders (Decision 87, spec 27 round 2). A staged wave marches to its staging
 ## point and holds there until its trigger, judged only on what it detects:
 ## - SEES_PARTNER: it detects its partner squad
-## - SEES_FIGHT: it detects its partner (or, with no partner named, any friendly squad)
+## - SEES_FIGHT: it detects its partner (or, with no partner named, any friendly squad on
+##   another route)
 ##   fighting
 ## or until its fallback runs out, when it goes on ("go") or turns back ("back"). Without a
 ## leader it goes as soon as the trigger fires. Led by a **coordinated** leader (Decision
 ## 81), a wave waiting to see its partner times its own departure: from the partner's
 ## distance to the meeting point and its pace, as seen, against its own predicted march,
-## it goes when it would arrive no earlier than the partner. A squad's `staging`: {"at":
+## it goes when it would arrive no earlier than the partner - with no partner named, than
+## every friend it sees firing the trigger, so none is singled out by the order squads are
+## listed in (Decision 97). A squad's `staging`: {"at":
 ## cells along its route, "trigger", "partner": squad id or 0, "fallback": ticks, "then":
 ## "go" or "back", optionally "meet": the meeting point and "meet_cells": how far along its
 ## own route that is}. Pure.
@@ -42,8 +45,9 @@ static func holds(
 ) -> bool:
 	if squad.staging.is_empty() or squad.order != SkirmishUnit.Order.ADVANCE:
 		return false
-	var partner := _triggered(squad, squads, terrain)
-	if partner != null and _time_to_go(squad, partner, pace):
+	var partners := _triggered(squad, squads, terrain)
+	var ready := partners.all(func(p): return _time_to_go(squad, p, pace, terrain))
+	if not partners.is_empty() and ready:
 		squad.staging = {}
 		events.append(FormationEvents.squad_event("signalled", tick, squad))
 		return false
@@ -65,7 +69,9 @@ static func holds(
 
 
 ## True unless a coordinated leader judges it too soon: it would arrive before its partner.
-static func _time_to_go(squad: SkirmishSquad, partner: SkirmishSquad, pace: Array) -> bool:
+static func _time_to_go(
+	squad: SkirmishSquad, partner: SkirmishSquad, pace: Array, terrain: FormationTerrain
+) -> bool:
 	if not squad.staging.has("meet") or not _coordinated(squad) or partner.speed() <= 0.0:
 		return true
 	var tick_seconds: float = pace[1]
@@ -79,7 +85,8 @@ static func _time_to_go(squad: SkirmishSquad, partner: SkirmishSquad, pace: Arra
 		squad.width,
 		squad.speed() * pace[0],
 		tick_seconds,
-		squad.front_distance * MapLayoutDef.CELLS_PER_TILE
+		squad.front_distance * MapLayoutDef.CELLS_PER_TILE,
+		terrain
 	)
 	return own_ticks >= partner_ticks - SLACK_TICKS
 
@@ -88,19 +95,20 @@ static func _coordinated(squad: SkirmishSquad) -> bool:
 	return squad.living().any(func(u): return u.tactics.has("coordinated"))
 
 
-## The friend whose sight fires the trigger, or null.
-static func _triggered(
-	squad: SkirmishSquad, squads: Array, terrain: FormationTerrain
-) -> SkirmishSquad:
+## The friends whose sight fires the trigger (none: it hasn't fired).
+static func _triggered(squad: SkirmishSquad, squads: Array, terrain: FormationTerrain) -> Array:
+	var out := []
 	var partner: int = squad.staging.get("partner", 0)
 	for other in squads:
 		if other == squad or other.faction_id != squad.faction_id:
 			continue
 		if partner != 0 and other.id != partner:
 			continue
+		if partner == 0 and other.route == squad.route:
+			continue  # a wave on its own route is no partner
 		var wanted: bool = (
 			squad.staging["trigger"] == SEES_PARTNER or other.state == SkirmishSquad.State.FIGHTING
 		)
 		if wanted and FormationSight.detects(squad, other, terrain):
-			return other
-	return null
+			out.append(other)
+	return out

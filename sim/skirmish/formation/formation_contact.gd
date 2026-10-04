@@ -15,6 +15,7 @@ const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
 const SquadEdges = preload("res://sim/skirmish/formation/squad_edges.gd")
+const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 
 ## Tiles between engaged fronts: a little over one cell (Decision 68).
 const MELEE_REACH := 0.0175
@@ -31,29 +32,41 @@ static func can_engage(candidate: SkirmishSquad) -> bool:
 	)
 
 
-static func nearest_hostile(from: SkirmishSquad, squads: Array) -> SkirmishSquad:
+## The hostile front within melee reach of `from`'s, facing it: the nearest, a tie going
+## to the squads' seeded draws (Decision 97), never to the order they are listed in.
+static func nearest_hostile(
+	from: SkirmishSquad, squads: Array, fight_seed: int = 0
+) -> SkirmishSquad:
 	var best: SkirmishSquad = null
-	var best_gap := INF
+	var best_key := []
 	for other in squads:
 		if other.faction_id == from.faction_id or not can_engage(other):
 			continue
 		if not SquadGeometry.facing_off(from, other) or not SquadGeometry.overlaps(from, other):
 			continue
 		var gap := absf(SquadGeometry.gap(from, other))
-		if gap <= MELEE_REACH + EPSILON and gap < best_gap:
+		var key := [snappedf(gap, EPSILON), ScrumContest.squad_draw(other, fight_seed)]
+		if gap <= MELEE_REACH + EPSILON and (best == null or key < best_key):
 			best = other
-			best_gap = gap
+			best_key = key
 	return best
 
 
-## The furthest an advancing squad may get this tick, wanting to reach `next`.
-static func limit(mover: SkirmishSquad, squads: Array, next: float) -> float:
+## The furthest an advancing squad may get this tick, wanting to reach `next`, judged
+## from where everyone stood as the tick began: all squads move together (Decision 97).
+## `marching` (squad id -> true) holds the squads advancing this tick; two hostiles
+## marching at each other each close at most half the gap that stood between them.
+static func limit(
+	mover: SkirmishSquad, squads: Array, next: float, marching: Dictionary = {}
+) -> float:
 	for other in squads:
 		if other == mover or not can_engage(other):
 			continue
 		var room := _room(mover, other)
 		if room == INF:
 			continue
+		if marching.has(other.id) and _closing_on(mover, other):
+			room /= 2.0  # it closes too: each takes its half
 		var reachable := mover.front_distance + mover.direction * maxf(room, 0.0)
 		next = minf(next, reachable) if mover.direction > 0 else maxf(next, reachable)
 	return next
@@ -136,6 +149,11 @@ static func _room(mover: SkirmishSquad, other: SkirmishSquad) -> float:
 	if other.faction_id != mover.faction_id:
 		return SquadGeometry.gap(mover, other) - MELEE_REACH
 	return SquadGeometry.gap(mover, other) - _depth(other)
+
+
+## True if `other` is a hostile face to face with the mover.
+static func _closing_on(mover: SkirmishSquad, other: SkirmishSquad) -> bool:
+	return other.faction_id != mover.faction_id and SquadGeometry.facing_off(mover, other)
 
 
 static func _accepts(mover: SkirmishSquad, leader: SkirmishSquad) -> bool:

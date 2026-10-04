@@ -8,7 +8,10 @@ extends RefCounted
 ## nothing on the way, and on arrival fights the enemy's units on that edge: its first
 ## interval of blows are flank blows, and edge units not held by their own front turn to
 ## it. A wing reaches the side only; going on to the rear waits for discipline. When the
-## fight ends its wings walk back to their places. Squads keep `wings`: unit id ->
+## fight ends its wings walk back to their places. Every squad's wings set out before any
+## arrives, so one side's arriving wing never shakes the other out of sending its own that
+## tick; a unit with two targets equally near strikes by the seeded draw (Decision 97).
+## Squads keep `wings`: unit id ->
 ## {"unit", "at", "to", "foe", "edge", "slot", "since", "returning"}. Pure.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -19,6 +22,7 @@ const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
+const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 ## Walking within a fight is slowed by the crush (Decision 48; FormationShuffle.CROWDING).
@@ -37,6 +41,8 @@ static func march(squads: Array, tick: int, cells_per_second: float, tick_second
 		var foe: SkirmishSquad = by_id.get(squad.engaged_with)
 		if foe != null and _frontal(squad, foe):
 			_set_out(squad, foe)
+	for squad in squads:
+		var foe: SkirmishSquad = by_id.get(squad.engaged_with)
 		for unit_id in squad.wings.keys():
 			var wing: Dictionary = squad.wings[unit_id]
 			if not wing["unit"].is_alive():
@@ -70,7 +76,7 @@ static func is_wing(squad: SkirmishSquad, unit: SkirmishUnit) -> bool:
 
 
 ## This tick's blows by arrived wings, and back at them: [[attacker, target, damage, flank]].
-static func blows(squads: Array, interval: int, tick: int) -> Array:
+static func blows(squads: Array, interval: int, tick: int, fight_seed: int = 0) -> Array:
 	var by_id := {}
 	for entry in squads:
 		by_id[entry.id] = entry
@@ -83,14 +89,15 @@ static func blows(squads: Array, interval: int, tick: int) -> Array:
 				continue
 			var on_edge := SquadEdges.edge_units(foe, wing["edge"])
 			var fresh: bool = tick - wing["since"] < interval
-			_strike(wing["unit"], wing["at"], on_edge, foe, fresh, interval, out)
+			var pace := [interval, fight_seed]
+			_strike(wing["unit"], wing["at"], on_edge, foe, fresh, pace, out)
 			for unit in on_edge:
 				if foe.engaged_with != 0 and unit.rank == 0:
 					continue  # held by its own front: a corner strikes back at one foe
 				var rect := SquadFrame.unit_rect(
 					foe.position, foe.facing, foe.width, foe.centre_shift, unit
 				)
-				_strike(unit, rect.get_center(), [wing["unit"]], squad, false, interval, out)
+				_strike(unit, rect.get_center(), [wing["unit"]], squad, false, pace, out)
 	return out
 
 
@@ -121,7 +128,9 @@ static func _set_out(squad: SkirmishSquad, foe: SkirmishSquad) -> void:
 			waiting.append([line.x - span.y, unit, -1])
 		elif span.x >= line.y - EPSILON:
 			waiting.append([span.x - line.y, unit, 1])
-	waiting.sort_custom(func(a, b): return a[0] < b[0] or (a[0] == b[0] and a[1].id < b[1].id))
+	waiting.sort_custom(
+		func(a, b): return [a[0], a[1].rank, a[1].column] < [b[0], b[1].rank, b[1].column]
+	)
 	for entry in waiting:
 		var side: int = entry[2]
 		var slot := _free_slot(squad, foe.id, side, depth)
@@ -188,25 +197,28 @@ static func _origin_point(ahead: Vector2, across: Vector2, along: float, lateral
 	return ahead * along + across * lateral
 
 
+## Strikes the nearest of `targets` (ties by their draws). `pace` = [the attack interval,
+## the battle seed].
 static func _strike(
 	unit: SkirmishUnit,
 	at: Vector2,
 	targets: Array,
 	target_squad: SkirmishSquad,
 	flank: bool,
-	interval: int,
+	pace: Array,
 	out: Array
 ) -> void:
 	var target: SkirmishUnit = null
-	var best := INF
+	var best := []
 	for candidate in targets:
-		var where := _where(target_squad, candidate)
-		var gap := at.distance_to(where)
-		if gap < best - EPSILON:
-			best = gap
+		var gap := snappedf(at.distance_to(_where(target_squad, candidate)), EPSILON)
+		var key := [gap, ScrumContest.draw(candidate, pace[1])]
+		if target == null or key < best:
+			best = key
 			target = candidate
 	if target == null:
 		return
+	var interval: int = pace[0]
 	unit.target_id = target.id
 	unit.attack_cooldown -= 1
 	if unit.attack_cooldown > 0:

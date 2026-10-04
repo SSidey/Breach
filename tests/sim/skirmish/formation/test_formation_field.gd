@@ -6,6 +6,8 @@ extends GdUnitTestSuite
 ## timed to arrive together.
 
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
+const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -87,14 +89,18 @@ func test_a_wave_on_route_b_strikes_the_lines_side() -> void:
 	assert_int(log.filter(func(e): return e["type"] == "turned").size()).is_greater_equal(1)
 
 
-func test_a_wider_wave_sends_wings_round_the_line() -> void:
+func test_a_wider_waves_overhanging_units_fight_the_lines_corners() -> void:
 	var field := _field(400, 200)
 	_run(field, _has("wave_full"))
 
 	field.send("A")
-	var log := _run(field, _has("wing_arrived"))
+	var log := _run(field, func(_log): return false, 400)
 
-	assert_bool(log.any(func(e): return e["type"] == "wing_arrived")).is_true()
+	var strikers := {}
+	for hit in log.filter(func(e): return e["type"] == "hit" and e["faction"] == "player"):
+		strikers[hit["unit"]] = true
+	# more strike than the line's 6-wide face: the ends reach its corners (Decision 88)
+	assert_int(strikers.size()).is_greater(FormationField.KINGDOM_WIDTH)
 
 
 func test_b_waits_in_the_wood_until_it_sees_a_engage_then_flanks() -> void:
@@ -126,7 +132,7 @@ func test_waves_sent_together_reach_the_line_together() -> void:
 
 	var engaged: int = log.filter(func(e): return e["type"] == "engaged")[0]["tick"]
 	var flanked: int = log.filter(func(e): return e["type"] == "flanked")[0]["tick"]
-	assert_int(absi(engaged - flanked)).is_less_equal(3)
+	assert_int(absi(engaged - flanked)).is_less_equal(3)  # timed by rehearsal
 
 
 func test_waves_depart_on_their_own_when_set_to() -> void:
@@ -178,4 +184,60 @@ func test_a_flank_timed_by_the_chieftain_breaks_the_line_into_its_reserve() -> v
 	assert_bool(flanked.is_empty()).is_false()
 	assert_int(flanked[0]["tick"] - engaged).is_less_equal(30)  # the flank lands with A
 	assert_bool(log.any(func(e): return e["type"] == "routed" and e["squad"] == line)).is_true()
-	assert_bool(log.any(func(e): return e["type"] == "crushed" and e["squad"] == reserve)).is_true()
+	var reached := func(e):
+		return (
+			(e["type"] == "crushed" and e["squad"] == reserve)
+			or (e["type"] == "rallied" and e["into"] == reserve)
+		)
+	assert_bool(log.any(reached)).is_true()  # its routers run into the reserve
+
+
+func test_route_bs_wave_narrows_through_the_ford_and_widens_after() -> void:
+	var field := _field(400, 200)
+	_run(field, func(log): return field.waves["B"].built() == 8)
+
+	field.send("B")
+	var log := _run(field, _has("widened"), 600)
+
+	var narrowed: Array = log.filter(func(e): return e["type"] == "narrowed")
+	assert_int(narrowed.size()).is_equal(1)
+	assert_int(narrowed[0]["width"]).is_equal(4)
+	assert_bool(log.any(func(e): return e["type"] == "widened")).is_true()
+
+
+func test_the_wood_slows_route_bs_wave() -> void:
+	var field := _field(400, 200)
+	_run(field, func(log): return field.waves["B"].built() == 8)
+
+	var wave := field.send("B")
+	_run(field, func(log): return false, 100)
+
+	assert_float(wave.position.x).is_less(60.0)  # open ground would be 80 cells on
+
+
+func test_the_wood_hides_deep_inside_but_not_at_its_edge() -> void:
+	var ground: FormationTerrain = _field().sim.terrain
+	var line_front := Vector2(FormationField.LINE_AT - 10.0, 32.5)
+
+	assert_bool(FormationSight.clear(ground, Vector2(40.5, 8.5), line_front)).is_false()
+	(
+		assert_bool(
+			FormationSight.clear(ground, FormationField.STAGING + Vector2(0.5, 0.5), line_front)
+		)
+		. is_true()
+	)
+
+
+func test_a_captained_line_turns_to_meet_b_before_it_strikes() -> void:
+	var captain := _def(60, 2)
+	captain.leadership = 2
+	var field := FormationField.new(TICK, _def(200, 3), 8, _def(400, 2), null, captain)
+	_run(field, func(log): return field.waves["B"].built() == 8)
+
+	field.send("B")
+	var log := _run(field, _has("flanked"))
+
+	var faced: Array = log.filter(func(e): return e["type"] == "faced")
+	assert_bool(faced.is_empty()).is_false()
+	assert_int(faced[0]["squad"]).is_equal(field.kingdom_line.id)
+	assert_int(faced[0]["facing"]).is_equal(SquadFrame.NORTH)

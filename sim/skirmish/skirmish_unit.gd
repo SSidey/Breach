@@ -26,6 +26,15 @@ var courage := 60
 var leadership := 0
 var tactics: Array[String] = []
 var height := 1.0
+## Formation sim: how quickly it acts, and how drilled it is (Decisions 88 and 92).
+var initiative := 10
+var discipline := 30
+## Formation sim: which of 8 bearings it faces (UnitMotion: 0 north, 2 east, 4 south, 6
+## west) - its squad's way, or its own in the scrum - and how it turns and backs away.
+var bearing := 2
+var turn_rate := 450.0
+var backward_pace := 0.4
+var turn_spare := 0.0
 ## Formation sim: the definition it was made from (a router fleeing home rejoins the
 ## reserve as one of these).
 var definition: Resource = null

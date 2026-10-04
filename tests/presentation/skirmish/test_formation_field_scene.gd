@@ -21,7 +21,7 @@ func test_the_scene_builds_the_field_with_the_kingdom_line() -> void:
 	var scene := _scene()
 
 	assert_object(scene.field()).is_not_null()
-	assert_array(scene.field().routes.keys()).contains_exactly(["A", "B"])
+	assert_array(scene.field().routes.keys()).contains_exactly(["A", "B", "C"])
 	assert_int(scene.field().sim.squads().size()).is_equal(2)  # the line and its reserve
 
 
@@ -51,3 +51,37 @@ func test_waves_can_be_sent_together_and_b_can_wait() -> void:
 
 	assert_int(sent.size()).is_equal(2)
 	assert_bool(scene.field().waves["B"].staging.is_empty()).is_false()
+
+
+func test_the_line_can_be_given_a_captain() -> void:
+	var scene := _scene()
+
+	scene.restart(true, 7)
+
+	var line = scene.field().kingdom_line
+	assert_bool(line.living().any(func(u): return u.leadership > 0)).is_true()
+
+
+func test_reset_starts_a_fresh_field_under_a_seed() -> void:
+	var scene := _scene()
+	scene.run_ticks(50)
+	var before = scene.field()
+
+	scene.restart(false, 42)
+
+	assert_object(scene.field()).is_not_same(before)
+	assert_int(scene.field().sim.fight_seed).is_equal(42)
+	assert_int(scene.field().sim.tick_number()).is_equal(0)
+
+
+func test_a_sent_wave_can_be_ordered_to_retreat() -> void:
+	var scene := _scene()
+	scene.run_ticks(100)
+	scene._on_send("A")
+	scene.run_ticks(5)
+
+	scene.retreat("A")
+	scene.run_ticks(1)
+
+	var wave = scene.field().sim.squads()[2]
+	assert_int(wave.order).is_equal(2)  # SkirmishUnit.Order.RETREAT
