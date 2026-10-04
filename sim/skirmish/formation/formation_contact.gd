@@ -13,6 +13,7 @@ extends RefCounted
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
 
 ## Tiles between engaged fronts: a little over one cell (Decision 68).
 const MELEE_REACH := 0.0175
@@ -34,7 +35,9 @@ static func nearest_hostile(from: SkirmishSquad, squads: Array) -> SkirmishSquad
 	for other in squads:
 		if other.faction_id == from.faction_id or not can_engage(other):
 			continue
-		var gap := absf(other.front_distance - from.front_distance)
+		if not SquadGeometry.facing_off(from, other) or not SquadGeometry.overlaps(from, other):
+			continue
+		var gap := absf(SquadGeometry.gap(from, other))
 		if gap <= MELEE_REACH + EPSILON and gap < best_gap:
 			best = other
 			best_gap = gap
@@ -46,14 +49,12 @@ static func limit(mover: SkirmishSquad, squads: Array, next: float) -> float:
 	for other in squads:
 		if other == mover or not can_engage(other) or not _ahead(mover, other):
 			continue
-		var stop := _stop_behind(mover, other)
+		var room := SquadGeometry.gap(mover, other) - _depth(other)
 		if other.faction_id != mover.faction_id:
-			stop = other.front_distance - mover.direction * MELEE_REACH
-		var reachable := (
-			maxf(stop, mover.front_distance)
-			if mover.direction > 0
-			else minf(stop, mover.front_distance)
-		)
+			if not SquadGeometry.facing_off(mover, other):
+				continue  # round 1 meets front to front only (spec 27)
+			room = SquadGeometry.gap(mover, other) - MELEE_REACH
+		var reachable := mover.front_distance + mover.direction * maxf(room, 0.0)
 		next = minf(next, reachable) if mover.direction > 0 else maxf(next, reachable)
 	return next
 
@@ -71,8 +72,13 @@ static func skirmishing(mover: SkirmishSquad, squads: Array) -> bool:
 	if reach == 0:
 		return false
 	for other in squads:
-		if other.faction_id != mover.faction_id and can_engage(other) and not other.is_destroyed():
-			var gap := absf(other.front_distance - mover.front_distance)
+		if (
+			other.faction_id != mover.faction_id
+			and can_engage(other)
+			and not other.is_destroyed()
+			and SquadGeometry.overlaps(mover, other)
+		):
+			var gap := absf(SquadGeometry.gap(mover, other))
 			if gap <= reach * SkirmishSquad.RANK_DEPTH + EPSILON:
 				return true
 	return false
@@ -89,7 +95,7 @@ static func joinable(mover: SkirmishSquad, squads: Array) -> SkirmishSquad:
 			or not _ahead(mover, other)
 		):
 			continue
-		if (_stop_behind(mover, other) - mover.front_distance) * mover.direction <= EPSILON:
+		if SquadGeometry.gap(mover, other) - _depth(other) <= EPSILON:
 			return other
 	return null
 
@@ -127,12 +133,12 @@ static func _accepts(mover: SkirmishSquad, leader: SkirmishSquad) -> bool:
 
 
 static func _ahead(mover: SkirmishSquad, other: SkirmishSquad) -> bool:
-	return (other.front_distance - mover.front_distance) * mover.direction > EPSILON
+	return SquadGeometry.gap(mover, other) > EPSILON and SquadGeometry.overlaps(mover, other)
 
 
-## Where the mover's front stands when it is directly behind a friendly squad.
-static func _stop_behind(mover: SkirmishSquad, friend: SkirmishSquad) -> float:
-	return friend.front_distance - mover.direction * _back_rows(friend) * SkirmishSquad.RANK_DEPTH
+## How deep a squad is in tiles: a squad behind it stops that far behind its front.
+static func _depth(friend: SkirmishSquad) -> float:
+	return _back_rows(friend) * SkirmishSquad.RANK_DEPTH
 
 
 static func _back_rows(squad: SkirmishSquad) -> int:

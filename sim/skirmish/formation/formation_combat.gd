@@ -14,6 +14,7 @@ extends RefCounted
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
 
 const FLANK_BONUS := 1.5
 const EPSILON := 0.000001
@@ -72,7 +73,7 @@ static func damage(fighter: SkirmishUnit, is_flank: bool) -> int:
 ## The nearest enemy unit within the shooter's range (ties: one it overlaps laterally).
 static func _in_range(own: SkirmishSquad, shooter: SkirmishUnit, squads: Array) -> SkirmishUnit:
 	var reach := shooter.attack_range * SkirmishSquad.RANK_DEPTH + EPSILON
-	var here := own.unit_distance(shooter)
+	var here := SquadGeometry.unit_gap(own, own, shooter)
 	var span := own.lateral_span(shooter)
 	var best: SkirmishUnit = null
 	var best_key := Vector2(INF, INF)
@@ -84,7 +85,7 @@ static func _in_range(own: SkirmishSquad, shooter: SkirmishUnit, squads: Array) 
 		):
 			continue
 		for unit in other.living():
-			var gap: float = absf(other.unit_distance(unit) - here)
+			var gap: float = absf(SquadGeometry.unit_gap(own, other, unit) - here)
 			var target_span: Vector2 = other.lateral_span(unit)
 			var overlap := minf(span.y, target_span.y) - maxf(span.x, target_span.x)
 			var key := Vector2(gap, 0.0 if overlap > EPSILON else 1.0)
