@@ -42,9 +42,9 @@ static func step(
 	var side := heading.orthogonal()
 	var at: Vector2 = motion[3]
 	var refuge = _refuge(squad, at, [entry["along"], home, motion[1]], motion[4])
-	if refuge != null:  # it makes for the friend, as fast as it may turn aside
+	if refuge != null:  # it makes for the friend, turning aside only if it would miss it
 		var most := sin(deg_to_rad(FAN_DEGREES)) * full
-		aside = clampf((refuge - at).dot(side), -most, most)
+		aside = clampf(_short_of(refuge, at, side), -most, most)
 	var terrain = motion[2]
 	var open: bool = terrain == null or terrain.factor(unit.height, at, at + side * aside) > 0.0
 	if (refuge == null and absf(fanned + aside) > FAN_CELLS) or not open:
@@ -54,7 +54,7 @@ static func step(
 	entry["along"] = move_toward(entry["along"], home, sqrt(full * full - aside * aside))
 
 
-## The unit of a standing friendly formation nearest `at`, among those between the
+## The standing friendly formation whose unit is nearest `at`, among those between the
 ## router and home on the route - `along` is [its distance along it, home's, the fight
 ## seed] - or null if there is none. Equally near ones go by their draws (Decision 97).
 static func _refuge(squad: SkirmishSquad, at: Vector2, along: Array, squads: Array):
@@ -74,6 +74,56 @@ static func _refuge(squad: SkirmishSquad, at: Vector2, along: Array, squads: Arr
 				snappedf(there.distance_to(at), 0.000001), ScrumContest.draw(unit, along[2])
 			]
 			if ahead and (best == null or key < best_key):
-				best = there
+				best = friend
 				best_key = key
 	return best
+
+
+## How far across its route (along `side`) a router at `at` must turn aside to run into
+## the friend's ranks: 0 if it is already heading into them.
+static func _short_of(friend: SkirmishSquad, at: Vector2, side: Vector2) -> float:
+	var across: Array = friend.living().map(
+		func(u): return (ScrumReach.at(friend, u) - at).dot(side)
+	)
+	var lowest: float = across.min() - 0.5
+	var highest: float = across.max() + 0.5
+	return clampf(0.0, lowest, highest)
+
+
+## Routers in flight that share a cell step apart: the one nearer the cell's centre keeps
+## its line, a tie going to the units' draws, and each other steps across its route to
+## the nearest free cell beside it, as far as it may turn aside this tick - never back
+## towards the enemy. `motion` is [pace, fight seed]; `where` gives a router's point.
+static func part(routing: Array, motion: Array, where: Callable) -> void:
+	var fleeing := []  # [key, squad, unit, at]
+	for squad in routing:
+		for unit in squad.living():
+			if squad.fleeing[unit.id].get("caught", 0) > 0:
+				continue
+			var at: Vector2 = where.call(squad, unit.id)
+			var off := snappedf(at.distance_to(ScrumReach.centre(ScrumReach.cell(at))), 0.001)
+			fleeing.append([[off, ScrumContest.draw(unit, motion[1])], squad, unit, at])
+	fleeing.sort_custom(func(a, b): return a[0] < b[0])
+	var kept := {}  # cell -> where the router keeping it stands
+	for entry in fleeing:
+		var cell := ScrumReach.cell(entry[3])
+		if kept.has(cell):
+			_aside(entry, kept[cell], motion)
+		else:
+			kept[cell] = entry[3]
+
+
+## Steps the router across its route away from the one keeping its cell (towards the
+## side its draw picks if level), as far as it may turn aside this tick.
+static func _aside(entry: Array, keeper: Vector2, motion: Array) -> void:
+	var squad: SkirmishSquad = entry[1]
+	var unit: SkirmishUnit = entry[2]
+	var record: Dictionary = squad.fleeing[unit.id]
+	var heading: Vector2 = (
+		squad.route.heading_at(record["along"]) if squad.route != null else Vector2.RIGHT
+	)
+	var side := heading.orthogonal()
+	var lean := signf((entry[3] - keeper).dot(side))
+	if is_zero_approx(lean):
+		lean = 1.0 if ScrumContest.draw(unit, motion[1]) % 2 == 0 else -1.0
+	record["offset"] += side * lean * sin(deg_to_rad(FAN_DEGREES)) * unit.speed * motion[0]

@@ -15,6 +15,7 @@ const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
+const UnitShuffle = preload("res://sim/skirmish/formation/unit_shuffle.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 
 
@@ -53,14 +54,18 @@ static func _walk_back(squad: SkirmishSquad, foes: Dictionary, pace: float, seco
 		var entry: Dictionary = squad.loose[unit_id]
 		var unit: SkirmishUnit = entry["unit"]
 		var place := ScrumStance.anchor(squad, unit)
-		var foe_at = foes.get(unit_id)
 		var step := unit.speed * pace * FormationDiscipline.reform_pace(squad)
+		var facing: int = squad.facing if squad.stance.is_empty() else squad.stance["facing"]
+		var foe_at = foes.get(unit_id)
+		if foe_at == null:  # it takes its place the quicker way, arriving facing its squad's
+			foe_at = UnitShuffle.look(
+				unit, entry["at"], place, UnitMotion.of_facing(facing), step / seconds
+			)
 		var arrived: bool = entry["at"].distance_to(place) < 0.000001
 		if not arrived:  # a drilled retreat backs away facing the foe it touches
 			entry["at"] = UnitMotion.walk(unit, entry["at"], place, step, seconds, foe_at)
 		entry["next"] = entry["at"]
 		entry["goal"] = null
-		var facing: int = squad.facing if squad.stance.is_empty() else squad.stance["facing"]
 		var faced := arrived and UnitMotion.turn(unit, UnitMotion.of_facing(facing), seconds)
 		if squad.stance.is_empty() and faced:
 			squad.loose.erase(unit_id)  # in its place and facing the squad's way

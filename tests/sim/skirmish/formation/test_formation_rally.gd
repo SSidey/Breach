@@ -57,7 +57,7 @@ func _rout_past_a_friend(friend_morale: int) -> Array:
 
 
 func test_routers_are_caught_by_a_steady_friend_and_join_it() -> void:
-	var setup := _rout_past_a_friend(60)
+	var setup := _rout_past_a_friend(75)  # steady still, once its routers have crashed through
 	var friend: SkirmishSquad = setup[2]
 
 	var caught := _run(setup[0], 20)

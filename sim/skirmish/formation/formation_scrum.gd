@@ -29,6 +29,7 @@ const ScrumPaths = preload("res://sim/skirmish/formation/scrum_paths.gd")
 const ScrumEngage = preload("res://sim/skirmish/formation/scrum_engage.gd")
 const ScrumRegroup = preload("res://sim/skirmish/formation/scrum_regroup.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
+const UnitShuffle = preload("res://sim/skirmish/formation/unit_shuffle.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
 const FormationWithdraw = preload("res://sim/skirmish/formation/formation_withdraw.gd")
@@ -44,6 +45,7 @@ const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain
 const STALL_SECONDS := 2.0
 ## Walking within a fight is slowed by the crush (Decision 48; FormationShuffle.CROWDING).
 const CROWDING := 0.2
+const EPSILON := 0.000001
 
 
 ## One tick of the scrum. `cells_per_second` is the march pace at speed 1. Returns
@@ -147,7 +149,7 @@ static func _seek(ctx: Dictionary) -> void:
 		func(s): return s.state == SkirmishSquad.State.FIGHTING
 	)
 	for squad in fighting:  # in the crush, but at the march pace in a pursuit
-		_walk(squad, ctx["pace"] * (CROWDING if squad.pursuit.is_empty() else 1.0))
+		_walk(squad, ctx["pace"] * (CROWDING if squad.pursuit.is_empty() else 1.0), ctx["seconds"])
 	for squad in fighting:  # after everyone has moved, so a unit stepped up to is seen
 		_face(squad, ctx)
 
@@ -194,7 +196,7 @@ static func _may_seek(squad: SkirmishSquad, unit: SkirmishUnit) -> bool:
 
 ## Fighting units walk a step to their goal, or back towards their place if they have none
 ## and touch no one.
-static func _walk(squad: SkirmishSquad, pace: float) -> void:
+static func _walk(squad: SkirmishSquad, pace: float, seconds: float) -> void:
 	for unit in squad.living():
 		var entry: Dictionary = squad.loose[unit.id]
 		var full: float = unit.speed * pace
@@ -204,23 +206,51 @@ static func _walk(squad: SkirmishSquad, pace: float) -> void:
 			entry["at"] = UnitMotion.move(unit, entry["at"], entry["next"], full)
 		elif not entry.get("touch", false):
 			var place := ScrumStance.anchor(squad, unit)
-			entry["toward"] = place
+			var facing: int = squad.stance.get("facing", squad.facing)
+			var speed := full / seconds
+			entry["toward"] = UnitShuffle.look(
+				unit, entry["at"], place, UnitMotion.of_facing(facing), speed
+			)
 			entry["at"] = UnitMotion.move(unit, entry["at"], place, full)
 			entry["next"] = entry["at"]
 
 
 ## Each unit turns once a tick, at its turn rate: towards the nearest foe it touches, or
-## else the way it walked.
+## else so as to arrive facing what it will do - its foe at the cell it seeks, or its
+## squad's way at its place - the quicker way (UnitShuffle).
 static func _face(squad: SkirmishSquad, ctx: Dictionary) -> void:
 	var foes := _foe_units(squad, ctx["squads"])
 	for unit in squad.living():
 		var entry: Dictionary = squad.loose[unit.id]
 		var look = ScrumBlows.nearest_touching(squad, unit, foes, ctx["seed"])
+		if look == null and entry["goal"] != null:
+			look = _seeking_look(unit, entry, foes, ctx)
 		if look == null:
 			look = entry.get("toward")
 		if look != null:
 			var wanted := UnitMotion.bearing_to(entry["at"], look, unit.bearing)
 			UnitMotion.turn(unit, wanted, ctx["seconds"])
+
+
+## Where a unit seeking `entry`'s goal cell looks: so as to arrive facing the foe nearest
+## that cell, the quicker way (UnitShuffle); ties go to the foes' draws.
+static func _seeking_look(unit: SkirmishUnit, entry: Dictionary, foes: Array, ctx: Dictionary):
+	var goal := ScrumReach.centre(entry["goal"])
+	var best = null
+	var best_key := []
+	for foe in foes:
+		var there := ScrumReach.at(foe[1], foe[0])
+		var key := [
+			snappedf(there.distance_to(goal), EPSILON), ScrumContest.draw(foe[0], ctx["seed"])
+		]
+		if best == null or key < best_key:
+			best = there
+			best_key = key
+	if best == null:
+		return null
+	var speed: float = unit.speed * ctx["pace"] * CROWDING / ctx["seconds"]
+	var bearing := UnitMotion.bearing_to(goal, best, unit.bearing)
+	return UnitShuffle.look(unit, entry["at"], goal, bearing, speed)
 
 
 ## Releases fights where nobody on either side has touched or sought a foe for a while.

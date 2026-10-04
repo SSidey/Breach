@@ -87,6 +87,7 @@ static func step(
 		_regroup(squad, squads, tick, tick_seconds, events, fight_seed)
 	if one_per_cell:
 		RoutSettle.settle(routing, squads, pace, where, fight_seed)
+		RoutFlight.part(routing, [pace, fight_seed], where)
 	for squad in breaking:
 		_break(squad, squads, tick, events, terrain)
 	return events
