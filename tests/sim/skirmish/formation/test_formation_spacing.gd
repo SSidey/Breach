@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## One unit to a cell, and one call on a threat, per spec 27 round 9 (the round 8 feel
-## test): routers caught by a steady friend come to rest in free cells, not inside it;
+## test): routers caught by a friend come to rest in free cells behind it, not inside it;
 ## units resting in one cell in the scrum step apart; and a line that has turned to meet
 ## one wave holds that call while it presses, rather than swinging between two.
 
@@ -45,15 +45,17 @@ func test_routers_caught_by_a_friend_rest_in_free_cells() -> void:
 	for _i in range(5):
 		sim.step()
 	mine.morale = 0
-	for _i in range(25):
+	for _i in range(45):  # they run through the friend to rest behind it
 		sim.step()
 
 	var friend_cells := {}
 	for unit in friend.living():
 		friend_cells[_cell(unit.position)] = true
 	var resting := {}
+	var front: float = friend.living().map(func(u): return u.position.x).min()
 	for unit in mine.living():
-		if mine.fleeing[unit.id].get("caught", 0) > 5:
+		if mine.fleeing[unit.id].get("caught", 0) > 0:
+			assert_float(FormationRout.where(mine, unit.id).x).is_less_equal(front)  # behind it
 			var spot := _cell(FormationRout.where(mine, unit.id))
 			assert_bool(friend_cells.has(spot)).is_false()
 			assert_bool(resting.has(spot)).is_false()
