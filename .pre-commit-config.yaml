@@ -43,6 +43,13 @@ repos:
         files: \.gd$
         exclude: ^addons/
 
+      - id: check-id-order
+        name: order-independent-simulation (ids name, never rank)
+        entry: python3 ci/godot/scripts/check_id_order.py
+        language: system
+        pass_filenames: true
+        files: ^sim/.*\.gd$
+
       - id: check-isp
         name: isp-method-count / isp-stub-detection
         entry: python3 ci/godot/scripts/check_isp.py

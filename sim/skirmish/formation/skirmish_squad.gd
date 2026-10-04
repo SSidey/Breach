@@ -5,7 +5,7 @@ extends RefCounted
 ## block at its slowest unit's speed, and takes orders as a whole. Only the foremost unit
 ## of each column fights; when one falls the ranks behind step up (compact()).
 
-enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DESTROYED, TURNING }
+enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DESTROYED, TURNING, ROUTING }
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
@@ -42,8 +42,46 @@ var about_facing := false
 var width: int
 var order: SkirmishUnit.Order = SkirmishUnit.Order.ADVANCE
 var state: State = State.MOVING
-## The squad this one is fighting; 0 = none.
+## The squad this one is fighting with its front; 0 = none.
 var engaged_with: int = 0
+## Hostile squads fighting it on its other edges (Decision 78): SquadEdges edge ->
+## {"foe": squad id, "since": tick the contact began}.
+var flank_contacts := {}
+## Its units out on wings round an enemy line's end (FormationWings, Decision 81).
+var wings := {}
+## The scrum (FormationScrum, Decision 88): its units' places while it fights (unit id ->
+## {"at", "next", "goal"}), the line it re-faced to {"anchor", "facing"}, the tick its fight
+## began (-1: none) and ticks with nobody able to strike.
+var loose := {}
+var stance := {}
+var fight_since := -1
+## Pursuit (ScrumPursuit, Decision 95): whether it is ordered to pursue a retreating enemy,
+## and its units out chasing one (unit id -> {"unit", "foe", "until"}).
+var pursues := false
+var chasers := {}
+## A pursuit under way (FormationPursuit): the enemy, the post it left, and how it held it.
+var pursuit := {}
+var stall_ticks := 0
+## What it is doing (FormationManoeuvre.Kind, Decisions 94 and 99): 0 combat, 1
+## withdrawing, 2 its route, 3 re-forming, 4 the player's order; it marches only on 4.
+var manoeuvre := 4
+## A withdrawal under way (FormationWithdraw): ticks it has felt safe; empty when none.
+var withdraw := {}
+## A hold-until order (FormationStaging, Decision 87); empty when it has none.
+var staging := {}
+## Its will to fight, 0 to 100 (FormationMorale, Decision 82); -1 until first read.
+var morale := -1
+## Routing (FormationRout): each fleeing unit's place, and ticks with no enemy near.
+var fleeing := {}
+var rally_ticks := 0
+## Halted by ground it can't cross (FormationMarch.pace); reported once.
+var blocked := false
+## Narrowed through a gap (FormationNarrowing): its painted places (unit id -> [rank,
+## column]), width and shift, and ticks left re-forming.
+var painted := {}
+var painted_width := 0
+var painted_shift := 0.0
+var narrow_ticks := 0
 var wait_ticks: int = 0
 ## Re-forming after a reinforcement, and the swaps under way (Decision 46, FormationShuffle):
 ## [[mover, passed units, ticks left, ticks in all], ...].

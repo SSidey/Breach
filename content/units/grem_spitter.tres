@@ -14,4 +14,6 @@ speed = 1.0
 build_seconds = 3.0
 preferred_position = 2
 position_priority = 1
+turn_rate = 720.0
+backward_pace = 0.6
 weapons = Array[ExtResource("2_ceb13")]([ExtResource("3_0n6f2"), ExtResource("4_eq3xv"), ExtResource("5_v4v6r")])

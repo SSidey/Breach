@@ -17,6 +17,8 @@ yet. Every script here was run against a deliberately broken case before being t
 | `srp-size` (function-length half) | `ci/godot/scripts/check_function_length.py` | pre-commit |
 | `dip-direction` | `ci/godot/scripts/check_dependency_direction.py` | pre-commit |
 | `naming-grep-discoverable` | `ci/godot/scripts/check_generic_naming.py` | pre-commit |
+| `order-independent-simulation` (static half) | `ci/godot/scripts/check_id_order.py` | pre-commit and CI, on `sim/` |
+| `order-independent-simulation` (trial half) | swapped-spawn-order trial, per `.claude/skills/design-check` | procedural, on any change to simulation outcomes |
 | `isp-method-count` / `isp-stub-detection` | `ci/godot/scripts/check_isp.py` | pre-commit and CI |
 | `no-cross-cutting-helper-violation` | `ci/godot/scripts/check_helper_promotion.py` | pre-commit and CI |
 | `ocp-shotgun-surgery` | `ci/godot/scripts/check_ocp_shotgun_surgery.py <base-ref>` | CI only — needs a diff against a real base ref, not meaningful on a bare working tree |
@@ -40,6 +42,17 @@ real, not an oversight.
 
 ## Heuristic limits (stated plainly, not hidden)
 
+- `check_id_order.py` — flags an id compared with `<`/`>`, arithmetic on an id, an id
+  inside an array-literal key (unless the line salts a seeded draw: `hash(`,
+  `BattleRolls.`), and `ids.sort()`. Cannot see a tie kept by list order (`if key <
+  best_key` keeping the first of equals, where the list is in spawn order), nor a
+  sequential update where the first squad processed changes what the second sees.
+  The backstops for both are the swapped-spawn-order trial and the reversed-lists tests
+  (`tests/sim/skirmish/formation/test_formation_list_order.gd` and
+  `test_formation_rout_order.gd`): they step a battle twice, the second time with every
+  squad and unit list reversed (same ids, same seed), and require the same state each
+  tick, which catches a list-order tie the trial's noise would hide. A line may be allowed with
+  `# id-order-ok: <reason>`, reviewed like any other exception.
 - `check_dependency_direction.py` — textual scan for `preload(`/`load(`/`extends`
   references from `sim/` into `presentation/`, plus a fixed list of Godot's common
   Node-family base types to catch a `sim/` file directly `extends`-ing an engine scene

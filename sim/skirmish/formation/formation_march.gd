@@ -10,6 +10,9 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
+const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
+const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 
@@ -18,6 +21,36 @@ static func length(squad: SkirmishSquad, fallback: float) -> float:
 	if squad.route == null:
 		return fallback
 	return squad.route.length_cells() / MapLayoutDef.CELLS_PER_TILE
+
+
+## How far the squad moves this tick on `terrain` (Decision 85): `step` at the pace of the
+## worst cell its front rank steps into. Where it can't go at all it halts, reported once
+## as "blocked".
+static func pace(
+	squad: SkirmishSquad, terrain: FormationTerrain, step: float, tick: int, events: Array
+) -> float:
+	if terrain == null:
+		return step
+	var ahead := SquadFrame.forward(squad.facing)
+	var worst := 1.0
+	for unit in squad.fighters():
+		worst = minf(worst, terrain.factor(unit.height, unit.position, unit.position + ahead))
+	if worst <= 0.0 and not squad.blocked:
+		events.append(FormationEvents.squad_event("blocked", tick, squad))
+	squad.blocked = worst <= 0.0
+	return step * worst
+
+
+## Where the squad's front gets moving `delta` tiles along its route of `route_end` tiles:
+## never past either end, nor past the point its order takes it to.
+static func toward(squad: SkirmishSquad, delta: float, route_end: float) -> float:
+	var next := clampf(squad.front_distance + delta, 0.0, route_end)
+	var enemy_end := route_end if is_zero_approx(squad.home_distance) else 0.0
+	var target := squad.home_distance if squad.order == SkirmishUnit.Order.RETREAT else enemy_end
+	var before := signf(target - squad.front_distance)
+	if before != 0.0 and signf(target - next) != before:
+		return target  # it would pass its target: it stops there
+	return next
 
 
 ## Which way the squad's order takes it along its route: +1 up it, -1 down it. Advancing
@@ -77,3 +110,11 @@ static func sync_units(squads: Array) -> void:
 				+ SquadFrame.right(entry.facing) * swapping.y
 			)
 			unit.position = rect.get_center() + shift
+			if entry.wings.has(unit.id):
+				unit.position = entry.wings[unit.id]["at"]
+			if entry.loose.has(unit.id):
+				unit.position = entry.loose[unit.id]["at"]
+			else:
+				unit.bearing = UnitMotion.of_facing(entry.facing)
+			if entry.fleeing.has(unit.id):
+				unit.position = FormationRout.where(entry, unit.id)

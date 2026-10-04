@@ -22,6 +22,16 @@ static func make(
 	unit.footprint_width = unit_def.footprint_width
 	unit.preferred_position = unit_def.preferred_position
 	unit.position_priority = unit_def.position_priority
+	unit.detection = unit_def.detection_range
+	unit.courage = unit_def.courage
+	unit.leadership = unit_def.leadership
+	unit.tactics = unit_def.tactics.duplicate()
+	unit.height = unit_def.height
+	unit.initiative = unit_def.initiative
+	unit.discipline = unit_def.discipline
+	unit.turn_rate = unit_def.turn_rate
+	unit.backward_pace = unit_def.backward_pace
+	unit.definition = unit_def
 	var ranged := unit_def.ranged_weapon()
 	if ranged != null:
 		unit.attack_range = ranged.attack_range

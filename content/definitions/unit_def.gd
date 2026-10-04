@@ -21,6 +21,29 @@ const MAX_FOOTPRINT := 8
 ## forward place first). Reinforcements re-form by these (Decision 46).
 @export var preferred_position: Position = Position.FRONT
 @export var position_priority: int = 0
+## How far it detects others, in cells (Decision 87; placeholder). Line of sight and light
+## come with terrain.
+@export var detection_range: float = 40.0
+## Its will to fight (Decision 82): a formation's morale ceiling is its units' mean courage.
+@export var courage: int = 60
+## How much it steadies a formation it leads (Decision 81); 0 for rank and file.
+@export var leadership: int = 0
+## How it leads (Decision 81), e.g. "coordinated": times a waiting wave's departure from
+## what it sees (Decision 87).
+@export var tactics: Array[String] = []
+## How tall it stands, in cells (Decision 85): water a quarter of this deep slows it.
+@export var height: float = 1.0
+## How quickly it acts (Decision 88; placeholder, equal for all until spec 28): it wins a
+## contested cell in the scrum over a slower-witted unit arriving at the same time.
+@export var initiative: int = 10
+## How drilled it is (Decision 92; placeholder: rank and file 30, drilled 60): a
+## formation's mean, bolstered by its leader, decides whether it re-forms as a whole to meet
+## a flank and how fast it re-forms.
+@export var discipline: int = 30
+## How it turns and backs away (Decision 95; placeholders until spec 28): degrees a second
+## it turns, and the share of its speed it makes moving straight back (sideways is between).
+@export var turn_rate: float = 450.0
+@export var backward_pace: float = 0.4
 ## What it fights with (Decision 47). Without weapons it strikes once for `dmg`.
 @export var weapons: Array[WeaponDef] = []
 
