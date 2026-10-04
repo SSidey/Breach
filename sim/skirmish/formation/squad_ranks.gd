@@ -12,8 +12,8 @@ static func close(squad: SkirmishSquad) -> void:
 	var order := squad.living()
 	order.sort_custom(
 		func(a, b):
-			var ka := [a.preferred_position, a.rank, a.column, a.id]
-			var kb := [b.preferred_position, b.rank, b.column, b.id]
+			var ka := [a.preferred_position, a.rank, a.column]  # a place holds one unit
+			var kb := [b.preferred_position, b.rank, b.column]
 			return ka < kb
 	)
 	var rows := _rows(order, squad.width)

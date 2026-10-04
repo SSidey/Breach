@@ -5,7 +5,7 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tools/formation_trials.gd -- \
 ##       [scenario=all|<name>] [runs=50] [band=0.25] [flank_bonus=1.5] [captain] \
-##       [first_seed=1]
+##       [first_seed=1] [swap]
 ##
 ## Scenarios: mirror_headon, mirror_flank, field_a, field_b, field_b_waits, field_together.
 
@@ -17,7 +17,11 @@ func _init() -> void:
 	for arg in OS.get_cmdline_user_args():
 		var parts: PackedStringArray = arg.split("=", true, 1)
 		args[parts[0]] = parts[1] if parts.size() > 1 else "true"
-	var options := {"captain": args.has("captain"), "first_seed": int(args.get("first_seed", 1))}
+	var options := {
+		"captain": args.has("captain"),
+		"swap": args.has("swap"),
+		"first_seed": int(args.get("first_seed", 1)),
+	}
 	for key in ["band", "flank_bonus"]:
 		if args.has(key):
 			options[key] = float(args[key])

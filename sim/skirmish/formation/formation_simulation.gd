@@ -165,9 +165,12 @@ func step() -> Array:
 
 
 func _apply_orders(events: Array) -> void:
-	var ids := _pending_orders.keys()
-	ids.sort()
-	for squad_id in ids:
+	var fighting := {}  # before any lands, so orders given together act together
+	for squad_id in _pending_orders:
+		var given := squad(squad_id)
+		var locked := given != null and given.engaged_with != 0
+		fighting[squad_id] = locked or (given != null and not given.flank_contacts.is_empty())
+	for squad_id in _pending_orders:
 		var target := squad(squad_id)
 		if target == null or target.state == SkirmishSquad.State.DESTROYED:
 			continue
@@ -176,8 +179,7 @@ func _apply_orders(events: Array) -> void:
 		events.append(
 			FormationEvents.squad_event("order_applied", _tick, target, {"order": order_name})
 		)
-		var fighting := target.engaged_with != 0 or not target.flank_contacts.is_empty()
-		if target.order == SkirmishUnit.Order.RETREAT and seek_contact and fighting:
+		if target.order == SkirmishUnit.Order.RETREAT and seek_contact and fighting[squad_id]:
 			events.append_array(
 				ScrumPursuit.retreat(target, _squads, _tick, fight_seed, tick_seconds)
 			)
@@ -280,7 +282,7 @@ func _fight(events: Array) -> void:
 			unit.target_id = 0
 	var interval := _attack_interval_ticks()
 	var mode := FormationMelee.SCRUM if seek_contact else int(walk_wings)
-	var blows := FormationMelee.blows(_squads, interval, _tick, mode, terrain)
+	var blows := FormationMelee.blows(_squads, interval, _tick, mode, fight_seed, terrain)
 	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks())
 	for shot in shots:
 		shot[2] = BattleRolls.damage(shot[2], damage_band, fight_seed, [_tick, shot[0].id, 1])

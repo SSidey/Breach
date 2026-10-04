@@ -92,9 +92,10 @@ func step() -> Array:
 
 
 func _apply_orders(events: Array) -> void:
-	var ids := _pending_orders.keys()
-	ids.sort()
-	for unit_id in ids:
+	var engaged := {}  # before any lands, so orders given together act together
+	for unit_id in _pending_orders:
+		engaged[unit_id] = unit(unit_id) != null and unit(unit_id).target_id != 0
+	for unit_id in _pending_orders:
 		var target := unit(unit_id)
 		if target == null or not target.is_alive():
 			continue
@@ -102,7 +103,7 @@ func _apply_orders(events: Array) -> void:
 		events.append(
 			_event("order_applied", target, {"order": SkirmishUnit.Order.keys()[target.order]})
 		)
-		if target.order == SkirmishUnit.Order.RETREAT and target.target_id != 0:
+		if target.order == SkirmishUnit.Order.RETREAT and engaged[unit_id]:
 			_release(target)
 			events.append(_event("disengaged", target))
 	_pending_orders.clear()

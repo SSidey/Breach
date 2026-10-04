@@ -24,7 +24,13 @@ existing Decision, only append.
 | <option> | <reason> |
 
 **Consequences:** <what this commits future work to; what it forecloses>
+
+**Rules over cases:** general: <the rule> | special case: <the owner's reason, and who gave it>
+**Order:** <why no outcome depends on identifiers or creation order; trial numbers if any>
 ```
+
+The last two lines answer `principles/rules-over-cases.md`; an agent never writes a
+special-case reason the owner didn't give.
 
 ## Decision that supersedes a prior one
 
@@ -44,6 +50,9 @@ existing Decision, only append.
 | <option> | <reason> |
 
 **Consequences:** <what changes going forward; what, if anything, survives from Decision N>
+
+**Rules over cases:** general: <the rule> | special case: <the owner's reason, and who gave it>
+**Order:** <why no outcome depends on identifiers or creation order; trial numbers if any>
 ```
 
 ## Required edit to the superseded decision's heading

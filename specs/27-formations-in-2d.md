@@ -448,7 +448,7 @@ From the round 8 feel test:
     mirrors, and stepping units in contact aside also cost tempo. Fixed, the head-on
     mirror over 751 seeds in each order is first-spawned 374, second 377.
 
-Also from the round 9 feel test (Decision 98):
+Also from the round 9 feel test, and the two principles the user set (Decisions 96–98):
 - **Routers form up with the friend they hit** (Decision 98). Two kingdom routers ran
   through the reserve and home (field, A and B together, seeds 2 and 6) for two reasons.
   The routers' own crushes shook the reserve, and only a steady formation caught
@@ -459,3 +459,15 @@ Also from the round 9 feel test (Decision 98):
     the friend itself routs.
   - The router joins after the friend has been steady for 3 s.
   - In both seeds every router now either rallies or falls.
+- **No ids in outcomes** (Decision 97). The remaining id tie-breaks are gone:
+  - Target picking goes to a seeded draw.
+  - Narrowing and wing order go to rank and column in the squad's frame.
+  - Closing ranks needs no tie-break.
+  - The contest draw is 62 bits wide instead of using an id fallback.
+  - Orders given on the same tick are judged from one snapshot. Before, two sides
+    ordering a retreat together left the second "not fighting" and spared it the
+    retreat's cost.
+  - `check_id_order.py` (pre-commit) catches new id tie-breaks, and the trials tool's
+    `swap` option runs a mirror the other way round.
+  - Head-on mirror over 400 seeds in each order: first-spawned 383, second 375. By
+    side: player 386, kingdom 372.

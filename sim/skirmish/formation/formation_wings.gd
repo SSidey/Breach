@@ -121,7 +121,9 @@ static func _set_out(squad: SkirmishSquad, foe: SkirmishSquad) -> void:
 			waiting.append([line.x - span.y, unit, -1])
 		elif span.x >= line.y - EPSILON:
 			waiting.append([span.x - line.y, unit, 1])
-	waiting.sort_custom(func(a, b): return a[0] < b[0] or (a[0] == b[0] and a[1].id < b[1].id))
+	waiting.sort_custom(
+		func(a, b): return [a[0], a[1].rank, a[1].column] < [b[0], b[1].rank, b[1].column]
+	)
 	for entry in waiting:
 		var side: int = entry[2]
 		var slot := _free_slot(squad, foe.id, side, depth)
