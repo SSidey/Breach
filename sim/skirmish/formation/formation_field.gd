@@ -54,6 +54,8 @@ const HILL := Rect2(92, 16, 20, 32)
 const STREAM_DEPTH := 1.2
 const FORD_DEPTH := 0.4
 const HILL_QUARTERS := 8
+## Each blow's damage rolls within this band (Decision 93; placeholder until spec 28).
+const DAMAGE_BAND := 0.25
 
 var tick_seconds: float
 var sim: FormationSimulation
@@ -82,20 +84,23 @@ static func contact_cells() -> Dictionary:
 
 ## `leader_unit`, if given, leads route B's wave from its second rank; `line_captain`, if
 ## given, leads the kingdom's line from its second rank, so it turns to meet a flank it sees
-## coming (Decision 88).
+## coming (Decision 88). `battle_seed` seeds the battle's rolls (Decision 93).
 func _init(
 	seconds_per_tick: float,
 	wave_unit: UnitDef,
 	builders: int,
 	kingdom_unit: UnitDef,
 	leader_unit: UnitDef = null,
-	line_captain: UnitDef = null
+	line_captain: UnitDef = null,
+	battle_seed: int = 0
 ) -> void:
 	tick_seconds = seconds_per_tick
 	_wave_unit = wave_unit
 	sim = FormationSimulation.new(float(SIZE.x) / MapLayoutDef.CELLS_PER_TILE, seconds_per_tick)
 	sim.combat_width = WAVE_WIDTH
 	sim.seek_contact = true
+	sim.fight_seed = battle_seed
+	sim.damage_band = DAMAGE_BAND
 	sim.terrain = _ground()
 	var points := route_points()
 	for key in points:

@@ -19,6 +19,9 @@ const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
 const FLANK_BONUS := 1.5
 const EPSILON := 0.000001
 
+## The flank bonus in use: FLANK_BONUS unless a tuning trial overrides it (BattleTrials).
+static var flank_bonus := FLANK_BONUS
+
 
 ## [target, is_flank], or [] when the enemy has no fighters.
 static func pick_target(
@@ -69,7 +72,7 @@ static func ranged_blows(squads: Array, interval_ticks: int) -> Array:
 
 
 static func damage(fighter: SkirmishUnit, is_flank: bool) -> int:
-	return roundi(fighter.dmg * (FLANK_BONUS if is_flank else 1.0))
+	return roundi(fighter.dmg * (flank_bonus if is_flank else 1.0))
 
 
 ## The nearest enemy unit within the shooter's range (ties: one it overlaps laterally).
