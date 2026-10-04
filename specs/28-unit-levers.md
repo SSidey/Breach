@@ -34,6 +34,8 @@ is done.
    (Decision 88).
 8. **Initiative and contests:** initiative as a stat, the contest die size (a unit's
    seeded variance), and whether initiative also orders blows within a tick (Decision 88).
+   Formation initiative from leadership (deciding) and discipline (carrying out), and
+   discipline as a unit stat (Decision 92).
 9. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
    wave painter shows it.
 
