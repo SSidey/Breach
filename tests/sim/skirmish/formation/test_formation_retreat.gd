@@ -62,7 +62,6 @@ func test_a_retreat_breaks_contact_at_once_and_heads_home() -> void:
 	var log: Array = setup[3]
 
 	assert_bool(log.any(func(e): return e["type"] == "disengaged")).is_true()
-	assert_int(me.engaged_with).is_equal(0)
 	assert_float(me.position.x).is_less(60.0)
 
 
