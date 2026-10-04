@@ -33,6 +33,7 @@ const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
+const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
@@ -72,6 +73,7 @@ static func step(
 	}
 	_seek(ctx)
 	_regroup(squads, ctx["pace"], tick_seconds)
+	ScrumPursuit.step(squads, tick, cells_per_second, tick_seconds)
 	_stall(squads, ctx["active"], tick, tick_seconds, events)
 	return events
 
@@ -225,14 +227,21 @@ static func _regroup(squads: Array, pace: float, seconds: float) -> void:
 			continue
 		if squad.state == SkirmishSquad.State.MOVING and not squad.loose.is_empty():
 			squad.state = SkirmishSquad.State.HOLDING  # it stands while its units regroup
+		var withdrawing: bool = (
+			squad.order == SkirmishUnit.Order.RETREAT and FormationDiscipline.meets_threats(squad)
+		)
+		var hostiles: Array = ScrumBlows.hostile_units(squad, squads) if withdrawing else []
 		for unit_id in squad.loose.keys():
+			if ScrumPursuit.chasing(squad, unit_id):
+				continue
 			var entry: Dictionary = squad.loose[unit_id]
 			var unit: SkirmishUnit = entry["unit"]
 			var place := ScrumStance.anchor(squad, unit)
+			var foe_at = ScrumBlows.nearest_touching(squad, unit, hostiles) if withdrawing else null
 			var step := unit.speed * pace * FormationDiscipline.reform_pace(squad)
 			var arrived: bool = entry["at"].distance_to(place) < 0.000001
-			if not arrived:
-				entry["at"] = UnitMotion.walk(unit, entry["at"], place, step, seconds)
+			if not arrived:  # a drilled retreat backs away facing the foe it touches
+				entry["at"] = UnitMotion.walk(unit, entry["at"], place, step, seconds, foe_at)
 			entry["next"] = entry["at"]
 			entry["goal"] = null
 			var facing: int = squad.facing if squad.stance.is_empty() else squad.stance["facing"]

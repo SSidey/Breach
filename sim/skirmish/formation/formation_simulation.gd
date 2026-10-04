@@ -33,6 +33,7 @@ const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd"
 const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
 const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
+const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
 const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
@@ -173,7 +174,12 @@ func _apply_orders(events: Array) -> void:
 		events.append(
 			FormationEvents.squad_event("order_applied", _tick, target, {"order": order_name})
 		)
-		if target.order == SkirmishUnit.Order.RETREAT and target.engaged_with != 0:
+		var fighting := target.engaged_with != 0 or not target.flank_contacts.is_empty()
+		if target.order == SkirmishUnit.Order.RETREAT and seek_contact and fighting:
+			events.append_array(
+				ScrumPursuit.retreat(target, _squads, _tick, fight_seed, tick_seconds)
+			)
+		elif target.order == SkirmishUnit.Order.RETREAT and target.engaged_with != 0:
 			FormationLocks.release(target, _squads)
 			events.append(FormationEvents.squad_event("disengaged", _tick, target))
 	_pending_orders.clear()
