@@ -346,14 +346,17 @@ breaks:
 Decision 94, raised by the round 6 feel test: a disciplined B re-forming at its corner as
 A engaged took the line (facing A, so "towards" B) for a threat closing in, turned to
 meet it and stayed there, off its route.
-- `FormationIntent`, checked every tick (the user: 2 s "feels like quite a long time"): a
-  formation ordered to march that stood still this tick for no order of the player's (not
-  holding, staged, waiting, fighting, blocked or done) and isn't mid-manoeuvre
-  (re-forming after a turn, narrowing at a gap, receiving an enemy still closing in, or
-  skirmishing at range) moves to combat if it detects an enemy within 12 cells, both
-  sides locking together; otherwise it lets go of its re-formed line, returns to its
-  route, re-forms and marches on.
-- A re-formed line is held while its enemy is near only under a hold order; a marching
-  formation keeps it only while the enemy is still closing in.
+- `FormationManoeuvre`: every formation always has a current manoeuvre, the
+  highest-priority one that applies, settled each tick (the user: no list of exceptions,
+  "an army should always have a current manoeuvre"):
+  0. **combat:** locked in melee, front or flank, or skirmishing with an enemy in range;
+     contact mid-re-form goes straight here
+  1. **route** and 2. **re-form:** its units walk back to their places on its route at
+     its discipline's pace - after a fight, a turn, narrowing at a gap (now a re-form, not
+     a fixed 1 s hold), or to face a threat
+  3. **order:** march, hold, retreat or wait; it marches only on this
+- Facing a threat is a re-form held only while that enemy keeps closing in (or, under a
+  hold order, is still near); any formation lets go of it otherwise, so a wave re-forms
+  and marches on rather than standing off its route.
 - Open: whether a retreat order can pull a formation out of melee (today it disengages at
   once).

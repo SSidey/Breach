@@ -56,9 +56,9 @@ var loose := {}
 var stance := {}
 var fight_since := -1
 var stall_ticks := 0
-## Where its front stood last tick: still, though ordered to march, it acts at once
-## (FormationIntent, Decision 94).
-var last_front := -1.0
+## What it is doing (FormationManoeuvre.Kind, Decision 94): 0 combat, 1 its route, 2
+## re-forming, 3 the player's order; it marches only on 3.
+var manoeuvre := 3
 ## A hold-until order (FormationStaging, Decision 87); empty when it has none.
 var staging := {}
 ## Its will to fight, 0 to 100 (FormationMorale, Decision 82); -1 until first read.
