@@ -20,8 +20,19 @@ static func length(squad: SkirmishSquad, fallback: float) -> float:
 	return squad.route.length_cells() / MapLayoutDef.CELLS_PER_TILE
 
 
-## Turns the squad to the facing nearest its route's heading at its front (round 1 turns
-## at once; turning takes time from round 1's part 3).
+## Which way the squad's order takes it along its route: +1 up it, -1 down it. Advancing
+## heads for the end away from home, retreating for home.
+static func travel_sign(squad: SkirmishSquad, route_end: float) -> int:
+	var enemy_end := route_end if is_zero_approx(squad.home_distance) else 0.0
+	var advancing := squad.order == SkirmishUnit.Order.ADVANCE
+	var target := enemy_end if advancing else squad.home_distance
+	if is_equal_approx(target, squad.front_distance):
+		return squad.direction
+	return 1 if target > squad.front_distance else -1
+
+
+## Turns the squad at once to the facing nearest its route's heading at its front: where it
+## is placed (FormationTurning times turns on the march).
 static func face(squad: SkirmishSquad) -> void:
 	if squad.route == null:
 		return
@@ -31,7 +42,7 @@ static func face(squad: SkirmishSquad) -> void:
 
 ## Arrival at the enemy's end (the fort is immune in the feel test), or a retreat home.
 static func check_ends(mover: SkirmishSquad, route_end: float, tick: int, events: Array) -> void:
-	var enemy_end := route_end if mover.direction > 0 else 0.0
+	var enemy_end := route_end if is_zero_approx(mover.home_distance) else 0.0
 	if (
 		mover.order == SkirmishUnit.Order.ADVANCE
 		and is_equal_approx(mover.front_distance, enemy_end)

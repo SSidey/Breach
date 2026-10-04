@@ -5,7 +5,7 @@ extends RefCounted
 ## block at its slowest unit's speed, and takes orders as a whole. Only the foremost unit
 ## of each column fights; when one falls the ranks behind step up (compact()).
 
-enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DESTROYED }
+enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DESTROYED, TURNING }
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
@@ -17,7 +17,8 @@ const RANK_DEPTH := 1.0 / MapLayoutDef.CELLS_PER_TILE
 
 var id: int
 var faction_id: String
-## +1 advances toward the kingdom's end, -1 toward the player's.
+## Which way the squad's front points along its route: +1 up it, -1 down it. An
+## about-face flips it.
 var direction: int
 var home_distance: float
 ## Tiles along the route; setting it moves `position` with it.
@@ -33,6 +34,11 @@ var route: FormationRoute = null:
 ## Which way the squad faces (SquadFrame), and the centre of its front edge in cells.
 var facing: int = SquadFrame.EAST
 var position := Vector2.ZERO
+## A turn under way (FormationTurning): the facing it turns to, ticks left, and whether it
+## is an about-face (which reverses the ranks when it ends).
+var turn_to: int = SquadFrame.EAST
+var turn_ticks := 0
+var about_facing := false
 var width: int
 var order: SkirmishUnit.Order = SkirmishUnit.Order.ADVANCE
 var state: State = State.MOVING
