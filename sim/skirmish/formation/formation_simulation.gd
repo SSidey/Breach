@@ -31,6 +31,8 @@ const FormationTurning = preload("res://sim/skirmish/formation/formation_turning
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
+const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.gd")
+const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
 const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
 const FormationMelee = preload("res://sim/skirmish/formation/formation_melee.gd")
@@ -60,10 +62,12 @@ var tick_seconds: float
 var combat_width := 0
 ## Overlapping front units walk round an enemy line's end (Decision 81) rather than wrap.
 var walk_wings := false
-## Both sides' units seek contact in a fight (Decision 88), in place of edges and wings;
-## fight_seed seeds their contests for cells.
+## Both sides' units seek contact in a fight (Decision 88), in place of edges and wings.
 var seek_contact := false
+## The battle seed (Decision 93): every random draw comes from it - contests for cells,
+## and each blow's damage, rolled within damage_band of its value (0: no roll).
 var fight_seed := 0
+var damage_band := 0.0
 ## The ground (Decision 85); null is open, level ground everywhere.
 var terrain: FormationTerrain = null
 
@@ -145,7 +149,7 @@ func step() -> Array:
 		var scrum := FormationScrum.step(_squads, _tick, pace, tick_seconds, fight_seed, terrain)
 		events.append_array(scrum)
 	_fight(events)
-	_bury(events)
+	FormationDeaths.bury(_squads, _tick, seek_contact, events)
 	if not seek_contact:  # the scrum ends stalled fights itself
 		FormationEdges.prune(_squads, _tick, events)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
@@ -259,41 +263,14 @@ func _fight(events: Array) -> void:
 	var blows := FormationMelee.blows(_squads, interval, _tick, mode, terrain)
 	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks())
 	for shot in shots:
+		shot[2] = BattleRolls.damage(shot[2], damage_band, fight_seed, [_tick, shot[0].id, 1])
 		shot[1].hp -= shot[2]
 		var spat := {"target": shot[1].id, "dmg": shot[2], "damage_type": shot[0].damage_type}
 		events.append(FormationEvents.unit_event("spat", _tick, shot[3], shot[0], spat))
 	for blow in blows:
+		blow[2] = BattleRolls.damage(blow[2], damage_band, fight_seed, [_tick, blow[0].id, 0])
 		blow[1].hp -= blow[2]
 		events.append(FormationEvents.hit(_tick, blow))
-
-
-func _bury(events: Array) -> void:
-	for fallen_squad in _squads:
-		var fallen := []
-		for unit in fallen_squad.living():
-			if unit.hp <= 0:
-				unit.state = SkirmishUnit.State.DEAD
-				fallen.append(unit)
-				events.append(FormationEvents.unit_event("died", _tick, fallen_squad, unit))
-		if fallen.is_empty():
-			continue
-		FormationMorale.losses(fallen_squad, fallen, _tick, events)
-		var front_before := fallen_squad.front_distance
-		for moved in fallen_squad.compact():
-			events.append(
-				FormationEvents.unit_event(
-					"stepped_up", _tick, fallen_squad, moved, {"rank": moved.rank}
-				)
-			)
-		fallen_squad.reforming = true  # front units may close gaps (Decision 49)
-		if not is_equal_approx(front_before, fallen_squad.front_distance) and not seek_contact:
-			# Its front fell: the enemy must advance (Decision 47).
-			FormationLocks.release(fallen_squad, _squads)
-			events.append(FormationEvents.squad_event("front_fell", _tick, fallen_squad))
-		if fallen_squad.is_destroyed() and fallen_squad.state != SkirmishSquad.State.DESTROYED:
-			fallen_squad.state = SkirmishSquad.State.DESTROYED
-			FormationLocks.release(fallen_squad, _squads)
-			events.append(FormationEvents.squad_event("destroyed", _tick, fallen_squad))
 
 
 func _attack_interval_ticks() -> int:
