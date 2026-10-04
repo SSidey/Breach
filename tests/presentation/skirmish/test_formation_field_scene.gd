@@ -51,3 +51,12 @@ func test_waves_can_be_sent_together_and_b_can_wait() -> void:
 
 	assert_int(sent.size()).is_equal(2)
 	assert_bool(scene.field().waves["B"].staging.is_empty()).is_false()
+
+
+func test_the_line_can_be_given_a_captain() -> void:
+	var scene := _scene()
+
+	scene._restart(true)
+
+	var line = scene.field().kingdom_line
+	assert_bool(line.living().any(func(u): return u.leadership > 0)).is_true()

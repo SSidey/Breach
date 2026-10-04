@@ -5,7 +5,9 @@ extends Node2D
 ## their corridors, and every unit drawn in its cells, turned to its squad's facing and
 ## eased between ticks. Send a route's wave, let it depart when full, send both timed to
 ## arrive together, or have B wait in the wood (its detection range ringed) until it sees
-## A engage (Decision 87). Engine glue - the rules live in sim/skirmish/formation/.
+## A engage (Decision 87). In a fight units seek contact and face their own foes (Decision
+## 88); "Line has a captain" restarts with a led line that turns to meet a flank.
+## Engine glue - the rules live in sim/skirmish/formation/.
 ##
 ##   godot --path . res://presentation/skirmish/formation_2d/formation_field.tscn
 
@@ -16,8 +18,10 @@ const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const GREM := preload("res://content/units/grem.tres")
 const MILITIA := preload("res://content/units/kingdom_militia.tres")
 const CHIEFTAIN := preload("res://content/units/grem_chieftain.tres")
+const CAPTAIN := preload("res://content/units/kingdom_captain.tres")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
+const UnitDef = preload("res://content/definitions/unit_def.gd")
 
 const CELL_PX := 8.0
 const ORIGIN := Vector2(16, 56)
@@ -45,6 +49,7 @@ var _previous := {}  # unit id -> position (cells) at the previous tick
 var _current := {}  # unit id -> position (cells) at the latest tick
 var _flashes := {}  # unit id -> seconds left
 var _status: Label
+var _captain := false
 
 
 func field() -> FormationField:
@@ -65,12 +70,21 @@ func run_ticks(count: int) -> void:
 
 
 func _ready() -> void:
-	_field = FormationField.new(_clock.tick_seconds, GREM, BUILDERS, MILITIA, CHIEFTAIN)
-	_snapshot()
+	_restart(false)
 	_build_hud()
 	var camera := Camera2D.new()
 	camera.position = ORIGIN + Vector2(FormationField.SIZE) * CELL_PX * 0.5 - Vector2(0, 20)
 	add_child(camera)
+
+
+## A fresh field, its line led by a captain or not.
+func _restart(captained: bool) -> void:
+	_captain = captained
+	var captain: UnitDef = CAPTAIN if captained else null
+	_field = FormationField.new(_clock.tick_seconds, GREM, BUILDERS, MILITIA, CHIEFTAIN, captain)
+	_previous = {}
+	_current = {}
+	_snapshot()
 
 
 func _process(delta: float) -> void:
@@ -136,8 +150,8 @@ func _draw_unit(squad, unit, fraction: float) -> void:
 	if squad.state == SkirmishSquad.State.ROUTING:
 		colour.a = 0.45  # routers flee one by one
 	draw_rect(Rect2(centre - size * 0.5, size), colour)
-	if unit.rank == 0:
-		var front := centre + SquadFrame.forward(squad.facing) * size * 0.5
+	if unit.rank == 0 or squad.loose.has(unit.id):
+		var front := centre + SquadFrame.forward(unit.facing) * size * 0.5
 		draw_circle(front, 1.5, Color.WHITE)
 
 
@@ -212,6 +226,10 @@ func _build_hud() -> void:
 	wait.text = "B waits for A"
 	wait.toggled.connect(func(on): _field.set_wait(on))
 	bar.add_child(wait)
+	var captain := CheckBox.new()
+	captain.text = "Line has a captain"
+	captain.toggled.connect(_restart)
+	bar.add_child(captain)
 	var pause := Button.new()
 	pause.text = "Pause (Space)"
 	pause.pressed.connect(_toggle_pause)
@@ -238,6 +256,8 @@ func _describe() -> String:
 	var line := _field.kingdom_line
 	var halted := _field.sim.squads().filter(func(s): return s.blocked).size()
 	var state: String = SkirmishSquad.State.keys()[line.state].to_lower()
+	if not line.stance.is_empty():
+		state += ", faced " + ["north", "east", "south", "west"][line.stance["facing"]]
 	var paused := "   (paused)" if _clock.is_paused() else ""
 	var reserve := _field.kingdom_reserve.living().size()
 	return (

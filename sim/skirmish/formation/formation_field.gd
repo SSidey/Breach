@@ -7,12 +7,12 @@ extends RefCounted
 ## - **B**, north through the wood (and its ford), then south onto the line's north side
 ## A wave on B can wait in the wood until it sees A's wave, its chieftain timing the flank
 ## to land with A's attack (Decision 87's hold-until, coordinated by a leader), or both can
-## be sent together, timed to arrive at once (planned rendezvous). Wings walk round the
-## line's ends (Decision 81). A broken line routs east into the kingdom's reserve on the
-## hill (Decision 82); the player's routers who reach home go back to the reserve. The
-## ground matters (Decision 85): the wood slows and hides, B's wave narrows through the
-## ford, and the reserve fights down from the hill. The player's domain builders fill both
-## waves in turn. Pure.
+## be sent together, timed to arrive at once (planned rendezvous). In a fight both sides'
+## units seek contact (Decision 88), and a captained line turns to meet a flank. A broken
+## line routs east into the kingdom's reserve on the hill (Decisions 82, 89); the player's
+## routers who reach home go back to the reserve. The ground matters (Decision 85): the
+## wood slows and hides, B's wave narrows through the ford, and the reserve fights down
+## from the hill. The player's domain builders fill both waves in turn. Pure.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
@@ -80,13 +80,16 @@ static func contact_cells() -> Dictionary:
 	return {"A": LINE_AT - 1.0, "B": FLANK_X + (north_face - 1.0 - B_Y)}
 
 
-## `leader_unit`, if given, leads route B's wave from its second rank.
+## `leader_unit`, if given, leads route B's wave from its second rank; `line_captain`, if
+## given, leads the kingdom's line from its second rank, so it turns to meet a flank it sees
+## coming (Decision 88).
 func _init(
 	seconds_per_tick: float,
 	wave_unit: UnitDef,
 	builders: int,
 	kingdom_unit: UnitDef,
-	leader_unit: UnitDef = null
+	leader_unit: UnitDef = null,
+	line_captain: UnitDef = null
 ) -> void:
 	tick_seconds = seconds_per_tick
 	_wave_unit = wave_unit
@@ -109,7 +112,7 @@ func _init(
 	if leader_unit != null:
 		player.set_builders(leader_unit, 1)
 	player.prefer("")  # round robin (Decision 51)
-	_hold_the_line(kingdom_unit)
+	_hold_the_line(kingdom_unit, line_captain)
 
 
 ## One tick: the builders fill the waves, full waves announce (and depart if automatic),
@@ -193,11 +196,12 @@ static func _ground() -> FormationTerrain:
 	return terrain
 
 
-func _hold_the_line(unit_def: UnitDef) -> void:
+func _hold_the_line(unit_def: UnitDef, captain: UnitDef) -> void:
 	var placements := []
 	for rank in range(KINGDOM_RANKS):
 		for column in range(KINGDOM_WIDTH):
-			placements.append([unit_def, Vector2i(rank, column)])
+			var leads := captain != null and rank == 1 and column == KINGDOM_WIDTH / 2
+			placements.append([captain if leads else unit_def, Vector2i(rank, column)])
 	kingdom_line = sim.spawn_squad(KINGDOM_WIDTH, placements, "the_kingdom", false, 0, routes["A"])
 	kingdom_line.front_distance = LINE_AT / MapLayoutDef.CELLS_PER_TILE  # home: the far end
 	sim.order(kingdom_line.id, SkirmishUnit.Order.HOLD)

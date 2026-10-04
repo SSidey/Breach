@@ -17,8 +17,9 @@ Wave templates are painted in stands (Decision 70).
 
 ## Status
 
-**Design conversation done.** All eight agenda subjects are agreed (see Agreed below).
-Round 1 is being planned.
+**Design conversation done.** All eight agenda subjects are agreed (see Agreed below), and
+the round 4 feel test's follow-ups (Decisions 88-91). Rounds 1 to 5 are built; the feel
+test of the whole stack is next.
 
 ## Agreed
 
@@ -233,3 +234,48 @@ Decision 85 and Decision 87's woods, in four stacked PRs (numbers are placeholde
 The comparison holds on terrain: A alone loses and the line holds; B alone grinds; B
 waiting (chieftain-timed) or both sent together break the line into its reserve, for 6
 grems.
+
+### Round 5: after the round 4 feel test (built; feel test pending)
+
+The fixes and Decisions 88 and 89, raised by the user's round 4 feel test, in four
+stacked PRs:
+1. **The ford** (bug): a partial wave keeps its painted columns, so a single unit could
+   stand off to one side of a ford it is narrower than, and halt at deep water. Narrowing
+   now checks that the line lies within the gap, not only that it is narrower.
+2. **Contact-seeking** (`FormationScrum`, Decision 88; on in the field, off on the one
+   lane):
+   - In a fight every unit walks to the nearest open cell next to an enemy, diagonals
+     included, round friends and never through an enemy (`ScrumPaths`), within the
+     route's leash of its place (16 cells), so the far end of a flanked line comes to
+     meet the flank, whatever its order. Front-band units seek; back-band units too once
+     no front-band unit is left. A wavering squad stops seeking.
+   - Contested cells go by `(arrival, roll + initiative, initiative, speed, draw)`
+     (`ScrumContest`; a die of 10 and initiative 10 as placeholders).
+   - Each unit strikes one enemy it touches, its front first, and turns to it; a blow
+     from outside the target's front is a flank blow (`ScrumBlows`, `ScrumReach`).
+   - Units start seeking 1.5 s after the fight begins, divided by one plus leadership.
+   - A led squad with a free front that sees an enemy coming at another face turns its
+     line to meet it before contact (`ScrumStance`), from 4 cells plus 4 per point of
+     leadership.
+   - A fight where nobody on either side has touched or sought a foe for 2 s is released,
+     so it can't freeze (the lone-flank freeze); after a fight units regroup before the
+     squad moves on.
+3. **Rally** (Decision 89): a router running into a steady leaderless friend (within a
+   cell, after crushing) is caught there and joins its rear after 3 s; a shaken friend
+   doesn't stop it.
+4. **The field and scene**: "Line has a captain" restarts with a kingdom captain
+   (leadership 2) in the line's second rank; each unit's front mark shows its own facing.
+
+The comparison (1500 ticks after sending; line /12, reserve /6, grems lost):
+
+| Case | Round 4 | Round 5, leaderless line | Round 5, captained line |
+|---|---|---|---|
+| A alone | line 10, 8 lost | line 10, 8 lost | line 10, 8 lost |
+| B alone | **froze**: line 7, 3 lost | line 5, 9 lost | line 10, 9 lost |
+| B waits (chieftain) | line broken, reserve routed, 6 lost | line broken, reserve 3, 8 lost | line broken, reserve 5, 8 lost |
+| Sent together | line broken, reserve routed, 6 lost | line broken, reserve 7 (2 rallied), 9 lost | line broken, reserve 6, 9 lost |
+
+- Coordinated attacks still break the line, but cost more: the whole line now fights, and
+  the reserve catches its routers instead of being swept away by them.
+- A lone B flank no longer freezes; it loses to a line half again its size. A captained
+  line meets it as a line and loses only two.
