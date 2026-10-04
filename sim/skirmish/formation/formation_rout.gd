@@ -9,9 +9,10 @@ extends RefCounted
 ## - **Crush:** a router running through a friend's cell hurts both (blunt, by its size),
 ##   and that friend's formation takes panic shock.
 ## - **Rally:** a router that reaches a friendly formation with a leader joins its rear
-##   ranks. One that runs into a steady friendly formation without a leader (Decision 89)
-##   is caught there: it stops (with contact-seeking, in the nearest free cell: RoutSettle),
-##   and after STEADY_RALLY_SECONDS joins that formation's rear, walking to its place.
+##   ranks. One that runs into any standing friendly formation (Decisions 89 and 98) is
+##   caught there: it stops (with contact-seeking, in the nearest free cell: RoutSettle),
+##   and after STEADY_RALLY_SECONDS with that formation steady joins its rear, walking to
+##   its place. A shaken formation holds its routers until it steadies.
 ##   A routing formation whose own leader lives, with no enemy near for a few seconds,
 ##   re-forms where its leader stands and holds there.
 ## - **Home:** routers that reach home leave the field ("fled_home"; the player's routers
@@ -29,6 +30,7 @@ const FormationContact = preload("res://sim/skirmish/formation/formation_contact
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const RoutCatch = preload("res://sim/skirmish/formation/rout_catch.gd")
 const RoutSettle = preload("res://sim/skirmish/formation/rout_settle.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -39,8 +41,8 @@ const PANIC := 5
 const SEEN_ROUT := 5
 ## How near (cells) a router must come to a led formation to rally to it.
 const RALLY_REACH := 2.0
-## A router running into a steady formation (within this many cells) is caught there, and
-## rallies to it after a while (Decision 89).
+## A router running into a standing friendly formation (within this many cells) is caught
+## there, and rallies to it after a while steady (Decisions 89 and 98).
 const CAUGHT_REACH := 1.0
 const STEADY_RALLY_SECONDS := 3.0
 ## Seconds with no enemy within ENEMY_NEAR cells before a led rout re-forms.
@@ -192,44 +194,23 @@ static func _rally(
 ) -> void:
 	for unit in squad.living():
 		var at := where(squad, unit.id)
-		var leader := _friend_near(squad, at, squads, true)
+		var leader := RoutCatch.friend_near(squad, at, squads, RALLY_REACH, true)
 		if leader != null:
 			_join(squad, unit, leader, tick, events)
 			continue
 		var entry: Dictionary = squad.fleeing[unit.id]
-		var steady := _friend_near(squad, at, squads, false)
-		entry["caught"] = 0 if steady == null else entry.get("caught", 0) + 1
-		if steady != null and entry["caught"] * tick_seconds >= STEADY_RALLY_SECONDS:
-			_join(squad, unit, steady, tick, events)
+		var friend := RoutCatch.holder(squad, entry, at, squads, CAUGHT_REACH)
+		var calm := friend != null and FormationMorale.band(friend) == FormationMorale.Band.STEADY
+		var held: int = entry.get("caught", 0)
+		entry["caught"] = 0 if friend == null else (held + 1 if calm else maxi(held, 1))
+		entry["held_by"] = null if friend == null else friend.id
+		if calm and entry["caught"] * tick_seconds >= STEADY_RALLY_SECONDS:
+			_join(squad, unit, friend, tick, events)
 	if squad.living().is_empty() or FormationMorale.leadership(squad) == 0:
 		return
 	squad.rally_ticks = 0 if _enemy_near(squad, squads) else squad.rally_ticks + 1
 	if squad.rally_ticks * tick_seconds >= RALLY_SECONDS:
 		_reform(squad, tick, events)
-
-
-## A friendly formation near `at`: one with a leader within RALLY_REACH (`led`), or a
-## steady one within CAUGHT_REACH.
-static func _friend_near(
-	squad: SkirmishSquad, at: Vector2, squads: Array, led: bool
-) -> SkirmishSquad:
-	var reach := RALLY_REACH if led else CAUGHT_REACH
-	for friend in squads:
-		if friend == squad or friend.faction_id != squad.faction_id:
-			continue
-		if friend.state in [SkirmishSquad.State.ROUTING, SkirmishSquad.State.DESTROYED]:
-			continue
-		var fit := (
-			FormationMorale.leadership(friend) >= 1
-			if led
-			else FormationMorale.band(friend) == FormationMorale.Band.STEADY
-		)
-		if not fit:
-			continue
-		for unit in friend.living():
-			if unit.position.distance_to(at) <= reach:
-				return friend
-	return null
 
 
 static func _join(

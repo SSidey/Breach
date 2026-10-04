@@ -447,3 +447,15 @@ From the round 8 feel test:
   - Fairness: deciding by id order gave whichever squad spawned second 54% of head-on
     mirrors, and stepping units in contact aside also cost tempo. Fixed, the head-on
     mirror over 751 seeds in each order is first-spawned 374, second 377.
+
+Also from the round 9 feel test (Decision 98):
+- **Routers form up with the friend they hit** (Decision 98). Two kingdom routers ran
+  through the reserve and home (field, A and B together, seeds 2 and 6) for two reasons.
+  The routers' own crushes shook the reserve, and only a steady formation caught
+  routers. And a caught router stepping to a free cell could leave the 1-cell catch
+  reach, which released it.
+  - Now any standing friend catches a router (`RoutCatch`), and the nearest one if
+    there are several. It holds the router wherever it steps until the router joins or
+    the friend itself routs.
+  - The router joins after the friend has been steady for 3 s.
+  - In both seeds every router now either rallies or falls.
