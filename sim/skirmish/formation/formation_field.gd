@@ -5,6 +5,8 @@ extends RefCounted
 ## the middle, facing the player. The player's waves come from the west on two routes:
 ## - **A**, straight at the line over open grass
 ## - **B**, north through the wood (and its ford), then south onto the line's north side
+## - **C**, an alternative path for A's wave: along the south edge, then slanting up onto
+##   A's lane (a march at an angle that is not 45 degrees)
 ## A wave on B can wait in the wood until it sees A's wave, its chieftain timing the flank
 ## to land with A's attack (Decision 87's hold-until, coordinated by a leader), or both can
 ## be sent together, timed to arrive at once (planned rendezvous). In a fight both sides'
@@ -41,6 +43,10 @@ const FLANK_X := 81.0
 ## Route B runs east along the wood's southern edge, one cell inside the trees.
 const B_Y := 21.0
 const STAGING := Vector2(56, B_Y)
+## Route C crosses the grid at a slant (2 across for every 3 up) onto route A's lane.
+const C_Y := 62.0
+const C_TURN := Vector2(40, C_Y)
+const C_JOIN := Vector2(60, 32)
 ## How long a waiting wave holds before going anyway (seconds).
 const WAIT_SECONDS := 60.0
 ## Scenery, in cells, drawn by the scene (no effect until round 4).
@@ -73,6 +79,7 @@ static func route_points() -> Dictionary:
 	return {
 		"A": PackedVector2Array([Vector2(0, 32), Vector2(128, 32)]),
 		"B": PackedVector2Array([Vector2(0, B_Y), Vector2(FLANK_X, B_Y), Vector2(FLANK_X, 64)]),
+		"C": PackedVector2Array([Vector2(0, C_Y), C_TURN, C_JOIN, Vector2(128, 32)]),
 	}
 
 
@@ -105,6 +112,8 @@ func _init(
 	var points := route_points()
 	for key in points:
 		routes[key] = FormationRoute.new(points[key], WAVE_WIDTH / 2.0)
+		if key == "C":
+			continue  # an alternative path for A's wave, not a wave of its own
 		var wave := FormationProduction.new("player", true)
 		wave.route = routes[key]
 		var template := WavePresets.line(wave_unit, WAVE_WIDTH, WAVE_WIDTH)

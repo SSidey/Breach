@@ -21,7 +21,7 @@ func test_the_scene_builds_the_field_with_the_kingdom_line() -> void:
 	var scene := _scene()
 
 	assert_object(scene.field()).is_not_null()
-	assert_array(scene.field().routes.keys()).contains_exactly(["A", "B"])
+	assert_array(scene.field().routes.keys()).contains_exactly(["A", "B", "C"])
 	assert_int(scene.field().sim.squads().size()).is_equal(2)  # the line and its reserve
 
 
@@ -56,7 +56,19 @@ func test_waves_can_be_sent_together_and_b_can_wait() -> void:
 func test_the_line_can_be_given_a_captain() -> void:
 	var scene := _scene()
 
-	scene._restart(true)
+	scene.restart(true, 7)
 
 	var line = scene.field().kingdom_line
 	assert_bool(line.living().any(func(u): return u.leadership > 0)).is_true()
+
+
+func test_reset_starts_a_fresh_field_under_a_seed() -> void:
+	var scene := _scene()
+	scene.run_ticks(50)
+	var before = scene.field()
+
+	scene.restart(false, 42)
+
+	assert_object(scene.field()).is_not_same(before)
+	assert_int(scene.field().sim.fight_seed).is_equal(42)
+	assert_int(scene.field().sim.tick_number()).is_equal(0)
