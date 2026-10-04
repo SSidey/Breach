@@ -4572,6 +4572,8 @@ meanings), messenger birds, light signals… beacons… or magics".
 
 ### Decision 88 — Both sides seek contact; contested cells go to whoever arrives first, by a seeded contest key; leadership sets cohesion, not restraint; facing is per unit
 
+> Superseded in part by Decision 101 on 2026-10-04 (a wavering formation still seeks contact).
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-04
 
@@ -4867,6 +4869,8 @@ decisions".
 
 ### Decision 95 — Units turn at a rate and move slower off their facing; a retreat breaks contact at a cost, scaled by discipline; pursuit is ordered or a leader's, breaking ranks is per unit; objectives and fallbacks come with nodes
 
+> Superseded in part by Decision 101 on 2026-10-04 (a drilled withdrawal no longer backs away facing the enemy).
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-04
 
@@ -5140,3 +5144,54 @@ Rules:
 close-ranks rule for any partial wave.
 **Order:** ties go to the seeded draw. Head-on mirror, 300 seeds each way round: 138 /
 151 and 143 / 146.
+
+### Decision 101 — Morale weakens how a formation fights, not whether; discipline sets how well it re-forms and disengages
+
+**Supersedes:** Decision 88, in part (a wavering formation's units no longer stop seeking contact), and Decision 95, in part (a drilled withdrawal no longer backs away facing the enemy)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** The user's answers to round 11's open questions:
+- On a lone chieftain fighting down a wavering line that didn't close in: "don't prevent
+  enemies (unless routing) from engaging in melee if they prefer it, we can just add a
+  negative to them for being so shaken e.g. lower chance to hit, lower damage etc. so at
+  all morale states they should attempt to engage".
+- On drilled units backing away from a pursuit, and being caught: "bake this into how
+  quickly they resolve the move, the same as with rounding corners being a reform and
+  based on discipline … lesser disciplined units being slower to disengage and sloppier",
+  and, clarified, "reforming and disengaging are manoeuvres whose efficacy is affected by
+  discipline".
+
+Rules:
+- **Morale weakens fighting:** short of a rout, a formation meets its enemy at every
+  morale band. The more shaken it is, the softer its blows land: a share of their damage
+  by band (placeholders: steady 100%, shaken 80%, wavering 60%). A wavering formation
+  also still strikes more slowly (Decision 82).
+- **Discipline sets how well a formation manoeuvres:** re-forming (Decision 92) and
+  disengaging are manoeuvres whose efficacy its discipline sets.
+  - Disengaging: a withdrawing unit turns for home and steps clear of the foes it
+    touches at its turn rate and pace times its formation's re-form pace, then flees at
+    full pace.
+  - A disciplined formation breaks off quickly and cleanly. A ragged one breaks off
+    slowly and is exposed while it turns. It also fans out wider (Decision 99) and takes
+    its scaled rout (Decision 95).
+  - Until it has turned, any unit still facing a foe it touches strikes it.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Morale rises as the enemy loses units | The user preferred a penalty at every band to a boost. |
+| Wavering units seek only a foe they outnumber | A special case; the user wants all to engage. |
+| Drilled units turn and run once pursued | A threshold case; discipline should scale how well every unit disengages. |
+
+**Consequences:**
+- Against a formation pursuing as a body, drilled units now get away almost free (0–5.6
+  damage) while ragged ones pay (9.5–17.5). Against units breaking ranks to chase, both
+  pay alike (36–42), because chasers stay on any fleeing unit.
+- The blow shares are placeholders for spec 28. Hit chance comes with spec 28 too.
+
+**Rules over cases:** general. One morale share for every blow; one discipline-set
+efficacy for every re-form and disengagement; no drilled or ragged threshold.
+**Order:** not affected. Head-on mirror, 300 seeds each way round: 137 / 149 and 145 /
+142; the flank mirror is the same in both orders.
