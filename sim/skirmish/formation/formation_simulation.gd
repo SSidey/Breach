@@ -33,6 +33,7 @@ const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd"
 const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd")
 const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
+const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
 const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
 const FormationMelee = preload("res://sim/skirmish/formation/formation_melee.gd")
@@ -233,7 +234,10 @@ func _move(events: Array) -> void:
 
 
 ## True if the squad must turn before moving `travel` along its route: it starts the turn.
+## With contact-seeking a turn is a re-form: its units walk to their new places (Decision 92).
 func _turns_first(mover: SkirmishSquad, travel: int, events: Array) -> bool:
+	if seek_contact:
+		return ScrumTurn.begin(mover, travel, _tick, events)
 	var cells_per_second := mover.speed() * TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
 	if not FormationTurning.begin(mover, travel, cells_per_second, tick_seconds):
 		return false

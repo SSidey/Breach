@@ -1,0 +1,137 @@
+extends GdUnitTestSuite
+## Discipline, per Decision 92 and spec 27 round 6: a formation's discipline is its units'
+## mean plus its leader's bolster; a disciplined formation re-forms as a whole to meet a
+## flank closing in, marching or holding, while an undisciplined one (even led) doesn't;
+## and a turn is a re-form, quicker the more disciplined the formation.
+
+const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
+const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
+const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
+const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
+const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
+const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const UnitDef = preload("res://content/definitions/unit_def.gd")
+
+const TICK := 0.1
+
+
+func _def(discipline: int, leadership: int = 0) -> UnitDef:
+	var unit_def := UnitDef.new()
+	unit_def.hp = 400
+	unit_def.dmg = 1
+	unit_def.speed = 1.0
+	unit_def.discipline = discipline
+	unit_def.leadership = leadership
+	return unit_def
+
+
+func _row(unit_def: UnitDef, columns: int) -> Array:
+	var placements := []
+	for column in range(columns):
+		placements.append([unit_def, Vector2i(0, column)])
+	return placements
+
+
+func _sim() -> FormationSimulation:
+	var sim := FormationSimulation.new(1.0, TICK)
+	sim.seek_contact = true
+	return sim
+
+
+func _run(sim: FormationSimulation, ticks: int) -> Array:
+	var log := []
+	for _i in range(ticks):
+		log.append_array(sim.step())
+	return log
+
+
+func _of(log: Array, kind: String) -> Array:
+	return log.filter(func(e): return e["type"] == kind)
+
+
+## A kingdom line 6 wide facing west, holding at (40, 32), of these units.
+func _line(sim: FormationSimulation, placements: Array) -> SkirmishSquad:
+	var route := FormationRoute.new(PackedVector2Array([Vector2(40, 32), Vector2(0, 32)]))
+	var line := sim.spawn_squad(6, placements, "the_kingdom", true, 0, route)
+	sim.order(line.id, SkirmishUnit.Order.HOLD)
+	return line
+
+
+## A player squad 2 wide coming south down x = 40.5 onto the line's north side.
+func _flank(sim: FormationSimulation) -> SkirmishSquad:
+	var route := FormationRoute.new(PackedVector2Array([Vector2(40.5, 0), Vector2(40.5, 64)]))
+	return sim.spawn_squad(2, _row(_def(30), 2), "player", true, 0, route)
+
+
+func test_discipline_is_the_mean_bolstered_by_the_leader() -> void:
+	var sim := _sim()
+	var placements := _row(_def(30), 3)
+	placements.append([_def(60, 2), Vector2i(0, 3)])
+
+	var squad := sim.spawn_squad(4, placements, "player", true)
+
+	assert_int(FormationDiscipline.of(squad)).is_equal(38 + 20)  # (30*3 + 60) / 4, + 2 x 10
+
+
+func test_a_disciplined_line_meets_a_flank_without_a_leader() -> void:
+	var sim := _sim()
+	_line(sim, _row(_def(60), 6))
+	_flank(sim)
+
+	var faced := _of(_run(sim, 250), "faced")
+
+	assert_bool(faced.is_empty()).is_false()
+	assert_int(faced[0]["facing"]).is_equal(SquadFrame.NORTH)
+
+
+func test_an_undrilled_line_does_not_even_when_led() -> void:
+	var sim := _sim()
+	var placements := _row(_def(30), 6)
+	placements[0][0] = _def(30, 1)  # 30 + 10: short of re-forming as a whole
+	_line(sim, placements)
+	_flank(sim)
+
+	assert_int(_of(_run(sim, 250), "faced").size()).is_equal(0)
+
+
+func test_a_marching_formation_stops_to_meet_a_flank() -> void:
+	var sim := _sim()
+	var east := FormationRoute.new(PackedVector2Array([Vector2(0, 32), Vector2(128, 32)]))
+	var column := sim.spawn_squad(4, _row(_def(60), 4), "player", true, 0, east)
+	column.front_distance = 30.0 / 64.0
+	var south := FormationRoute.new(PackedVector2Array([Vector2(44, 16), Vector2(44, 64)]))
+	var raiders := sim.spawn_squad(2, _row(_def(30), 2), "the_kingdom", true, 0, south)
+
+	var log := _run(sim, 60)
+
+	var faced := _of(log, "faced")
+	assert_bool(faced.is_empty()).is_false()
+	assert_int(faced[0]["squad"]).is_equal(column.id)
+	assert_int(faced[0]["facing"]).is_equal(SquadFrame.NORTH)
+	assert_float(column.position.x).is_less(44.0)  # it stopped short to meet them
+	assert_bool(raiders.is_destroyed()).is_false()
+
+
+func _turned_and_moved(discipline: int) -> int:
+	var sim := _sim()
+	var bend := FormationRoute.new(
+		PackedVector2Array([Vector2(0, 20), Vector2(20, 20), Vector2(20, 64)])
+	)
+	var squad := sim.spawn_squad(8, _row(_def(discipline), 8), "player", true, 0, bend)
+	var turned := -1
+	for tick in range(1, 400):
+		var log := sim.step()
+		if turned < 0 and not _of(log, "turned").is_empty():
+			turned = tick
+		if turned >= 0 and not FormationScrum.regrouping(squad):
+			return tick - turned
+	return 400
+
+
+func test_a_turn_is_a_re_form_quicker_when_disciplined() -> void:
+	var drilled := _turned_and_moved(60)
+	var ragged := _turned_and_moved(20)
+
+	assert_int(drilled).is_greater(0)
+	assert_int(drilled).is_less(ragged)

@@ -36,6 +36,10 @@ const MAX_FOOTPRINT := 8
 ## How quickly it acts (Decision 88; placeholder, equal for all until spec 28): it wins a
 ## contested cell in the scrum over a slower-witted unit arriving at the same time.
 @export var initiative: int = 10
+## How drilled it is (Decision 92; placeholder: rank and file 30, drilled 60): a
+## formation's mean, bolstered by its leader, decides whether it re-forms as a whole to meet
+## a flank and how fast it re-forms.
+@export var discipline: int = 30
 ## What it fights with (Decision 47). Without weapons it strikes once for `dmg`.
 @export var weapons: Array[WeaponDef] = []
 
