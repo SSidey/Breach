@@ -25,6 +25,7 @@ static func make(
 	unit.detection = unit_def.detection_range
 	unit.courage = unit_def.courage
 	unit.leadership = unit_def.leadership
+	unit.definition = unit_def
 	var ranged := unit_def.ranged_weapon()
 	if ranged != null:
 		unit.attack_range = ranged.attack_range

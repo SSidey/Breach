@@ -42,6 +42,7 @@ const FormationWings = preload("res://sim/skirmish/formation/formation_wings.gd"
 const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
 const FormationMelee = preload("res://sim/skirmish/formation/formation_melee.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
+const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -49,6 +50,13 @@ const MELEE_REACH := FormationContact.MELEE_REACH
 const ATTACK_INTERVAL_SECONDS := 1.0
 const TRAVEL_SCALE := 0.125  # tiles per second at speed 1: 8 cells a second (Decision 68)
 const EPSILON := 0.000001
+## States in which a squad doesn't march (a rout flees on its own: FormationRout).
+const STANDING := [
+	SkirmishSquad.State.DESTROYED,
+	SkirmishSquad.State.FIGHTING,
+	SkirmishSquad.State.ROUTING,
+	SkirmishSquad.State.ARRIVED,
+]
 
 var route_length: float
 var tick_seconds: float
@@ -129,13 +137,14 @@ func step() -> Array:
 	_apply_orders(events)
 	_engage(events)
 	_move(events)
+	var pace := TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
 	if walk_wings:
-		var pace := TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
 		events.append_array(FormationWings.march(_squads, _tick, pace, tick_seconds))
 	_fight(events)
 	_bury(events)
 	FormationEdges.prune(_squads, _tick, events)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
+	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds))
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
 	FormationMarch.sync_units(_squads)
@@ -181,9 +190,7 @@ func _move(events: Array) -> void:
 	for mover in _squads:
 		if FormationTurning.step(mover, _tick, events):
 			continue
-		if mover.state in [SkirmishSquad.State.DESTROYED, SkirmishSquad.State.FIGHTING]:
-			continue
-		if mover.state == SkirmishSquad.State.ARRIVED:
+		if mover.state in STANDING:
 			continue
 		if mover.wait_ticks > 0:
 			mover.wait_ticks -= 1

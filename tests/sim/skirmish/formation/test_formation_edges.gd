@@ -114,11 +114,13 @@ func test_a_squad_fights_its_front_and_a_side_at_once() -> void:
 		4, _block(_def(100, 3), 1, 4), "player", true, 0, _route([Vector2(0, 32), Vector2(90, 32)])
 	)
 	var raider := _from_north(sim)
-
-	var log := _run(sim, 200)
+	for _i in range(300):
+		sim.step()
+		if line.engaged_with != 0 and line.flank_contacts.has(SquadEdges.RIGHT):
+			break
 
 	assert_int(line.engaged_with).is_equal(front.id)
-	assert_bool(line.flank_contacts.has(SquadEdges.RIGHT)).is_true()
+	var log := _run(sim, 40)  # both at once, before the line's morale gives
 	var targets := {}
 	for hit in _of(log, "hit").filter(func(h): return h["faction"] == "the_kingdom"):
 		targets[hit["target"]] = true

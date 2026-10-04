@@ -111,7 +111,8 @@ func test_wings_walk_back_when_the_fight_ends() -> void:
 
 	var log := _run(sim, 600)
 
-	assert_int(_of(log, "destroyed").size()).is_equal(1)
+	var ended := _of(log, "destroyed").size() + _of(log, "routed").size()
+	assert_int(ended).is_greater_equal(1)  # the line falls or breaks
 	assert_bool(_of(log, "wing_returned").is_empty()).is_false()
 	var player: SkirmishSquad = sim.squads()[0]
 	assert_bool(player.wings.is_empty()).is_true()

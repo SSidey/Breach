@@ -106,11 +106,13 @@ func test_b_waits_in_the_wood_until_it_sees_a_engage_then_flanks() -> void:
 	assert_bool(waiting.any(func(e): return e["type"] == "staged")).is_true()
 
 	field.send("A")
-	var log := _run(field, _has("flanked"))
+	var log := _run(field, func(log): return _has("flanked").call(log) or _has("routed").call(log))
 
 	var kinds: Array = log.map(func(e): return e["type"])
 	assert_int(kinds.find("signalled")).is_greater(kinds.find("engaged"))
-	assert_int(kinds.find("flanked")).is_greater(kinds.find("signalled"))
+	assert_int(maxi(kinds.find("flanked"), kinds.find("routed"))).is_greater(
+		kinds.find("signalled")
+	)
 
 
 func test_waves_sent_together_reach_the_line_together() -> void:

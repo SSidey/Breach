@@ -88,7 +88,7 @@ static func step(squads: Array, tick: int, ticks_per_second: int, events: Array)
 	if tick % maxi(1, ticks_per_second) != 0:
 		return
 	for squad in squads:
-		if squad.is_destroyed():
+		if squad.is_destroyed() or squad.state == SkirmishSquad.State.ROUTING:
 			continue
 		var sides := _sides_engaged(squad, squads)
 		var morale := _morale(squad)
