@@ -17,7 +17,9 @@ extends RefCounted
 ## - **Safe:** with no enemy within FormationRout.ENEMY_NEAR of it, and none pursuing it,
 ##   for FormationRout.RALLY_SECONDS - the test a rout rallies by - it re-forms on its route
 ##   where its units stand, facing home, and marches home (its order). One whose units are
-##   all home, with nowhere further to go, re-forms there at once, and fights as any other.
+##   all home, with nowhere further to go, re-forms there at once, facing out the way it
+##   will hold, and fights as any other. Its units fan out no further than a rout's, by its
+##   disorder.
 ## Squads keep `withdraw` ({"safe_ticks"}). Pure over the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -104,6 +106,10 @@ static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, motion: Array, terra
 	var homeward: Vector2 = squad.route.heading_at(along) * signf(home - along)
 	var full: float = unit.speed * motion[0]
 	var heading := homeward.rotated(RoutFlight.fan(unit, motion[2]) * disorder(squad))
+	var side := homeward.orthogonal()
+	var aside: float = (at - squad.route.point_at(along)).dot(side)
+	if absf(aside) >= RoutFlight.FAN_CELLS * disorder(squad) and heading.dot(side) * aside > 0.0:
+		heading = homeward  # fanned out as far as its disorder takes it (a rout's at most)
 	if terrain != null and terrain.factor(unit.height, at, at + heading) <= 0.0:
 		heading = homeward  # it can't fan that way: it keeps to the line
 	if terrain != null:
@@ -151,5 +157,13 @@ static func _reform_here(squad: SkirmishSquad, tick: int, events: Array) -> void
 	var highest := maxf(squad.home_distance, squad.front_distance)
 	squad.front_distance = clampf(mean, lowest, highest)
 	squad.withdraw = {}
-	ScrumTurn.begin(squad, -1 if squad.home_distance < squad.front_distance else 1, tick, events)
+	var homeward := -1 if squad.home_distance < squad.front_distance else 1
+	var arrived := _home(squad)
+	if arrived:  # nowhere further to go: its retreat is done, and it holds facing out
+		homeward = 1 if is_zero_approx(squad.home_distance) else -1
+		squad.front_distance = squad.home_distance
+	ScrumTurn.begin(squad, homeward, tick, events)
 	events.append(FormationEvents.squad_event("regrouping", tick, squad))
+	if arrived:
+		squad.order = SkirmishUnit.Order.HOLD
+		events.append(FormationEvents.squad_event("returned", tick, squad))

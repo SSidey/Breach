@@ -2,18 +2,18 @@ class_name FormationPursuit
 extends RefCounted
 ## A formation pursuing as a whole (Decision 95, spec 27 round 8): ordered to pursue, or
 ## led by a pursuer, when its enemy retreats it stays locked on it and its frame advances
-## along its own route after it, no faster than its units keep up, its units seeking
-## contact as they go at the march pace. When
-## the enemy - where its units stand - is out of PURSUIT_REACH, gone, or no longer
-## retreating, it gives up: it marches
-## back to the post it held and turns to face the way it held it, taking up its order
-## again. Squads keep `pursuit` ({"foe", "post", "home", "direction", "order",
-## "returning"}). Pure over the squads it is given.
+## along its own route after it as a body - no faster than its rearmost unit keeps up
+## (Decision 103) - its units seeking contact as they go at the march pace. When the enemy
+## (where its units stand) is out of PURSUIT_REACH, gone, or no longer retreating, it
+## gives up: it marches back to the post it held and turns to face the way it held it,
+## taking up its order again. Squads keep `pursuit` ({"foe", "post", "home", "direction",
+## "order", "returning"}). Pure over the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const SquadEdges = preload("res://sim/skirmish/formation/squad_edges.gd")
+const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
@@ -82,14 +82,15 @@ static func _advance(squad: SkirmishSquad, foe: SkirmishSquad, step_cells: float
 	squad.front_distance = clampf(squad.front_distance + squad.direction * tiles, 0.0, length)
 
 
-## True if its units lag too far behind its front to follow it further.
+## True if any of its units lags more than LAG_CELLS behind its place: a formation
+## pursues as a body, its frame waiting for its rearmost (Decision 103).
 static func _lagging(squad: SkirmishSquad) -> bool:
 	var forward := SquadFrame.forward(squad.facing)
-	var foremost := -INF
-	for unit_id in squad.loose:
-		var entry: Dictionary = squad.loose[unit_id]
-		foremost = maxf(foremost, (entry["at"] - squad.position).dot(forward))
-	return foremost < -LAG_CELLS
+	for unit in squad.living():
+		var behind := (ScrumStance.anchor(squad, unit) - ScrumReach.at(squad, unit)).dot(forward)
+		if behind > LAG_CELLS:
+			return true
+	return false
 
 
 ## It ends its fight and marches back to its post (a march home, with home its post).

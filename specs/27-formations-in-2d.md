@@ -596,3 +596,17 @@ The user's answers to round 11's open questions (Decision 101):
   Chasers stay on any fleeing unit for their 2 s, whatever its discipline.
 - Head-on mirror, 300 seeds each way round: player first 137 / 149, kingdom first
   145 / 142. Flank mirror: the same in both orders.
+- **From the user's test of #90** (seed 606531: A retreats from a captained line set to
+  pursue; Decision 103):
+  - **A pursuit moves as a body.** The pursuer's frame advanced while its *foremost* unit
+    kept up. Its captain, walking to his place rather than seeking, was dragged ahead of
+    the militia, up to 13 cells. Because he stayed near A, the pursuit never ran out of
+    reach, and the line chased all the way to A's spawn. Now the frame waits while any
+    unit lags more than 2 cells behind its place. The line stays within 6 cells across
+    and gives up 16 cells out.
+  - **A withdrawal that reaches home has done its retreat.** It re-formed facing home
+    with its retreat order still standing, so the march turned it back and forth across
+    the home point every 5 ticks: the spinning in the clip. Now it re-forms facing out
+    and holds there.
+  - **A withdrawal fans out no further than a rout,** scaled by its disorder. One A unit
+    had drifted 21 cells off its route.
