@@ -4569,3 +4569,144 @@ meanings), messenger birds, light signals… beacons… or magics".
 - Spec 27's round 2 adds detection, hold-until (seeing the partner or the fight) and
   planned rendezvous: route B's wave holds in the wood until it sees route A's engage,
   then strikes. Signals beyond sight come later, with the tech work.
+
+### Decision 88 — Both sides seek contact; contested cells go to whoever arrives first, by a seeded contest key; leadership sets cohesion, not restraint; facing is per unit
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after feel-testing spec 27's round 4: a lone flank froze
+(the units in contact died and nobody stepped into the gap), the flanked line never
+turned, and the flankers never wrapped. The user was "wary of language explicitly calling
+out position of a squad as to what to wrap to… the intent of a unit that wants to be in
+melee is more-so just attempting to find a place in melee to fight", and then: "both
+sides are 'attackers'… a flanked force with high leadership should still seek contact…
+the 'line' is retained where a lower leadership formation might leave gaps in their
+attempt to reorient themselves to the contact points". On ties: "seed a variance per
+unit… d20+score and the tie breaker is score… attach our speed and init values… of
+course we could assign some random id to each unit".
+- **Every unit seeks contact.** A unit with no enemy in reach moves to the nearest open
+  cell next to an enemy unit, in any of the 8 directions (diagonals count). Wings, rear
+  attacks and wraps are what this looks like; no rule names them.
+- **The order sets the leash, not leadership.** How far a unit may stray from its place
+  is set by its squad's order (hold: short; charge: long; placeholders). A shaken squad
+  doesn't seek contact (Decision 82).
+- **Contested cells.** When units want one cell, the order is the key
+  `(arrival time, roll + initiative, initiative, speed, unit's draw)`, compared item by
+  item, not packed into one number (no digit overflow, no float precision limit).
+  - Arrival time is a reaction delay plus distance over speed; earliest wins.
+  - The roll is the unit's seeded variance, drawn from its own stream once per contest
+    (fight seed, tick, unit), so replays repeat. The die size is a variance setting in
+    spec 28; 0 makes contests purely by stats.
+  - The unit's draw is a seeded value unique within the fight, so the order never ties.
+  - Initiative is a unit stat, placeholder equal for all until spec 28.
+- **Leadership sets cohesion.** A well-led squad reacts sooner (shorter reaction delay)
+  and shifts as a line: when contact comes on an unexpected face, it wheels or bends its
+  threatened end back as one, and its ranks fill the places units leave. A poorly led
+  squad moves unit by unit and leaves gaps; a gap is an open cell next to an enemy, so the
+  enemy steps into it. Leadership is the squad's best (Decision 81).
+- **Facing is per unit.** Each unit faces the enemy it fights; a blow from outside a
+  unit's front is a flank blow. A squad whose front is free may also turn as a whole to
+  meet a threat (Decision 74).
+- **Pillar check (Decision 58):** the player chooses orders and leaders; units find
+  their own places in the fight. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Position rules (wings beside the side, contact-only flank strikes) | Freezes when contact is lost; the user wants intent, not named positions. |
+| Attackers seek, defenders hold shape | Both sides are attackers; holding is just a short leash. |
+| Leadership tightens the leash | Punishes good commanders; leadership should help a squad meet a flank, not hold it back. |
+| One packed decimal for ties | Digits overflow (speed 12) and floats run out of precision. |
+| Tie by unit id | Always favours whoever was spawned first. |
+
+**Consequences:**
+- Replaces the position rules of Decisions 78 (fronts on four edges: who strikes an edge)
+  and 81 (wings walk to set places) with contact-seeking; discipline's reach becomes the
+  order's leash.
+- Units gain initiative and a seeded draw; squads keep a fight seed.
+- Spec 28 adds initiative, the contest die size and how leadership scales cohesion.
+
+### Decision 89 — Leaderless routers rally to a steady friendly formation they pass
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after feel-testing spec 27's round 4: enemy routers did
+not stop with their allies. Round 3 let routers rally only to a formation with a leader,
+or round their own leader; leaderless militia ran home.
+- A router that passes within reach (placeholder 6 cells) of a steady friendly formation
+  rallies to it, less reliably than to a leader: it takes longer (placeholder 3 s near
+  it), comes back only to shaken, and joins that formation's rear.
+- Rallying to a leader (Decision 82) stays quicker and restores more.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Leaders only (round 3) | Leaderless forces vanish from a fight they could rejoin. |
+| Rally anywhere once calm | Ignores that a rout ends by reaching safety among friends. |
+
+**Consequences:**
+- The rout rules gain a leaderless rally; the reach, time and band are placeholders.
+
+### Decision 90 — Formations merge only on a merge order at a shared node, led by the best leader
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after feel-testing spec 27's round 4: routes A and B
+cross, and their waves did not merge for the fight behind. "I guess this would be
+determined by links? though at a crossroads… how would priority be determined there?"
+- **No order, no merge.** Without a merge order, squads cross a shared node under the
+  crowding rules (Decision 84): whoever holds the cell first has right of way. Auto-merge
+  stays off by default (Decision 51).
+- **A merge order** sits on a route node shared by two or more routes. Squads reaching it
+  merge into one.
+- **Priority:** the squad with the higher leadership leads; then the larger squad; then
+  whoever arrived first. The merged squad takes the leader's route unless the order names
+  another.
+- **AI-run forces** (an enemy reserve) may merge with friends at a node on their own.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Merge whenever routes cross | Takes the choice from the player; a crossing isn't a plan. |
+| First to arrive leads | A small vanguard would drag a chieftain's host along its route. |
+
+**Consequences:**
+- Route nodes gain a merge order; merging gains a priority. Built with player-assigned
+  routes (Decision 75).
+
+### Decision 91 — A tile is its ground plus cover features; features spill across tile edges with seeded soft edges and clearings
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after feel-testing spec 27's round 4: "are we
+suggesting that we now have e.g. a tile with some forest on a portion?… I am for that
+rather than having a hard stop on tile edge… are we expecting to see elements such as
+clearings develop?… forest doesn't necessarily denote the underlying topology, do we need
+to separate the two elements?… likewise for rocky terrain, that could actually be flat but
+mostly stone".
+- **Ground:** shape from elevation and relief (Decisions 56, 59), material from its top
+  stratum (Decision 54). Rocky but flat is rock with no relief.
+- **Cover features** (forest, scrub, rubble; `TerrainFeatureDef`) lie on top, each with a
+  density, assigned in broad strokes per tile.
+- **Generated per cell when a map loads:** features spill a few cells into neighbouring
+  tiles with seeded soft edges; a density noise inside makes clearings. How often
+  clearings come is a setting per feature.
+- A cell's move cost and sight blocking come from its ground and its features together.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Forest as a terrain type | Ties cover to topology; a forested hill would be a new type. |
+| Hard edges at tile borders | Reads as a grid; the user wants features to spill. |
+
+**Consequences:**
+- `TerrainFeatureDef` grows into cover features with density, move cost and sight;
+  `TerrainDef` keeps the ground. The formation sim's terrain grid is built from both.
