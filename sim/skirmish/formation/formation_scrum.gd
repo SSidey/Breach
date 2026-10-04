@@ -13,8 +13,10 @@ extends RefCounted
 ##   another face turns its line to meet it before contact - its places re-laid facing the
 ##   threat at that face (its stance) - from further off the better it is led. A leaderless
 ##   squad meets it unit by unit, leaving gaps.
-## - **Regrouping:** when the fight ends its units walk back to their places at the march
-##   pace, and the squad moves on once all are back.
+## - **Engaging:** squads whose units come within reach fight, whatever their faces
+##   (ScrumEngage).
+## - **Regrouping:** when the fight ends the squad closes ranks over its dead (SquadRanks),
+##   its units walk to their places at the march pace, and it moves on once all are back.
 ## - **A stalled fight** (no unit on either side touching or seeking for STALL_SECONDS) is
 ##   released, so it can't freeze.
 ## Squads keep `loose`, `stance`, `fight_since` and `stall_ticks`. Pure over the squads.
@@ -25,6 +27,8 @@ const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
 const ScrumPaths = preload("res://sim/skirmish/formation/scrum_paths.gd")
+const ScrumEngage = preload("res://sim/skirmish/formation/scrum_engage.gd")
+const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
@@ -47,7 +51,7 @@ static func step(
 	fight_seed: int,
 	terrain: FormationTerrain = null
 ) -> Array:
-	var events := []
+	var events := ScrumEngage.step(squads, tick)
 	for squad in squads:
 		_prepare(squad, tick)
 	for squad in squads:
@@ -87,6 +91,8 @@ static func _prepare(squad: SkirmishSquad, tick: int) -> void:
 		squad.fight_since = tick
 		squad.stall_ticks = 0
 	elif not fighting:
+		if squad.fight_since >= 0 and squad.painted.is_empty():
+			SquadRanks.close(squad)  # the dead leave holes: the living close up
 		squad.fight_since = -1
 	if not fighting and squad.stance.is_empty():
 		return

@@ -57,7 +57,7 @@ static func anticipate(
 	events.append(FormationEvents.squad_event("faced", tick, squad, {"facing": threat}))
 
 
-## The facing towards the nearest seen hostile within `reach` cells, or -1.
+## The facing towards the nearest seen hostile closing in within `reach` cells, or -1.
 static func _threat(
 	squad: SkirmishSquad, squads: Array, terrain: FormationTerrain, reach: float
 ) -> int:
@@ -69,7 +69,7 @@ static func _threat(
 			continue
 		if other.state == SkirmishSquad.State.ROUTING:
 			continue
-		if not FormationSight.detects(squad, other, terrain):
+		if not FormationSight.detects(squad, other, terrain) or not _closing(other, area):
 			continue
 		var theirs := SquadEdges.bounds(other)
 		var nearest := theirs.get_center().clamp(area.position, area.end)
@@ -79,3 +79,12 @@ static func _threat(
 			best = gap
 			facing = ScrumReach.facing_to(area.get_center(), point)
 	return facing
+
+
+## True if `other` is closing in on `area`: marching or fighting with its front towards it
+## (a reserve holding its ground is no reason to re-form).
+static func _closing(other: SkirmishSquad, area: Rect2) -> bool:
+	if other.state not in [SkirmishSquad.State.MOVING, SkirmishSquad.State.FIGHTING]:
+		return false
+	var towards := area.get_center() - SquadEdges.bounds(other).get_center()
+	return towards.dot(SquadFrame.forward(other.facing)) > 0.0

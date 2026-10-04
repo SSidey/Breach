@@ -3,7 +3,8 @@ extends RefCounted
 ## Hold-until orders (Decision 87, spec 27 round 2). A staged wave marches to its staging
 ## point and holds there until its trigger, judged only on what it detects:
 ## - SEES_PARTNER: it detects its partner squad
-## - SEES_FIGHT: it detects its partner (or, with no partner named, any friendly squad)
+## - SEES_FIGHT: it detects its partner (or, with no partner named, any friendly squad on
+##   another route)
 ##   fighting
 ## or until its fallback runs out, when it goes on ("go") or turns back ("back"). Without a
 ## leader it goes as soon as the trigger fires. Led by a **coordinated** leader (Decision
@@ -101,6 +102,8 @@ static func _triggered(
 			continue
 		if partner != 0 and other.id != partner:
 			continue
+		if partner == 0 and other.route == squad.route:
+			continue  # a wave on its own route is no partner
 		var wanted: bool = (
 			squad.staging["trigger"] == SEES_PARTNER or other.state == SkirmishSquad.State.FIGHTING
 		)
