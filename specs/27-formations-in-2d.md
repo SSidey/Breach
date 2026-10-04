@@ -93,6 +93,16 @@ Round 1 is being planned.
    3. morale, shock, rout, leadership
    4. terrain speed, slope, liquids, narrowing
    5. later: stands in the painter, horde and mob, tactic traits
+9. **After the round 4 feel test (Decisions 88–91).**
+   - Both sides seek contact: a unit with no enemy in reach moves to the nearest open
+     cell next to an enemy, diagonals included. The order sets the leash; contested
+     cells go by `(arrival time, roll + initiative, initiative, speed, unit's draw)`.
+     Leadership sets cohesion (reacting sooner, shifting as a line), not restraint.
+     Facing is per unit. This replaces the position rules of subjects 3 and 4.
+   - Leaderless routers rally to a steady friendly formation they pass (Decision 89).
+   - Merging needs a merge order at a shared node, led by the best leader (Decision 90).
+   - A tile is its ground plus cover features, which spill with soft edges and clearings
+     (Decision 91).
 
 ## Agenda for the design conversation
 
