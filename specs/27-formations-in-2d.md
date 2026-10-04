@@ -522,3 +522,38 @@ From the design questions after round 9 (Decision 99):
   - The flank stays as it is (Decision 81: flanking is a leader's tactic).
 - Head-on mirror, 300 seeds each way round: player first 139 / 142, kingdom first 142 /
   141.
+
+### Round 11: after the round 9 feel test (built; feel test pending)
+
+The user tested #85. Each report was reproduced on the current top of the stack (#88)
+first, and only what still happened there was fixed (Decision 100):
+- **Units arrive facing their task** (`UnitShuffle`).
+  - Report: a captained line meeting A and B "oscillated between facings".
+  - Finding: the line's formation facing changed once and held. Its *units* spun round
+    the long way, turning to face where they walked as they shuffled to their places,
+    then turning back.
+  - Now a unit taking its place, or seeking a cell next to a foe, arrives facing its
+    squad's way or that foe, by the quicker of two ways: shuffling there facing it, or
+    turning to walk and turning back.
+- **Routers form up behind friends** (Decision 98, refined).
+  - Report: routers clumped at the reserve's front. On seeds 584265 and 786851 they
+    stopped 3 cells in front of it.
+  - Now a router is caught only once it has got behind a friend, with the friend between
+    it and the enemy. It runs through the friend's ranks to get there, crushing as
+    Decision 82 has it, and settles in a free cell at the friend's back.
+  - A router steers for a friend only if it would miss its ranks, so routers no longer
+    converge on one friendly unit.
+  - Routers that share a cell in flight step apart across their route. Shared cells in
+    flight drop from about 20 unit-ticks to 4–6.
+- **A partial wave closes up.** A wave sent before it is full leaves as a solid block,
+  as wide as its built front band, with its other units centred behind. That is the
+  rule a squad closing ranks over its dead already follows. A full wave keeps its
+  painted shape.
+- **Already fixed on #88, no change:**
+  - A second B wave stuck at the corner (seed 723653) now reaches the first and
+    reinforces it. The list-order audit fixed how waves queue on one road.
+  - A pursuing captain running far ahead: since #88 a pursuer follows the enemy's
+    units, and no unit gets more than half a cell ahead of its formation.
+- **Open:** a wavering line doesn't seek contact (Decision 88), so a lone chieftain
+  fights its way down a broken line one unit at a time (seed 678788). This is a question
+  for the user.
