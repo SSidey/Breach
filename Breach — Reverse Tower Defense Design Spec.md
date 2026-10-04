@@ -4636,6 +4636,8 @@ course we could assign some random id to each unit".
 
 ### Decision 89 — Leaderless routers rally to a steady friendly formation they pass
 
+> Superseded in part by Decision 98 on 2026-10-04 (which formations catch routers).
+
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-04
 
@@ -4927,3 +4929,115 @@ which ones do".
 - The formation sim gains retreat as a contact-breaking manoeuvre, a scaled rout for
   ragged retreats, pursuit by order or trait, and per-unit chasing.
 - Objectives, fallbacks and retreat conditions are built with nodes and routes.
+
+### Decision 96 — A general rule over special cases; a special case needs the user's reason
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Set by the user after spec 27's round 9: "we must work into our design
+philosophy that we should prefer generic cases to specifics, there must be a user given
+reason to employ specifics over generic cases". The example was the manoeuvres
+(Decision 94). A list of exceptions, such as re-forming after a turn, narrowing, or
+waiting for a closing enemy, gave way to one rule: an army always has a current
+manoeuvre, the most urgent wins, and it is checked every tick.
+- New behaviour comes from a general rule stated as priorities, quantities and
+  conditions that apply to everything of its kind. It never comes from a branch for a
+  named situation.
+- A special case is allowed only for a reason the user gives. That reason is recorded
+  with the Decision that introduces it. An agent proposes the general rule, and asks if
+  it believes a special case is needed.
+- This is checked on every design decision: the kit's `principles/rules-over-cases.md`
+  (Principle 1), the spec rubric's `general-over-special` row, a **Rules over cases**
+  line in each Decision, and the `design-check` skill.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Judge case by case | It is how the exception lists built up. |
+| Forbid special cases outright | Some may be right; the user decides. |
+
+**Consequences:**
+- Feel-test fixes are answered by changing a rule, not adding a case.
+- Existing special cases found later are put to the user: keep them with a reason, or
+  fold them into a rule.
+
+**Rules over cases:** general: this is the rule.
+**Order:** not affected.
+
+### Decision 97 — Identity and spawn order never decide an outcome
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Set by the user after spec 27's round 9: "we have multiple times run up
+against issues of using spawn ids for simulation, we must never use the spawn id for
+simulation". Ids follow spawn order, and so do the squad and unit lists. Ties decided by
+them gave the head-on mirror to whichever side was stepped first (round 8), and then to
+whichever spawned second (round 9's one-unit-per-cell).
+- An id names a unit or squad: to look it up, to target it, to log it. It may salt a
+  seeded random draw, which is fair over many battles. It never ranks anything: no
+  comparison, sort, key, tie-break or arithmetic on it.
+- The same holds for list order. Keeping the first of equals in a spawn-ordered list is
+  the same fault.
+- Things that happen together are decided together, from one snapshot.
+- Ties go first to what units are and where they stand, then to the battle's seeded
+  draw.
+- It is checked mechanically and by trial. `check_id_order.py` runs as a pre-commit
+  hook on `sim/`. A symmetric mirror run both ways round (the trials tool's `swap`)
+  must agree within noise. Both are in the kit (`principles/rules-over-cases.md`,
+  Principle 2, and the rubric rows `order-independent` and
+  `order-independent-simulation`) and in the `design-check` skill.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Ids as a last tie-break | Repeatedly biased outcomes by spawn order. |
+| A per-unit lot drawn at spawn | Still drawn in spawn order; a seeded hash per battle is simpler and as fair. |
+
+**Consequences:**
+- The remaining id tie-breaks in the formation sim are replaced, and orders given on one
+  tick are judged from one snapshot.
+- Every change to simulation outcomes reports a swapped-order trial.
+
+**Rules over cases:** general: this is the rule.
+**Order:** this is the rule. Head-on mirror over 400 seeds in each order: first-spawned
+383, second 375.
+
+### Decision 98 — Any standing friend catches routers that run into it, and takes them in once steady
+
+**Supersedes:** Decision 89, in part (which formations catch routers)
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after feel-testing spec 27's round 9: "when the routers
+hit the allied line, 2 of them kept going, should that happen? I thought they should
+form up". Decision 89 let only a steady formation catch routers, but the routers' own
+crushes (Decision 82) shook the reserve. Those that came after then ran straight
+through, and a caught router stepping to a free cell could leave the catch reach and be
+released.
+- A router that runs into any standing friendly formation is caught there. "Standing"
+  means not routing and not destroyed. If several friends are near, the nearest
+  catches it.
+- That formation holds the router wherever it steps, until the router joins it or the
+  formation itself routs.
+- The router joins after the formation has been steady for a while (placeholder 3 s). A
+  shaken formation holds its routers until it steadies.
+- Rallying to a leader (Decision 82) is unchanged.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep "steady only" | Routers pass through the friend they hit, because of their own crushing. |
+| Join at once whatever the friend's morale | A shaken formation would gain units without steadying. |
+
+**Consequences:**
+- Routers stop with the formation they hit, and the rally rules no longer depend on how
+  near a router stays.
+
+**Rules over cases:** general: any standing friend catches, and steadiness sets when
+routers join; this replaces the "steady only" case.
+**Order:** the nearest friend catches, not the first listed.
