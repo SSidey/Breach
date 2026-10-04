@@ -4718,3 +4718,46 @@ mostly stone".
 **Consequences:**
 - `TerrainFeatureDef` grows into cover features with density, move cost and sight;
   `TerrainDef` keeps the ground. The formation sim's terrain grid is built from both.
+
+### Decision 92 — A formation acts on orders and threats by its own initiative: leadership sets how fast it decides, discipline how cleanly it carries it out
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after spec 27's round 5 was built: "the readiness of a
+formation to pivot to face a flanking force (given they are not occupied and have
+detected them) we could look at formation maneuver 'order speed' as being controlled by
+leadership and discipline of the units so leadership acting almost like the full
+formation (treating as 1 entity) initiative?"
+- **Formation initiative** treats the formation as one actor, as unit initiative treats
+  a unit (Decision 88). It is built from two parts:
+  - **Leadership decides** (the formation's best leader, Decision 81): how soon after it
+    detects a threat it acts, and how far off it starts to act (getting into position
+    before contact). A leaderless formation acts only once struck.
+  - **Discipline carries it out** (its units' mean discipline, Decision 52): how fast it
+    re-forms (turns, about-faces, units walking to new places), and whether it moves as
+    one block or unit by unit. A drilled leaderless formation still pivots as a line,
+    later; a led but undrilled one decides quickly but turns raggedly, leaving gaps.
+- **One delay, not separate formulas:** the time from detecting a threat to the
+  formation acting, and the time it takes to do it, both come from formation initiative.
+  It replaces round 5's placeholders (reaction 1.5 s divided by one plus leadership;
+  anticipation 4 cells plus 4 per leadership).
+- **Formation contests:** when formations manoeuvre at once (turning to face each other,
+  racing for the same ground), they act in the order of
+  `(time, roll + formation initiative, formation initiative, ...)`, as unit contests do
+  (Decision 88), with the roll seeded per formation.
+- **Pillar check (Decision 58):** the player chooses leaders and trains units; formations
+  react on their own. Holds.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Leadership alone sets readiness | Ignores drill: a trained unit with no officer still keeps its line. |
+| Separate formulas per manoeuvre | Each needs its own tuning; one score keeps them consistent. |
+
+**Consequences:**
+- Discipline becomes a unit stat (spec 28), with a formation's the mean of its units.
+- The formation sim gains formation initiative, used for reaction, anticipation,
+  re-forming pace and turning as a line; built after the round 5 feel test.
+- Spec 28's agenda adds formation initiative beside unit initiative.
