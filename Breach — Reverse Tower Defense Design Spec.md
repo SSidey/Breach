@@ -5195,3 +5195,49 @@ Rules:
 efficacy for every re-form and disengagement; no drilled or ragged threshold.
 **Order:** not affected. Head-on mirror, 300 seeds each way round: 137 / 149 and 145 /
 142; the flank mirror is the same in both orders.
+
+### Decision 102 — Units keep continuous positions with rotated-rectangle footprints that never overlap; formations face any angle
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** Raised by the user after spec 27's round 11, on formations marching a
+diagonal route with their front at 45 degrees to their way. The choice was between
+diagonal "staircase" ranks on the grid, rotating formations off the grid, or leaving
+cell positioning altogether. The user: "Rotating off grid I think is the cleaner
+approach… The other alternative is moving away from cell based positioning and relying
+on them just having enough space around them, so they would need to retain space of e.g.
+a grem is 1x1 cell size so no overlaps, consider if they were 3d it would be to avoid
+collisions… consider total war". Of the options put to them, the user chose:
+- continuous footprints
+- rotated rectangles
+- any facing
+- **Positions are continuous:** each unit is a rectangle its own width by depth, turned
+  to its bearing. No two footprints overlap, moving or at rest. This is one rule
+  everywhere, replacing one unit to a cell (Decision 100).
+- **A formation faces any angle,** its route's heading where it is, with its places laid
+  out in that turned frame.
+- **Terrain stays a grid,** read at a unit's position (Decision 85).
+- Built as spec 30, after the spec 27 stack and the list-order audit's follow-ups.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Staircase diagonal ranks on the grid | Corner-touching ranks need their own rules; still off on curved routes. |
+| Off-grid rotation with one unit to a cell at rest | Two rules (moving and at rest), a special case (Decision 96). |
+| Circular footprints | Cheaper, but wide or deep units lose their shape. |
+| Eight formation facings | Still off the true heading on curved player-drawn routes. |
+
+**Consequences:**
+- The cell-based parts of the formation sim become footprint-based in spec 30:
+  - separation (`ScrumSpacing`, `RoutSettle`, `RoutFlight`)
+  - contact-seeking and contests (`ScrumPaths`, `ScrumContest`)
+  - touching (`ScrumReach`)
+  - the frame (`SquadFrame`)
+  - narrowing (`FormationNarrowing`)
+- Cell-exact tests become footprint tests. The fairness checks run throughout.
+
+**Rules over cases:** general. One no-overlap rule for every unit, moving or still.
+**Order:** contests keep the seeded key, and separation must be decided from one
+snapshot (Decision 97).
