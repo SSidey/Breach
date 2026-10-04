@@ -5093,3 +5093,50 @@ rallying routs; one fan-out rule scaled by disorder.
 **Order:** fan angles are seeded per battle and unit; a refuge is the nearest friend
 unit, not the first listed. Head-on mirror, 300 seeds each way round: 139 / 142 and
 142 / 141.
+
+### Decision 100 — Units arrive facing their task; routers form up behind the friend that catches them; a partial wave closes up
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-04
+
+**Rationale:** From the user's feel test of spec 27 round 9 (#85):
+- "the line with captain still oscillated between facings". The line's formation facing
+  held, but its units spun the long way round, turning to face where they walked as
+  they took their places.
+- "they clumped to the front of the hill defenders instead of forming up behind", and
+  routers "moving with units overlapping".
+- A partial B wave left with "4 grem in column 1 then captain in an unoccupied row",
+  and had to re-form before fording.
+
+Rules:
+- **Arriving facing:** a unit taking its place, or seeking a cell next to a foe, arrives
+  facing its squad's way or that foe, by the quicker of two ways: shuffling there facing
+  it at the pace its bearing allows (Decision 95), or turning to walk and turning back.
+- **Routers form up behind:** a router is safe once a friend stands between it and the
+  enemy. It is caught only once it has got behind a friend, running through the friend's
+  ranks (Decision 82's crush), and it settles at the friend's back. It steers for a
+  friend only if it would otherwise miss the friend's ranks. Routers sharing a cell in
+  flight step apart across their route. This refines Decision 98.
+- **A partial wave closes up:** its unbuilt places are holes, closed as a squad's dead
+  are. It leaves as a solid block as wide as its built front band, with the rest centred
+  behind. A full wave keeps its painted shape.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Units always face where they walk | Spins a whole line round to step back a cell. |
+| Routers caught at the friend's front (Decision 98 as built) | The user expects a backline. |
+| Partial waves keep painted places | Holes and a stranded leader; re-forms at the first gap. |
+
+**Consequences:**
+- Every router that runs through a friend crushes it, so a friend that catches routers is
+  often shaken. It holds them until it steadies.
+- Open: a wavering formation doesn't seek contact (Decision 88), so a lone enemy can
+  fight its way down a broken line. This is for the user.
+
+**Rules over cases:** general. One arrival rule for any unit taking a place or a foe;
+"safe once a friend stands between it and the enemy" for any router; the existing
+close-ranks rule for any partial wave.
+**Order:** ties go to the seeded draw. Head-on mirror, 300 seeds each way round: 138 /
+151 and 143 / 146.
