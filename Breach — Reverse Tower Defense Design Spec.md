@@ -4838,10 +4838,12 @@ decisions".
 - **Tactical over strategic:** 0 to 2 are the formation's own decisions, made from its
   leadership, discipline, morale and traits; 3 is the player's.
 - **Halted without an order:** a formation that has stopped though its order is to march
-  (not holding, not waiting at a staging point, not queued for a hold-until) for a moment
-  (placeholder 2 s) moves to combat if one is available - an enemy it detects within
-  reach (placeholder 12 cells) - and otherwise returns to its route, re-forms and
-  marches on.
+  (not holding, not waiting at a staging point, not queued for a hold-until) moves, from
+  the next tick, to combat if one is available - an enemy it detects within reach
+  (placeholder 12 cells) - and otherwise returns to its route, re-forms and marches on.
+  The user: a 2 s wait "feels like quite a long time… would we not just check on next
+  tick". Its own short manoeuvres are not halts: re-forming after a turn, narrowing at a
+  gap, receiving an enemy still closing in, skirmishing at range.
 - **A threat that stops closing in** no longer holds a marching formation in its
   re-formed line: it engages that enemy if it is near, or marches on.
 - **Open:** whether a retreat order can pull a formation out of melee, or melee holds it
