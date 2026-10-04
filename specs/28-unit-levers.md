@@ -36,7 +36,12 @@ is done.
    seeded variance), and whether initiative also orders blows within a tick (Decision 88).
    Formation initiative from leadership (deciding) and discipline (carrying out), and
    discipline as a unit stat (Decision 92).
-9. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
+9. **Variance:** how damage and other rolls vary by unit (skill, weapons, conditions),
+   replacing the ±25% placeholder (Decision 93).
+10. **Damage over time and healing:** a bleed trait on weapons (damage over time); medics
+    or a medic trait that heals over time, perhaps needing a halt and helped by
+    leadership.
+11. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
    wave painter shows it.
 
 ## Rounds
