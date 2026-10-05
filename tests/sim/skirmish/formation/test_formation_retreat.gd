@@ -10,6 +10,7 @@ const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
 
@@ -32,8 +33,8 @@ func _row(unit_def: UnitDef) -> Array:
 
 ## A head-on fight of 8 v 8; 3 s in, the player's squad is ordered to retreat. Returns
 ## [sim, mine, theirs, log of its withdrawal, the player's losses in it, the morale it lost
-## on the order's tick, the damage it took in it].
-func _retreat(mine: UnitDef, theirs: UnitDef, battle_seed: int = 1, pursue := false) -> Array:
+## on the order's tick, the damage it took in it]. `pursue` false orders the enemy not to.
+func _retreat(mine: UnitDef, theirs: UnitDef, battle_seed: int = 1, pursue := true) -> Array:
 	var sim := FormationSimulation.new(2.0, 0.1)
 	sim.fight_seed = battle_seed
 	sim.damage_band = 0.25
@@ -86,24 +87,19 @@ func test_a_ragged_retreat_takes_a_scaled_rout() -> void:
 	assert_int(drilled[5]).is_less(ragged[5])
 
 
-func test_an_enemy_ordered_to_pursue_follows() -> void:
-	var setup := _retreat(_def(60), _def(60), 1, true)
+func test_an_enemy_pursues_by_default_unless_ordered_not_to() -> void:
+	var pursued := _retreat(_def(60), _def(60), 1, true)
+	var held := _retreat(_def(60), _def(60), 1, false)
 
-	assert_bool(setup[3].any(func(e): return e["type"] == "pursuing")).is_true()
-
-
-func test_a_leader_who_pursues_leads_the_pursuit() -> void:
-	var tactics: Array[String] = ["pursues"]
-	var setup := _retreat(_def(60), _def(60, tactics))
-
-	assert_bool(ScrumPursuit.pursues(setup[2])).is_true()
-	assert_bool(setup[3].any(func(e): return e["type"] == "pursuing")).is_true()
+	assert_bool(pursued[3].any(func(e): return e["type"] == "pursuing")).is_true()
+	assert_bool(held[3].any(func(e): return e["type"] == "pursuing")).is_false()
 
 
 func test_undisciplined_units_break_ranks_to_chase_one_by_one() -> void:
 	var sim := FormationSimulation.new(2.0, 0.1)
 	var me := sim.spawn_squad(8, _row(_def(60)), "player", true)
 	var ragged := sim.spawn_squad(8, _row(_def(0)), "the_kingdom", false)
+	ragged.pursues = false  # ordered not to: its units break ranks all the same
 	for _i in range(400):
 		if sim.step().any(func(e): return e["type"] == "engaged"):
 			break
@@ -144,3 +140,51 @@ func test_a_pursuing_formation_follows_as_a_body_then_returns_to_its_post() -> v
 	assert_float(line.position.x).is_greater(76.0)  # and went back to its post
 	assert_int(line.order).is_equal(SkirmishUnit.Order.HOLD)
 	assert_bool(line.pursuit.is_empty()).is_true()
+
+
+func test_a_unit_breaking_ranks_chases_no_further_than_its_own_leash() -> void:
+	var chased := 0
+	var furthest := 0.0
+	for battle_seed in range(1, 11):  # until some units break ranks
+		var sim := FormationSimulation.new(2.0, 0.1)
+		sim.fight_seed = battle_seed
+		var me := sim.spawn_squad(8, _row(_def(10)), "player", true)  # ragged: it flees far
+		var keen := sim.spawn_squad(8, _row(_def(30)), "the_kingdom", false)  # 128 cells
+		keen.pursues = false
+		for _i in range(400):
+			if sim.step().any(func(e): return e["type"] == "engaged"):
+				break
+		for _i in range(30):
+			sim.step()
+		sim.order(me.id, SkirmishUnit.Order.RETREAT)
+		for _i in range(600):
+			sim.step()
+			chased += keen.chasers.size()
+			for unit_id in keen.chasers:
+				var at: Vector2 = keen.loose[unit_id]["at"]
+				furthest = maxf(furthest, at.distance_to(keen.chasers[unit_id]["from"]))
+		assert_bool(keen.chasers.is_empty()).is_true()  # all came back
+		if chased > 0:
+			break
+
+	assert_int(chased).is_greater(0)
+	assert_float(furthest).is_less_equal(128.0 + 1.0)
+
+
+func test_a_wave_caught_at_home_by_units_breaking_ranks_fights_back() -> void:
+	# A feel-test log: the line's chasers ran A's last three down at its spawn and A never
+	# struck back, the line marching home counting as retreating, so it could not be engaged.
+	var log := "seed 233831 captain on\n0 pursues off\n115 send A\n186 pursues on\n223 retreat A"
+	var events := []
+	var field := FormationFieldActions.replay(
+		log, 480, func(_f, tick_events): events.append_array(tick_events)
+	)
+	var wave: SkirmishSquad = field.sim.squads()[-1]
+
+	var homes := events.filter(func(e): return e["type"] == "returned" and e["squad"] == wave.id)
+	var home: int = homes[0]["tick"]
+	var fought_back := events.any(
+		func(e): return e["type"] == "engaged" and e["squad"] == wave.id and e["tick"] > home
+	)
+	assert_bool(fought_back).is_true()
+	assert_int(wave.living().size()).is_greater(0)

@@ -1,19 +1,20 @@
 class_name ScrumPursuit
 extends RefCounted
-## Retreat and pursuit (Decision 95, spec 27 round 8). When a formation is ordered to
-## retreat out of a fight:
+## Retreat and pursuit (Decisions 95 and 109, spec 27 round 8). When a formation is
+## ordered to retreat out of a fight:
 ## - **The retreat:** its locks end at once and it withdraws (FormationWithdraw, Decision
 ##   99): its units flee from where they stand until it is safe. A ragged one also pays a
 ##   scaled rout: a morale shock in proportion to how far short of drilled it is.
 ## - **Its enemies:** any of their units still touching it strike it as it goes
-##   (ScrumBlows). A formation ordered to pursue, or led by a leader with the "pursues"
-##   tactic (Decision 81), follows it as a whole, then returns to its post
-##   (FormationPursuit). Otherwise it returns to formation, though each of its units may
-##   break ranks to chase a little way first: decided per unit, by its discipline and a
-##   seeded roll, for CHASE_SECONDS.
+##   (ScrumBlows). Each follows it as a whole, to the leash its discipline gives it
+##   (FormationPursuit, Decision 107), unless ordered not to pursue. And each of their units
+##   near it may break ranks to chase on its own - decided per unit, by its discipline and a
+##   seeded roll - as far from where it broke away as its own discipline leashes it, while
+##   it can see its quarry; then it goes back to its formation.
 ## Chasers all pick their quarry before any moves: the nearest unit, ties by its seeded
 ## draw (Decision 97).
-## Squads keep `pursues` and `chasers` (unit id -> {"foe", "until"}). Pure over the squads.
+## Squads keep `pursues` and `chasers` (unit id -> {"unit", "foe", "from", "leash"}). Pure
+## over the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -31,9 +32,7 @@ const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit
 ## The scaled rout of a ragged retreat: up to this much shock, for a formation with no
 ## discipline at all (placeholder).
 const RAGGED_SHOCK := 20
-## A unit breaks ranks to chase with a chance of (DRILLED - its discipline) / 100, chasing
-## for this long (placeholders).
-const CHASE_SECONDS := 2.0
+## A unit breaks ranks to chase with a chance of (MEETS_THREATS - its discipline) / 100.
 ## How near (cells) a unit must stand to a retreating enemy to be tempted to chase.
 const TEMPTED_WITHIN := 2.0
 
@@ -41,7 +40,7 @@ const TEMPTED_WITHIN := 2.0
 ## Applies a retreat order to `squad`: ends its fight, costs a ragged one its scaled rout,
 ## and sets its enemies pursuing or chasing. Returns events.
 static func retreat(
-	squad: SkirmishSquad, squads: Array, tick: int, battle_seed: int, seconds: float
+	squad: SkirmishSquad, squads: Array, tick: int, battle_seed: int, _seconds: float
 ) -> Array:
 	var events := []
 	var enemies := squads.filter(func(s): return _fights(s, squad))
@@ -52,22 +51,17 @@ static func retreat(
 		FormationMorale.shock(squad, roundi(RAGGED_SHOCK * short), tick, events)
 	FormationWithdraw.begin(squad, tick, events)
 	for enemy in enemies:
-		if pursues(enemy):
+		if enemy.pursues:
 			FormationPursuit.begin(enemy, squad, tick, events)
-		else:
-			_tempt(enemy, squad, tick, battle_seed, roundi(CHASE_SECONDS / seconds))
+		_tempt(enemy, squad, tick, battle_seed)
 	return events
 
 
-## True if the squad pursues a retreating enemy: ordered to, or led by a pursuer.
-static func pursues(squad: SkirmishSquad) -> bool:
-	return squad.pursues or squad.living().any(func(u): return u.tactics.has("pursues"))
-
-
 ## One tick of chasing: each chaser walks at the march pace after the nearest unit of the
-## enemy it chases; when its time is up, or that enemy is gone, it returns to its place.
+## enemy it chases; once at its leash, out of sight of that enemy, or that enemy gone, it
+## returns to its formation.
 static func step(
-	squads: Array, tick: int, cells_per_second: float, seconds: float, fight_seed: int = 0
+	squads: Array, _tick: int, cells_per_second: float, seconds: float, fight_seed: int = 0
 ) -> void:
 	var by_id := {}
 	for entry in squads:
@@ -78,11 +72,16 @@ static func step(
 			var chase: Dictionary = squad.chasers[unit_id]
 			var foe: SkirmishSquad = by_id.get(chase["foe"])
 			var unit: SkirmishUnit = chase["unit"]
-			if tick > chase["until"] or foe == null or foe.is_destroyed() or not unit.is_alive():
+			if foe == null or foe.is_destroyed() or not unit.is_alive():
 				squad.chasers.erase(unit_id)
 				continue
 			var entry: Dictionary = squad.loose[unit_id]
-			walks.append([unit, entry, _nearest(entry["at"], foe, fight_seed)])
+			var quarry := _nearest(entry["at"], foe, fight_seed)
+			var gone: float = entry["at"].distance_to(chase["from"])
+			if gone >= chase["leash"] or quarry.distance_to(entry["at"]) > unit.detection:
+				squad.chasers.erase(unit_id)
+				continue
+			walks.append([unit, entry, quarry])
 	for walk in walks:
 		var entry: Dictionary = walk[1]
 		var full: float = walk[0].speed * cells_per_second * seconds
@@ -104,9 +103,7 @@ static func _fights(other: SkirmishSquad, squad: SkirmishSquad) -> bool:
 
 
 ## Each of the enemy's units near the retreating squad may break ranks to chase it.
-static func _tempt(
-	enemy: SkirmishSquad, squad: SkirmishSquad, tick: int, battle_seed: int, ticks: int
-) -> void:
+static func _tempt(enemy: SkirmishSquad, squad: SkirmishSquad, tick: int, battle_seed: int) -> void:
 	for unit in enemy.living():
 		var at := ScrumReach.at(enemy, unit)
 		if _nearest(at, squad, battle_seed).distance_to(at) > TEMPTED_WITHIN:
@@ -116,7 +113,8 @@ static func _tempt(
 			continue
 		if not enemy.loose.has(unit.id):
 			enemy.loose[unit.id] = {"unit": unit, "at": at, "goal": null, "next": at}
-		enemy.chasers[unit.id] = {"unit": unit, "foe": squad.id, "until": tick + ticks}
+		var leash := FormationDiscipline.unit_leash(unit)
+		enemy.chasers[unit.id] = {"unit": unit, "foe": squad.id, "from": at, "leash": leash}
 
 
 ## Where the squad's unit nearest `at` stands (ties by the units' draws); `at` if none.

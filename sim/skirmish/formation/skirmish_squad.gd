@@ -57,9 +57,10 @@ var flank_contacts := {}
 var loose := {}
 var stance := {}
 var fight_since := -1
-## Pursuit (ScrumPursuit, Decision 95): whether it is ordered to pursue a retreating enemy,
-## and its units out chasing one (unit id -> {"unit", "foe", "until"}).
-var pursues := false
+## Pursuit (ScrumPursuit, Decision 109): whether it may pursue a retreating enemy (false:
+## ordered not to), and its units out chasing one on their own (unit id -> {"unit", "foe",
+## "from", "leash"}).
+var pursues := true
 var chasers := {}
 ## A pursuit under way (FormationPursuit): the enemy, the post it left, and how it held it.
 var pursuit := {}
