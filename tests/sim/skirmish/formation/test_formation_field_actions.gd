@@ -62,3 +62,25 @@ func test_waves_that_merge_after_a_fight_regroup_and_march_on() -> void:
 		if squad.faction_id == "player" and squad.state != SkirmishSquad.State.DESTROYED:
 			assert_bool(squad.loose.is_empty()).is_true()
 			assert_int(squad.state).is_equal(SkirmishSquad.State.ARRIVED)
+
+
+func test_waves_short_of_a_slot_wait_by_the_fight_not_in_their_places() -> void:
+	# A feel-test log: as the line shrank, A's units with no slot left walked back into
+	# their places while the rest fought on.
+	var log := "seed 492625 captain off\n22 via_c on\n129 send A+B"
+	var walked_back := {"units": 0}  # a lambda captures a local int by value
+	var on_events := func(field, _events):
+		if field.kingdom_line.is_destroyed():
+			return
+		for squad in field.sim.squads():
+			if squad.faction_id != "player" or squad.state != SkirmishSquad.State.FIGHTING:
+				continue
+			for unit in squad.living():
+				var entry: Dictionary = squad.loose.get(unit.id, {})
+				var idle: bool = entry.get("goal") == null and not entry.get("touch", false)
+				if unit.preferred_position == 0 and idle:
+					walked_back["units"] += 1
+
+	FormationFieldActions.replay(log, 280, on_events)
+
+	assert_int(walked_back["units"]).is_equal(0)

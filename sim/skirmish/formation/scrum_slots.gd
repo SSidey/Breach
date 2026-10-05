@@ -9,7 +9,10 @@ extends RefCounted
 ## ahead of it, then the one nearest its place - then by the foes' draws, and two mirror
 ## images of each other (left and right of it, round one foe) by a draw seeded by the battle,
 ## the seeker and the slot: no world direction and no handedness is preferred (Decision 97,
-## spec 30 agenda 5). It walks straight there, bodies parting round it (UnitBodies). Pure.
+## spec 30 agenda 5). It walks straight there, bodies parting round it (UnitBodies). With
+## none open it presses in: it waits a body's breadth short of the nearest, taken, slot,
+## for the next to open (ScrumSeek, Decision 108), rather than going back to its place.
+## Pure.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -63,12 +66,16 @@ static func gap_to(at: Vector2, radius: float, foes: Array) -> float:
 
 ## The slot (as round_foes gives it) the seeker at `at` makes for, or [] if none is open.
 ## `ground` is [its place, the bodies, the claimed points, the terrain or null, the seed].
-static func pick(seeker: SkirmishUnit, at: Vector2, slots: Array, ground: Array) -> Array:
+## `crowded`: the nearest it could stand on were it free, others' bodies and claims aside
+## (one with no open slot waits behind it).
+static func pick(
+	seeker: SkirmishUnit, at: Vector2, slots: Array, ground: Array, crowded := false
+) -> Array:
 	var ahead := UnitMotion.vector(seeker.bearing)
 	var best := []
 	var best_key := []
 	for slot in slots:
-		if not open(seeker, slot[0], ground):
+		if not (_within(seeker, slot[0], ground) if crowded else open(seeker, slot[0], ground)):
 			continue
 		var key := [
 			snappedf(at.distance_to(slot[0]), 0.000001),
@@ -86,10 +93,7 @@ static func pick(seeker: SkirmishUnit, at: Vector2, slots: Array, ground: Array)
 ## True if the seeker may take the slot at `point`: within its leash, on ground it can
 ## cross, with no other body on it and no claim within a body's breadth of it.
 static func open(seeker: SkirmishUnit, point: Vector2, ground: Array) -> bool:
-	if point.distance_to(ground[0]) > LEASH:
-		return false
-	var terrain: FormationTerrain = ground[3]
-	if terrain != null and terrain.factor(seeker.height, point, point) <= 0.0:
+	if not _within(seeker, point, ground):
 		return false
 	var radius := ScrumReach.radius(seeker)
 	for body in ground[1]:
@@ -99,3 +103,11 @@ static func open(seeker: SkirmishUnit, point: Vector2, ground: Array) -> bool:
 		if claim.distance_to(point) < 2.0 * radius - EPSILON:
 			return false
 	return true
+
+
+## True if `point` is within the seeker's leash, on ground it can cross.
+static func _within(seeker: SkirmishUnit, point: Vector2, ground: Array) -> bool:
+	if point.distance_to(ground[0]) > LEASH:
+		return false
+	var terrain: FormationTerrain = ground[3]
+	return terrain == null or terrain.factor(seeker.height, point, point) > 0.0

@@ -4,7 +4,8 @@ extends RefCounted
 ## led by a pursuer, when its enemy retreats it stays locked on it and its frame advances
 ## along its own route after it as a body - no faster than its rearmost unit keeps up
 ## (Decision 103) - its units seeking contact as they go at the march pace. When the enemy
-## (where its units stand) is out of PURSUIT_REACH, gone, or no longer retreating, it
+## is out of its sight, gone, or no longer retreating, or it has gone as far from its post
+## as its discipline leashes it (FormationDiscipline.pursuit_leash, Decision 107), it
 ## gives up: it marches back to the post it held and turns to face the way it held it,
 ## taking up its order again. Squads keep `pursuit` ({"foe", "post", "home", "direction",
 ## "order", "returning"}). Pure over the squads it is given.
@@ -18,10 +19,10 @@ const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
+const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
+const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
-## How far (cells, between their extents) it follows before giving up (placeholder).
-const PURSUIT_REACH := 16.0
 ## It advances while its enemy is more than this many cells ahead of its front, and its
 ## foremost unit no more than LAG_CELLS behind it.
 const CLOSE_ENOUGH := 1.0
@@ -63,10 +64,20 @@ static func step(
 			_advance(squad, foe, cells_per_second * seconds)
 
 
+## [cells its frame has gone from its post, cells its leash allows (INF: none)] for a
+## pursuing squad.
+static func reach(squad: SkirmishSquad) -> Array:
+	var gone := absf(squad.front_distance - squad.pursuit["post"]) * MapLayoutDef.CELLS_PER_TILE
+	return [gone, FormationDiscipline.pursuit_leash(squad)]
+
+
 static func _given_up(squad: SkirmishSquad, foe: SkirmishSquad) -> bool:
 	if foe == null or foe.is_destroyed() or foe.order != SkirmishUnit.Order.RETREAT:
 		return true
-	return _gap(squad, foe) > PURSUIT_REACH
+	if not FormationSight.detects(squad, foe):
+		return true
+	var reached := reach(squad)
+	return reached[0] >= reached[1]
 
 
 ## Its frame moves along its route towards the enemy while the enemy is ahead.
@@ -112,13 +123,6 @@ static func _arrive(squad: SkirmishSquad, tick: int, events: Array) -> void:
 	squad.order = held["order"]
 	squad.pursuit = {}
 	ScrumTurn.begin(squad, held["direction"], tick, events)
-
-
-static func _gap(squad: SkirmishSquad, foe: SkirmishSquad) -> float:
-	var mine := _spread(squad)
-	var theirs := _spread(foe)
-	var near := theirs.get_center().clamp(mine.position, mine.end)
-	return near.distance_to(near.clamp(theirs.position, theirs.end))
 
 
 ## The cells a squad's units cover where they actually stand - in its frame, loose in a

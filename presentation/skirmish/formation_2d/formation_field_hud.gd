@@ -4,14 +4,15 @@ extends CanvasLayer
 ## wave or let it go when full, or retreat it; send A down the slanted route C, send A and
 ## B together, have B wait for A, give the line a captain, have it pursue, reset with a
 ## seed, pause - and a status row under it: the tick (and seconds of battle), waves built
-## (leaders counted apart), the line, the reserve and the battle seed. Reset starts a
-## fresh field, with the seed typed in or a random one, keeping the ticked options. Below,
-## this run's action log (FormationFieldActions) to copy, and a box to paste a log into:
-## Replay restarts on its seed and plays its actions at their ticks, live (pause still
-## works), counting them off. Engine glue.
+## (leaders counted apart), the line (how far it has pursued, of its leash), the reserve
+## and the battle seed. Reset starts a fresh field, with the seed typed in or a random
+## one, keeping the ticked options. Below, this run's action log (FormationFieldActions)
+## to copy, and a box to paste a log into: Replay restarts on its seed and plays its
+## actions at their ticks, live (pause still works), counting them off. Engine glue.
 
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
+const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 
 const WAYS := ["north", "east", "south", "west"]
@@ -111,6 +112,10 @@ func show_status(field: FormationField, paused: bool, battle_seed: int) -> void:
 	var state: String = SkirmishSquad.State.keys()[line.state].to_lower()
 	if not line.stance.is_empty():
 		state += ", faced " + WAYS[line.stance["facing"]]
+	if not line.pursuit.is_empty() and not line.pursuit["returning"]:
+		var reached := FormationPursuit.reach(line)  # Decision 107's leash
+		var leash := "unleashed" if is_inf(reached[1]) else "%d" % reached[1]
+		state += ", pursuing %d/%s cells" % [reached[0], leash]
 	var halted := field.sim.squads().any(func(s): return s.blocked)
 	_status.text = (
 		"Tick %d (%.1fs)   Waves: %s   Line: %d (%s)   Reserve: %d   Seed: %d%s%s"

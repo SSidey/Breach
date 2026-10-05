@@ -9,6 +9,7 @@ const FormationFieldScene = preload(
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
 const FormationFieldHud = preload("res://presentation/skirmish/formation_2d/formation_field_hud.gd")
+const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SCENE := "res://presentation/skirmish/formation_2d/formation_field.tscn"
 
 
@@ -132,3 +133,25 @@ func test_replay_plays_the_pasted_log_not_this_runs() -> void:
 	scene.run_ticks(130)
 
 	assert_str(scene.action_log()).is_equal(hud._replay_view.text)
+
+
+func test_a_pursuing_line_shows_how_far_it_has_gone_of_its_leash() -> void:
+	var scene := _scene()
+	scene.restart(true, 606531)  # a captained line: discipline 50, a 64-cell leash
+	scene.act("pursues on")
+	var hud: FormationFieldHud = scene.get_children().filter(func(c): return c is FormationFieldHud)[0]
+	var wave = null
+	for _i in range(3000):
+		if wave == null and scene.field().waves["A"].built() == 8:
+			scene.act("send A")
+			wave = scene.field().sim.squads()[-1]
+		scene.run_ticks(1)
+		if wave != null and wave.state == SkirmishSquad.State.FIGHTING:
+			break
+	scene.run_ticks(30)
+	scene.act("retreat A")
+	scene.run_ticks(40)
+
+	hud.show_status(scene.field(), true, 606531)
+	assert_str(hud._status.text).contains("pursuing ")
+	assert_str(hud._status.text).contains("/64 cells")
