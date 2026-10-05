@@ -56,3 +56,18 @@ func test_a_retreating_squad_in_reach_is_engaged_but_does_not_turn_to_fight() ->
 	assert_bool(relocked).is_true()  # it may be engaged as it goes
 	assert_int(mine.engaged_with).is_equal(0)  # it doesn't turn to fight
 	assert_int(mine.order).is_equal(SkirmishUnit.Order.RETREAT)
+
+
+func test_a_routing_squad_is_met_where_its_units_are_not_at_its_frame() -> void:
+	# A feel-test field run: a line's last router fled to its reserve while its frame stood
+	# at the wave's front; the wave locked onto the empty frame tick after tick.
+	var routing := _squad(SkirmishSquad.State.ROUTING, SkirmishUnit.Order.HOLD)
+	var holding := _squad(SkirmishSquad.State.HOLDING, SkirmishUnit.Order.HOLD)
+
+	assert_bool(FormationContact.framed(routing)).is_false()
+	assert_bool(FormationContact.framed(holding)).is_true()
+	var front := _squad(SkirmishSquad.State.MOVING, SkirmishUnit.Order.ADVANCE)
+	routing.faction_id = "the_kingdom"
+	routing.heading = 270.0
+	routing.position = front.position + Vector2(0.5, 0.0)  # front to front, in melee reach
+	assert_object(FormationContact.nearest_hostile(front, [front, routing])).is_null()

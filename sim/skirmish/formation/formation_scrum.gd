@@ -29,6 +29,7 @@ const ScrumEngage = preload("res://sim/skirmish/formation/scrum_engage.gd")
 const ScrumRegroup = preload("res://sim/skirmish/formation/scrum_regroup.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const UnitShuffle = preload("res://sim/skirmish/formation/unit_shuffle.gd")
+const UnitSteer = preload("res://sim/skirmish/formation/unit_steer.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
 const FormationWithdraw = preload("res://sim/skirmish/formation/formation_withdraw.gd")
@@ -118,7 +119,7 @@ static func _seek(ctx: Dictionary) -> void:
 		func(s): return s.state == SkirmishSquad.State.FIGHTING
 	)
 	for squad in fighting:  # in the crush, but at the march pace in a pursuit
-		_walk(squad, ctx["pace"] * (CROWDING if squad.pursuit.is_empty() else 1.0), ctx["seconds"])
+		_walk(squad, ctx["pace"] * (CROWDING if squad.pursuit.is_empty() else 1.0), ctx)
 	var turns := []  # after all have moved (a unit stepped up to is seen), before any turn
 	for squad in fighting:
 		turns.append_array(_faces(squad, ctx))
@@ -127,8 +128,10 @@ static func _seek(ctx: Dictionary) -> void:
 
 
 ## Fighting units walk a step to their goal, or back towards their place if they have none
-## and touch no one; units out chasing on their own are left to ScrumPursuit.
-static func _walk(squad: SkirmishSquad, pace: float, seconds: float) -> void:
+## and touch no one, stepping round bodies in their way (UnitSteer); units out chasing on
+## their own are left to ScrumPursuit.
+static func _walk(squad: SkirmishSquad, pace: float, ctx: Dictionary) -> void:
+	var seconds: float = ctx["seconds"]
 	for unit in squad.living():
 		if squad.chasers.has(unit.id):
 			continue  # out chasing on its own (ScrumPursuit)
@@ -137,13 +140,15 @@ static func _walk(squad: SkirmishSquad, pace: float, seconds: float) -> void:
 		entry["toward"] = null
 		if entry["goal"] != null:
 			entry["toward"] = entry["next"]
-			entry["at"] = UnitMotion.move(unit, entry["at"], entry["next"], full)
+			var to := UnitSteer.toward(unit, entry["at"], entry["next"], ctx["bodies"], ctx["seed"])
+			entry["at"] = UnitMotion.move(unit, entry["at"], to, full)
 		elif not entry.get("touch", false):
 			var place := ScrumStance.anchor(squad, unit)
 			var heading: float = squad.stance.get("heading", squad.heading)
 			var speed := full / seconds
 			entry["toward"] = UnitShuffle.look(unit, entry["at"], place, heading, speed)
-			entry["at"] = UnitMotion.move(unit, entry["at"], place, full)
+			var to := UnitSteer.toward(unit, entry["at"], place, ctx["bodies"], ctx["seed"])
+			entry["at"] = UnitMotion.move(unit, entry["at"], to, full)
 			entry["next"] = entry["at"]
 
 

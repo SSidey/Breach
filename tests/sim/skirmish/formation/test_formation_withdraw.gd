@@ -201,12 +201,13 @@ func test_a_pursuit_moves_as_a_body_and_gives_up_at_its_leash() -> void:
 	for _i in range(400):
 		log.append_array(setup[0].step())
 		var xs: Array = line.living().map(func(u): return ScrumReach.at(line, u).x)
-		if not line.pursuit.is_empty() and not line.pursuit["returning"]:
-			spread = maxf(spread, xs.max() - xs.min())
+		var captains := line.living().filter(func(u): return u.leadership > 0)
+		if not line.pursuit.is_empty() and not line.pursuit["returning"] and captains.size() > 0:
+			spread = maxf(spread, xs.max() - ScrumReach.at(line, captains[0]).x)  # it runs west
 		gone = maxf(gone, absf(line.front_distance - post) * MapLayoutDef.CELLS_PER_TILE)
 
 	assert_float(leash).is_equal(64.0)
-	assert_float(spread).is_less(6.0)  # its captain no longer runs ahead of its units
+	assert_float(spread).is_less(6.0)  # its captain no longer runs ahead of its rearmost
 	assert_bool(log.any(func(e): return e["type"] == "pursuit_ended")).is_true()
 	assert_float(gone).is_less_equal(leash + 1.0)  # not all the way to A's spawn
 

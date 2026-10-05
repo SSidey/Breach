@@ -29,6 +29,8 @@ const FormationWithdraw = preload("res://sim/skirmish/formation/formation_withdr
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
+const ScrumSlots = preload("res://sim/skirmish/formation/scrum_slots.gd")
+const UnitSteer = preload("res://sim/skirmish/formation/unit_steer.gd")
 
 ## The scaled rout of a ragged retreat: up to this much shock, for a formation with no
 ## discipline at all (placeholder).
@@ -85,11 +87,13 @@ static func step(
 				else:
 					heads = _nearest(entry["at"], foe, fight_seed)
 			walks.append([squad, unit, entry, heads, chase.get("returning", false)])
+	var bodies := ScrumSlots.bodies(squads) if not walks.is_empty() else []
 	for walk in walks:
 		var unit: SkirmishUnit = walk[1]
 		var entry: Dictionary = walk[2]
 		var full: float = unit.speed * cells_per_second * seconds
-		entry["at"] = UnitMotion.walk(unit, entry["at"], walk[3], full, seconds)
+		var to := UnitSteer.toward(unit, entry["at"], walk[3], bodies, fight_seed)
+		entry["at"] = UnitMotion.walk(unit, entry["at"], to, full, seconds)
 		entry["next"] = entry["at"]
 		if walk[4] and entry["at"].distance_to(walk[3]) < 0.000001:
 			walk[0].chasers.erase(unit.id)  # back in its place: it rejoins its formation
