@@ -135,7 +135,12 @@ Stacked PRs #99 to #108 on `main`:
   it square on.
 
 **Fairness:** head-on mirror, 300 seeds each way round, the side spawned first winning.
-Part 6's 53% over 1,012 battles is within 2 standard deviations; it is the one to watch.
+Parts 6 and 7 leaned to the first-spawned side on seeds 1 to 300 (part 7: 142 to 107, 2.2
+standard deviations); a swapped run mirrors its twin exactly, so the outcome follows the
+ids' draws within a battle, as it should. The draws for the pairs that meet were tested
+directly and are even, and 700 fresh seeds (301 to 1000) on part 7 came out 282 to 290:
+424 to 397 over 1,000, within 1 standard deviation. No bias; seeds 1 to 300 were a
+fluctuation.
 
 | Part | One way | The other |
 |---|---|---|
@@ -143,6 +148,7 @@ Part 6's 53% over 1,012 battles is within 2 standard deviations; it is the one t
 | 2 and 3 | 147 of 287 | 138 of 291 |
 | 5 | 139 of 282 | 144 of 285 |
 | 6 (600 seeds) | 271 of 504 | 263 of 508 |
+| 7 (1,000 seeds, one way) | 424 of 821 | (mirror) |
 
 **Found on the way:**
 - A rout that re-formed round its own leader crashed the scrum's settling (fixed in part 1).
