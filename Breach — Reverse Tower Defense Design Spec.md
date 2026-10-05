@@ -5647,3 +5647,42 @@ chase that ends keeps its unit as a straggler (`returning`) until it reaches its
 every unit under a leader.
 **Order:** unchanged: the roll to break ranks is seeded by battle, tick and unit.
 
+### Decision 113 — A route is a way to travel, not a formation's own: a pursuit follows its quarry's road
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in the feel test: a line pursuing a wave that had come by route C,
+or by route B, ran down its own route A after it, parallel to the wave or away from it,
+because a formation's frame could only move along its own route. The user: "a road
+shouldn't really be owned by a formation and is more used to indicate travel (given
+nothing goes wrong e.g. being attacked), they should pursue the enemy, and if the enemy
+flees they should do so along a known route which can be determined by where they need to
+flee back to, same for progressing, where is the target? pick the nearest route that paths
+to that target, use that route given all is well".
+- **The rule:** a formation travels to its target by the nearest known route that paths
+  to it, joining it where it stands.
+- **Pursuit:** the target is the fleeing enemy, which flees by its own route home, so a
+  pursuer takes that route where it passes (within 2 cells) and follows it after the
+  enemy. Giving up, it marches back along the route it is on to its post, and takes up its
+  own route there again.
+- **The leash** (Decision 107) is now measured as the crow flies from the post, the
+  formation's road no longer being one line; the feel test rings the post at the leash.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Pursue only down its own route | The user: a road isn't the formation's own. |
+| Leave roads and head straight for the enemy | Roads are how formations travel when all is well; open-ground movement is a larger change. |
+
+**Consequences:**
+- `FormationPursuit` keeps the route and post it left (`route`, `post_at`), takes the
+  quarry's route on beginning, and restores its own at its post.
+- Agenda (spec 31): choosing among a network of routes by target for advances and
+  retreats, with the node graph.
+
+**Rules over cases:** general. One rule for how any formation picks its road to a target;
+pursuit is the first place it is applied.
+**Order:** the route is the quarry's own; no ids or list order.
+

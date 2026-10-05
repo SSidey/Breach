@@ -188,22 +188,18 @@ func _draw_staging() -> void:
 		draw_arc(centre, reach * CELL_PX, 0.0, TAU, 64, COLOURS["sight"], 1.5)
 
 
-## A pursuing squad's post and how far its leash lets it go (Decision 107): a tick across
-## its route at each, joined along it.
+## A pursuing squad's post and how far its leash lets it go (Decision 107): a cross at the
+## post, ringed at the leash (it pursues along whatever route its quarry flees by).
 func _draw_pursuit(squad: SkirmishSquad) -> void:
-	if squad.pursuit.is_empty() or squad.pursuit["returning"] or squad.route == null:
+	if squad.pursuit.is_empty() or squad.pursuit["returning"]:
 		return
-	var post: float = squad.pursuit["post"] * MapLayoutDef.CELLS_PER_TILE
+	var post := ORIGIN + Vector2(squad.pursuit["post_at"]) * CELL_PX
 	var leash: float = FormationPursuit.reach(squad)[1]
-	var limit := post + squad.direction * minf(leash, squad.route.length_cells())
 	var colour: Color = COLOURS[squad.faction_id]
-	var ends := []
-	for distance in [post, limit]:
-		var at: Vector2 = squad.route.point_at(distance)
-		var across: Vector2 = squad.route.heading_at(distance).orthogonal() * 4.0
-		ends.append(ORIGIN + at * CELL_PX)
-		draw_line(ORIGIN + (at - across) * CELL_PX, ORIGIN + (at + across) * CELL_PX, colour, 2.0)
-	draw_dashed_line(ends[0], ends[1], colour, 1.0, 4.0)
+	draw_line(post - Vector2(4, 4), post + Vector2(4, 4), colour, 2.0)
+	draw_line(post - Vector2(4, -4), post + Vector2(4, -4), colour, 2.0)
+	if not is_inf(leash):
+		draw_arc(post, leash * CELL_PX, 0.0, TAU, 96, colour, 1.0)
 
 
 ## A bar over the squad's front: its morale, coloured by band (Decision 82).
