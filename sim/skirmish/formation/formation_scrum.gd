@@ -80,9 +80,10 @@ static func step(
 	return events
 
 
-## True while the squad's units are out of their places: it doesn't march.
+## True while the squad's units are out of their places: it doesn't march. Units out chasing
+## or straggling back on their own don't hold it (Decision 112).
 static func regrouping(squad: SkirmishSquad) -> bool:
-	return not squad.loose.is_empty()
+	return squad.loose.keys().any(func(unit_id): return not squad.chasers.has(unit_id))
 
 
 static func _prepare(squad: SkirmishSquad, tick: int) -> void:

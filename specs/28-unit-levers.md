@@ -43,6 +43,8 @@ is done.
     leadership.
 11. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
    wave painter shows it.
+12. **Fatigue:** pursuers and the pursued tiring over a chase, so pursuit wears off by
+    itself as well as by its discipline leash (Decisions 107 and 109).
 
 ## Rounds
 

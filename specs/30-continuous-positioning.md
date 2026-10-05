@@ -175,3 +175,7 @@ fluctuation.
    field.
 5. **Tidy:** `State.TURNING`, `turn_to`-era checks, `FormationRout._reform`'s four-way
    facing and the router's grem-sized catch reach (`CAUGHT_REACH`).
+6. **Replay as a record of play:** the feel test's action log (`FormationFieldActions`)
+   replays a battle tick for tick (Decision 93). The user would keep it for whole games:
+   a standard command vocabulary (who, which order, what target) in place of the feel
+   test's words, a versioned header, and a structured format, made robust where needed.

@@ -28,6 +28,7 @@ const FormationEvents = preload("res://sim/skirmish/formation/formation_events.g
 const FormationWithdraw = preload("res://sim/skirmish/formation/formation_withdraw.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
+const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 
 ## The scaled rout of a ragged retreat: up to this much shock, for a formation with no
 ## discipline at all (placeholder).
@@ -59,7 +60,8 @@ static func retreat(
 
 ## One tick of chasing: each chaser walks at the march pace after the nearest unit of the
 ## enemy it chases; once at its leash, out of sight of that enemy, or that enemy gone, it
-## returns to its formation.
+## straggles back on its own to its place, wherever its formation now is, and rejoins it
+## there - the formation doesn't wait for it (Decision 112).
 static func step(
 	squads: Array, _tick: int, cells_per_second: float, seconds: float, fight_seed: int = 0
 ) -> void:
@@ -72,21 +74,38 @@ static func step(
 			var chase: Dictionary = squad.chasers[unit_id]
 			var foe: SkirmishSquad = by_id.get(chase["foe"])
 			var unit: SkirmishUnit = chase["unit"]
-			if foe == null or foe.is_destroyed() or not unit.is_alive():
+			if not unit.is_alive() or not squad.loose.has(unit_id):
 				squad.chasers.erase(unit_id)
 				continue
 			var entry: Dictionary = squad.loose[unit_id]
-			var quarry := _nearest(entry["at"], foe, fight_seed)
-			var gone: float = entry["at"].distance_to(chase["from"])
-			if gone >= chase["leash"] or quarry.distance_to(entry["at"]) > unit.detection:
-				squad.chasers.erase(unit_id)
-				continue
-			walks.append([unit, entry, quarry])
+			var heads := ScrumStance.anchor(squad, unit)  # straggling back to its place
+			if not chase.get("returning", false):
+				if _done(chase, entry["at"], unit, foe, fight_seed):
+					chase["returning"] = true
+				else:
+					heads = _nearest(entry["at"], foe, fight_seed)
+			walks.append([squad, unit, entry, heads, chase.get("returning", false)])
 	for walk in walks:
-		var entry: Dictionary = walk[1]
-		var full: float = walk[0].speed * cells_per_second * seconds
-		entry["at"] = UnitMotion.walk(walk[0], entry["at"], walk[2], full, seconds)
+		var unit: SkirmishUnit = walk[1]
+		var entry: Dictionary = walk[2]
+		var full: float = unit.speed * cells_per_second * seconds
+		entry["at"] = UnitMotion.walk(unit, entry["at"], walk[3], full, seconds)
 		entry["next"] = entry["at"]
+		if walk[4] and entry["at"].distance_to(walk[3]) < 0.000001:
+			walk[0].chasers.erase(unit.id)  # back in its place: it rejoins its formation
+			walk[0].loose.erase(unit.id)
+
+
+## True if a chase is over: the chaser at its leash, its quarry out of its sight, or gone.
+static func _done(
+	chase: Dictionary, at: Vector2, unit: SkirmishUnit, foe: SkirmishSquad, fight_seed: int
+) -> bool:
+	if foe == null or foe.is_destroyed():
+		return true
+	var quarry := _nearest(at, foe, fight_seed)
+	return (
+		at.distance_to(chase["from"]) >= chase["leash"] or quarry.distance_to(at) > unit.detection
+	)
 
 
 ## True if the squad's unit is away from its place on its own - chasing, or its squad
@@ -108,12 +127,13 @@ static func _tempt(enemy: SkirmishSquad, squad: SkirmishSquad, tick: int, battle
 		var at := ScrumReach.at(enemy, unit)
 		if _nearest(at, squad, battle_seed).distance_to(at) > TEMPTED_WITHIN:
 			continue
-		var chance := float(FormationDiscipline.MEETS_THREATS - unit.discipline) / 100.0
+		var steadied := FormationDiscipline.unit_discipline(enemy, unit)  # its leader's too
+		var chance := float(FormationDiscipline.MEETS_THREATS - steadied) / 100.0
 		if BattleRolls.uniform(battle_seed, [tick, unit.id, "chase"]) >= chance:
 			continue
 		if not enemy.loose.has(unit.id):
 			enemy.loose[unit.id] = {"unit": unit, "at": at, "goal": null, "next": at}
-		var leash := FormationDiscipline.unit_leash(unit)
+		var leash := FormationDiscipline.unit_leash(enemy, unit)
 		enemy.chasers[unit.id] = {"unit": unit, "foe": squad.id, "from": at, "leash": leash}
 
 

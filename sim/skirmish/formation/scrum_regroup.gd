@@ -29,7 +29,8 @@ static func step(squads: Array, pace: float, seconds: float, fight_seed: int) ->
 	for squad in squads:
 		if squad.state in [SkirmishSquad.State.FIGHTING, SkirmishSquad.State.ROUTING]:
 			continue
-		if squad.state == SkirmishSquad.State.MOVING and not squad.loose.is_empty():
+		var held: bool = squad.loose.keys().any(func(id): return not squad.chasers.has(id))
+		if squad.state == SkirmishSquad.State.MOVING and held:
 			squad.state = SkirmishSquad.State.HOLDING  # it stands while its units regroup
 		regrouping.append([squad, _foes_faced(squad, squads, fight_seed)])
 	for entry in regrouping:

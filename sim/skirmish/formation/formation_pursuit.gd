@@ -98,6 +98,8 @@ static func _advance(squad: SkirmishSquad, foe: SkirmishSquad, step_cells: float
 static func _lagging(squad: SkirmishSquad) -> bool:
 	var forward := SquadFrame.forward(squad.facing)
 	for unit in squad.living():
+		if squad.chasers.has(unit.id):
+			continue  # one out on its own makes its own way (Decision 112)
 		var behind := (ScrumStance.anchor(squad, unit) - ScrumReach.at(squad, unit)).dot(forward)
 		if behind > LAG_CELLS:
 			return true
