@@ -1,7 +1,7 @@
 # Spec 30: Continuous positioning
 
-Decisions 102 (continuous footprints, rotated rectangles, any facing) and 105 (free
-bearings, sweeping round bends, pushing apart by size). It builds on
+Decisions 102 (continuous footprints, rotated rectangles, any facing), 105 (free
+bearings, sweeping round bends, pushing apart by size) and 106 (a body and a space). It builds on
 Decisions 74 and 75 (squads on routes), 84 (claimed cells, overtaking), 85 (terrain per
 cell), 88 (seeking contact), 95 (movement by facing), 97 (no ids or order in outcomes)
 and 100 (one unit to a cell).
@@ -23,9 +23,11 @@ is built as stacked PRs, in the order under "Round 1 plan".
 
 ## Agreed
 
-- **Footprints:** a unit is a rectangle its own width by depth (a grem 1 x 1, a brute
-  2 x 2), turned to its bearing. No two footprints overlap, ever: moving units steer
-  round friends and stop short of foes; a unit at rest is never inside another.
+- **Bodies and spaces (Decision 106):** a unit's body is the circle inscribed in its
+  footprint (a grem 1 across, a brute 2); its space is the footprint rectangle turned to
+  its bearing. No two bodies overlap, ever: they push apart by mass, and units stop short
+  of foes. A unit in control keeps its space; a router keeps only its body and shoves
+  through, crushing as it goes.
 - **Facing:** a formation's frame faces any angle, the route's heading where it is. Its
   places are laid out in that turned frame. Units keep turning at their turn rate
   (Decision 95), and their bearings turn freely (Decision 105).
@@ -101,7 +103,7 @@ Each part is a PR, stacked on the one before. No part opens more than 11 existin
 | 1 | Retire the wrap, edge and walking-wing modes; the scrum is the only fight. |
 | 2 | Free bearings (`UnitMotion`): an angle turned at the turn rate. |
 | 3 | The turned frame (`SquadFrame`): a heading, swept round bends at the wheel rate. |
-| 4 | Turned-rectangle touching (`ScrumReach`): the same reach and front arc. |
-| 5 | Separation: one push step for scrum, rout and withdrawal (`ScrumSpacing`, `RoutSettle`, `RoutFlight.part`). |
-| 6 | Slots beside a foe (`ScrumPaths`, `ScrumContest`). |
+| 4 | Turned footprints (`UnitFootprint`): a unit's space. |
+| 5 | Bodies: one push step by mass for scrum, rout and withdrawal (`ScrumSpacing`, `RoutSettle`, `RoutFlight.part`). |
+| 6 | Slots round a foe's body, and contact between bodies (`ScrumPaths`, `ScrumContest`, `ScrumReach`). |
 | 7 | Narrowing across the heading; the scene draws turned units; the mirror test; trials. |
