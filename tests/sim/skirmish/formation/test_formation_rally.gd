@@ -40,7 +40,8 @@ func _of(log: Array, kind: String) -> Array:
 
 
 ## The player's squad 30 cells from home fighting a kingdom squad, a leaderless friend
-## holding 15 cells from home behind it; it routs. Returns [sim, routers, friend].
+## holding 15 cells from home behind it; it routs, and the enemy holds its ground (so it
+## doesn't follow up onto the friend). Returns [sim, routers, friend].
 func _rout_past_a_friend(friend_morale: int) -> Array:
 	var sim := FormationSimulation.new(2.0, TICK)
 	var mine := sim.spawn_squad(4, _line(4), "player", true)
@@ -53,17 +54,18 @@ func _rout_past_a_friend(friend_morale: int) -> Array:
 	_run(sim, 5)
 	friend.morale = friend_morale
 	mine.morale = 0
+	sim.order(theirs.id, SkirmishUnit.Order.HOLD)
 	return [sim, mine, friend]
 
 
 func test_routers_are_caught_by_a_steady_friend_and_join_it() -> void:
-	var setup := _rout_past_a_friend(75)  # steady still, once its routers have crashed through
+	var setup := _rout_past_a_friend(75)  # the crushes shake it a little; it soon steadies
 	var friend: SkirmishSquad = setup[2]
 
-	var caught := _run(setup[0], 20)
+	var caught := _run(setup[0], 25)
 	assert_bool(_of(caught, "crushed").is_empty()).is_false()
 	assert_int(_of(caught, "rallied").size()).is_equal(0)  # not yet: it takes a while
-	var log := _run(setup[0], roundi(FormationRout.STEADY_RALLY_SECONDS / TICK) + 5)
+	var log := _run(setup[0], roundi((FormationRout.STEADY_RALLY_SECONDS + 3.0) / TICK))
 
 	var rallied := _of(log, "rallied")
 	assert_bool(rallied.is_empty()).is_false()
@@ -80,7 +82,7 @@ func test_a_shaken_friend_holds_them_until_it_steadies() -> void:
 	assert_int(_of(held, "fled_home").size()).is_equal(0)
 	assert_int(_of(held, "rallied").size()).is_equal(0)  # not while it is shaken
 	friend.morale = 60  # it steadies
-	var log := _run(setup[0], roundi(FormationRout.STEADY_RALLY_SECONDS / TICK) + 5)
+	var log := _run(setup[0], roundi((FormationRout.STEADY_RALLY_SECONDS + 3.0) / TICK))
 
 	assert_int(_of(log, "fled_home").size()).is_equal(0)
 	var rallied := _of(log, "rallied")

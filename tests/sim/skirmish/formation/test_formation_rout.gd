@@ -76,15 +76,22 @@ func test_routers_flee_home_and_strike_nothing() -> void:
 	assert_int(_of(log, "hit").filter(func(h): return h["faction"] == "player").size()).is_equal(0)
 
 
-func test_pursuers_strike_routers_from_behind() -> void:
-	var setup := _fight(1.2)  # a little faster than the routers: it keeps them in reach
+func test_hostiles_strike_routers_running_past_them_from_behind() -> void:
+	var setup := _fight()
+	var sim: FormationSimulation = setup[0]
 	var mine: SkirmishSquad = setup[1]
+	var across := sim.spawn_squad(4, _line(_def(500, 2), 4), "the_kingdom", false)
+	across.front_distance = 15.0 / 64.0  # a hostile line between the routers and home
+	sim.order(across.id, SkirmishUnit.Order.HOLD)
 	mine.morale = 0
+	var ids := mine.units.map(func(u): return u.id)  # before any reach home and leave
 
-	var log := _run(setup[0], 30)
+	var log := _run(sim, 40)
 
-	var ids := mine.units.map(func(u): return u.id)
-	var on_routers := _of(log, "hit").filter(func(h): return ids.has(h["target"]))
+	var broke: int = _of(log, "routed")[0]["tick"]
+	var on_routers := _of(log, "hit").filter(
+		func(h): return ids.has(h["target"]) and h["tick"] > broke
+	)
 	assert_bool(on_routers.is_empty()).is_false()
 	assert_bool(on_routers.all(func(h): return h["flank"])).is_true()
 
