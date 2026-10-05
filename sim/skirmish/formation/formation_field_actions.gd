@@ -3,7 +3,8 @@ extends RefCounted
 ## The feel test's player actions as words, so a session can be logged and replayed tick
 ## for tick (Decision 93: the same seed and orders replay a battle). The scene's buttons
 ## apply them through here and log "<tick> <action>"; a log replays the same battle
-## (tools/formation_replay.gd). A log opens with "seed <n> captain <on|off>". Actions:
+## (tools/formation_replay.gd, or the scene's Replay log button). A log opens with
+## "seed <n> captain <on|off>". Actions:
 ##   send A | send B | send A+B | retreat A | retreat B | auto A on | auto B off |
 ##   wait on | via_c on | pursues on   (on or off)
 ## Pure over the field it is given.
@@ -60,19 +61,33 @@ static func apply(field: FormationField, action: String) -> bool:
 	return true
 
 
+## A log read back: {"seed", "captained", "actions": [[tick, action], ...]} in order.
+static func parse(log: String) -> Dictionary:
+	var lines := log.strip_edges().split("\n", false)
+	var head := lines[0].split(" ", false) if lines.size() > 0 else PackedStringArray()
+	var read := {"seed": 0, "captained": false, "actions": []}
+	if head.size() < 2 or head[0] != "seed" or not head[1].is_valid_int():
+		return {}
+	read["seed"] = int(head[1])
+	read["captained"] = head.size() > 3 and head[3] == "on"
+	for line in lines.slice(1):
+		var parts := line.strip_edges().split(" ", false, 1)
+		if parts.size() == 2 and parts[0].is_valid_int():
+			read["actions"].append([int(parts[0]), parts[1]])
+	return read
+
+
 ## The field a log leaves after its last action and `extra` more ticks; after every tick
 ## `on_events` (the field, the tick's events) is called, if given.
 static func replay(log: String, extra: int, on_events: Callable = Callable()) -> FormationField:
-	var lines := log.strip_edges().split("\n", false)
-	var head := lines[0].split(" ", false)
-	var played := field(int(head[1]), head.size() > 3 and head[3] == "on")
+	var read := parse(log)
+	var played := field(read["seed"], read["captained"])
 	var tick := 0
-	for line in lines.slice(1):
-		var parts := line.strip_edges().split(" ", false, 1)
-		while tick < int(parts[0]):
+	for queued in read["actions"]:
+		while tick < queued[0]:
 			_step(played, on_events)
 			tick += 1
-		apply(played, parts[1])
+		apply(played, queued[1])
 	for _i in range(extra):
 		_step(played, on_events)
 	return played

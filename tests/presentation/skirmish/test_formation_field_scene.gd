@@ -7,6 +7,7 @@ const FormationFieldScene = preload(
 	"res://presentation/skirmish/formation_2d/formation_field_scene.gd"
 )
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
+const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
 const SCENE := "res://presentation/skirmish/formation_2d/formation_field.tscn"
 
 
@@ -95,3 +96,24 @@ func test_actions_are_logged_with_their_ticks_after_the_seed() -> void:
 	scene.act("send A")
 
 	assert_str(scene.action_log()).is_equal("seed 42 captain off\n5 send A")
+
+
+func test_a_pasted_log_replays_live_as_the_headless_replay_does() -> void:
+	var log := "seed 446157 captain off\n0 wait on\n40 send A+B"
+	var scene := _scene()
+	var read := FormationFieldActions.parse(log)
+	scene.restart(read["captained"], read["seed"], read["actions"])
+
+	scene.run_ticks(200)
+
+	var headless := FormationFieldActions.replay(log, 200 - 40)
+	assert_str(scene.action_log()).is_equal(log)
+	assert_int(scene.field().sim.tick_number()).is_equal(headless.sim.tick_number())
+	assert_str(str(_fronts(scene.field()))).is_equal(str(_fronts(headless)))
+
+
+func _fronts(field: FormationField) -> Array:
+	var rows := []
+	for squad in field.sim.squads():
+		rows.append([squad.state, squad.position, squad.living().size()])
+	return rows

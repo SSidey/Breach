@@ -8,7 +8,8 @@ extends Node2D
 ## A engage (Decision 87). In a fight units seek contact and face their own foes (Decision
 ## 88); "Line has a captain" restarts with a led line that turns to meet a flank; Reset
 ## starts afresh under a battle seed (Decision 93). Every action is logged with its tick
-## (FormationFieldActions), for copying out and replaying. Controls: FormationFieldHud.
+## (FormationFieldActions), for copying out; a log pasted back replays live.
+## Controls: FormationFieldHud.
 ## Engine glue - the rules live in sim/skirmish/formation/.
 ##
 ##   godot --path . res://presentation/skirmish/formation_2d/formation_field.tscn
@@ -52,6 +53,7 @@ var _battle_seed := 0
 var _log := PackedStringArray()  # "<tick> <action>", after a "seed <n> captain <on|off>"
 var _squads_before := {}  # squad id -> its front's position at the previous tick
 var _squads_now := {}
+var _queued := []  # [tick, action] still to replay, in order
 
 
 func field() -> FormationField:
@@ -65,6 +67,8 @@ func clock() -> SkirmishClock:
 ## Runs `count` ticks at once (the frame loop runs whatever the clock says is due).
 func run_ticks(count: int) -> void:
 	for _i in range(count):
+		while not _queued.is_empty() and _queued[0][0] <= _field.sim.tick_number():
+			act(_queued.pop_front()[1])
 		for event in _field.step():
 			if event["type"] == "hit" and event["flank"]:
 				_flashes[event["target"]] = FLASH_SECONDS
@@ -82,9 +86,11 @@ func _ready() -> void:
 
 
 ## A fresh field, its line led by a captain or not, its battle under `battle_seed`
-## (Decision 93: the same seed and orders replay a battle).
-func restart(captained: bool, battle_seed: int) -> void:
+## (Decision 93: the same seed and orders replay a battle). `queued` ([tick, action] pairs,
+## FormationFieldActions.parse) are played at their ticks as the clock runs: a replay.
+func restart(captained: bool, battle_seed: int, queued: Array = []) -> void:
 	_battle_seed = battle_seed
+	_queued = queued.duplicate()
 	_field = FormationFieldActions.field(battle_seed, captained)
 	_log = PackedStringArray(["seed %d captain %s" % [battle_seed, "on" if captained else "off"]])
 	_previous = {}

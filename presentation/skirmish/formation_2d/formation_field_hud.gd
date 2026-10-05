@@ -3,13 +3,15 @@ extends CanvasLayer
 ## The 2D feel test's controls and status (spec 27): two rows of buttons - send each route's
 ## wave or let it go when full, or retreat it; send A down the slanted route C, send A and
 ## B together, have B wait for A, give the line a captain, have it pursue, reset with a
-## seed, pause - and a status row
-## under it: waves built (leaders counted apart), the line, the reserve and the battle
-## seed. Reset starts a fresh field, with the seed typed in or a random one, keeping the
-## ticked options. Below, the session's action log (FormationFieldActions) and a Copy
-## button: pasted back, it replays the same battle. Engine glue.
+## seed, pause - and a status row under it: the tick (and seconds of battle), waves built
+## (leaders counted apart), the line, the reserve and the battle seed. Reset starts a
+## fresh field, with the seed typed in or a random one, keeping the ticked options. Below,
+## the session's action log (FormationFieldActions) with Copy and Replay: paste a log in
+## and Replay restarts on its seed and plays its actions at their ticks, live (pause still
+## works). Engine glue.
 
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
+const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 
 const WAYS := ["north", "east", "south", "west"]
@@ -55,10 +57,25 @@ func build(scene: Node) -> void:
 	var logged := HBoxContainer.new()
 	rows.add_child(logged)
 	_log_view = TextEdit.new()
-	_log_view.editable = false
 	_log_view.custom_minimum_size = Vector2(420, 72)
 	logged.add_child(_log_view)
-	_button(logged, "Copy log", func(): DisplayServer.clipboard_set(scene.action_log()))
+	var log_buttons := VBoxContainer.new()
+	logged.add_child(log_buttons)
+	_button(log_buttons, "Copy log", func(): DisplayServer.clipboard_set(scene.action_log()))
+	_button(log_buttons, "Replay log", replay)
+
+
+## Restarts on the pasted log's seed and replays its actions; the options are the log's.
+func replay() -> void:
+	var read := FormationFieldActions.parse(_log_view.text)
+	if read.is_empty():
+		return
+	_log_view.release_focus()
+	_seed.text = str(read["seed"])
+	_captain.set_pressed_no_signal(read["captained"])
+	for box in [_wait, _via_c, _pursues] + _autos.values():
+		box.set_pressed_no_signal(false)
+	_scene.restart(read["captained"], read["seed"], read["actions"])
 
 
 ## A fresh field: the seed typed in, or a random one; the ticked options kept (and logged).
@@ -89,8 +106,10 @@ func show_status(field: FormationField, paused: bool, battle_seed: int) -> void:
 		state += ", faced " + WAYS[line.stance["facing"]]
 	var halted := field.sim.squads().any(func(s): return s.blocked)
 	_status.text = (
-		"Waves: %s   Line: %d (%s)   Reserve: %d   Seed: %d%s%s"
+		"Tick %d (%.1fs)   Waves: %s   Line: %d (%s)   Reserve: %d   Seed: %d%s%s"
 		% [
+			field.sim.tick_number(),
+			field.sim.tick_number() * FormationFieldActions.TICK_SECONDS,
 			", ".join(built),
 			line.living().size(),
 			state,
@@ -101,7 +120,7 @@ func show_status(field: FormationField, paused: bool, battle_seed: int) -> void:
 		]
 	)
 	var log: String = _scene.action_log()
-	if _log_view.text != log:
+	if _log_view.text != log and not _log_view.has_focus():  # not while a log is pasted in
 		_log_view.text = log
 		_log_view.scroll_vertical = _log_view.get_line_count()
 
