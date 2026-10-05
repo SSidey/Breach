@@ -18,8 +18,8 @@ faces its route's true heading.
 
 ## Status
 
-**Round 1 agreed (Decisions 102 and 105); building.** The spec 27 stack is merged. Round 1
-is built as stacked PRs, in the order under "Round 1 plan".
+**Round 1 built (Decisions 102, 105 and 106); round 2 to agree.** The spec 27 stack is
+merged. Round 1 is built as stacked PRs, in the order under "Round 1 plan".
 
 ## Agreed
 
@@ -107,3 +107,65 @@ Each part is a PR, stacked on the one before. No part opens more than 11 existin
 | 5 | Bodies: one push step by mass for scrum, rout and withdrawal (`ScrumSpacing`, `RoutSettle`, `RoutFlight.part`). |
 | 6 | Slots round a foe's body, and contact between bodies (`ScrumPaths`, `ScrumContest`, `ScrumReach`). |
 | 7 | Narrowing across the heading; the scene draws turned units; the mirror test; trials. |
+
+## Round 1 built
+
+Stacked PRs #99 to #108 on `main`:
+
+| PR | Part |
+|---|---|
+| #99 | Decisions 105 and 106, this plan |
+| #100 to #102 | 1: the scrum is the only fight; the wrap, edge-blow and walking-wing modes go |
+| #103 | 2: free bearings |
+| #104 | 3: the turned frame, sweeping round bends at its wheel rate |
+| #105 | 4: turned footprints (`UnitFootprint`), a unit's space |
+| #106 | 5: bodies push apart by mass (`UnitBodies`) |
+| #107 | 6: slots round a foe's body (`ScrumSlots`, `ScrumSeek`), contact between bodies |
+| #108 | 7: narrowing across the heading, bodies drawn, no handedness |
+
+**To feel-test:**
+- The scrum is fluid: more of a wave wraps a line's ends than cells let it. A frontal
+  attack still doesn't rout the field's line, but it now costs it about half its units
+  (it kept about 9 of 12).
+- Head-on mirror battles are quicker (about 120 ticks, from 170) and end in a mutual
+  rout more often (about 15%, from 5%).
+- Routers shove through their own ranks, crushing as they go; a friend they shove past
+  catches them.
+- A formation on a bend sweeps round it without halting; one on a slanting route faces
+  it square on.
+
+**Fairness:** head-on mirror, 300 seeds each way round, the side spawned first winning.
+Part 6's 53% over 1,012 battles is within 2 standard deviations; it is the one to watch.
+
+| Part | One way | The other |
+|---|---|---|
+| 1 (100 seeds) | 45 of 93 | 47 of 96 |
+| 2 and 3 | 147 of 287 | 138 of 291 |
+| 5 | 139 of 282 | 144 of 285 |
+| 6 (600 seeds) | 271 of 504 | 263 of 508 |
+
+**Found on the way:**
+- A rout that re-formed round its own leader crashed the scrum's settling (fixed in part 1).
+- The scrum turned squads' units in list order, which would have mattered once footprints
+  turn with their units (fixed in part 4).
+- Vector2 is float32: bodies just touching measured a hair apart or overlapping depending
+  on where on the field they stood. Tolerances are now 0.001 cell (part 7).
+- Exact mirror runs can't match: a seeker facing a mirror-symmetric choice must pick a
+  hand, and a reflection flips it. The test checks no hand is preferred instead.
+
+## Agenda for round 2
+
+1. **What still reckons in four ways:** a disciplined line's stance (`ScrumStance`) turns
+   to the nearest of four ways and re-lays in that frame; flank locks (`FormationEdges`,
+   `SquadEdges`) are by four edges; `SquadGeometry`, `FormationContact` and
+   `FormationMarch.pace` read the facing nearest the heading. Each moves onto the heading.
+2. **Spaces kept by control:** a unit in control keeps its space (Decision 106); today
+   only the frame keeps places, and a pushed unit in its frame leaves it to walk back.
+   Whether loose units in control should hold their spaces against friends is open.
+3. **Seeking round bodies:** seekers walk straight to their slot and bodies part round
+   them; one blocked by an enemy between it and its slot can stall. A steering rule
+   (round the nearer side) may be needed.
+4. **Cost:** `UnitBodies` runs three passes a tick over bucketed pairs; measure a full
+   field.
+5. **Tidy:** `State.TURNING`, `turn_to`-era checks, `FormationRout._reform`'s four-way
+   facing and the router's grem-sized catch reach (`CAUGHT_REACH`).
