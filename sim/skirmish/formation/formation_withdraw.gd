@@ -38,6 +38,8 @@ const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const CELLS := float(MapLayoutDef.CELLS_PER_TILE)
 ## How near (cells, along its route) home a unit has nowhere further to go.
 const HOME_CELLS := 0.5
+## How far ahead along its route (cells) a fleeing unit looks for the way home.
+const LOOK_CELLS := 1.0
 
 
 ## Starts the squad withdrawing: its units leave their places where they stand.
@@ -103,7 +105,7 @@ static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, motion: Array, terra
 	var home: float = squad.home_distance * CELLS
 	if absf(along - home) < HOME_CELLS:
 		return  # home
-	var homeward: Vector2 = squad.route.heading_at(along) * signf(home - along)
+	var homeward := _homeward(squad.route, along, home)
 	var full: float = unit.speed * motion[0]
 	var heading := homeward.rotated(RoutFlight.fan(unit, motion[2]) * disorder(squad))
 	var side := homeward.orthogonal()
@@ -130,6 +132,16 @@ static func _home(squad: SkirmishSquad) -> bool:
 		if absf(squad.route.distance_of(ScrumReach.at(squad, unit)) - home) >= HOME_CELLS:
 			return false
 	return true
+
+
+## The way home along the route from `along`: towards the route a step nearer home, so a
+## unit at a bend turns with the route rather than running on along the leg it was on.
+static func _homeward(route, along: float, home: float) -> Vector2:
+	var nearer: float = move_toward(along, home, LOOK_CELLS)
+	var way: Vector2 = route.point_at(nearer) - route.point_at(along)
+	if way.length() < 0.000001:
+		return route.heading_at(along) * signf(home - along)
+	return way.normalized()
 
 
 ## True if no standing enemy is near the squad and none pursues it.
