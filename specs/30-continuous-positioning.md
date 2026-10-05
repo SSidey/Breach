@@ -18,8 +18,9 @@ faces its route's true heading.
 
 ## Status
 
-**Round 1 built and feel-tested (Decisions 102 and 105 to 113); round 2 next.** Round 1
-and the fixes its feel test asked for are stacked PRs #99 to #117 (below). The user's order
+**Round 1 built, feel-tested and merged (Decisions 102 and 105 to 113); round 2 agreed
+(Decisions 114 and 115), being built.** Round 1 and the fixes its feel test asked for were
+stacked PRs #99 to #117 (below). The user's order
 after it: this spec's round 2 (the clean-up), then spec 28 (unit levers), spec 32 (impact
 and attack shapes), spec 31 (posts and garrisons), then the structure work still to come
 (damage and collapse in play, spec 24; fighting at structures).
@@ -241,3 +242,37 @@ run mirrors its twin exactly and the totals sit within 2 standard deviations (60
    replays a battle tick for tick (Decision 93). The user would keep it for whole games:
    a standard command vocabulary (who, which order, what target) in place of the feel
    test's words, a versioned header, and a structured format, made robust where needed.
+
+## Round 2 answers
+
+1. **Four ways:** the mechanical move - everything that reads the facing nearest the
+   heading (`ScrumStance`, `SquadEdges` and `FormationEdges`, `SquadGeometry`,
+   `FormationContact`, `FormationMarch.pace`, the rout's re-forming) reckons from the
+   heading itself.
+2. **Spaces kept by control:** settled in round 1's feel test: a framed unit holds its
+   place against another squad's loose units and against a brush from its own (#110,
+   #112), and a unit its own ranks hold off trades places (Decision 110). Closed.
+3. **Steering (Decision 114):** a unit whose straight way to its goal is blocked by a body
+   steps round it on the side nearer its goal, a seeded draw breaking a dead-centre tie;
+   one rule for seekers, regrouping units and stragglers.
+4. **Cost:** measured on a full field; optimised only if it needs it.
+5. **Tidy:** `State.TURNING` and its checks, `turn_to`-era checks, the rout's four-way
+   re-forming, and the router's catch reach measured by bodies, not a grem's size.
+6. **Replay (Decision 115):** the record of play is structured now: a versioned header and
+   one command per line - its tick, who gives it, the order and its target - with the feel
+   test's words mapped onto it and old logs still replaying. The vocabulary grows as real
+   orders come (spec 31).
+
+## Round 2 plan
+
+Stacked PRs on `main`, each within the 11-file limit:
+
+| Part | What |
+|---|---|
+| 1 | The tidy (item 5) |
+| 2 | Edges, geometry, contact and the march reckon from the heading (item 1) |
+| 3 | Stance, regrouping, routs and pursuit reckon from the heading (item 1) |
+| 4 | Steering round bodies (item 3, Decision 114) |
+| 5 | The structured record of play (item 6, Decision 115) |
+| 6 | The cost of bodies on a full field (item 4), and this spec's round 2 write-up |
+

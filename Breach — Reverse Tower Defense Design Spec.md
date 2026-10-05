@@ -5694,3 +5694,46 @@ to that target, use that route given all is well".
 pursuit is the first place it is applied.
 **Order:** the route is the quarry's own; no ids or list order.
 
+### Decision 114 — A unit blocked on its way steps round the body in the way, on the side nearer its goal
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Spec 30 round 2, item 3: a unit walks straight at its goal and relies on
+bodies parting round it (Decision 106); one with an enemy body between it and its slot
+could stall against it. The user chose steering: a unit whose straight way to its goal is
+blocked by a body steps round it on the side nearer its goal, a seeded draw breaking a
+dead-centre tie (no handedness). One rule for seekers, regrouping units and stragglers.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Re-pick another slot when blocked | Can still stall where no other slot is open. |
+| Leave it to bodies parting | An enemy body doesn't part for it. |
+
+**Rules over cases:** general. One rule for any unit walking to a goal.
+**Order:** the side by geometry, a dead-centre tie by a seeded draw (Decision 97).
+
+### Decision 115 — The record of play is structured: a versioned header and one command per line
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** The feel test's action log replays a battle tick for tick (Decision 93) and
+the user would keep it for whole games (spec 30 round 2, item 6). Chosen: structure it
+now - a header naming the format's version and the battle's seed and set-up, then one
+command per line: its tick, who gives it (a faction), the order and its target - with the
+feel test's words mapped onto it and old logs still replaying. The vocabulary grows as
+the game's real orders come (spec 31).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Design the format, build it later | The user chose to give the working replay structure now. |
+| Keep the feel test's words | Not robust enough to keep for whole games. |
+
+**Rules over cases:** general. One record for every command.
+**Order:** commands apply in the order they were given within a tick, as given.
+
