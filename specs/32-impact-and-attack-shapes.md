@@ -14,7 +14,8 @@ another.
 
 ## Status
 
-**Draft (not agreed).** Raised during spec 30 round 1; to follow spec 30 round 2.
+**Draft; partly agreed** (see "The user's answers"). Raised during spec 30 round 1; to
+follow spec 30 round 2.
 
 ## Proposed
 
@@ -64,6 +65,23 @@ Each shape carries: which bodies it can hit (foes only, or friends too), how man
 damage by distance from its centre or along its band (falloff), and its impact (strength
 and the direction: away from the striker, along the band, or out from the centre).
 
+## The user's answers
+
+- **Shapes:** sector and band are enough, "as we can encompass pretty much anything (so
+  long as area attacks like cleaves hit multiple enemies)". A shape hits every body in it
+  that it may (up to any limit the weapon sets).
+- **Friendly fire:** "should be a thing" - blasts, cleaves and thrown bodies reach
+  friends as foes.
+- **Terrain and structures are one question**, what a thrown body meets:
+  - **Off an edge or into liquid:** the fall resolves first - damage by how far it drops
+    (the height difference, Decision 85) - then what it lands in: on ground it is down; in
+    liquid deeper than it can stand, swimming or drowning (spec to come).
+  - **Into terrain or a structure:** the collision is damage from its own speed and mass,
+    as a blunt blow (Decision 79), to the body and the thing it hits. The user asked
+    whether to treat it as blunt with breaker 0. Proposed: blunt, with the thrown unit's
+    own breaker (Decision 77) - 0 for most, so a grem thrown at a wall hurts only itself;
+    a unit with breaker (a brute) can crack what it is thrown into.
+
 ## Agenda for round 1
 
 1. **Impact model:** decaying velocity on bodies, stagger and knockdown thresholds, and
@@ -75,10 +93,11 @@ and the direction: away from the striker, along the band, or out from the centre
 4. **Shapes:** sector and band as the only primitives, or others (a ring, a chain that
    jumps between targets, a wall); how many targets a shape may take, and in what order
    (nearest first, then the unit's own frame, then a draw: Decision 97).
-5. **Friendly fire:** blasts and throws reaching friends (by shape, always, or never).
+5. **Friendly fire:** agreed (it reaches friends); how much (full, or less for a
+   striker's own formation).
 6. **Damage over a shape:** falloff from a blast's centre, along a band, through a cone.
-7. **Terrain:** thrown into a wall, off a cliff, into water; impact on structures
-   (Decision 77's digging and breaking).
+7. **Terrain and structures:** agreed in outline (above); the fall-damage curve, the
+   collision threshold, and breaker 0 or the unit's own.
 8. **Feel test:** a brute in a grem scrum, a charge into a line (braced and not), a bomb
    in a crowd.
 9. **Fairness:** shapes resolve from one snapshot, impacts apply together (Decision 97);
