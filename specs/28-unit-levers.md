@@ -12,10 +12,108 @@ traits: bonuses and new capabilities that plug into the same pairs.
 
 ## Status
 
-**Design conversation not started.** Raised during spec 27; held until spec 27's agenda
-is done.
+**Round 1 agenda drafted, for the user's answers.** Spec 30 is built and merged
+(Decisions 102 to 116), so what a unit needs for the fights it now has is clear. Round 1
+takes stock of the unit as built, the placeholders it leans on, and asks the questions
+below; the original agenda (kept below) is folded into them.
 
-## Agenda for the design conversation
+## The unit as built
+
+`UnitDef` today, with the six units in `content/units/`:
+
+| Group | Fields | Notes |
+|---|---|---|
+| Body | `hp`, `footprint_depth`, `footprint_width`, `height` | Mass for bodies is footprint area (Decision 106); no armour, no resistances |
+| Movement | `speed`, `turn_rate`, `backward_pace` | Turn rate and backward pace are placeholders (Decision 95) |
+| Mind | `courage`, `discipline`, `initiative`, `leadership`, `tactics` | Initiative is 10 for all; discipline 30 rank and file, 60 drilled |
+| Senses | `detection_range` | 40 cells for all |
+| Fighting | `weapons` (`WeaponDef`: `damage`, `damage_type`, `attack_range`, `traits`), `dmg` | `dmg` is only a fallback for a unit with no weapons; every unit has weapons |
+| Formation | `preferred_position`, `position_priority` | Band and claim (Decision 46) |
+| Cost | `cost_food`, `build_seconds` | |
+
+Missing beside the Decisions that ask for them:
+- **Traits on units.** Rated traits (Decision 64) live on materials and weapons, not on
+  `UnitDef`; climber, darksight, horde and mob (Decision 83), bleed and medic have nowhere
+  to go.
+- **Armour or resistances.** Damage types (Decision 79) have no effect on units.
+- **Skill.** Every blow lands; there is no melee or ranged skill (agenda item 3).
+- **Stamina.** Nothing tires (agenda item 12).
+
+## The placeholders
+
+Numbers marked as placeholders in the code, by where they belong:
+
+| Belongs to | Placeholders |
+|---|---|
+| **A unit** (its sheet) | turn rate and backward pace, detection, initiative, discipline 30/60 |
+| **A weapon** | the damage band ±25% (`FormationField.DAMAGE_BAND`, Decision 93); the attack interval, one for all (`ATTACK_INTERVAL_SECONDS`) |
+| **Damage steps** | flank ×1.5 (`FormationCombat.FLANK_BONUS`), high ground ×1.25 (`FormationMelee.HIGH_GROUND`), blows by morale band 100/80/60% (`FormationMorale.BLOW_SHARE`) |
+| **The contest** | the die, 0 to 10 (`ScrumContest.DIE`) |
+| **Morale** | shock (side 15, rear 30, wing 10, a fallen unit 4, a fallen leader 10 a point), pressure 3/9/18, recovery 2, bands at 50 and 25, 10 a point of leadership |
+| **Discipline** | meets threats at 50, re-form pace 0.4 to 1.5, pursuit leash 16/32/64/128/unleashed, breaking ranks 75/50/25% |
+| **Routs** | crush 2 a cell, panic 5, seen rout 5, rally reach and times, re-formed morale 30, fan 45° and 6 cells |
+| **Terrain** | slope 10% a quarter, wading ×0.6 and ×0.3, cliff at a cell |
+| **Movement and bodies** | the scrum leash 16 cells, anticipation 12, steering look 3, body resistance ×4, brush 0.05, trade after 0.5 s, wheel lag |
+
+## Round 1 agenda
+
+Each item has a recommendation; answer, change or reject it.
+
+1. **One sheet, grouped.** Recommend `UnitDef` grouped as body, movement, mind, senses,
+   skill, items, traits and cost, and `dmg` retired: a unit with no weapon fights with a
+   natural one (fists, bite), as every unit already does.
+2. **Traits on units (Decision 64).** Recommend a rated `traits` dictionary on `UnitDef`,
+   meeting the same ability-and-demand pairs as materials: climber, burrower, darksight,
+   swimmer, horde N and mob N (Decision 83), bleed resistance, medic, and the tactics
+   (`pursues`, `cautious`, `coordinated`) folded in as leader traits.
+3. **Items: weapons, armour, tools (Decisions 47, 54, 79).** Recommend items of three
+   kinds on one list: weapons deal damage of a type; **armour** gives a resistance per
+   damage type (as a material's weakness or resistance shifts its hardness) and may slow
+   or tire; tools grant trait levels (a shovel, burrower 1). Unwieldy items strike more
+   slowly (Decision 79): the **attack interval moves onto the weapon**.
+4. **Skill (agenda item 3).** Recommend one **melee skill** and one **ranged skill** per
+   unit, 0 to 100. A blow is a contest: the striker's skill plus the weapon's handling
+   against the target's defence (its skill, plus a shield); the seeded die (Decision 93)
+   decides how close ones go. Outmatched by a margin, a blow is sure; otherwise it lands
+   **glancing** (half) or is parried (none). Morale bands and conditions shift skill
+   rather than damage, replacing the blow shares by band.
+5. **Damage steps (agenda item 5).** Recommend a **step = ×1.25**, applied by one helper.
+   High ground is one step (as now), a flank two (×1.56, near today's ×1.5), the rear
+   three; resistance and weakness are steps down and up.
+6. **Variance (agenda item 9).** Recommend the band moves onto the weapon (a club varies
+   more than a spear) and narrows with skill; the die stays seeded (Decision 93).
+7. **Initiative and the contest (agenda item 8).** Recommend initiative stays a unit stat
+   that decides contested slots, the die stays one size for all, and blows stay
+   simultaneous within a tick (no ordering by initiative: fairness, Decision 97).
+8. **Stamina (agenda item 12).** Recommend a **stamina** pool per unit: drained by moving
+   faster than a walk (pursuing, fleeing, charging), by fighting, and by heavy armour;
+   recovered standing or walking. Tired units lose speed and skill; a chase ends when the
+   chasers tire, as well as at the leash. Units differ by **endurance**.
+9. **Morale inputs (agenda item 4).** Recommend courage per type now; tolerances (cold,
+   heat, wet) as rated traits; conditions (fed, rested, comfortable) waiting for the
+   systems that make them (stores, weather) - only rested comes now, from stamina.
+10. **Bleed and healing (agenda item 10).** Recommend **bleed N** as a weapon trait (N
+    damage a second for a few seconds, not stacking past the strongest) and **medic N** as
+    a unit trait healing nearby friends N a second while the squad holds out of contact,
+    a leader's leadership adding to it.
+11. **Leaders (agenda item 7).** Recommend the three tiers keep one sheet: a
+    **commander** is built with rolled tactic traits, a **hero** is promoted from a veteran
+    unit (item 12) and rolls one, a **lord** is authored. Leadership N stays the one
+    number; tactics are traits.
+12. **Progression and variation (agenda items 6 and 11).** Recommend tech unlocks per
+    unit type are **item loadouts and trait levels**, never raw stat edits; **veterancy**
+    raises skill and discipline with fights survived; variation within a type is its
+    loadout, painted per stand in the wave painter. What a map grants (a captured node's
+    unlock) is a tech unlock like any other.
+13. **Where the numbers live.** Recommend every placeholder above that isn't a unit's or
+    an item's moves into one **battle tuning** resource (`content/tuning/`), so tuning is
+    data, edited without code and named in one place.
+14. **Order of work.** Recommend round 1 builds the sheet, unit traits and items with
+    armour (1 to 3), then the damage step, skill and variance (4 to 6), then stamina
+    (8) and the tuning resource (13); bleed and healing, leaders and progression (10 to 12)
+    in a round 2.
+
+## The original agenda (folded into round 1)
 
 1. **The levers there are today:** stats, traits, items, size, band, discipline. What each
    is for, and where they overlap.
