@@ -98,7 +98,6 @@ static func _mirror_spawns(scenario: String, sim: FormationSimulation) -> Array:
 
 static func _mirror(scenario: String, battle_seed: int, options: Dictionary) -> Dictionary:
 	var sim := FormationSimulation.new(2.0, TICK)
-	sim.seek_contact = true
 	sim.fight_seed = battle_seed
 	sim.damage_band = options.get("band", FormationField.DAMAGE_BAND)
 	var spawns := _mirror_spawns(scenario, sim)

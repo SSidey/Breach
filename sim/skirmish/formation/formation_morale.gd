@@ -4,7 +4,7 @@ extends RefCounted
 ## numbers placeholders).
 ## - **Ceiling:** its living units' mean courage, plus 10 for each point of its best
 ##   living leader's leadership (Decision 81), at most 100. A fallen leader lowers it.
-## - **Bands:** steady, shaken (wings don't set out), wavering (strikes half again more
+## - **Bands:** steady, shaken, wavering (strikes half again more
 ##   slowly) and routing at 0. Short of a rout, a formation still meets its enemy at every
 ##   band (Decision 101), but the more shaken it is the softer its blows land: BLOW_SHARE
 ##   of their damage, by band.
@@ -14,7 +14,7 @@ extends RefCounted
 ## - **Pressure**, each second, by the sides it fights on: two 3, three 9, four 18. A side
 ##   with a friendly squad within 2 cells is supported and counts one less.
 ## - **Recovery**, each second out of contact: 2 plus its leadership, up to the ceiling.
-## Pure over the squads it is given; the simulation, edges and wings call it.
+## Pure over the squads it is given; the simulation calls it.
 
 enum Band { STEADY, SHAKEN, WAVERING, ROUTING }
 
@@ -95,7 +95,7 @@ static func step(squads: Array, tick: int, ticks_per_second: int, events: Array)
 	for squad in squads:
 		if squad.is_destroyed() or squad.state == SkirmishSquad.State.ROUTING:
 			continue
-		var sides := _sides_engaged(squad, squads)
+		var sides := _sides_engaged(squad)
 		var morale := _morale(squad)
 		if sides.is_empty():
 			morale += RECOVERY + leadership(squad)
@@ -105,19 +105,14 @@ static func step(squads: Array, tick: int, ticks_per_second: int, events: Array)
 		_set_morale(squad, mini(morale, ceiling(squad)), tick, events)
 
 
-## The edges (SquadEdges) a squad is fought on: its front, flank locks and arrived wings.
-static func _sides_engaged(squad: SkirmishSquad, squads: Array) -> Array:
+## The edges (SquadEdges) a squad is fought on: its front and its flank contacts.
+static func _sides_engaged(squad: SkirmishSquad) -> Array:
 	var sides := []
 	if squad.engaged_with != 0:
 		sides.append(SquadEdges.FRONT)
 	for edge in squad.flank_contacts:
 		if not sides.has(edge):
 			sides.append(edge)
-	for other in squads:
-		for wing in other.wings.values():
-			var arrived: bool = wing["foe"] == squad.id and wing["since"] >= 0
-			if arrived and not wing["returning"] and not sides.has(wing["edge"]):
-				sides.append(wing["edge"])
 	return sides
 
 

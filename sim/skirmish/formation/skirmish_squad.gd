@@ -34,11 +34,6 @@ var route: FormationRoute = null:
 ## Which way the squad faces (SquadFrame), and the centre of its front edge in cells.
 var facing: int = SquadFrame.EAST
 var position := Vector2.ZERO
-## A turn under way (FormationTurning): the facing it turns to, ticks left, and whether it
-## is an about-face (which reverses the ranks when it ends).
-var turn_to: int = SquadFrame.EAST
-var turn_ticks := 0
-var about_facing := false
 var width: int
 var order: SkirmishUnit.Order = SkirmishUnit.Order.ADVANCE
 var state: State = State.MOVING
@@ -47,8 +42,6 @@ var engaged_with: int = 0
 ## Hostile squads fighting it on its other edges (Decision 78): SquadEdges edge ->
 ## {"foe": squad id, "since": tick the contact began}.
 var flank_contacts := {}
-## Its units out on wings round an enemy line's end (FormationWings, Decision 81).
-var wings := {}
 ## The scrum (FormationScrum, Decision 88): its units' places while it fights (unit id ->
 ## {"at", "next", "goal"}), the line it re-faced to {"anchor", "facing"}, the tick its fight
 ## began (-1: none) and ticks with nobody able to strike.
