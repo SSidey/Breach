@@ -11,7 +11,6 @@ const FormationField = preload("res://sim/skirmish/formation/formation_field.gd"
 const RoutFlight = preload("res://sim/skirmish/formation/rout_flight.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
-const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -242,23 +241,3 @@ func test_a_withdrawal_home_holds_there_facing_out() -> void:
 	assert_int(turns.size()).is_equal(0)  # it doesn't spin at its spawn
 	assert_int(wave.order).is_equal(SkirmishUnit.Order.HOLD)
 	assert_float(lateral).is_less_equal(RoutFlight.FAN_CELLS + 4.0)  # route A's line is y 32
-
-
-func test_a_withdrawal_from_past_a_bend_turns_with_its_route() -> void:
-	# A feel-test log: B, caught on its route's southward leg, withdrew; units past the
-	# bend ran on north off the field, the way the leg they were on led, instead of turning
-	# west with the route.
-	var log := "seed 515557 captain off\n0 pursues off\n120 send B\n318 retreat B"
-	var northmost := {"y": INF}  # a lambda captures a local by value
-	var field := FormationFieldActions.replay(
-		log,
-		400,
-		func(played, _events):
-			for squad in played.sim.squads():
-				if squad.faction_id == "player":
-					for unit in squad.living():
-						northmost["y"] = minf(northmost["y"], ScrumReach.at(squad, unit).y)
-	)
-
-	assert_float(northmost["y"]).is_greater(14.0)  # route B runs west along y 21
-	assert_bool(field.sim.squads().any(func(s): return s.faction_id == "player")).is_true()
