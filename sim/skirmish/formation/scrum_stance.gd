@@ -3,7 +3,8 @@ extends RefCounted
 ## A disciplined squad meets a threat as a line (Decisions 88 and 92, spec 27 rounds 5
 ## and 6): marching or holding, with its front free, when it sees an enemy closing in on
 ## another face within ANTICIPATE cells and is disciplined enough (FormationDiscipline), it
-## re-lays its places facing the threat at that face (its stance) before contact, and
+## re-lays its places facing the threat at that face (its stance: its frame turned a
+## quarter, half or three quarters about) before contact, and
 ## commits to it: it faces that enemy while it is still a threat, not swinging to another. Its
 ## units walk there at its re-form pace and keep to those places until the threat has
 ## gone; it doesn't march meanwhile. A less disciplined squad meets it unit by unit. Two
@@ -13,7 +14,7 @@ const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const SquadEdges = preload("res://sim/skirmish/formation/squad_edges.gd")
-const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
@@ -30,10 +31,7 @@ static func anchor(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 		return SquadFrame.place(
 			squad.position, squad.heading, squad.width, squad.centre_shift, unit
 		)
-	var place := SquadFrame.unit_rect(
-		squad.stance["anchor"], UnitMotion.of_facing(squad.stance["facing"]), squad.width, 0.0, unit
-	)
-	return place.get_center()
+	return SquadFrame.place(squad.stance["anchor"], squad.stance["heading"], squad.width, 0.0, unit)
 
 
 ## A disciplined squad with a free front turns its line to meet a threat it sees closing
@@ -60,19 +58,24 @@ static func anticipate(
 		return  # it made its call: it faces that enemy while it is still a threat
 	var found := _threat(squad, squads, [terrain, fight_seed], true)
 	var threat: int = found[0]
-	if threat < 0 or threat == squad.facing:
+	if threat < 0 or threat == SquadEdges.FRONT:
 		var gone: bool = _threat(squad, squads, [terrain, fight_seed], false)[0] < 0
 		var holds := squad.order == SkirmishUnit.Order.HOLD and not gone
-		if squad.state != SkirmishSquad.State.FIGHTING and (not holds or threat == squad.facing):
+		if (
+			squad.state != SkirmishSquad.State.FIGHTING
+			and (not holds or threat == SquadEdges.FRONT)
+		):
 			squad.stance = {}  # a holding line keeps it while that enemy is near (Decision 94)
 		return
-	if not squad.stance.is_empty() and squad.stance["facing"] == threat:
+	var heading := fposmod(squad.heading + threat * 90.0, 360.0)
+	if not squad.stance.is_empty() and is_equal_approx(squad.stance["heading"], heading):
 		return
-	var area := SquadEdges.bounds(squad)
-	var outward := SquadFrame.forward(threat)
-	var face := area.get_center() + outward * area.size / 2.0
-	squad.stance = {"anchor": face, "facing": threat, "foe": found[1]}
-	events.append(FormationEvents.squad_event("faced", tick, squad, {"facing": threat}))
+	var centre := SquadEdges.bounds(squad).get_center()
+	var outward := UnitMotion.vector(heading)
+	var face := centre + outward * (SquadEdges.reach(squad, outward).y - centre.dot(outward))
+	squad.stance = {"anchor": face, "heading": heading, "foe": found[1]}
+	var faced := {"heading": heading, "facing": posmod(roundi(heading / 90.0), 4)}
+	events.append(FormationEvents.squad_event("faced", tick, squad, faced))
 
 
 ## True if the squad holds a re-formed line towards an enemy that is still a threat - alive,
@@ -92,13 +95,14 @@ static func _committed(squad: SkirmishSquad, squads: Array) -> bool:
 	return false
 
 
-## [facing, squad id] towards the nearest seen hostile within ANTICIPATE cells - closing
-## in, if `closing` - or [-1, 0]. `seeing` = [the terrain, the battle seed].
+## [edge, squad id]: the edge of the squad's frame (SquadEdges) facing the nearest seen
+## hostile within ANTICIPATE cells - closing in, if `closing` - or [-1, 0]. `seeing` = [the
+## terrain, the battle seed].
 static func _threat(squad: SkirmishSquad, squads: Array, seeing: Array, closing: bool) -> Array:
 	var terrain: FormationTerrain = seeing[0]
 	var area := SquadEdges.bounds(squad)
 	var best := [ANTICIPATE + 0.000001, 0]
-	var facing := -1
+	var edge := -1
 	var foe := 0
 	for other in squads:
 		if other.faction_id == squad.faction_id or other.is_destroyed():
@@ -116,9 +120,10 @@ static func _threat(squad: SkirmishSquad, squads: Array, seeing: Array, closing:
 			best = gap
 			var theirs := SquadEdges.bounds(other)
 			var point := area.get_center().clamp(theirs.position, theirs.end)
-			facing = ScrumReach.facing_to(area.get_center(), point)
+			var bearing := UnitMotion.bearing_to(area.get_center(), point, squad.heading)
+			edge = posmod(roundi(fposmod(bearing - squad.heading, 360.0) / 90.0), 4)
 			foe = other.id
-	return [facing, foe]
+	return [edge, foe]
 
 
 static func _gap(squad: SkirmishSquad, other: SkirmishSquad) -> float:
@@ -141,4 +146,4 @@ static func _closing(other: SkirmishSquad, squad: SkirmishSquad) -> bool:
 	if other.state != SkirmishSquad.State.MOVING:
 		return false
 	var towards := SquadEdges.bounds(squad).get_center() - SquadEdges.bounds(other).get_center()
-	return towards.dot(SquadFrame.forward(other.facing)) > 0.0
+	return towards.dot(UnitMotion.vector(other.heading)) > 0.0

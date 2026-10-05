@@ -113,7 +113,7 @@ func show_status(field: FormationField, paused: bool, battle_seed: int) -> void:
 	var line := field.kingdom_line
 	var state: String = SkirmishSquad.State.keys()[line.state].to_lower()
 	if not line.stance.is_empty():
-		state += ", faced " + WAYS[line.stance["facing"]]
+		state += ", faced " + WAYS[posmod(roundi(line.stance["heading"] / 90.0), 4)]
 	if not line.pursuit.is_empty() and not line.pursuit["returning"]:
 		var reached := FormationPursuit.reach(line)  # Decision 107's leash
 		var leash := "unleashed" if is_inf(reached[1]) else "%d" % reached[1]

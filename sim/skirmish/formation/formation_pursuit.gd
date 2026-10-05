@@ -13,7 +13,7 @@ extends RefCounted
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
-const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const SquadEdges = preload("res://sim/skirmish/formation/squad_edges.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
@@ -118,10 +118,10 @@ static func _advance(
 
 
 ## Cells `at` lies ahead of the squad's front along the route it travels (as the crow flies
-## along its facing, with no route).
+## along its heading, with no route).
 static func _ahead(squad: SkirmishSquad, at: Vector2) -> float:
 	if squad.route == null:
-		return (at - squad.position).dot(SquadFrame.forward(squad.facing))
+		return (at - squad.position).dot(UnitMotion.vector(squad.heading))
 	var own := squad.front_distance * MapLayoutDef.CELLS_PER_TILE
 	return (squad.route.distance_of(at) - own) * squad.direction
 
@@ -129,7 +129,7 @@ static func _ahead(squad: SkirmishSquad, at: Vector2) -> float:
 ## True if any of its units lags more than LAG_CELLS behind its place: a formation
 ## pursues as a body, its frame waiting for its rearmost (Decision 103).
 static func _lagging(squad: SkirmishSquad) -> bool:
-	var forward := SquadFrame.forward(squad.facing)
+	var forward := UnitMotion.vector(squad.heading)
 	for unit in squad.living():
 		if squad.chasers.has(unit.id):
 			continue  # one out on its own makes its own way (Decision 112)

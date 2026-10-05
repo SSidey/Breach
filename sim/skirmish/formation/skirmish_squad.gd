@@ -52,7 +52,7 @@ var engaged_with: int = 0
 ## {"foe": squad id, "since": tick the contact began}.
 var flank_contacts := {}
 ## The scrum (FormationScrum, Decision 88): its units' places while it fights (unit id ->
-## {"at", "next", "goal"}), the line it re-faced to {"anchor", "facing"}, the tick its fight
+## {"at", "next", "goal"}), the line it re-faced to {"anchor", "heading"}, the tick its fight
 ## began (-1: none) and ticks with nobody able to strike.
 var loose := {}
 var stance := {}
