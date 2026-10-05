@@ -6,6 +6,9 @@ extends RefCounted
 ## - **Friends** split the push by mass (footprint area): a brute moves a grem more than a
 ##   grem moves a brute. A unit in its formation's frame resists, RESIST times its mass,
 ##   but gives way: pushed, it leaves its place and walks back to it (its squad re-forms).
+##   To another squad's loose unit it doesn't give way - a squad's space is kept by its
+##   units in control of it - so the loose one takes the whole push; routers in flight
+##   still push through, and its own squad's loose units still make their way through it.
 ## - **Foes** are not pushed (Decision 105): two that overlap - one shoved into the other by
 ##   its friends - each step back half the overlap, so no one is pushed into an enemy.
 ## - **Two units both in their frames** are kept apart by the frames (their own places, and
@@ -111,8 +114,20 @@ static func _push(bodies: Array, pair: Array, fight_seed: int, moves: Dictionary
 	var share := 0.5
 	if a[0].faction_id == b[0].faction_id:
 		share = _mass(b) / (_mass(a) + _mass(b))
-	moves[pair[0]] = moves.get(pair[0], Vector2.ZERO) - way * depth * share
-	moves[pair[1]] = moves.get(pair[1], Vector2.ZERO) + way * depth * (1.0 - share)
+		if a[0] != b[0] and _keeps(a, b):
+			share = 0.0
+		elif a[0] != b[0] and _keeps(b, a):
+			share = 1.0
+	if share > 0.0:  # a body that holds its space isn't moved, so stays in its frame
+		moves[pair[0]] = moves.get(pair[0], Vector2.ZERO) - way * depth * share
+	if share < 1.0:
+		moves[pair[1]] = moves.get(pair[1], Vector2.ZERO) + way * depth * (1.0 - share)
+
+
+## True if `keeper`, in its frame, holds its space against `other`, a loose unit (one in
+## flight, out of control, still pushes through).
+static func _keeps(keeper: Array, other: Array) -> bool:
+	return _framed(keeper) and other[0].loose.has(other[1].id)
 
 
 ## What a body weighs against a push: its footprint's area, RESIST times over in its frame.

@@ -63,20 +63,35 @@ func test_overlapping_foes_each_step_back_half_whatever_their_mass() -> void:
 	assert_vector(_at(b, brute)).is_equal_approx(Vector2(1.35, 0), Vector2(0.0001, 0.0001))
 
 
-func test_a_unit_in_its_frame_resists_but_gives_way() -> void:
+func test_a_unit_in_its_frame_resists_but_gives_way_to_its_own_squad() -> void:
+	var framed := _unit(1)
+	var shover := _unit(2)
+	var line := SkirmishSquad.new(1, "player", 1, 0.0, 2, [framed, shover] as Array[SkirmishUnit])
+	framed.position = Vector2(5, 5)
+	line.loose[shover.id] = {"unit": shover, "at": Vector2(5.5, 5), "goal": null}
+	line.loose[shover.id]["next"] = Vector2(5.5, 5)
+
+	UnitBodies.step([line], 7)
+
+	assert_bool(line.loose.has(framed.id)).is_true()  # it left its place, to walk back
+	var framed_moved := _at(line, framed).distance_to(Vector2(5, 5))
+	var shover_moved := _at(line, shover).distance_to(Vector2(5.5, 5))
+	assert_float(framed_moved).is_equal_approx(0.1, 0.0001)  # 0.5 deep, split 1 : 4
+	assert_float(shover_moved).is_equal_approx(0.4, 0.0001)
+
+
+func test_a_unit_in_its_frame_holds_its_space_against_another_squads_loose_unit() -> void:
 	var framed := _unit(1)
 	var line := SkirmishSquad.new(1, "player", 1, 0.0, 1, [framed] as Array[SkirmishUnit])
 	framed.position = Vector2(5, 5)
 	var shover := _unit(2)
-	var router := _loose(2, "player", [shover], [Vector2(5.5, 5)])
+	var other := _loose(2, "player", [shover], [Vector2(5.5, 5)])
 
-	UnitBodies.step([line, router], 7)
+	UnitBodies.step([line, other], 7)
 
-	assert_bool(line.loose.has(framed.id)).is_true()  # it left its place, to walk back
-	var framed_moved := _at(line, framed).distance_to(Vector2(5, 5))
-	var shover_moved := _at(router, shover).distance_to(Vector2(5.5, 5))
-	assert_float(framed_moved).is_equal_approx(0.1, 0.0001)  # 0.5 deep, split 1 : 4
-	assert_float(shover_moved).is_equal_approx(0.4, 0.0001)
+	assert_bool(line.loose.has(framed.id)).is_false()  # it keeps its place
+	assert_vector(_at(line, framed)).is_equal(Vector2(5, 5))
+	assert_vector(_at(other, shover)).is_equal_approx(Vector2(6, 5), Vector2(0.0001, 0.0001))
 
 
 func test_bodies_on_one_spot_part_the_same_whatever_the_list_order() -> void:
