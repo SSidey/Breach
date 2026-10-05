@@ -65,7 +65,7 @@ static func travel_sign(squad: SkirmishSquad, route_end: float) -> int:
 
 
 ## Turns the squad at once to the facing nearest its route's heading at its front: where it
-## is placed (FormationTurning times turns on the march).
+## is placed (ScrumTurn turns it on the march).
 static func face(squad: SkirmishSquad) -> void:
 	if squad.route == null:
 		return
@@ -110,8 +110,6 @@ static func sync_units(squads: Array) -> void:
 				+ SquadFrame.right(entry.facing) * swapping.y
 			)
 			unit.position = rect.get_center() + shift
-			if entry.wings.has(unit.id):
-				unit.position = entry.wings[unit.id]["at"]
 			if entry.loose.has(unit.id):
 				unit.position = entry.loose[unit.id]["at"]
 			else:

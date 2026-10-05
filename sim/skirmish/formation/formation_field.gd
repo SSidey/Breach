@@ -104,7 +104,6 @@ func _init(
 	tick_seconds = seconds_per_tick
 	sim = FormationSimulation.new(float(SIZE.x) / MapLayoutDef.CELLS_PER_TILE, seconds_per_tick)
 	sim.combat_width = WAVE_WIDTH
-	sim.seek_contact = true
 	sim.fight_seed = battle_seed
 	sim.damage_band = DAMAGE_BAND
 	sim.terrain = _ground()

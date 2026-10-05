@@ -27,7 +27,6 @@ static func ticks_to(
 		return 0
 	var cells_per_tile := float(MapLayoutDef.CELLS_PER_TILE)
 	var sim := FormationSimulation.new(route.length_cells() / cells_per_tile, tick_seconds)
-	sim.seek_contact = true
 	sim.terrain = terrain
 	var squad := sim.spawn_squad(width, placements, "player", true, 0, route)
 	for tick in range(LIMIT_TICKS):
