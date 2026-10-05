@@ -6,9 +6,9 @@ extends CanvasLayer
 ## seed, pause - and a status row under it: the tick (and seconds of battle), waves built
 ## (leaders counted apart), the line, the reserve and the battle seed. Reset starts a
 ## fresh field, with the seed typed in or a random one, keeping the ticked options. Below,
-## the session's action log (FormationFieldActions) with Copy and Replay: paste a log in
-## and Replay restarts on its seed and plays its actions at their ticks, live (pause still
-## works). Engine glue.
+## this run's action log (FormationFieldActions) to copy, and a box to paste a log into:
+## Replay restarts on its seed and plays its actions at their ticks, live (pause still
+## works), counting them off. Engine glue.
 
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
@@ -25,6 +25,9 @@ var _captain: CheckBox
 var _seed: LineEdit
 var _status: Label
 var _log_view: TextEdit
+var _replay_view: TextEdit
+var _replay_status: Label
+var _replaying := 0  # how many actions the replay running holds (0: not a replay)
 
 
 ## Builds the controls for `scene` (FormationFieldScene).
@@ -54,28 +57,30 @@ func build(scene: Node) -> void:
 	_button(options, "Pause (Space)", scene.toggle_pause)
 	_status = Label.new()
 	rows.add_child(_status)
-	var logged := HBoxContainer.new()
-	rows.add_child(logged)
-	_log_view = TextEdit.new()
-	_log_view.custom_minimum_size = Vector2(420, 72)
-	logged.add_child(_log_view)
-	var log_buttons := VBoxContainer.new()
-	logged.add_child(log_buttons)
-	_button(log_buttons, "Copy log", func(): DisplayServer.clipboard_set(scene.action_log()))
-	_button(log_buttons, "Replay log", replay)
+	var logs := HBoxContainer.new()
+	rows.add_child(logs)
+	_log_view = _log_box(logs, "This run's actions")
+	_log_view.editable = false
+	_button(logs, "Copy", func(): DisplayServer.clipboard_set(scene.action_log()))
+	_replay_view = _log_box(logs, "Paste a log to replay")
+	_button(logs, "Replay", replay)
+	_replay_status = Label.new()
+	logs.add_child(_replay_status)
 
 
 ## Restarts on the pasted log's seed and replays its actions; the options are the log's.
 func replay() -> void:
-	var read := FormationFieldActions.parse(_log_view.text)
+	var read := FormationFieldActions.parse(_replay_view.text)
 	if read.is_empty():
+		_replay_status.text = 'Not a log: it starts\n"seed <n> captain <on|off>"'
+		_replaying = 0
 		return
-	_log_view.release_focus()
 	_seed.text = str(read["seed"])
 	_captain.set_pressed_no_signal(read["captained"])
 	for box in [_wait, _via_c, _pursues] + _autos.values():
 		box.set_pressed_no_signal(false)
 	_scene.restart(read["captained"], read["seed"], read["actions"])
+	_replaying = read["actions"].size()
 
 
 ## A fresh field: the seed typed in, or a random one; the ticked options kept (and logged).
@@ -83,6 +88,8 @@ func reset() -> void:
 	var text := _seed.text.strip_edges()
 	var battle_seed := int(text) if text.is_valid_int() else randi() % 1000000
 	_scene.restart(_captain.button_pressed, battle_seed)
+	_replaying = 0
+	_replay_status.text = ""
 	for key in _autos:
 		if _autos[key].button_pressed:
 			_scene.act(_toggle("auto " + key, true))
@@ -120,9 +127,14 @@ func show_status(field: FormationField, paused: bool, battle_seed: int) -> void:
 		]
 	)
 	var log: String = _scene.action_log()
-	if _log_view.text != log and not _log_view.has_focus():  # not while a log is pasted in
+	if _log_view.text != log:
 		_log_view.text = log
 		_log_view.scroll_vertical = _log_view.get_line_count()
+	if _replaying > 0:  # the replayed actions are logged again as they're played
+		var played := mini(_log_view.get_line_count() - 1, _replaying)
+		_replay_status.text = (
+			"Replaying seed %d\n%d of %d actions played" % [battle_seed, played, _replaying]
+		)
 
 
 ## "B 8/8 + leader 1/1": rank and file and leaders counted apart.
@@ -136,6 +148,14 @@ func _built(field: FormationField, key: String) -> String:
 	if counts[3] > 0:
 		text += " + leader %d/%d" % [counts[2], counts[3]]
 	return text
+
+
+func _log_box(bar: Container, hint: String) -> TextEdit:
+	var box := TextEdit.new()
+	box.placeholder_text = hint
+	box.custom_minimum_size = Vector2(260, 72)
+	bar.add_child(box)
+	return box
 
 
 func _button(bar: Container, text: String, pressed: Callable) -> void:

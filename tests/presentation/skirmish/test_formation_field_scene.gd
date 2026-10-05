@@ -8,6 +8,7 @@ const FormationFieldScene = preload(
 )
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
+const FormationFieldHud = preload("res://presentation/skirmish/formation_2d/formation_field_hud.gd")
 const SCENE := "res://presentation/skirmish/formation_2d/formation_field.tscn"
 
 
@@ -117,3 +118,17 @@ func _fronts(field: FormationField) -> Array:
 	for squad in field.sim.squads():
 		rows.append([squad.state, squad.position, squad.living().size()])
 	return rows
+
+
+func test_replay_plays_the_pasted_log_not_this_runs() -> void:
+	var scene := _scene()
+	scene.run_ticks(3)
+	scene.act("send A")
+	var hud: FormationFieldHud = scene.get_children().filter(func(c): return c is FormationFieldHud)[0]
+	hud._replay_view.text = "seed 492625 captain off\n22 via_c on\n129 send A+B"
+	hud.show_status(scene.field(), true, 1)  # a frame passes: the pasted log is kept
+
+	hud.replay()
+	scene.run_ticks(130)
+
+	assert_str(scene.action_log()).is_equal(hud._replay_view.text)
