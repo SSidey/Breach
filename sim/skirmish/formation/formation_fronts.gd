@@ -4,7 +4,9 @@ extends RefCounted
 ## the nearest hostile front within melee reach (FormationContact.nearest_hostile), all
 ## from one snapshot, then the locks land together - a squad between two foes isn't taken
 ## by whichever was listed first. A foe that picked no one (it is turning, Decision 74)
-## locks onto the nearest of the squads that picked it, and fights once its turn ends.
+## locks onto the nearest of the squads that picked it, and fights once its turn ends -
+## unless it is getting away, retreating or routing: it may be engaged, but doesn't turn
+## to fight (Decision 111).
 ## Pure over the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -29,8 +31,8 @@ static func engage(squads: Array, tick: int, fight_seed: int, events: Array) -> 
 		var extra := {"with": picks[attacker].id}
 		events.append(FormationEvents.squad_event("engaged", tick, attacker, extra))
 	for foe in picks.values():
-		if foe.engaged_with != 0:
-			continue
+		if foe.engaged_with != 0 or not FormationContact.can_engage(foe):
+			continue  # one getting away doesn't turn to fight (Decision 111)
 		var pickers := picks.keys().filter(func(a): return picks[a] == foe)
 		var nearest := FormationContact.nearest_hostile(foe, pickers, fight_seed)
 		if nearest != null:  # reach is mutual, so one always is

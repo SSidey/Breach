@@ -5527,9 +5527,9 @@ two levels:
   `from` and `leash` in place of `until`; the formation's seeking, walking and turning
   leave its chasers to `ScrumPursuit`.
 - Retreating waves are now often caught and destroyed: a feel-test item.
-- A squad with units out chasing can be engaged whatever its order: its units are
-  attacking. Found in the feel test, where a line marching home from its pursuit counted
-  as retreating, so the wave its chasers caught at its spawn could never strike back.
+- Found in the feel test: a line marching home from its pursuit counted as retreating, so
+  the wave its chasers caught at its spawn could never strike back. First patched as "a
+  squad with units out chasing can be engaged"; superseded by Decision 111.
 
 **Rules over cases:** general. One leash table for every formation and every unit.
 **Order:** the roll to break ranks is seeded by the battle, the tick and the unit; chasers
@@ -5570,3 +5570,45 @@ skips places moves under way are heading for; `UnitBodies.BRUSH`.
 **Rules over cases:** general. One rule for any regrouping unit held off its place.
 **Order:** stalled units trade in the order of their seeded draws; the friend is picked by
 distance, then its seeded draw. No ids or list order.
+
+### Decision 111 — Any standing squad may be engaged; only one not getting away seeks combat
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in the feel test, where a wave caught at its spawn by a pursuing
+line's chasers could not fight back, the line marching home counting as retreating. The
+user: "a unit should always be possible to engage, the logic should be that retreating or
+routing units do not attempt to engage", and, choosing this over leaving retreaters to
+pursuit alone: "it is on the unit itself to determine what it wants to attack, not
+whether or not the unit can be attacked, so any formation aside from those retreating or
+routing should attempt to seek combat, a retreating force should engage with foes that
+block their retreat path (with the formation retaining coherency based on discipline),
+routed units should always attempt to flee and are essentially free kills if completely
+surrounded as they ought not fight back".
+- **Engageable:** any squad still standing, whatever it is doing - retreating, routing,
+  arrived or marching home.
+- **Seeking combat:** a squad that isn't retreating or routing (nor arrived or waiting)
+  locks onto hostiles in reach, those getting away included; its units go after them
+  within their leash of their places, its frame holding unless it pursues (Decision 109).
+- **Getting away:** a retreating squad doesn't turn to fight as a squad, but its units
+  strike foes in front of them, those blocking its way included (Decision 101); a routing
+  one only flees and strikes nothing, so routers caught are free kills.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Retreaters and routers can't be engaged | The attacker should choose what it attacks. |
+| Only pursuit goes after those getting away | The user chose to let any squad in reach engage. |
+
+**Consequences:**
+- `FormationContact.engageable` (targets) beside `can_engage` (seeking combat); front,
+  flank and scrum locks take any engageable target; a target getting away is not locked
+  back.
+- A retreat no longer frees its enemy: one ordered not to pursue holds its post, but its
+  units fight the retreater while it is in reach. Routers are run down by any squad that
+  reaches them, so fewer reach their friends to crush or rally there.
+
+**Rules over cases:** general. One rule for who may be engaged and one for who seeks it.
+**Order:** locks are chosen from one snapshot, ties by the squads' seeded draws, as before.

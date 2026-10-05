@@ -125,22 +125,25 @@ func test_a_holding_squad_stays_put_and_still_fights() -> void:
 	assert_int(mine.state).is_equal(SkirmishSquad.State.FIGHTING)
 
 
-func test_a_retreating_squad_disengages_and_the_enemy_is_freed() -> void:
+func test_a_retreating_squad_disengages_and_an_enemy_that_won_t_pursue_holds() -> void:
 	var sim := FormationSimulation.new(ROUTE, TICK)
 	var mine := sim.spawn_squad(1, _line(_grem(), 1), "player", true)
 	var theirs := sim.spawn_squad(1, _line(_militia(), 1), "the_kingdom", false)
-	theirs.pursues = false  # ordered not to: it is freed (Decision 109)
+	theirs.pursues = false  # ordered not to: it stays at its post (Decision 109)
 	_run(sim, func(): return mine.state == SkirmishSquad.State.FIGHTING)
 	var at := mine.units[0].position.x
+	var post := theirs.front_distance
 
 	sim.order(mine.id, SkirmishUnit.Order.RETREAT)
 	var events := sim.step()
 
 	assert_array(events.map(func(e): return e["type"])).contains(["disengaged", "withdrawing"])
-	assert_int(theirs.engaged_with).is_equal(0)
-	# It withdraws from where it stands (Decision 99), heading home.
+	# It withdraws from where it stands (Decision 99), heading home; the enemy holds its
+	# post, though its units may strike it while it is in reach (Decision 111).
 	_run(sim, func(): return false, 20)
 	assert_float(mine.units[0].position.x).is_less(at)
+	assert_float(theirs.front_distance).is_equal(post)
+	assert_bool(theirs.pursuit.is_empty()).is_true()
 
 
 func test_reaching_the_enemy_end_is_arrival() -> void:
