@@ -143,12 +143,13 @@ func unit_distance(unit: SkirmishUnit) -> float:
 	return front_distance - direction * unit.rank * RANK_DEPTH
 
 
-## The unit's columns as a lateral span on the world axis across the squad's facing: turned
-## from its (rank, column), never mirrored (Decision 74). On a straight lane both sides
-## share the lane's lateral axis, centred on it (less any centre_shift).
-func lateral_span(unit: SkirmishUnit) -> Vector2:
-	var rect := SquadFrame.unit_rect(position, facing, width, centre_shift, unit)
-	return SquadFrame.lateral_interval(rect, facing)
+## The unit's columns as a lateral span along `axis` (its squad's lateral axis if none):
+## turned from its (rank, column), never mirrored (Decision 74). On a straight lane both
+## sides share the lane's lateral axis, centred on it (less any centre_shift).
+func lateral_span(unit: SkirmishUnit, axis := Vector2.ZERO) -> Vector2:
+	var along := SquadFrame.lateral_axis(heading) if axis == Vector2.ZERO else axis
+	var points := SquadFrame.corners(position, heading, width, centre_shift, unit)
+	return SquadFrame.extent(points, along)
 
 
 ## The front rank, left to right: only it fights in melee (Decision 47). A column whose

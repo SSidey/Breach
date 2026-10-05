@@ -56,6 +56,7 @@ static func _in_range(
 ) -> SkirmishUnit:
 	var reach := shooter.attack_range * SkirmishSquad.RANK_DEPTH + EPSILON
 	var here := SquadGeometry.unit_gap(own, own, shooter)
+	var axis := SquadFrame.lateral_axis(own.heading)
 	var span := own.lateral_span(shooter)
 	var best: SkirmishUnit = null
 	var best_key := []
@@ -68,7 +69,7 @@ static func _in_range(
 			continue
 		for unit in other.living():
 			var gap: float = absf(SquadGeometry.unit_gap(own, other, unit) - here)
-			var target_span: Vector2 = other.lateral_span(unit)
+			var target_span: Vector2 = other.lateral_span(unit, axis)
 			var overlap := minf(span.y, target_span.y) - maxf(span.x, target_span.x)
 			var key := [
 				snappedf(gap, EPSILON),

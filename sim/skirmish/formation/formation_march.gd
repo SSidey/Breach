@@ -31,7 +31,7 @@ static func pace(
 ) -> float:
 	if terrain == null:
 		return step
-	var ahead := SquadFrame.forward(squad.facing)
+	var ahead := UnitMotion.vector(squad.heading)
 	var worst := 1.0
 	for unit in squad.fighters():
 		worst = minf(worst, terrain.factor(unit.height, unit.position, unit.position + ahead))

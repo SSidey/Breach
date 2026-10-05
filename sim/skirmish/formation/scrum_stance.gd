@@ -31,7 +31,7 @@ static func anchor(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 			squad.position, squad.heading, squad.width, squad.centre_shift, unit
 		)
 	var place := SquadFrame.unit_rect(
-		squad.stance["anchor"], squad.stance["facing"], squad.width, 0.0, unit
+		squad.stance["anchor"], UnitMotion.of_facing(squad.stance["facing"]), squad.width, 0.0, unit
 	)
 	return place.get_center()
 
