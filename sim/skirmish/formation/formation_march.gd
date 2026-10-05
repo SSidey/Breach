@@ -64,13 +64,14 @@ static func travel_sign(squad: SkirmishSquad, route_end: float) -> int:
 	return 1 if target > squad.front_distance else -1
 
 
-## Turns the squad at once to the facing nearest its route's heading at its front: where it
-## is placed (ScrumTurn turns it on the march).
+## Turns the squad's frame at once to its route's heading at its front: where it is placed
+## (on the march it sweeps round bends: FormationSweep).
 static func face(squad: SkirmishSquad) -> void:
 	if squad.route == null:
 		return
 	var cells := squad.front_distance * MapLayoutDef.CELLS_PER_TILE
-	squad.facing = squad.route.facing_at(cells, squad.direction, squad.facing)
+	var way := squad.route.heading_at(cells) * squad.direction
+	squad.heading = UnitMotion.bearing_to(Vector2.ZERO, way, squad.heading)
 
 
 ## Arrival at the enemy's end (the fort is immune in the feel test), or a retreat home.
@@ -102,17 +103,17 @@ static func sync_units(squads: Array) -> void:
 			unit.distance = (
 				entry.unit_distance(unit) + entry.direction * swapping.x * SkirmishSquad.RANK_DEPTH
 			)
-			var rect := SquadFrame.unit_rect(
-				entry.position, entry.facing, entry.width, entry.centre_shift, unit
+			var ahead := UnitMotion.vector(entry.heading)
+			var shift := ahead * swapping.x - ahead.orthogonal() * swapping.y
+			unit.position = (
+				SquadFrame.place(
+					entry.position, entry.heading, entry.width, entry.centre_shift, unit
+				)
+				+ shift
 			)
-			var shift := (
-				SquadFrame.forward(entry.facing) * swapping.x
-				+ SquadFrame.right(entry.facing) * swapping.y
-			)
-			unit.position = rect.get_center() + shift
 			if entry.loose.has(unit.id):
 				unit.position = entry.loose[unit.id]["at"]
 			else:
-				unit.bearing = UnitMotion.of_facing(entry.facing)
+				unit.bearing = entry.heading
 			if entry.fleeing.has(unit.id):
 				unit.position = FormationRout.where(entry, unit.id)

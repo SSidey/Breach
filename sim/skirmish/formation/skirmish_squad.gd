@@ -31,8 +31,17 @@ var route: FormationRoute = null:
 	set(value):
 		route = value
 		_place()
-## Which way the squad faces (SquadFrame), and the centre of its front edge in cells.
-var facing: int = SquadFrame.EAST
+## Which way the squad's frame faces (Decision 105): a heading in degrees, clockwise from
+## north (90 east), as a unit's bearing; its places are laid out in that turned frame.
+var heading := 90.0
+## The facing (SquadFrame) nearest its heading, for what still reckons in four ways (an
+## exact diagonal rounds clockwise); setting it turns the frame to that way.
+var facing: int:
+	get:
+		return posmod(roundi(heading / 90.0), 4)
+	set(value):
+		heading = posmod(value, 4) * 90.0
+## The centre of its front edge in cells.
 var position := Vector2.ZERO
 var width: int
 var order: SkirmishUnit.Order = SkirmishUnit.Order.ADVANCE

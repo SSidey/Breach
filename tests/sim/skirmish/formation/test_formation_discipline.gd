@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## Discipline, per Decision 92 and spec 27 round 6: a formation's discipline is its units'
 ## mean plus its leader's bolster; a disciplined formation re-forms as a whole to meet a
 ## flank closing in, marching or holding, while an undisciplined one (even led) doesn't;
-## and a turn is a re-form, quicker the more disciplined the formation.
+## and a re-form is quicker the more disciplined the formation.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -116,25 +116,27 @@ func test_a_marching_formation_stops_to_meet_a_flank() -> void:
 	assert_bool(raiders.is_destroyed()).is_false()
 
 
-func _turned_and_moved(discipline: int) -> int:
+## Ticks for a squad of this discipline, its units knocked 3 cells out of their places, to
+## re-form.
+func _reformed(discipline: int) -> int:
 	var sim := _sim()
-	var bend := FormationRoute.new(
-		PackedVector2Array([Vector2(0, 20), Vector2(20, 20), Vector2(20, 64)])
-	)
-	var squad := sim.spawn_squad(8, _row(_def(discipline), 8), "player", true, 0, bend)
-	var turned := -1
+	var lane := FormationRoute.new(PackedVector2Array([Vector2(0, 20), Vector2(64, 20)]))
+	var squad := sim.spawn_squad(8, _row(_def(discipline), 8), "player", true, 0, lane)
+	sim.order(squad.id, SkirmishUnit.Order.HOLD)
+	sim.step()
+	for unit in squad.living():
+		var scattered := unit.position + Vector2(0, 3)
+		squad.loose[unit.id] = {"unit": unit, "at": scattered, "next": scattered, "goal": null}
 	for tick in range(1, 400):
-		var log := sim.step()
-		if turned < 0 and not _of(log, "turned").is_empty():
-			turned = tick
-		if turned >= 0 and not FormationScrum.regrouping(squad):
-			return tick - turned
+		sim.step()
+		if not FormationScrum.regrouping(squad):
+			return tick
 	return 400
 
 
-func test_a_turn_is_a_re_form_quicker_when_disciplined() -> void:
-	var drilled := _turned_and_moved(60)
-	var ragged := _turned_and_moved(20)
+func test_a_re_form_is_quicker_when_disciplined() -> void:
+	var drilled := _reformed(60)
+	var ragged := _reformed(20)
 
 	assert_int(drilled).is_greater(0)
 	assert_int(drilled).is_less(ragged)
