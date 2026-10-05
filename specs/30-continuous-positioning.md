@@ -18,8 +18,11 @@ faces its route's true heading.
 
 ## Status
 
-**Round 1 built (Decisions 102, 105 and 106); round 2 to agree.** The spec 27 stack is
-merged. Round 1 is built as stacked PRs, in the order under "Round 1 plan".
+**Round 1 built and feel-tested (Decisions 102 and 105 to 113); round 2 next.** Round 1
+and the fixes its feel test asked for are stacked PRs #99 to #117 (below). The user's order
+after it: this spec's round 2 (the clean-up), then spec 28 (unit levers), spec 32 (impact
+and attack shapes), spec 31 (posts and garrisons), then the structure work still to come
+(damage and collapse in play, spec 24; fighting at structures).
 
 ## Agreed
 
@@ -158,6 +161,65 @@ fluctuation.
   on where on the field they stood. Tolerances are now 0.001 cell (part 7).
 - Exact mirror runs can't match: a seeker facing a mirror-symmetric choice must pick a
   hand, and a reflection flips it. The test checks no hand is preferred instead.
+
+## Round 1 feel test
+
+The user feel-tested round 1 with the action log and replay built for it, sending logs
+of what looked wrong; each became a fix with its log as a regression test.
+
+| PR | What |
+|---|---|
+| #110 | The action log, Copy and Replay in the feel test, the tick counter; framed units hold their places against another squad's loose units, so waves meeting at the crossroads regroup |
+| #111 | Units with no slot open wait by the fight (Decision 108); a pursuit is leashed by discipline (Decision 107), its leash shown |
+| #112 | One unit per place (stepping up waits for moves under way); a framed unit holds against a brush; a unit its own ranks hold off trades places with a like friend (Decision 110) |
+| #113 | Every formation pursues to its leash; its units roll to break ranks and chase to their own (Decision 109) |
+| #114 | Any standing squad may be engaged; only one not getting away seeks combat (Decision 111) |
+| #115 | A formation doesn't wait for its runaways; a leader steadies its units (Decision 112) |
+| #116 | A withdrawal turns with its route at a bend |
+| #117 | A pursuit takes its quarry's road (Decision 113), sweeps round its bends, its units free of their places; a fleeing unit finds the ford again |
+
+**Decisions made:**
+- **107:** a pursuit is leashed by discipline: 32, 64, 128 cells from its post, or none,
+  by share of an expected maximum discipline of 100.
+- **108:** a unit with no slot open waits a body's breadth behind the nearest, not back in
+  its place.
+- **109:** every formation pursues a retreating enemy as a body (unless ordered not to);
+  leash steps 16 to none, a leader's "pursues" tactic a step out, "cautious" a step in;
+  units near the enemy may break ranks and chase to their own leash.
+- **110:** a unit its own ranks hold off its place trades places with an interchangeable
+  friend (one kind, one band), or takes its own place.
+- **111:** any standing squad may be engaged - what to attack is the attacker's choice -
+  but only one not retreating or routing seeks combat; retreaters strike what's in front
+  of them, routers only flee.
+- **112:** a formation marches on without its runaways, who make their own way back; a
+  leader's bonus steadies its units against breaking ranks.
+- **113:** a route is a way to travel, not a formation's own: a formation travels to its
+  target by the nearest route that paths to it; a pursuit takes its quarry's road.
+
+**To feel-test after merging:**
+- Retreats are costly: a pursuing line and its runaways often destroy a wave before it
+  gets home; a captain keeps his line together, and "Line won't pursue" holds it.
+- A pursuer follows its quarry's road (C or B) and returns along it to its post; the
+  status line reads "pursuing x/y cells" and its post is ringed at its leash.
+- Routers are run down by any squad that reaches them (fewer reach a friend to crush or
+  rally there).
+
+**Fairness:** head-on mirror, 300 seeds each way round, after each change: the swapped
+run mirrors its twin exactly and the totals sit within 2 standard deviations (600 seeds:
+262 to 229, 1.5); flank mirror 100 to 0 for the flanker both ways round.
+
+**Found on the way:**
+- A unit given no share of a push still went loose, so squads whose places overlapped
+  churned for ever (#110).
+- Closing up after a swap stepped units onto places other swaps were heading for: two
+  units shared a place (#112).
+- A pursuit gave up only when the enemy got 16 cells ahead of its units; an equally fast
+  pursuer never did (#111).
+- Withdrawing units at a bend took the leg leaving it, and ran off the field (#116).
+- A front lock also locked its target back, which would have turned routers into
+  fighters under Decision 111 (#114).
+- `ocp-shotgun-surgery` counts every pre-existing file a PR changes: run pre-commit with
+  `--all-files` and the stack's base as `BASE_REF`, and split a PR before it passes 11.
 
 ## Agenda for round 2
 
