@@ -66,3 +66,15 @@ func test_a_seeker_takes_the_nearest_open_slot() -> void:
 	)
 	assert_float(next[0].distance_to(Vector2(10, 10))).is_equal_approx(1.0, 0.0001)
 	assert_float(next[0].x).is_greater(10.0)  # one of the two to the east side next
+
+
+func test_with_no_slot_open_the_crowded_pick_is_the_nearest_taken_one() -> void:
+	var foe := _unit(1, Vector2(10, 10), 90.0)
+	var seeker := _unit(5, Vector2(13, 10), 270.0)
+	var slots := ScrumSlots.round_foes(_foes(foe), 0.5)
+	var claimed := slots.map(func(s): return s[0])  # every slot taken
+	var ground := [seeker.position, [], claimed, null, 3]
+
+	assert_array(ScrumSlots.pick(seeker, seeker.position, slots, ground)).is_empty()
+	var nearest := ScrumSlots.pick(seeker, seeker.position, slots, ground, true)
+	assert_vector(nearest[0]).is_equal_approx(Vector2(11, 10), Vector2(0.0001, 0.0001))

@@ -3,8 +3,10 @@ extends RefCounted
 ## Seeking in the scrum (Decision 88, spec 30 round 1): each tick a fighting squad's free
 ## front-band units make for slots beside their foes' bodies (ScrumSlots), in contest order
 ## (ScrumContest) - first those keeping a slot still open, then the rest picking the
-## nearest open one - so the earliest arrival takes a slot and the rest look further. A unit
-## touching a foe stands; one not free to seek keeps to its place. Pure over the squads.
+## nearest open one - so the earliest arrival takes a slot and the rest look further; with
+## none open, it waits just behind the nearest (Decision 108; in a pursuit it keeps to its
+## place: the squad pursues as a body, Decision 103). A unit touching a foe stands; one not
+## free to seek keeps to its place. Pure over the squads.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -42,8 +44,12 @@ static func plan(ctx: Dictionary) -> void:
 		var ground := [
 			ScrumStance.anchor(squad, unit), ctx["bodies"], claimed, ctx["terrain"], ctx["seed"]
 		]
-		var slot := ScrumSlots.pick(unit, squad.loose[unit.id]["at"], seeker[3], ground)
-		_aim(seeker, slot, claimed, ctx)
+		var at: Vector2 = squad.loose[unit.id]["at"]
+		var slot := ScrumSlots.pick(unit, at, seeker[3], ground)
+		if slot.is_empty() and squad.pursuit.is_empty():  # it waits behind the nearest
+			_press(seeker, ScrumSlots.pick(unit, at, seeker[3], ground, true), ctx)
+		else:
+			_aim(seeker, slot, claimed, ctx)
 
 
 ## The seeker's slot this tick if it still holds one that is open, or [].
@@ -74,6 +80,24 @@ static func _aim(seeker: Array, slot: Array, claimed: Array, ctx: Dictionary) ->
 	entry["next"] = slot[0]
 	entry["foe_at"] = ScrumReach.at(slot[2], slot[1])
 	claimed.append(slot[0])
+	ctx["active"][squad.id] = true
+
+
+## Sets the seeker making for a body's breadth short of `slot`, a taken one (none if
+## empty), claiming nothing: it waits there for a slot to open.
+static func _press(seeker: Array, slot: Array, ctx: Dictionary) -> void:
+	if slot.is_empty():
+		_aim(seeker, slot, [], ctx)
+		return
+	var squad: SkirmishSquad = seeker[1]
+	var entry: Dictionary = squad.loose[seeker[2].id]
+	var back: Vector2 = entry["at"] - slot[0]
+	var breadth := 2.0 * ScrumReach.radius(seeker[2])
+	entry["goal"] = [slot[1].id, slot[3]]
+	entry["next"] = (
+		entry["at"] if back.length() <= breadth else slot[0] + back.normalized() * breadth
+	)
+	entry["foe_at"] = ScrumReach.at(slot[2], slot[1])
 	ctx["active"][squad.id] = true
 
 
