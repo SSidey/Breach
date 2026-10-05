@@ -44,7 +44,10 @@ is done.
 11. **Variation:** how two units of one type can differ (loadouts, upgrades), and how the
    wave painter shows it.
 12. **Fatigue:** pursuers and the pursued tiring over a chase, so pursuit wears off by
-    itself as well as by its discipline leash (Decisions 107 and 109).
+    itself as well as by its discipline leash (Decisions 107 and 109). From spec 30 round
+    2's feel test: an unleashed line chased a retreating wave to the player's end and was
+    cut up there - with fatigue "they ought not pursue that far, or if they can then fair
+    enough they do".
 
 ## Rounds
 

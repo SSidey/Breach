@@ -2,10 +2,8 @@ class_name FormationRoute
 extends RefCounted
 ## A route as a path of cells across the map (Decision 75, specs/27-formations-in-2d.md):
 ## waypoints in cells, walked by distance along them. A squad keeps its distance along its
-## route and takes its 2D place and facing from it (Decision 74). The corridor is how far
+## route and takes its 2D place and heading from it (Decision 74). The corridor is how far
 ## either side of the centre line squads may spread. Pure; distances are in cells.
-
-const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 
 ## Cells either side of the centre line squads may use (the lane's combat width, halved).
 var corridor_half_width := 0.0
@@ -54,17 +52,6 @@ func heading_at(distance: float) -> Vector2:
 			return (_points[i] - _points[i - 1]).normalized()
 		remaining -= leg
 	return (_points[-1] - _points[-2]).normalized()
-
-
-## The facing (SquadFrame) nearest the heading, for a squad travelling with (+1) or against
-## (-1) the route. On an exact diagonal it keeps `current` (Decision 74).
-func facing_at(distance: float, travel_sign: int, current: int) -> int:
-	var heading := heading_at(distance) * travel_sign
-	if is_equal_approx(absf(heading.x), absf(heading.y)):
-		return current
-	if absf(heading.x) > absf(heading.y):
-		return SquadFrame.EAST if heading.x > 0.0 else SquadFrame.WEST
-	return SquadFrame.SOUTH if heading.y > 0.0 else SquadFrame.NORTH
 
 
 ## The distance along the route of the point on it nearest `point`.
