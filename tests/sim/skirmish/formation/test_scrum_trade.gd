@@ -1,0 +1,64 @@
+extends GdUnitTestSuite
+## Trading places while regrouping, per Decision 110: a unit held off its place for
+## STALL_SECONDS trades places with the interchangeable friend whose place is nearest it;
+## with none, it takes its own place there and then.
+
+const ScrumTrade = preload("res://sim/skirmish/formation/scrum_trade.gd")
+const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
+const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
+const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const UnitDef = preload("res://content/definitions/unit_def.gd")
+
+
+func _unit(unit_id: int, rank: int, kind: UnitDef) -> SkirmishUnit:
+	var unit := SkirmishUnit.new()
+	unit.id = unit_id
+	unit.hp = 10
+	unit.rank = rank
+	unit.definition = kind
+	return unit
+
+
+## A file of two, front and rear; the rear unit stands loose a cell in front of the front
+## one, held there - its own front rank in the way.
+func _held_in_front(front_kind: UnitDef, rear_kind: UnitDef) -> Array:
+	var front := _unit(1, 0, front_kind)
+	var rear := _unit(2, 1, rear_kind)
+	var squad := SkirmishSquad.new(1, "player", 1, 0.0, 1, [front, rear] as Array[SkirmishUnit])
+	front.position = ScrumStance.anchor(squad, front)
+	var at := front.position + (front.position - ScrumStance.anchor(squad, rear))
+	squad.loose[rear.id] = {"unit": rear, "at": at, "goal": null, "next": at}
+	squad.loose[rear.id]["stuck"] = ScrumTrade.STALL_SECONDS
+	return [squad, front, rear]
+
+
+func test_a_unit_held_off_by_its_own_ranks_trades_places_with_a_like_friend() -> void:
+	var kind := UnitDef.new()
+	var setup := _held_in_front(kind, kind)
+
+	ScrumTrade.trade(setup[0], 7)
+
+	assert_int(setup[2].rank).is_equal(0)  # the held unit takes the front place, nearer it
+	assert_int(setup[1].rank).is_equal(1)  # its friend steps back into the one it left
+	assert_bool(setup[0].loose.has(setup[1].id)).is_true()
+
+
+func test_a_unit_with_no_like_friend_takes_its_own_place() -> void:
+	var setup := _held_in_front(UnitDef.new(), UnitDef.new())  # two kinds: no trade
+
+	ScrumTrade.trade(setup[0], 7)
+
+	assert_int(setup[2].rank).is_equal(1)
+	assert_bool(setup[0].loose.has(setup[2].id)).is_false()
+	assert_vector(setup[2].position).is_equal(ScrumStance.anchor(setup[0], setup[2]))
+
+
+func test_a_unit_not_yet_held_long_enough_does_not_trade() -> void:
+	var kind := UnitDef.new()
+	var setup := _held_in_front(kind, kind)
+	setup[0].loose[setup[2].id]["stuck"] = ScrumTrade.STALL_SECONDS / 2.0
+
+	ScrumTrade.trade(setup[0], 7)
+
+	assert_int(setup[2].rank).is_equal(1)
+	assert_bool(setup[0].loose.has(setup[2].id)).is_true()

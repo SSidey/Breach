@@ -10,7 +10,7 @@ extends RefCounted
 ##   and that friend's formation takes panic shock.
 ## - **Rally:** a router that reaches a friendly formation with a leader joins its rear
 ##   ranks. One that runs into any standing friendly formation (Decisions 89 and 98) is
-##   caught there: it stops (in the nearest free cell: RoutSettle),
+##   caught there: it stops (shoving in among them, its body kept apart: UnitBodies),
 ##   and after STEADY_RALLY_SECONDS with that formation steady joins its rear, walking to
 ##   its place. A shaken formation holds its routers until it steadies.
 ##   A routing formation whose own leader lives, with no enemy near for a few seconds,
@@ -35,7 +35,6 @@ const FormationEvents = preload("res://sim/skirmish/formation/formation_events.g
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const RoutFlight = preload("res://sim/skirmish/formation/rout_flight.gd")
 const RoutCatch = preload("res://sim/skirmish/formation/rout_catch.gd")
-const RoutSettle = preload("res://sim/skirmish/formation/rout_settle.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -44,10 +43,12 @@ const CELLS := float(MapLayoutDef.CELLS_PER_TILE)
 const CRUSH := 2
 const PANIC := 5
 const SEEN_ROUT := 5
-## How near (cells) a router must come to a led formation to rally to it.
-const RALLY_REACH := 2.0
-## A router running into a standing friendly formation (within this many cells) is caught
-## there, and rallies to it after a while steady (Decisions 89 and 98).
+## How near (cells, from a router's centre to a friend's body) a router must come to a led
+## formation to rally to it.
+const RALLY_REACH := 1.5
+## A router running into a standing friendly formation - its centre within a body's
+## breadth of a friend's body, shoving past it (Decision 106) - is caught there, and
+## rallies to it after a while steady (Decisions 89 and 98).
 const CAUGHT_REACH := 1.0
 const STEADY_RALLY_SECONDS := 3.0
 ## Seconds with no enemy within ENEMY_NEAR cells before a led rout re-forms.
@@ -84,9 +85,6 @@ static func step(
 		_join(entry[1], entry[2], entry[3], tick, events)
 	for squad in routing:
 		_regroup(squad, squads, tick, tick_seconds, events, fight_seed)
-	routing = routing.filter(func(s): return s.state == SkirmishSquad.State.ROUTING)
-	RoutSettle.settle(routing, squads, pace, where, fight_seed)  # not those that re-formed
-	RoutFlight.part(routing, [pace, fight_seed], where)
 	for squad in breaking:
 		_break(squad, squads, tick, events, terrain)
 	return events
@@ -228,7 +226,7 @@ static func _regroup(
 static func _join(
 	squad: SkirmishSquad, unit: SkirmishUnit, leader: SkirmishSquad, tick: int, events: Array
 ) -> void:
-	var settled = squad.fleeing.get(unit.id, {}).get("settled_at")
+	var settled := where(squad, unit.id)
 	squad.units.erase(unit)
 	squad.fleeing.erase(unit.id)
 	unit.rank = 0
@@ -237,8 +235,7 @@ static func _join(
 	var single := SkirmishSquad.new(-1, squad.faction_id, leader.direction, 0.0, 1, members)
 	FormationContact.reinforce(leader, single)
 	leader.reforming = true
-	if settled != null:
-		RoutSettle.walk_in(leader, unit, settled)  # it walks to its place in the ranks
+	leader.loose[unit.id] = {"unit": unit, "at": settled, "goal": null, "next": settled}
 	events.append(FormationEvents.unit_event("rallied", tick, squad, unit, {"into": leader.id}))
 	if squad.living().is_empty():
 		squad.state = SkirmishSquad.State.DESTROYED

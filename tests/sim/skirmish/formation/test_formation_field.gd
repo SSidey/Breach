@@ -164,7 +164,9 @@ func test_a_frontal_attack_alone_does_not_break_the_line() -> void:
 	var log := _run(field, func(log): return false, 1200)
 
 	assert_bool(log.any(func(e): return e["type"] == "routed")).is_false()
-	assert_int(field.kingdom_line.living().size()).is_greater(6)
+	# Bodies, not cells (Decision 106): more of the wave wraps the line's ends than cells let
+	# it, so the line loses about half (it kept about 9 of 12 before), but it holds.
+	assert_int(field.kingdom_line.living().size()).is_greater_equal(4)
 
 
 func test_a_flank_timed_by_the_chieftain_breaks_the_line_into_its_reserve() -> void:
@@ -184,13 +186,12 @@ func test_a_flank_timed_by_the_chieftain_breaks_the_line_into_its_reserve() -> v
 	var flanked: Array = log.filter(func(e): return e["type"] == "flanked")
 	assert_bool(flanked.is_empty()).is_false()
 	assert_int(flanked[0]["tick"] - engaged).is_less_equal(30)  # the flank lands with A
-	assert_bool(log.any(func(e): return e["type"] == "routed" and e["squad"] == line)).is_true()
-	var reached := func(e):
-		return (
-			(e["type"] == "crushed" and e["squad"] == reserve)
-			or (e["type"] == "rallied" and e["into"] == reserve)
-		)
-	assert_bool(log.any(reached)).is_true()  # its routers run into the reserve
+	var routs: Array = log.filter(func(e): return e["type"] == "routed" and e["squad"] == line)
+	assert_bool(routs.is_empty()).is_false()
+	var run_down := func(e):  # the waves go after its routers: they are fair game (Decision 111)
+		return e["type"] == "engaged" and e["with"] == line and e["tick"] > routs[0]["tick"]
+	assert_bool(log.any(run_down)).is_true()
+	assert_bool(log.any(func(e): return e["type"] == "engaged" and e["squad"] == reserve)).is_true()
 
 
 func test_route_bs_wave_narrows_through_the_ford_and_widens_after() -> void:

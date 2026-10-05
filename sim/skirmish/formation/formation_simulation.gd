@@ -18,7 +18,9 @@ extends RefCounted
 ##                FormationJoins); then units seek contact (FormationScrum, Decision 88)
 ##   4. combat  - melee blows (FormationMelee) and ranged blows (Decision 46)
 ##   5. deaths  - the fallen die, the ranks behind step up, an empty squad is destroyed
-##   6. re-form - units swap toward their preferred places (FormationShuffle, Decision 46)
+##   6. bodies  - friends' bodies that overlap are pushed apart by mass (UnitBodies, Decision
+##                106)
+##   7. re-form - units swap toward their preferred places (FormationShuffle, Decision 46)
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -35,6 +37,7 @@ const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
+const UnitBodies = preload("res://sim/skirmish/formation/unit_bodies.gd")
 const FormationSweep = preload("res://sim/skirmish/formation/formation_sweep.gd")
 const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
 const FormationMelee = preload("res://sim/skirmish/formation/formation_melee.gd")
@@ -150,6 +153,7 @@ func step() -> Array:
 	FormationDeaths.bury(_squads, _tick, events)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
 	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, fight_seed))
+	UnitBodies.step(_squads, fight_seed)  # after every move: friends' bodies part (Decision 106)
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
 	FormationMarch.sync_units(_squads)

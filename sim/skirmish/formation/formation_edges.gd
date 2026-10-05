@@ -80,7 +80,7 @@ static func _free(attacker: SkirmishSquad) -> bool:
 
 ## True if the attacker's front reaches a hostile's side or rear face, overlapping it.
 static func _reaches(attacker: SkirmishSquad, victim: SkirmishSquad) -> bool:
-	if not FormationContact.can_engage(victim) or victim.is_destroyed():
+	if not FormationContact.engageable(victim):
 		return false
 	if SquadGeometry.facing_off(attacker, victim):
 		return false  # front to front: FormationContact's frontal lock

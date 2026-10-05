@@ -8,7 +8,7 @@ extends RefCounted
 ## something interferes on the way (a fight, a queue). Pure.
 
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
-const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationNarrowing = preload("res://sim/skirmish/formation/formation_narrowing.gd")
 
@@ -25,18 +25,17 @@ static func ticks_to(
 	terrain: FormationTerrain = null
 ) -> int:
 	var step := cells_per_second * tick_seconds
-	var facing := route.facing_at(from, 1, SquadFrame.EAST)
 	var travelled := from
 	var ticks := 0
 	var narrowed := false
 	while travelled < cells - 0.000001 and ticks < 1000000:
-		facing = route.facing_at(travelled, 1, facing)
 		var here := route.point_at(travelled)
 		var share := 1.0
 		if terrain != null:
-			var heading := SquadFrame.forward(facing)
-			share = maxf(0.05, terrain.factor(1.0, here, here + heading))
-			if not narrowed and _narrows(terrain, here + heading, facing, width):
+			var ahead := route.heading_at(travelled)
+			share = maxf(0.05, terrain.factor(1.0, here, here + ahead))
+			var heading := UnitMotion.bearing_to(Vector2.ZERO, ahead, 0.0)
+			if not narrowed and _narrows(terrain, here + ahead, heading, width):
 				narrowed = true
 				ticks += 2 * roundi(FormationNarrowing.REFORM_SECONDS / tick_seconds)
 		travelled += step * share
@@ -44,8 +43,8 @@ static func ticks_to(
 	return ticks
 
 
-static func _narrows(terrain: FormationTerrain, at: Vector2, facing: int, width: int) -> bool:
-	var run := FormationNarrowing.run_across(terrain, at, facing, 1.0)
+static func _narrows(terrain: FormationTerrain, at: Vector2, heading: float, width: int) -> bool:
+	var run := FormationNarrowing.run_across(terrain, at, heading, 1.0)
 	return run.x >= 1.0 and run.x < width
 
 

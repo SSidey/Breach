@@ -57,9 +57,10 @@ var flank_contacts := {}
 var loose := {}
 var stance := {}
 var fight_since := -1
-## Pursuit (ScrumPursuit, Decision 95): whether it is ordered to pursue a retreating enemy,
-## and its units out chasing one (unit id -> {"unit", "foe", "until"}).
-var pursues := false
+## Pursuit (ScrumPursuit, Decision 109): whether it may pursue a retreating enemy (false:
+## ordered not to), and its units out chasing one on their own (unit id -> {"unit", "foe",
+## "from", "leash"}).
+var pursues := true
 var chasers := {}
 ## A pursuit under way (FormationPursuit): the enemy, the post it left, and how it held it.
 var pursuit := {}
@@ -173,6 +174,8 @@ func compact() -> Array[SkirmishUnit]:
 			func(a, b): return a.rank < b.rank or (a.rank == b.rank and a.column < b.column)
 		)
 		for unit in order_by_place:
+			if swaps.any(func(swap): return swap["to"].has(unit)):
+				continue  # mid-move: it takes the place its move is heading for
 			var into_front_ok := unit.rank > 1 or unit.preferred_position == 0
 			if unit.rank > 0 and into_front_ok and _clear_ahead(unit):
 				unit.rank -= 1
@@ -200,6 +203,16 @@ func _clear_ahead(unit: SkirmishUnit) -> bool:
 		)
 		if rows_overlap and columns_overlap:
 			return false
+	for swap in swaps:  # nor a place a move under way is heading for
+		for mover in swap["to"]:
+			var to: Vector2i = swap["to"][mover]
+			var rows_meet: bool = to.x <= row and row < to.x + mover.footprint_depth
+			var columns_meet: bool = (
+				to.y < unit.column + unit.footprint_width
+				and unit.column < to.y + mover.footprint_width
+			)
+			if mover != unit and rows_meet and columns_meet:
+				return false
 	return true
 
 

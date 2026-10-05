@@ -22,6 +22,14 @@ const MELEE_REACH := 0.0175
 const EPSILON := 0.000001
 
 
+## True if the squad may be engaged: any squad still standing, whatever it is doing - one
+## retreating or routing too. What a squad attacks is the attacker's choice (Decision 111).
+static func engageable(target: SkirmishSquad) -> bool:
+	return target.state != SkirmishSquad.State.DESTROYED and not target.living().is_empty()
+
+
+## True if the squad seeks combat: not one retreating or routing (it is getting away), nor
+## one that has arrived or is waiting (Decision 111).
 static func can_engage(candidate: SkirmishSquad) -> bool:
 	return (
 		candidate.state != SkirmishSquad.State.DESTROYED
@@ -40,7 +48,7 @@ static func nearest_hostile(
 	var best: SkirmishSquad = null
 	var best_key := []
 	for other in squads:
-		if other.faction_id == from.faction_id or not can_engage(other):
+		if other.faction_id == from.faction_id or not engageable(other):
 			continue
 		if not SquadGeometry.facing_off(from, other) or not SquadGeometry.overlaps(from, other):
 			continue

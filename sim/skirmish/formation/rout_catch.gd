@@ -29,8 +29,8 @@ static func holder(
 	return friend_near(squad, at, squads, reach, false, fight_seed)
 
 
-## The nearest standing friendly formation with a unit within `reach` of `at`; if `led`,
-## only one with a leader.
+## The nearest standing friendly formation with a unit's body within `reach` of `at`
+## (measured to the body's edge, Decision 106); if `led`, only one with a leader.
 static func friend_near(
 	squad: SkirmishSquad, at: Vector2, squads: Array, reach: float, led: bool, fight_seed: int = 0
 ) -> SkirmishSquad:
@@ -43,7 +43,7 @@ static func friend_near(
 			continue
 		for unit in friend.living():
 			var there := ScrumReach.at(friend, unit)
-			var gap := there.distance_to(at)
+			var gap := there.distance_to(at) - ScrumReach.radius(unit)
 			var key := [snappedf(gap, 0.000001), ScrumContest.draw(unit, fight_seed)]
 			if gap <= reach and behind(squad, at, there) and (best == null or key < best_key):
 				best = friend

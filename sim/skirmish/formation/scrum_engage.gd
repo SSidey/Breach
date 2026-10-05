@@ -4,9 +4,11 @@ extends RefCounted
 ## hostile squads whose units come within REACH of each other lock into a fight, whatever
 ## their faces - a squad passing beside a line, or a line it brushes, fights rather than
 ## walking by. A squad already fighting is joined by the one that reached it, and keeps
-## its own foe. Every free squad picks the nearest hostile it has come within reach of, all
-## from one snapshot before any lock lands, a tie going to the squads' seeded draws -
-## never to the order they are listed in (Decision 97). Pure over the squads it is given.
+## its own foe. Any standing squad may be engaged, one retreating or routing too; only one
+## not getting away seeks combat (Decision 111). Every free squad picks the nearest hostile
+## it has come within reach of, all from one snapshot before any lock lands, a tie going to
+## the squads' seeded draws - never to the order they are listed in (Decision 97). Pure over
+## the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
@@ -53,7 +55,7 @@ static func _nearest(squad: SkirmishSquad, squads: Array, fight_seed: int) -> Sk
 	var best: SkirmishSquad = null
 	var best_key := []
 	for other in squads:
-		if other.faction_id == squad.faction_id or not FormationContact.can_engage(other):
+		if other.faction_id == squad.faction_id or not FormationContact.engageable(other):
 			continue
 		var gap := _gap(squad, other)
 		var key := [snappedf(gap, 0.000001), ScrumContest.squad_draw(other, fight_seed)]
@@ -63,14 +65,10 @@ static func _nearest(squad: SkirmishSquad, squads: Array, fight_seed: int) -> Sk
 	return best
 
 
-## Cells between the two squads' nearest units (0 where they touch or overlap).
+## Cells between the two squads' nearest units' bodies (0 where they touch or overlap).
 static func _gap(squad: SkirmishSquad, other: SkirmishSquad) -> float:
 	var least := INF
 	for unit in squad.living():
-		var mine := ScrumReach.area(squad, unit)
 		for foe in other.living():
-			var theirs := ScrumReach.area(other, foe)
-			var gap_x := maxf(mine.position.x - theirs.end.x, theirs.position.x - mine.end.x)
-			var gap_y := maxf(mine.position.y - theirs.end.y, theirs.position.y - mine.end.y)
-			least = minf(least, maxf(maxf(gap_x, gap_y), 0.0))
+			least = minf(least, ScrumReach.gap(squad, unit, other, foe))
 	return least

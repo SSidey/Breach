@@ -13,7 +13,8 @@ extends RefCounted
 ##   has turned, a unit still facing a foe it touches strikes it (ScrumBlows). The less
 ##   ordered the formation, the wider its units fan out from the route's line: up to
 ##   RoutFlight.FAN_DEGREES either side, by a seeded angle per unit, for one with no
-##   discipline. Ground it can't cross holds it.
+##   discipline. Ground it can't cross turns it back onto the route (a ford it fanned
+##   away from), and holds it only if that is barred too.
 ## - **Safe:** with no enemy within FormationRout.ENEMY_NEAR of it, and none pursuing it,
 ##   for FormationRout.RALLY_SECONDS - the test a rout rallies by - it re-forms on its route
 ##   where its units stand, facing home, and marches home (its order). One whose units are
@@ -38,6 +39,8 @@ const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const CELLS := float(MapLayoutDef.CELLS_PER_TILE)
 ## How near (cells, along its route) home a unit has nowhere further to go.
 const HOME_CELLS := 0.5
+## How far ahead along its route (cells) a fleeing unit looks for the way home.
+const LOOK_CELLS := 1.0
 
 
 ## Starts the squad withdrawing: its units leave their places where they stand.
@@ -103,7 +106,7 @@ static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, motion: Array, terra
 	var home: float = squad.home_distance * CELLS
 	if absf(along - home) < HOME_CELLS:
 		return  # home
-	var homeward: Vector2 = squad.route.heading_at(along) * signf(home - along)
+	var homeward := _homeward(squad.route, along, home)
 	var full: float = unit.speed * motion[0]
 	var heading := homeward.rotated(RoutFlight.fan(unit, motion[2]) * disorder(squad))
 	var side := homeward.orthogonal()
@@ -111,7 +114,8 @@ static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, motion: Array, terra
 	if absf(aside) >= RoutFlight.FAN_CELLS * disorder(squad) and heading.dot(side) * aside > 0.0:
 		heading = homeward  # fanned out as far as its disorder takes it (a rout's at most)
 	if terrain != null and terrain.factor(unit.height, at, at + heading) <= 0.0:
-		heading = homeward  # it can't fan that way: it keeps to the line
+		var onto: Vector2 = squad.route.point_at(move_toward(along, home, LOOK_CELLS)) - at
+		heading = onto.normalized() if onto.length() > 0.000001 else homeward  # back to the road
 	if terrain != null:
 		full *= terrain.factor(unit.height, at, at + heading)
 	var to := at + heading * maxf(full, 0.000001)
@@ -130,6 +134,16 @@ static func _home(squad: SkirmishSquad) -> bool:
 		if absf(squad.route.distance_of(ScrumReach.at(squad, unit)) - home) >= HOME_CELLS:
 			return false
 	return true
+
+
+## The way home along the route from `along`: towards the route a step nearer home, so a
+## unit at a bend turns with the route rather than running on along the leg it was on.
+static func _homeward(route, along: float, home: float) -> Vector2:
+	var nearer: float = move_toward(along, home, LOOK_CELLS)
+	var way: Vector2 = route.point_at(nearer) - route.point_at(along)
+	if way.length() < 0.000001:
+		return route.heading_at(along) * signf(home - along)
+	return way.normalized()
 
 
 ## True if no standing enemy is near the squad and none pursues it.

@@ -11,6 +11,8 @@ const FormationField = preload("res://sim/skirmish/formation/formation_field.gd"
 const RoutFlight = preload("res://sim/skirmish/formation/rout_flight.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
+const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
+const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -163,7 +165,7 @@ func test_withdrawals_do_not_hang_on_list_order() -> void:
 ## The feel test's field (captained line, seed 606531, from the user's test of #90): A is
 ## sent and, 3 s into its fight, ordered home with the line set to pursue. Returns [field,
 ## A, the log from the order on].
-func _a_retreats_from_a_pursuing_line() -> Array:
+func _a_retreats_from_a_pursuing_line(pursues := true) -> Array:
 	var field := FormationField.new(
 		0.1,
 		load("res://content/units/grem.tres"),
@@ -177,7 +179,7 @@ func _a_retreats_from_a_pursuing_line() -> Array:
 		if field.waves["A"].built() == 8:
 			break
 		field.step()
-	field.kingdom_line.pursues = true
+	field.kingdom_line.pursues = pursues  # it does by default (Decision 109)
 	var wave := field.send("A")
 	for _i in range(400):
 		if field.step().any(func(e): return e["type"] == "engaged"):
@@ -188,10 +190,12 @@ func _a_retreats_from_a_pursuing_line() -> Array:
 	return [field, wave, []]
 
 
-func test_a_pursuit_moves_as_a_body_and_gives_up_out_of_reach() -> void:
+func test_a_pursuit_moves_as_a_body_and_gives_up_at_its_leash() -> void:
 	var setup := _a_retreats_from_a_pursuing_line()
 	var line: SkirmishSquad = setup[0].kingdom_line
-	var furthest := INF
+	var leash := FormationDiscipline.pursuit_leash(line)  # a captained line: 64 cells
+	var post := line.front_distance
+	var gone := 0.0
 	var spread := 0.0
 	var log := []
 	for _i in range(400):
@@ -199,15 +203,30 @@ func test_a_pursuit_moves_as_a_body_and_gives_up_out_of_reach() -> void:
 		var xs: Array = line.living().map(func(u): return ScrumReach.at(line, u).x)
 		if not line.pursuit.is_empty() and not line.pursuit["returning"]:
 			spread = maxf(spread, xs.max() - xs.min())
-		furthest = minf(furthest, xs.min())
+		gone = maxf(gone, absf(line.front_distance - post) * MapLayoutDef.CELLS_PER_TILE)
 
+	assert_float(leash).is_equal(64.0)
 	assert_float(spread).is_less(6.0)  # its captain no longer runs ahead of its units
 	assert_bool(log.any(func(e): return e["type"] == "pursuit_ended")).is_true()
-	assert_float(furthest).is_greater(20.0)  # not all the way to A's spawn
+	assert_float(gone).is_less_equal(leash + 1.0)  # not all the way to A's spawn
+
+
+func test_a_pursuit_ends_when_the_enemy_is_out_of_sight() -> void:
+	var setup := _a_retreats_from_a_pursuing_line()
+	var line: SkirmishSquad = setup[0].kingdom_line
+	for unit in line.units:
+		unit.detection = 1.0  # it loses sight of A's wave as soon as it steps back
+	var ended := -1
+	for _i in range(100):
+		for event in setup[0].step():
+			if event["type"] == "pursuit_ended" and ended < 0:
+				ended = setup[0].sim.tick_number()
+
+	assert_int(ended).is_greater(0)
 
 
 func test_a_withdrawal_home_holds_there_facing_out() -> void:
-	var setup := _a_retreats_from_a_pursuing_line()
+	var setup := _a_retreats_from_a_pursuing_line(false)  # so that it gets home
 	var wave: SkirmishSquad = setup[1]
 	var lateral := 0.0
 	var log := []

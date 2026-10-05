@@ -70,12 +70,23 @@ func _of(log: Array, kind: String) -> Array:
 	return log.filter(func(e): return e["type"] == kind)
 
 
-func test_units_touch_on_faces_and_corners_but_not_across_a_gap() -> void:
-	var here := Rect2(Vector2(0, 0), Vector2.ONE)
+## The gap between two 1-cell units' bodies, one at `here`, one at `there`.
+func _gap(here: Vector2, there: Vector2) -> float:
+	var mine := SkirmishUnit.new()
+	mine.position = here
+	var theirs := SkirmishUnit.new()
+	theirs.position = there
+	var a := SkirmishSquad.new(1, "player", 1, 0.0, 1, [mine] as Array[SkirmishUnit])
+	var b := SkirmishSquad.new(2, "the_kingdom", -1, 0.0, 1, [theirs] as Array[SkirmishUnit])
+	return ScrumReach.gap(a, mine, b, theirs)
 
-	assert_bool(ScrumReach.touching(here, Rect2(Vector2(1, 0), Vector2.ONE))).is_true()
-	assert_bool(ScrumReach.touching(here, Rect2(Vector2(1, 1), Vector2.ONE))).is_true()
-	assert_bool(ScrumReach.touching(here, Rect2(Vector2(2, 0), Vector2.ONE))).is_false()
+
+func test_units_touch_face_to_face_and_at_a_slant_but_not_across_a_gap() -> void:
+	var here := Vector2(0.5, 0.5)
+
+	assert_float(_gap(here, Vector2(1.5, 0.5))).is_equal_approx(0.0, 0.0001)
+	assert_float(_gap(here, Vector2(1.2, 1.2))).is_less_equal(ScrumReach.CONTACT)
+	assert_float(_gap(here, Vector2(2.0, 0.5))).is_greater(ScrumReach.CONTACT)
 
 
 func test_a_units_front_is_the_three_cells_ahead() -> void:

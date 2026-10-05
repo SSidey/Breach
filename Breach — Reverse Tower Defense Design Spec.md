@@ -5421,3 +5421,276 @@ The user chose:
 **Rules over cases:** general. One body rule for every unit; "keeps its space" is what
 being in control means, not a router exception.
 **Order:** pushes are decided from one snapshot and applied together (Decision 97).
+
+### Decision 107 — A pursuit is leashed by discipline: the steadier a formation, the sooner it comes back to its post
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in a feel test: a pursuing line that kept pace with a retreating wave
+followed it to its spawn, since a pursuit only gave up when the enemy got 16 cells ahead
+of it. The user: "a formation (with the order to hold a position) with low discipline
+might pursue back to origin whereas a higher discipline would leash earlier… use % of a
+max expected discipline… (don't cap it but going over doesn't give increasing benefits?)".
+A pursuit ends when its enemy is out of the formation's sight, gone or no longer
+retreating, or when its frame has gone as far from the post it held as its discipline
+(Decision 92) leashes it:
+
+| Discipline (share of an expected maximum, 100) | Leash from its post |
+|---|---|
+| 75% and over | 32 cells |
+| 50% to 75% | 64 cells |
+| 25% to 50% | 128 cells |
+| under 25% | none: as long as it can see its enemy |
+
+Discipline over the maximum is allowed but leashes no shorter. The top tier is 32 cells,
+confirmed by the user: "such that a high discipline force can keep a 1 tile area clear
+before reforming at their rally point"; each step down doubles the leash.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Give up 16 cells behind the enemy | An equally fast pursuer never falls behind. |
+| One leash for every formation | Discipline is what holds a formation to its post. |
+| Pursuers tire | Wanted, later: fatigue belongs to the unit characteristics design. |
+
+**Consequences:**
+- `FormationDiscipline.pursuit_leash`; `FormationPursuit` gives up out of sight or at it.
+- Agenda (unit characteristics): fatigue, so pursuers and the pursued tire.
+
+**Rules over cases:** general. One leash rule over discipline for every pursuing formation.
+**Order:** a squad's own discipline and distance; no ids or list order.
+
+### Decision 108 — In a fight, a unit with no slot open waits just behind the nearest, not back in its place
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in a feel test: as the line shrank, A and B's units that found no
+slot open beside a foe (Decision 106) walked back into their places while the rest fought
+on. The user: "that doesn't seem right, shouldn't they still be trying to pile around?" A
+seeker with no slot open now makes for a body's breadth short of the nearest slot it could
+stand on were it free (within its leash, on ground it can cross), claiming nothing, and
+takes the next slot that opens. A pursuing formation's units still keep to their places
+with no slot open: it pursues as a body (Decision 103).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Walk back to its place (as before) | Part of a squad leaves a fight it is winning. |
+| Make for the taken slot itself | It would shove the friend holding it off its foe. |
+
+**Consequences:** `ScrumSlots.pick(..., crowded)`, `ScrumSeek._press`.
+
+**Rules over cases:** general. Any seeker short of a slot, any size of fight.
+**Order:** the nearest slot is chosen by the same key as an open one (distance, its own
+frame, seeded draws); no ids or list order.
+
+### Decision 109 — Every formation pursues a retreating enemy as far as its discipline leashes it; its undisciplined units may break ranks and chase further
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in the feel test, after Decision 107: "Should pursue not be the
+default logic for formations going forward with discipline dictating how far?" This
+supersedes Decision 95's "pursuit is ordered or a leader's". The user, on a leader's
+"pursues" tactic and on cautious commanders: "Go with the recommended [a leash one step
+longer], we could also allow command to explicitly state do not pursue, or for commanders
+that are very conservative with pursuing that may only pursue 16, so bring the bands down
+for them". On breaking ranks: "the idea was to make it such that some undisciplined units
+would break rank rather a guaranteed all"; the user agreed to one leash table applied at
+two levels:
+- **The formation** pursues any retreating enemy as a body, by default, to the leash its
+  discipline gives it (Decision 107), unless ordered not to pursue. The leash steps are
+  16, 32, 64, 128 cells and no leash: discipline picks the step, a leader's "pursues"
+  tactic moves it one out, a "cautious" one one in.
+- **Each unit** near the retreating enemy rolls, as before, on its own discipline to break
+  ranks: one that does chases on its own as far from where it broke away as its own
+  discipline leashes it, while it can see its quarry, then goes back to its formation.
+  This holds under an order not to pursue too: the formation holds, but some of its
+  undisciplined units may still run.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Pursuit only when ordered or led (Decision 95) | Discipline should decide how far, not whether. |
+| Retire breaking ranks | Then every unit goes, or none; the user wanted some. |
+| A 2-second chase for units breaking ranks | Replaced by each unit's own leash. |
+
+**Consequences:**
+- `SkirmishSquad.pursues` defaults to true (false: ordered not to pursue); the feel test's
+  "Line pursues" becomes "Line won't pursue".
+- `FormationDiscipline.pursuit_leash` (with tactics) and `unit_leash`; chasers keep
+  `from` and `leash` in place of `until`; the formation's seeking, walking and turning
+  leave its chasers to `ScrumPursuit`.
+- Retreating waves are now often caught and destroyed: a feel-test item.
+- Found in the feel test: a line marching home from its pursuit counted as retreating, so
+  the wave its chasers caught at its spawn could never strike back. First patched as "a
+  squad with units out chasing can be engaged"; superseded by Decision 111.
+
+**Rules over cases:** general. One leash table for every formation and every unit.
+**Order:** the roll to break ranks is seeded by the battle, the tick and the unit; chasers
+pick their quarry by distance, then its seeded draw. No ids or list order.
+
+### Decision 110 — A unit its own ranks hold off its place trades places with a like friend
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Found building pursuit by default (Decision 109): after a pursuit, a
+line's units could end up on the wrong side of their own ranks, and the line stood
+re-forming for good, its units shoving each other out of their places. In a real line
+the soldiers would sort themselves out by trading places, not by forcing a way through.
+A unit walking back to its place that has come no nearer than its closest for half a
+second trades places with the friend whose place is nearest it, if that place is nearer
+than its own and the two are interchangeable: the same kind of unit, in the same band.
+The friend walks to the place it left. With no such friend its own place is the nearest
+one, and it takes it there and then. Places stay one unit each.
+
+Two fixes ride with it:
+- **Stepping up:** closing up after a move stepped units into places that other moves
+  under way were heading for, so two units could share a place. It no longer does.
+- **A brush is not a shove:** a unit in its frame keeps its place against its own
+  squad's loose units overlapping it by under 0.05 cells, and gives way to a real push.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Rejoin where it stands | Its body stays off its place, and is pushed loose again. |
+| Move it onto its place | Units jumped up to 4 cells. |
+| Trade with any friend | It would scramble the layout the player painted. |
+
+**Consequences:** `ScrumTrade` (new), called from `ScrumRegroup`; `SkirmishSquad.compact`
+skips places moves under way are heading for; `UnitBodies.BRUSH`.
+
+**Rules over cases:** general. One rule for any regrouping unit held off its place.
+**Order:** stalled units trade in the order of their seeded draws; the friend is picked by
+distance, then its seeded draw. No ids or list order.
+
+### Decision 111 — Any standing squad may be engaged; only one not getting away seeks combat
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in the feel test, where a wave caught at its spawn by a pursuing
+line's chasers could not fight back, the line marching home counting as retreating. The
+user: "a unit should always be possible to engage, the logic should be that retreating or
+routing units do not attempt to engage", and, choosing this over leaving retreaters to
+pursuit alone: "it is on the unit itself to determine what it wants to attack, not
+whether or not the unit can be attacked, so any formation aside from those retreating or
+routing should attempt to seek combat, a retreating force should engage with foes that
+block their retreat path (with the formation retaining coherency based on discipline),
+routed units should always attempt to flee and are essentially free kills if completely
+surrounded as they ought not fight back".
+- **Engageable:** any squad still standing, whatever it is doing - retreating, routing,
+  arrived or marching home.
+- **Seeking combat:** a squad that isn't retreating or routing (nor arrived or waiting)
+  locks onto hostiles in reach, those getting away included; its units go after them
+  within their leash of their places, its frame holding unless it pursues (Decision 109).
+- **Getting away:** a retreating squad doesn't turn to fight as a squad, but its units
+  strike foes in front of them, those blocking its way included (Decision 101); a routing
+  one only flees and strikes nothing, so routers caught are free kills.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Retreaters and routers can't be engaged | The attacker should choose what it attacks. |
+| Only pursuit goes after those getting away | The user chose to let any squad in reach engage. |
+
+**Consequences:**
+- `FormationContact.engageable` (targets) beside `can_engage` (seeking combat); front,
+  flank and scrum locks take any engageable target; a target getting away is not locked
+  back.
+- A retreat no longer frees its enemy: one ordered not to pursue holds its post, but its
+  units fight the retreater while it is in reach. Routers are run down by any squad that
+  reaches them, so fewer reach their friends to crush or rally there.
+
+**Rules over cases:** general. One rule for who may be engaged and one for who seeks it.
+**Order:** locks are chosen from one snapshot, ties by the squads' seeded draws, as before.
+
+### Decision 112 — A formation doesn't wait for its runaways; a leader steadies its units against breaking ranks
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in the feel test: a pursuing line stood waiting for its units that
+had broken ranks before marching home, and its undisciplined militia ran on past the
+formation's leash even under a captain. The user: "I would expect them to march back and
+let the runaways come back on their own if at all", and "Leadership bonus ought to
+prevent runaways more yes, they should be at least less likely to chase beyond the
+overall group".
+- **Runaways:** a unit whose chase ends straggles back on its own to its place, wherever
+  its formation now is, and rejoins there. Units out chasing or straggling don't hold
+  their formation's march or its pursuit.
+- **Steadied by a leader:** a unit's roll to break ranks and its own leash use its
+  discipline bolstered by its formation's best leader, as the formation's own discipline
+  is (Decision 81): a captain lifts a militiaman's 30 to 50, so he no longer breaks
+  ranks, and would chase no further than his formation.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| The formation waits for its runaways | The user: they make their own way back, if at all. |
+| A unit's own discipline alone | A leader should hold its units together. |
+
+**Consequences:** `FormationDiscipline.unit_discipline` and `unit_leash(squad, unit)`; a
+chase that ends keeps its unit as a straggler (`returning`) until it reaches its place;
+`FormationScrum.regrouping` and the pursuit's laggard check leave chasers out.
+
+**Rules over cases:** general. One rule for every unit out on its own, one bolster for
+every unit under a leader.
+**Order:** unchanged: the roll to break ranks is seeded by battle, tick and unit.
+
+### Decision 113 — A route is a way to travel, not a formation's own: a pursuit follows its quarry's road
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in the feel test: a line pursuing a wave that had come by route C,
+or by route B, ran down its own route A after it, parallel to the wave or away from it,
+because a formation's frame could only move along its own route. The user: "a road
+shouldn't really be owned by a formation and is more used to indicate travel (given
+nothing goes wrong e.g. being attacked), they should pursue the enemy, and if the enemy
+flees they should do so along a known route which can be determined by where they need to
+flee back to, same for progressing, where is the target? pick the nearest route that paths
+to that target, use that route given all is well".
+- **The rule:** a formation travels to its target by the nearest known route that paths
+  to it, joining it where it stands.
+- **Pursuit:** the target is the fleeing enemy, which flees by its own route home, so a
+  pursuer takes that route where it passes (within 2 cells) and follows it after the
+  enemy. Giving up, it marches back along the route it is on to its post, and takes up its
+  own route there again.
+- **The leash** (Decision 107) is now measured as the crow flies from the post, the
+  formation's road no longer being one line; the feel test rings the post at the leash.
+- **On the road:** a pursuing frame judges its quarry ahead along the road it travels and
+  sweeps round its bends as a marching one does (Decision 105). Its units aren't held to
+  their places as it goes - the user: "they don't need to verbatim follow a formation
+  point on the line" - so one with no slot open waits by the fight in a pursuit too,
+  retiring Decision 108's pursuit exception (the leash no longer measures from its units).
+- Found with it in the feel test: a withdrawing unit fanned beside its road that met water
+  it couldn't cross ran on along the road's line into it, beside the ford; it now turns
+  back onto the road.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Pursue only down its own route | The user: a road isn't the formation's own. |
+| Leave roads and head straight for the enemy | Roads are how formations travel when all is well; open-ground movement is a larger change. |
+
+**Consequences:**
+- `FormationPursuit` keeps the route and post it left (`route`, `post_at`), takes the
+  quarry's route on beginning, and restores its own at its post.
+- Agenda (spec 31): choosing among a network of routes by target for advances and
+  retreats, with the node graph.
+
+**Rules over cases:** general. One rule for how any formation picks its road to a target;
+pursuit is the first place it is applied.
+**Order:** the route is the quarry's own; no ids or list order.
+

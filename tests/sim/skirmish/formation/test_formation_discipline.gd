@@ -140,3 +140,51 @@ func test_a_re_form_is_quicker_when_disciplined() -> void:
 
 	assert_int(drilled).is_greater(0)
 	assert_int(drilled).is_less(ragged)
+
+
+func test_the_steadier_a_formation_the_shorter_it_pursues() -> void:
+	var leashes := []
+	for discipline in [80, 75, 60, 50, 30, 25, 24, 150]:
+		var sim := _sim()
+		var squad := sim.spawn_squad(2, _row(_def(discipline), 2), "player", true)
+		leashes.append(FormationDiscipline.pursuit_leash(squad))
+
+	assert_array(leashes).is_equal([32.0, 32.0, 64.0, 64.0, 128.0, 128.0, INF, 32.0])
+
+
+func test_a_pursuing_leader_leashes_a_step_further_and_a_cautious_one_a_step_shorter() -> void:
+	var leashes := []
+	for tactic in ["pursues", "cautious"]:
+		for discipline in [80, 24]:
+			var leader := _def(discipline)
+			leader.tactics.assign([tactic])
+			var sim := _sim()
+			var placements := _row(_def(discipline), 1) + [[leader, Vector2i(0, 1)]]
+			var squad := sim.spawn_squad(2, placements, "player", true)
+			leashes.append(FormationDiscipline.pursuit_leash(squad))
+
+	assert_array(leashes).is_equal([64.0, INF, 16.0, 128.0])
+
+
+func test_a_unit_breaking_ranks_is_leashed_by_its_own_discipline() -> void:
+	var sim := _sim()
+	var placements := [[_def(80), Vector2i(0, 0)], [_def(10), Vector2i(0, 1)]]
+	var squad := sim.spawn_squad(2, placements, "player", true)
+
+	var leashes: Array = squad.living().map(
+		func(u): return FormationDiscipline.unit_leash(squad, u)
+	)
+	assert_bool(leashes.has(32.0)).is_true()
+	assert_bool(leashes.has(INF)).is_true()
+
+
+func test_a_leader_steadies_its_units_against_breaking_ranks() -> void:
+	var sim := _sim()
+	var placements := [[_def(30), Vector2i(0, 0)], [_def(30, 2), Vector2i(0, 1)]]
+	var led := sim.spawn_squad(2, placements, "player", true)  # a captain: leadership 2
+	var unled := sim.spawn_squad(1, [[_def(30), Vector2i(0, 0)]], "the_kingdom", true)
+
+	var ranker: SkirmishUnit = led.living()[0]
+	assert_int(FormationDiscipline.unit_discipline(led, ranker)).is_equal(50)
+	assert_float(FormationDiscipline.unit_leash(led, ranker)).is_equal(64.0)  # the group's
+	assert_float(FormationDiscipline.unit_leash(unled, unled.living()[0])).is_equal(128.0)

@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## FormationSimulation, per specs/22-formation-feel-test.md and Decision 40: squads in
-## formation on one lane - front ranks fight and the ranks behind step up. Units seek
+## formation on one lane - the front band fights and the rest come on when it falls. Units seek
 ## contact (Decision 88): the scrum is the only fight (spec 30, round 1 part 1).
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
@@ -76,22 +76,23 @@ func test_the_spec_21_duel_still_holds() -> void:
 	assert_int(theirs.units[0].hp).is_equal(2)
 
 
-func test_only_the_front_rank_fights_and_the_rank_behind_steps_up() -> void:
+func test_a_back_band_unit_fights_only_once_the_front_has_fallen() -> void:
 	var sim := FormationSimulation.new(ROUTE, TICK)
-	var column := [[_grem(), Vector2i(0, 0)], [_grem(), Vector2i(1, 0)]]
+	var rear := _grem()
+	rear.preferred_position = UnitDef.Position.BACK  # it keeps its place while a front one is left
+	var column := [[_grem(), Vector2i(0, 0)], [rear, Vector2i(1, 0)]]
 	var mine := sim.spawn_squad(1, column, "player", true)
 	var theirs := sim.spawn_squad(1, _line(_militia(), 1), "the_kingdom", false)
 	var front_id := mine.units[0].id
 	var back_id := mine.units[1].id
 
-	# The militia beats the front grem on 2 hp; the grem behind steps up and finishes it.
+	# The militia beats the front grem on 2 hp; the grem behind comes on and finishes it.
 	var log := _run(sim, func(): return theirs.is_destroyed() or mine.is_destroyed())
 
 	var first_death: int = _of(log, "died").filter(func(e): return e["unit"] == front_id)[0]["tick"]
 	var back_hits := _of(log, "hit").filter(func(e): return e["unit"] == back_id)
 	assert_bool(back_hits.all(func(e): return e["tick"] > first_death)).is_true()
 	assert_int(back_hits.size()).is_greater(0)
-	assert_array(_of(log, "stepped_up").map(func(e): return e["unit"])).contains([back_id])
 
 
 func test_a_unit_struck_by_several_takes_every_blow_but_strikes_once() -> void:
@@ -124,21 +125,25 @@ func test_a_holding_squad_stays_put_and_still_fights() -> void:
 	assert_int(mine.state).is_equal(SkirmishSquad.State.FIGHTING)
 
 
-func test_a_retreating_squad_disengages_and_the_enemy_is_freed() -> void:
+func test_a_retreating_squad_disengages_and_an_enemy_that_won_t_pursue_holds() -> void:
 	var sim := FormationSimulation.new(ROUTE, TICK)
 	var mine := sim.spawn_squad(1, _line(_grem(), 1), "player", true)
 	var theirs := sim.spawn_squad(1, _line(_militia(), 1), "the_kingdom", false)
+	theirs.pursues = false  # ordered not to: it stays at its post (Decision 109)
 	_run(sim, func(): return mine.state == SkirmishSquad.State.FIGHTING)
 	var at := mine.units[0].position.x
+	var post := theirs.front_distance
 
 	sim.order(mine.id, SkirmishUnit.Order.RETREAT)
 	var events := sim.step()
 
 	assert_array(events.map(func(e): return e["type"])).contains(["disengaged", "withdrawing"])
-	assert_int(theirs.engaged_with).is_equal(0)
-	# It withdraws from where it stands (Decision 99), heading home.
+	# It withdraws from where it stands (Decision 99), heading home; the enemy holds its
+	# post, though its units may strike it while it is in reach (Decision 111).
 	_run(sim, func(): return false, 20)
 	assert_float(mine.units[0].position.x).is_less(at)
+	assert_float(theirs.front_distance).is_equal(post)
+	assert_bool(theirs.pursuit.is_empty()).is_true()
 
 
 func test_reaching_the_enemy_end_is_arrival() -> void:
