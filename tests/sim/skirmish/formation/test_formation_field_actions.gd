@@ -1,9 +1,11 @@
 extends GdUnitTestSuite
-## The feel test's actions as words (Decision 93): applied to a field as its buttons would
-## be, logged with their ticks, and a log replays the same battle tick for tick.
+## The feel test's orders (Decision 93) as commands of the record of play (Decision 115):
+## given to a field as its buttons would, recorded with their ticks, and a record - or an
+## old log of the feel test's words - replays the same battle tick for tick.
 
 const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
+const FormationRecord = preload("res://sim/skirmish/formation/formation_record.gd")
 
 
 func _state(field) -> String:
@@ -14,41 +16,74 @@ func _state(field) -> String:
 	return str(rows)
 
 
-func test_actions_apply_as_the_buttons_do() -> void:
+func _words(words: String) -> Dictionary:
+	return FormationRecord.from_words(0, words)
+
+
+func test_orders_apply_as_the_buttons_do() -> void:
 	var field := FormationFieldActions.field(7, false)
 
-	assert_bool(FormationFieldActions.apply(field, "wait on")).is_true()
+	assert_bool(FormationFieldActions.apply(field, _words("wait on"))).is_true()
 	assert_bool(field.waves["B"].staging.is_empty()).is_false()
-	assert_bool(FormationFieldActions.apply(field, "via_c on")).is_true()
+	assert_bool(FormationFieldActions.apply(field, _words("via_c on"))).is_true()
 	assert_object(field.waves["A"].route).is_same(field.routes["C"])
-	assert_bool(FormationFieldActions.apply(field, "pursues on")).is_true()
+	assert_bool(FormationFieldActions.apply(field, _words("pursues on"))).is_true()
 	assert_bool(field.kingdom_line.pursues).is_true()
-	assert_bool(FormationFieldActions.apply(field, "dance")).is_false()
+	assert_bool(FormationFieldActions.apply(field, _words("dance"))).is_false()
 
 
-func test_a_log_replays_the_same_battle() -> void:
+func test_an_order_is_taken_only_from_the_side_that_gives_it() -> void:
+	var field := FormationFieldActions.field(7, false)
+	var theirs := FormationRecord.command(0, FormationRecord.KINGDOM, "send", "A")
+	var unknown := FormationRecord.command(0, FormationRecord.PLAYER, "send", "Z")
+
+	assert_bool(FormationFieldActions.apply(field, theirs)).is_false()
+	assert_bool(FormationFieldActions.apply(field, unknown)).is_false()
+	assert_bool(field.sim.squads().any(func(q): return q.faction_id == "player")).is_false()
+
+
+func test_a_record_replays_the_same_battle() -> void:
 	var field := FormationFieldActions.field(446157, false)
-	var log := ["seed 446157 captain off"]
+	var log := [FormationRecord.header(446157, false)]
 	for _i in range(60):
 		field.step()
-	FormationFieldActions.apply(field, "send A+B")
-	log.append("%d send A+B" % field.sim.tick_number())
+	var send := FormationRecord.from_words(field.sim.tick_number(), "send A+B")
+	FormationFieldActions.apply(field, send)
+	log.append(FormationRecord.line(send))
 	for _i in range(300):
 		field.step()
 
 	var replayed := FormationFieldActions.replay("\n".join(log), 300)
 
+	assert_str(log[1]).is_equal("60 player send A+B")
 	assert_int(replayed.sim.tick_number()).is_equal(field.sim.tick_number())
 	assert_str(_state(replayed)).is_equal(_state(field))
 
 
-func test_a_log_reads_back_as_its_seed_and_actions() -> void:
-	var read := FormationFieldActions.parse("seed 9 captain on\n0 wait on\n12 send A+B\n")
+func test_a_record_reads_back_as_its_version_seed_and_commands() -> void:
+	var record := "record 1 seed 9 captain on\n0 player wait waves on\n12 kingdom pursue all off\n"
+	var read := FormationFieldActions.parse(record)
 
+	assert_int(read["version"]).is_equal(1)
 	assert_int(read["seed"]).is_equal(9)
 	assert_bool(read["captained"]).is_true()
-	assert_array(read["actions"]).is_equal([[0, "wait on"], [12, "send A+B"]])
+	(
+		assert_array(read["commands"].map(func(c): return FormationRecord.line(c)))
+		. is_equal(["0 player wait waves on", "12 kingdom pursue all off"])
+	)
 	assert_bool(FormationFieldActions.parse("not a log").is_empty()).is_true()
+
+
+func test_an_old_log_of_the_feel_tests_words_reads_as_commands() -> void:
+	var read := FormationFieldActions.parse(
+		"seed 9 captain on\n0 wait on\n12 via_c on\n30 send A+B"
+	)
+
+	assert_int(read["version"]).is_equal(0)
+	(
+		assert_array(read["commands"].map(func(c): return FormationRecord.line(c)))
+		. is_equal(["0 player wait waves on", "12 player route A C", "30 player send A+B"])
+	)
 
 
 func test_waves_that_merge_after_a_fight_regroup_and_march_on() -> void:
