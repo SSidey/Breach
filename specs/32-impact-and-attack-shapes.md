@@ -14,8 +14,11 @@ another.
 
 ## Status
 
-**Draft; partly agreed** (see "The user's answers"). Raised during spec 30 round 1; to
-follow spec 30 round 2.
+**Draft; partly agreed** (see "The user's answers"). Raised during spec 30 round 1. In the
+user's order it follows spec 30 round 2 and spec 28 (unit levers), whose numbers - mass,
+discipline, weapons - its impacts and thresholds rest on; spec 31 (posts and garrisons)
+comes after it. Still open from round 1: a thrown unit's collision as blunt with breaker
+0, or with its own breaker (proposed).
 
 ## Proposed
 
