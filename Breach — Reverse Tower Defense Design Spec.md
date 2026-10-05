@@ -5331,3 +5331,43 @@ Rules:
 lane rule for every held node.
 **Order:** not affected. A garrison's lanes share by the domain's rule, which has no list
 order (Decision 97).
+
+### Decision 105 — Units turn freely; a formation sweeps round bends at its wheel rate; friends that overlap are pushed apart by size
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Spec 30's round-1 agenda (Decision 102). The user chose the recommended
+option on each of its open questions:
+- **Unit bearings turn freely.** A unit's bearing is an angle, turned at its turn rate
+  (Decision 95), not one of 8 steps. It can face its formation's true front, or a foe at
+  any angle. Its front arc and flank blows are measured from that angle.
+- **A formation sweeps round bends.** Its frame turns towards its route's heading all the
+  time, no faster than its outer file can march the arc: today's wheel time, as a turn
+  rate. A 5 degree bend and a 90 degree bend follow the same rule. It may cut a sharp
+  corner a little. A turn of more than 90 degrees stays an about-face, its ranks reversed
+  (Decision 74).
+- **Friends that overlap are pushed apart by size.** Each overlap is pushed apart the
+  shortest way, split by footprint area: a brute moves a grem more than a grem moves a
+  brute. A unit steering to a goal slides along friends rather than stopping. Foes are
+  never pushed: a unit stops short at contact.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep 8 bearing steps | On a 30 degree route the units face 0 or 45 while their frame faces 30. |
+| Turn at each bend as a re-form | Every small bend costs a halt. |
+| Movers give way to units at rest | A moving-or-still distinction: a second rule (Decision 96). |
+
+**Consequences:**
+- `UnitMotion`'s bearing becomes an angle; `SquadFrame`'s facing becomes a heading.
+- `FormationTurning`'s wheel becomes a turn rate the frame sweeps at.
+- `ScrumSpacing`, `RoutSettle` and `RoutFlight.part` become one separation step.
+
+**Rules over cases:** general. One turn rule for any bearing; one sweep rule for any bend
+(the about-face is the same rule's shorter way round); one push rule for every pair of
+friends.
+**Order:** separation is decided from one snapshot each tick and applied together, so list
+order can't matter (Decision 97). Ties go by the unit's own frame, then its seeded draw
+(spec 30, agenda 5).
