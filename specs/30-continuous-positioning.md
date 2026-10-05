@@ -274,5 +274,6 @@ Stacked PRs on `main`, each within the 11-file limit:
 | 3 | Stance, regrouping, routs and pursuit reckon from the heading (item 1) |
 | 4 | Steering round bodies (item 3, Decision 114) |
 | 5 | The structured record of play (item 6, Decision 115) |
-| 6 | The cost of bodies on a full field (item 4), and this spec's round 2 write-up |
+| 6 | A formation moves no faster than its units can walk (Decision 116, from the feel test) |
+| 7 | The cost of bodies on a full field (item 4), and this spec's round 2 write-up |
 

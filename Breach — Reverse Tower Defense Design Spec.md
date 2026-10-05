@@ -5737,3 +5737,31 @@ the game's real orders come (spec 31).
 **Rules over cases:** general. One record for every command.
 **Order:** commands apply in the order they were given within a tick, as given.
 
+### Decision 116 — A formation moves no faster than its units can walk
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Spec 30 round 2's feel test: a formation sweeping round a bend looked like
+the whole line rotated as one board. Its frame swept at the rate its outer file could march
+the arc (Decision 105) while also stepping on along the route, so the outer file moved up
+to nearly twice its pace. The user: units "shouldn't miraculously gain speed on a corner -
+the inner units may have to slow their pace to maintain formation". Chosen: each tick a
+formation's step and its sweep are cut back together until no unit's place moves further
+than that unit can walk (its own speed, at the pace the ground allows the squad). On a
+straight march nothing changes; round a bend the wheel slows to its outer file's pace, the
+files nearer the pivot step shorter, and the formation keeps its shape. A march predicted
+before it is made (FormationRendezvous) is cut back the same way.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Outer files hurry to keep up | Rejected by the user: no unit gains speed on a corner. |
+| Units walk to their places behind the frame, the frame waiting for laggards | Every move of a frame by fiat (placing, joining, re-forming) would leave its units behind; the same limit applied to the frame keeps the shape without that. |
+| Turn only the units' bearings | The outer file would still hurry. |
+
+**Rules over cases:** general. Every frame move, on a bend or not, is bounded by what its
+units can walk.
+**Order:** each squad's share is worked out from where it stood as the tick began; no ties.
+

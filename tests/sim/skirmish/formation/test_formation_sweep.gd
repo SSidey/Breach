@@ -2,7 +2,8 @@ extends GdUnitTestSuite
 ## A formation sweeps round its route's bends, per Decision 105 and spec 30 round 1: its
 ## frame turns towards its route's heading as it marches, no faster than its outer file
 ## can march the arc, without halting; it faces a slanting route's true heading; and its
-## units stand in the turned frame.
+## units stand in the turned frame. Per Decision 116, no unit ever moves faster than it
+## can walk: the wheel slows to its outer file's pace and the inner files step shorter.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -71,11 +72,33 @@ func test_a_wider_frame_sweeps_slower_at_its_outer_files_pace() -> void:
 	var wide := _sweep_ticks(8)
 
 	assert_int(narrow).is_less(wide)
-	# 8 wide at 8 cells a second: the outer file, 4 out, marches a quarter circle (6.3
-	# cells) in 0.8 s, as a wheel took.
+	# 8 wide at 8 cells a second: the outer file, 4 out, would march a quarter circle (6.3
+	# cells) in 0.8 s at most; stepping on along the route too, it can't hurry, so the
+	# wheel takes about twice that.
 	var rate := FormationSweep.rate(_at_a_bend(8)[1], CELLS_PER_SECOND)
 	assert_float(90.0 / rate).is_equal_approx(PI * 8.0 / 4.0 / CELLS_PER_SECOND, 0.0001)
-	assert_int(wide).is_between(7, 9)
+	assert_int(wide).is_between(15, 17)
+
+
+func test_no_unit_hurries_round_a_bend_and_the_inner_files_step_shorter() -> void:
+	var setup := _at_a_bend(8)
+	var squad: SkirmishSquad = setup[1]
+	var step := CELLS_PER_SECOND * TICK
+	var inner := 0.0
+	var outer := 0.0
+	for _i in range(80):
+		var before := squad.living().map(func(u): return u.position)
+		setup[0].step()
+		var turning := squad.heading > 90.5 and squad.heading < 179.5
+		for i in range(before.size()):
+			var moved: float = squad.living()[i].position.distance_to(before[i])
+			assert_float(moved).is_less_equal(step + 0.0001)  # never faster than it walks
+			if turning and squad.living()[i].column == 7:
+				inner += moved  # turning right, the right-hand file is on the inside
+			elif turning and squad.living()[i].column == 0:
+				outer += moved
+
+	assert_float(inner).is_less(outer)
 
 
 func test_a_slanting_route_is_faced_at_its_true_heading() -> void:
