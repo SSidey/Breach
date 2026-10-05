@@ -164,7 +164,9 @@ func test_a_frontal_attack_alone_does_not_break_the_line() -> void:
 	var log := _run(field, func(log): return false, 1200)
 
 	assert_bool(log.any(func(e): return e["type"] == "routed")).is_false()
-	assert_int(field.kingdom_line.living().size()).is_greater(6)
+	# Bodies, not cells (Decision 106): more of the wave wraps the line's ends than cells let
+	# it, so the line loses about half (it kept about 9 of 12 before), but it holds.
+	assert_int(field.kingdom_line.living().size()).is_greater_equal(4)
 
 
 func test_a_flank_timed_by_the_chieftain_breaks_the_line_into_its_reserve() -> void:

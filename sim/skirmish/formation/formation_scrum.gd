@@ -34,7 +34,6 @@ const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoe
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
 const FormationWithdraw = preload("res://sim/skirmish/formation/formation_withdraw.gd")
 const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
-const ScrumSpacing = preload("res://sim/skirmish/formation/scrum_spacing.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
@@ -78,7 +77,6 @@ static func step(
 	ScrumRegroup.step(squads, ctx["pace"], tick_seconds, fight_seed)
 	ScrumPursuit.step(squads, tick, cells_per_second, tick_seconds, fight_seed)
 	FormationWithdraw.step(squads, tick, ctx["pace"], tick_seconds, fight_seed, terrain, events)
-	ScrumSpacing.step(squads, ctx["pace"], fight_seed)
 	FormationPursuit.step(squads, tick, cells_per_second, tick_seconds, events)
 	_stall(squads, ctx["active"], tick, tick_seconds, events)
 	return events
