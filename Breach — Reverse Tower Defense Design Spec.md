@@ -5421,3 +5421,69 @@ The user chose:
 **Rules over cases:** general. One body rule for every unit; "keeps its space" is what
 being in control means, not a router exception.
 **Order:** pushes are decided from one snapshot and applied together (Decision 97).
+
+### Decision 107 — A pursuit is leashed by discipline: the steadier a formation, the sooner it comes back to its post
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in a feel test: a pursuing line that kept pace with a retreating wave
+followed it to its spawn, since a pursuit only gave up when the enemy got 16 cells ahead
+of it. The user: "a formation (with the order to hold a position) with low discipline
+might pursue back to origin whereas a higher discipline would leash earlier… use % of a
+max expected discipline… (don't cap it but going over doesn't give increasing benefits?)".
+A pursuit ends when its enemy is out of the formation's sight, gone or no longer
+retreating, or when its frame has gone as far from the post it held as its discipline
+(Decision 92) leashes it:
+
+| Discipline (share of an expected maximum, 100) | Leash from its post |
+|---|---|
+| 75% and over | 32 cells |
+| 50% to 75% | 64 cells |
+| 25% to 50% | 128 cells |
+| under 25% | none: as long as it can see its enemy |
+
+Discipline over the maximum is allowed but leashes no shorter. The user's tiers read "X>75%
+… they leash at 64 cells, 50%<X<75% … after 64m"; the top tier is taken as 32 cells (their
+"leash shortly e.g. 32 cells"), so each step halves the leash: to confirm.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Give up 16 cells behind the enemy | An equally fast pursuer never falls behind. |
+| One leash for every formation | Discipline is what holds a formation to its post. |
+| Pursuers tire | Wanted, later: fatigue belongs to the unit characteristics design. |
+
+**Consequences:**
+- `FormationDiscipline.pursuit_leash`; `FormationPursuit` gives up out of sight or at it.
+- Agenda (unit characteristics): fatigue, so pursuers and the pursued tire.
+
+**Rules over cases:** general. One leash rule over discipline for every pursuing formation.
+**Order:** a squad's own discipline and distance; no ids or list order.
+
+### Decision 108 — In a fight, a unit with no slot open waits just behind the nearest, not back in its place
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in a feel test: as the line shrank, A and B's units that found no
+slot open beside a foe (Decision 106) walked back into their places while the rest fought
+on. The user: "that doesn't seem right, shouldn't they still be trying to pile around?" A
+seeker with no slot open now makes for a body's breadth short of the nearest slot it could
+stand on were it free (within its leash, on ground it can cross), claiming nothing, and
+takes the next slot that opens. A pursuing formation's units still keep to their places
+with no slot open: it pursues as a body (Decision 103).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Walk back to its place (as before) | Part of a squad leaves a fight it is winning. |
+| Make for the taken slot itself | It would shove the friend holding it off its foe. |
+
+**Consequences:** `ScrumSlots.pick(..., crowded)`, `ScrumSeek._press`.
+
+**Rules over cases:** general. Any seeker short of a slot, any size of fight.
+**Order:** the nearest slot is chosen by the same key as an open one (distance, its own
+frame, seeded draws); no ids or list order.
