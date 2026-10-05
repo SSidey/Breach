@@ -18,12 +18,12 @@ faces its route's true heading.
 
 ## Status
 
-**Round 1 built, feel-tested and merged (Decisions 102 and 105 to 113); round 2 agreed
-(Decisions 114 and 115), being built.** Round 1 and the fixes its feel test asked for were
-stacked PRs #99 to #117 (below). The user's order
-after it: this spec's round 2 (the clean-up), then spec 28 (unit levers), spec 32 (impact
-and attack shapes), spec 31 (posts and garrisons), then the structure work still to come
-(damage and collapse in play, spec 24; fighting at structures).
+**Round 1 built, feel-tested and merged (Decisions 102 and 105 to 113); round 2 built and
+feel-tested (Decisions 114 to 116), stacked PRs #120 to #127 (below).** The user's order
+after it: spec 28 (unit levers), spec 32 (impact and attack shapes), spec 31 (posts and
+garrisons), then the structure work still to come (damage and collapse in play, spec 24;
+fighting at structures). A dedicated pass on unit movement is wanted later (see Round 2's
+feel test).
 
 ## Agreed
 
@@ -276,4 +276,62 @@ Stacked PRs on `main`, each within the 11-file limit:
 | 5 | The structured record of play (item 6, Decision 115) |
 | 6 | A formation moves no faster than its units can walk (Decision 116, from the feel test) |
 | 7 | The cost of bodies on a full field (item 4), and this spec's round 2 write-up |
+
+## Round 2 built
+
+Stacked PRs #120 to #127:
+
+| PR | Part |
+|---|---|
+| #120 | Decisions 114 and 115, this round's answers and plan |
+| #121 | 1: the tidy - `State.TURNING` retired, routs re-form on the route's true heading, a router caught by bodies |
+| #122 | 2: geometry, edges, contact and the march reckon from the heading |
+| #123 | 3: stance, regrouping, morale and pursuit reckon from the heading |
+| #124 | 4: steering round bodies that won't part (`UnitSteer`); a routing squad met where its units are |
+| #125 | 5: the structured record of play (`FormationRecord`) |
+| #126 | 6: a formation moves no faster than its units can walk (`FormationWheel`, Decision 116) |
+| #127 | 7: the cost of bodies, this write-up; `FormationRoute.facing_at` retired |
+
+On quarter headings parts 2 and 3 change nothing (the mirror trials matched the base
+exactly); on a slant a squad now reckons at its true angle. Steering and the wheel moved the
+mirror trials within noise: head-on 135/119 and 122/127 swapped, flank 300/0 both ways
+(300 seeds each).
+
+## Round 2 feel test
+
+- **Pursuit depth:** with no leash short of the field, a pursuing line chased B to the
+  player's end and was cut up there by B and the wave behind it. The user: fine for now;
+  once fatigue or stamina comes in (spec 28, agenda item 12) they ought not to pursue that
+  far - or if they can, fair enough.
+- **Pursuit by route C:** as expected.
+- **A wheel looks like one board turning:** its outer file was hurrying round the arc.
+  Decision 116 holds every unit to its own pace, the inner files stepping shorter, so a
+  wheel takes about twice as long. Units still stand on their places: the formation turns
+  as a drilled line, not as units each finding their way.
+- **Wanted later, in a dedicated pass on unit movement** (the user's words: "the overall
+  unit movement could use some work re. turning or reforming for gaps"):
+  - **Pouring through a gap:** "when we get to forts and the door is 2 wide, I don't expect
+    my formation to line up into 2 lines before entering" - a formation pours through a
+    gap and gathers beyond it, rather than narrowing into files first (today's
+    `FormationNarrowing`).
+  - **Wheeling and re-forming as units:** each unit finding its own way to its place
+    (Decision 116's rejected first approach), which first needs every move of a frame to
+    say whether it walks or is set (placing, joining and re-forming set it).
+
+## Round 2: the cost of bodies
+
+Measured headless (one core, 10 ticks a second: a 100 ms budget a tick):
+
+| Field | A step, average | Worst | `UnitBodies` (3 passes) |
+|---|---|---|---|
+| The feel test, both waves sent (about 40 units) | 2.3 ms | 20 ms | 0.35 ms |
+| A clash, 20 a side | 0.7 ms | 1.3 ms | 0.14 ms |
+| 40 a side | 2.9 ms | 4.1 ms | 0.56 ms |
+| 80 a side | 12 ms | 21 ms | 5.1 ms |
+| 160 a side | 46 ms | 105 ms | 15 ms |
+
+Steering (`UnitSteer`) is about a sixth of a crowded step (160 a side: 39 ms without it).
+Not optimised: it isn't needed at the feel test's scale. Where to start if the game needs
+more: steering looks at every body (bucket it as `UnitBodies` does), a dense scrum gives
+the bodies' 2-cell buckets many pairs, and the pair search runs three times a tick.
 
