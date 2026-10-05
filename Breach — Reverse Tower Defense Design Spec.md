@@ -5527,6 +5527,9 @@ two levels:
   `from` and `leash` in place of `until`; the formation's seeking, walking and turning
   leave its chasers to `ScrumPursuit`.
 - Retreating waves are now often caught and destroyed: a feel-test item.
+- A squad with units out chasing can be engaged whatever its order: its units are
+  attacking. Found in the feel test, where a line marching home from its pursuit counted
+  as retreating, so the wave its chasers caught at its spawn could never strike back.
 
 **Rules over cases:** general. One leash table for every formation and every unit.
 **Order:** the roll to break ranks is seeded by the battle, the tick and the unit; chasers

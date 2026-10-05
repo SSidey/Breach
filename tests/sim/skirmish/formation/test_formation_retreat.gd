@@ -10,6 +10,7 @@ const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
 
@@ -168,3 +169,22 @@ func test_a_unit_breaking_ranks_chases_no_further_than_its_own_leash() -> void:
 
 	assert_int(chased).is_greater(0)
 	assert_float(furthest).is_less_equal(128.0 + 1.0)
+
+
+func test_a_wave_caught_at_home_by_units_breaking_ranks_fights_back() -> void:
+	# A feel-test log: the line's chasers ran A's last three down at its spawn and A never
+	# struck back, the line marching home counting as retreating, so it could not be engaged.
+	var log := "seed 233831 captain on\n0 pursues off\n115 send A\n186 pursues on\n223 retreat A"
+	var events := []
+	var field := FormationFieldActions.replay(
+		log, 480, func(_f, tick_events): events.append_array(tick_events)
+	)
+	var wave: SkirmishSquad = field.sim.squads()[-1]
+
+	var homes := events.filter(func(e): return e["type"] == "returned" and e["squad"] == wave.id)
+	var home: int = homes[0]["tick"]
+	var fought_back := events.any(
+		func(e): return e["type"] == "engaged" and e["squad"] == wave.id and e["tick"] > home
+	)
+	assert_bool(fought_back).is_true()
+	assert_int(wave.living().size()).is_greater(0)
