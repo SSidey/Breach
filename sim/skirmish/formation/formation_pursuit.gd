@@ -64,13 +64,20 @@ static func step(
 			_advance(squad, foe, cells_per_second * seconds)
 
 
+## [cells its frame has gone from its post, cells its leash allows (INF: none)] for a
+## pursuing squad.
+static func reach(squad: SkirmishSquad) -> Array:
+	var gone := absf(squad.front_distance - squad.pursuit["post"]) * MapLayoutDef.CELLS_PER_TILE
+	return [gone, FormationDiscipline.pursuit_leash(squad)]
+
+
 static func _given_up(squad: SkirmishSquad, foe: SkirmishSquad) -> bool:
 	if foe == null or foe.is_destroyed() or foe.order != SkirmishUnit.Order.RETREAT:
 		return true
 	if not FormationSight.detects(squad, foe):
 		return true
-	var gone := absf(squad.front_distance - squad.pursuit["post"]) * MapLayoutDef.CELLS_PER_TILE
-	return gone >= FormationDiscipline.pursuit_leash(squad)
+	var reached := reach(squad)
+	return reached[0] >= reached[1]
 
 
 ## Its frame moves along its route towards the enemy while the enemy is ahead.

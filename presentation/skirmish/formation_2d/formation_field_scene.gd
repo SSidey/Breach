@@ -20,6 +20,8 @@ const FormationFieldActions = preload("res://sim/skirmish/formation/formation_fi
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
+const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
+const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const FormationFieldHud = preload("res://presentation/skirmish/formation_2d/formation_field_hud.gd")
 
@@ -132,6 +134,7 @@ func _draw() -> void:
 		for unit in squad.living():
 			_draw_unit(squad, unit, fraction)
 		_draw_morale(squad)
+		_draw_pursuit(squad)
 
 
 func _draw_route(key: String) -> void:
@@ -183,6 +186,24 @@ func _draw_staging() -> void:
 		var reach: float = squad.living().map(func(u): return u.detection).max()
 		var centre := ORIGIN + squad.position * CELL_PX
 		draw_arc(centre, reach * CELL_PX, 0.0, TAU, 64, COLOURS["sight"], 1.5)
+
+
+## A pursuing squad's post and how far its leash lets it go (Decision 107): a tick across
+## its route at each, joined along it.
+func _draw_pursuit(squad: SkirmishSquad) -> void:
+	if squad.pursuit.is_empty() or squad.pursuit["returning"] or squad.route == null:
+		return
+	var post: float = squad.pursuit["post"] * MapLayoutDef.CELLS_PER_TILE
+	var leash: float = FormationPursuit.reach(squad)[1]
+	var limit := post + squad.direction * minf(leash, squad.route.length_cells())
+	var colour: Color = COLOURS[squad.faction_id]
+	var ends := []
+	for distance in [post, limit]:
+		var at: Vector2 = squad.route.point_at(distance)
+		var across: Vector2 = squad.route.heading_at(distance).orthogonal() * 4.0
+		ends.append(ORIGIN + at * CELL_PX)
+		draw_line(ORIGIN + (at - across) * CELL_PX, ORIGIN + (at + across) * CELL_PX, colour, 2.0)
+	draw_dashed_line(ends[0], ends[1], colour, 1.0, 4.0)
 
 
 ## A bar over the squad's front: its morale, coloured by band (Decision 82).
