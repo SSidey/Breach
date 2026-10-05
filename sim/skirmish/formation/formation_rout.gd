@@ -43,10 +43,12 @@ const CELLS := float(MapLayoutDef.CELLS_PER_TILE)
 const CRUSH := 2
 const PANIC := 5
 const SEEN_ROUT := 5
-## How near (cells) a router must come to a led formation to rally to it.
-const RALLY_REACH := 2.0
-## A router running into a standing friendly formation (within this many cells) is caught
-## there, and rallies to it after a while steady (Decisions 89 and 98).
+## How near (cells, from a router's centre to a friend's body) a router must come to a led
+## formation to rally to it.
+const RALLY_REACH := 1.5
+## A router running into a standing friendly formation - its centre within a body's
+## breadth of a friend's body, shoving past it (Decision 106) - is caught there, and
+## rallies to it after a while steady (Decisions 89 and 98).
 const CAUGHT_REACH := 1.0
 const STEADY_RALLY_SECONDS := 3.0
 ## Seconds with no enemy within ENEMY_NEAR cells before a led rout re-forms.

@@ -17,6 +17,7 @@ extends RefCounted
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
@@ -31,7 +32,7 @@ const EPSILON := 0.000001
 
 ## The body's radius in cells.
 static func radius(unit: SkirmishUnit) -> float:
-	return minf(unit.footprint_width, unit.footprint_depth) / 2.0
+	return ScrumReach.radius(unit)
 
 
 ## Where the unit's body stands: its point in the scrum or in flight, or its place.

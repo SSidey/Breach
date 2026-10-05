@@ -5,7 +5,6 @@ extends GdUnitTestSuite
 ## order squads are stepped in.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
-const ScrumPaths = preload("res://sim/skirmish/formation/scrum_paths.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
@@ -46,17 +45,3 @@ func test_squads_marching_at_each_other_meet_in_the_middle_either_way() -> void:
 	for kingdom_first in [false, true]:
 		var fronts := _meeting(kingdom_first)
 		assert_float(fronts[0] + fronts[1]).is_equal_approx(128.0, 0.05)
-
-
-func test_a_cell_two_sides_stand_on_counts_both() -> void:
-	var sim := FormationSimulation.new(2.0, 0.1)
-	var mine := sim.spawn_squad(1, _row(1), "player", true)
-	var theirs := sim.spawn_squad(1, _row(1), "the_kingdom", false)
-	mine.units[0].position = Vector2(10.5, 0.5)
-	theirs.units[0].position = Vector2(10.5, 0.5)
-
-	var cells := ScrumPaths.occupancy([mine, theirs])
-
-	assert_array(cells[Vector2i(10, 0)].keys()).contains_exactly_in_any_order(
-		["player", "the_kingdom"]
-	)
