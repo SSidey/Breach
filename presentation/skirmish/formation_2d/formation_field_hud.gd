@@ -2,7 +2,7 @@ class_name FormationFieldHud
 extends CanvasLayer
 ## The 2D feel test's controls and status (spec 27): two rows of buttons - send each route's
 ## wave or let it go when full, or retreat it; send A down the slanted route C, send A and
-## B together, have B wait for A, give the line a captain, have it pursue, reset with a
+## B together, have B wait for A, give the line a captain, forbid it to pursue, reset with a
 ## seed, pause - and a status row under it: the tick (and seconds of battle), waves built
 ## (leaders counted apart), the line (how far it has pursued, of its leash), the reserve
 ## and the battle seed. Reset starts a fresh field, with the seed typed in or a random
@@ -21,7 +21,7 @@ var _scene: Node
 var _autos := {}  # route key -> CheckBox
 var _wait: CheckBox
 var _via_c: CheckBox
-var _pursues: CheckBox
+var _holds: CheckBox  # the line won't pursue (it does by default, Decision 109)
 var _captain: CheckBox
 var _seed: LineEdit
 var _status: Label
@@ -49,7 +49,7 @@ func build(scene: Node) -> void:
 	_via_c = _check(options, "A goes via C", func(on): scene.act(_toggle("via_c", on)))
 	_wait = _check(options, "B waits for A", func(on): scene.act(_toggle("wait", on)))
 	_captain = _check(options, "Line has a captain", func(_on): reset())
-	_pursues = _check(options, "Line pursues", func(on): scene.act(_toggle("pursues", on)))
+	_holds = _check(options, "Line won't pursue", func(on): scene.act(_toggle("pursues", not on)))
 	_seed = LineEdit.new()
 	_seed.placeholder_text = "seed (random)"
 	_seed.custom_minimum_size = Vector2(110, 0)
@@ -78,7 +78,7 @@ func replay() -> void:
 		return
 	_seed.text = str(read["seed"])
 	_captain.set_pressed_no_signal(read["captained"])
-	for box in [_wait, _via_c, _pursues] + _autos.values():
+	for box in [_wait, _via_c, _holds] + _autos.values():
 		box.set_pressed_no_signal(false)
 	_scene.restart(read["captained"], read["seed"], read["actions"])
 	_replaying = read["actions"].size()
@@ -94,9 +94,11 @@ func reset() -> void:
 	for key in _autos:
 		if _autos[key].button_pressed:
 			_scene.act(_toggle("auto " + key, true))
-	for option in [[_wait, "wait"], [_via_c, "via_c"], [_pursues, "pursues"]]:
+	for option in [[_wait, "wait"], [_via_c, "via_c"]]:
 		if option[0].button_pressed:
 			_scene.act(_toggle(option[1], true))
+	if _holds.button_pressed:
+		_scene.act(_toggle("pursues", false))
 
 
 ## An on/off action's words.

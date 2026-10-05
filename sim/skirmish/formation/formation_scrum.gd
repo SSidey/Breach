@@ -126,9 +126,11 @@ static func _seek(ctx: Dictionary) -> void:
 
 
 ## Fighting units walk a step to their goal, or back towards their place if they have none
-## and touch no one.
+## and touch no one; units out chasing on their own are left to ScrumPursuit.
 static func _walk(squad: SkirmishSquad, pace: float, seconds: float) -> void:
 	for unit in squad.living():
+		if squad.chasers.has(unit.id):
+			continue  # out chasing on its own (ScrumPursuit)
 		var entry: Dictionary = squad.loose[unit.id]
 		var full: float = unit.speed * pace
 		entry["toward"] = null
@@ -153,6 +155,8 @@ static func _faces(squad: SkirmishSquad, ctx: Dictionary) -> Array:
 	var foes := ScrumSeek.foe_units(squad, ctx["squads"])
 	var out := []
 	for unit in squad.living():
+		if squad.chasers.has(unit.id):
+			continue
 		var entry: Dictionary = squad.loose[unit.id]
 		var look = ScrumBlows.nearest_touching(squad, unit, foes, ctx["seed"])
 		if look == null and entry["goal"] != null:

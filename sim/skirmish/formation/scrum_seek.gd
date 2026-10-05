@@ -107,6 +107,8 @@ static func _seekers_of(squad: SkirmishSquad, ctx: Dictionary) -> Array:
 	var foes := foe_units(squad, ctx["squads"])
 	var out := []
 	for unit in squad.living():
+		if squad.chasers.has(unit.id):
+			continue  # out chasing on its own (ScrumPursuit)
 		var entry: Dictionary = squad.loose[unit.id]
 		entry["touch"] = ScrumBlows.touches_any(squad, unit, foes)
 		if entry["touch"]:

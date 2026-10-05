@@ -5488,6 +5488,50 @@ with no slot open: it pursues as a body (Decision 103).
 **Order:** the nearest slot is chosen by the same key as an open one (distance, its own
 frame, seeded draws); no ids or list order.
 
+### Decision 109 — Every formation pursues a retreating enemy as far as its discipline leashes it; its undisciplined units may break ranks and chase further
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in the feel test, after Decision 107: "Should pursue not be the
+default logic for formations going forward with discipline dictating how far?" This
+supersedes Decision 95's "pursuit is ordered or a leader's". The user, on a leader's
+"pursues" tactic and on cautious commanders: "Go with the recommended [a leash one step
+longer], we could also allow command to explicitly state do not pursue, or for commanders
+that are very conservative with pursuing that may only pursue 16, so bring the bands down
+for them". On breaking ranks: "the idea was to make it such that some undisciplined units
+would break rank rather a guaranteed all"; the user agreed to one leash table applied at
+two levels:
+- **The formation** pursues any retreating enemy as a body, by default, to the leash its
+  discipline gives it (Decision 107), unless ordered not to pursue. The leash steps are
+  16, 32, 64, 128 cells and no leash: discipline picks the step, a leader's "pursues"
+  tactic moves it one out, a "cautious" one one in.
+- **Each unit** near the retreating enemy rolls, as before, on its own discipline to break
+  ranks: one that does chases on its own as far from where it broke away as its own
+  discipline leashes it, while it can see its quarry, then goes back to its formation.
+  This holds under an order not to pursue too: the formation holds, but some of its
+  undisciplined units may still run.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Pursuit only when ordered or led (Decision 95) | Discipline should decide how far, not whether. |
+| Retire breaking ranks | Then every unit goes, or none; the user wanted some. |
+| A 2-second chase for units breaking ranks | Replaced by each unit's own leash. |
+
+**Consequences:**
+- `SkirmishSquad.pursues` defaults to true (false: ordered not to pursue); the feel test's
+  "Line pursues" becomes "Line won't pursue".
+- `FormationDiscipline.pursuit_leash` (with tactics) and `unit_leash`; chasers keep
+  `from` and `leash` in place of `until`; the formation's seeking, walking and turning
+  leave its chasers to `ScrumPursuit`.
+- Retreating waves are now often caught and destroyed: a feel-test item.
+
+**Rules over cases:** general. One leash table for every formation and every unit.
+**Order:** the roll to break ranks is seeded by the battle, the tick and the unit; chasers
+pick their quarry by distance, then its seeded draw. No ids or list order.
+
 ### Decision 110 — A unit its own ranks hold off its place trades places with a like friend
 
 **Authorised by:** Simeon Sidey

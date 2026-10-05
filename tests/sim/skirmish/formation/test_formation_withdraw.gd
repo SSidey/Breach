@@ -165,7 +165,7 @@ func test_withdrawals_do_not_hang_on_list_order() -> void:
 ## The feel test's field (captained line, seed 606531, from the user's test of #90): A is
 ## sent and, 3 s into its fight, ordered home with the line set to pursue. Returns [field,
 ## A, the log from the order on].
-func _a_retreats_from_a_pursuing_line() -> Array:
+func _a_retreats_from_a_pursuing_line(pursues := true) -> Array:
 	var field := FormationField.new(
 		0.1,
 		load("res://content/units/grem.tres"),
@@ -179,7 +179,7 @@ func _a_retreats_from_a_pursuing_line() -> Array:
 		if field.waves["A"].built() == 8:
 			break
 		field.step()
-	field.kingdom_line.pursues = true
+	field.kingdom_line.pursues = pursues  # it does by default (Decision 109)
 	var wave := field.send("A")
 	for _i in range(400):
 		if field.step().any(func(e): return e["type"] == "engaged"):
@@ -226,7 +226,7 @@ func test_a_pursuit_ends_when_the_enemy_is_out_of_sight() -> void:
 
 
 func test_a_withdrawal_home_holds_there_facing_out() -> void:
-	var setup := _a_retreats_from_a_pursuing_line()
+	var setup := _a_retreats_from_a_pursuing_line(false)  # so that it gets home
 	var wave: SkirmishSquad = setup[1]
 	var lateral := 0.0
 	var log := []

@@ -129,6 +129,7 @@ func test_a_retreating_squad_disengages_and_the_enemy_is_freed() -> void:
 	var sim := FormationSimulation.new(ROUTE, TICK)
 	var mine := sim.spawn_squad(1, _line(_grem(), 1), "player", true)
 	var theirs := sim.spawn_squad(1, _line(_militia(), 1), "the_kingdom", false)
+	theirs.pursues = false  # ordered not to: it is freed (Decision 109)
 	_run(sim, func(): return mine.state == SkirmishSquad.State.FIGHTING)
 	var at := mine.units[0].position.x
 

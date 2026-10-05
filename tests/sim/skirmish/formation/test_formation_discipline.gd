@@ -150,3 +150,27 @@ func test_the_steadier_a_formation_the_shorter_it_pursues() -> void:
 		leashes.append(FormationDiscipline.pursuit_leash(squad))
 
 	assert_array(leashes).is_equal([32.0, 32.0, 64.0, 64.0, 128.0, 128.0, INF, 32.0])
+
+
+func test_a_pursuing_leader_leashes_a_step_further_and_a_cautious_one_a_step_shorter() -> void:
+	var leashes := []
+	for tactic in ["pursues", "cautious"]:
+		for discipline in [80, 24]:
+			var leader := _def(discipline)
+			leader.tactics.assign([tactic])
+			var sim := _sim()
+			var placements := _row(_def(discipline), 1) + [[leader, Vector2i(0, 1)]]
+			var squad := sim.spawn_squad(2, placements, "player", true)
+			leashes.append(FormationDiscipline.pursuit_leash(squad))
+
+	assert_array(leashes).is_equal([64.0, INF, 16.0, 128.0])
+
+
+func test_a_unit_breaking_ranks_is_leashed_by_its_own_discipline() -> void:
+	var sim := _sim()
+	var placements := [[_def(80), Vector2i(0, 0)], [_def(10), Vector2i(0, 1)]]
+	var squad := sim.spawn_squad(2, placements, "player", true)
+
+	var leashes: Array = squad.living().map(func(u): return FormationDiscipline.unit_leash(u))
+	assert_bool(leashes.has(32.0)).is_true()
+	assert_bool(leashes.has(INF)).is_true()
