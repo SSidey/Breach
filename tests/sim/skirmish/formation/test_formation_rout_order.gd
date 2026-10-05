@@ -103,7 +103,6 @@ func _row(columns: int) -> Array:
 ## is listed after it if `breaking_first`.
 func _after_a_break(breaking_first: bool) -> Array:
 	var sim := FormationSimulation.new(2.0, TICK)
-	sim.seek_contact = true
 	var breaking := sim.spawn_squad(4, _row(4), "player", true)
 	var friend := sim.spawn_squad(4, _row(4), "player", true, 50)
 	breaking.order = SkirmishUnit.Order.HOLD

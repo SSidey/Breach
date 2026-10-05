@@ -43,7 +43,6 @@ func _run(sim: FormationSimulation, ticks: int) -> Array:
 
 func _sim() -> FormationSimulation:
 	var sim := FormationSimulation.new(2.0, TICK)
-	sim.seek_contact = true
 	return sim
 
 

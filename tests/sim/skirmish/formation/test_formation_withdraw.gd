@@ -36,7 +36,6 @@ func _row(unit_def: UnitDef, count: int = 8) -> Array:
 ## Returns [sim, mine, theirs].
 func _fight_then_retreat(discipline: int) -> Array:
 	var sim := FormationSimulation.new(2.0, 0.1)
-	sim.seek_contact = true
 	sim.fight_seed = 3
 	var me := sim.spawn_squad(8, _row(_def(discipline)), "player", true)
 	var foe := sim.spawn_squad(8, _row(_def(60)), "the_kingdom", false)
@@ -133,7 +132,6 @@ func test_withdrawals_replay_the_same() -> void:
 ## squad and unit list reversed each tick if `reversed`. Returns each tick's state.
 func _both_retreat(reversed: bool) -> Array:
 	var sim := FormationSimulation.new(2.0, 0.1)
-	sim.seek_contact = true
 	sim.fight_seed = 7
 	var me := sim.spawn_squad(8, _row(_def(10)), "player", true)
 	var foe := sim.spawn_squad(8, _row(_def(10)), "the_kingdom", false)
