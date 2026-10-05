@@ -6,7 +6,8 @@ extends CanvasLayer
 ## seed, pause - and a status row
 ## under it: waves built (leaders counted apart), the line, the reserve and the battle
 ## seed. Reset starts a fresh field, with the seed typed in or a random one, keeping the
-## ticked options. Engine glue.
+## ticked options. Below, the session's action log (FormationFieldActions) and a Copy
+## button: pasted back, it replays the same battle. Engine glue.
 
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -21,6 +22,7 @@ var _pursues: CheckBox
 var _captain: CheckBox
 var _seed: LineEdit
 var _status: Label
+var _log_view: TextEdit
 
 
 ## Builds the controls for `scene` (FormationFieldScene).
@@ -32,16 +34,16 @@ func build(scene: Node) -> void:
 	var bar := HBoxContainer.new()
 	rows.add_child(bar)
 	for key in ["A", "B"]:
-		_button(bar, "Send %s" % key, func(): scene.field().send(key))
-		_autos[key] = _check(bar, "Auto %s" % key, func(on): scene.field().set_auto(key, on))
-		_button(bar, "Retreat %s" % key, func(): scene.retreat(key))
-	_button(bar, "Send A+B", func(): scene.field().send_together(["A", "B"]))
+		_button(bar, "Send %s" % key, func(): scene.act("send " + key))
+		_autos[key] = _check(bar, "Auto %s" % key, func(on): scene.act(_toggle("auto " + key, on)))
+		_button(bar, "Retreat %s" % key, func(): scene.act("retreat " + key))
+	_button(bar, "Send A+B", func(): scene.act("send A+B"))
 	var options := HBoxContainer.new()  # a second row, so the controls fit the window
 	rows.add_child(options)
-	_via_c = _check(options, "A goes via C", func(on): _route_a(on))
-	_wait = _check(options, "B waits for A", func(on): scene.field().set_wait(on))
+	_via_c = _check(options, "A goes via C", func(on): scene.act(_toggle("via_c", on)))
+	_wait = _check(options, "B waits for A", func(on): scene.act(_toggle("wait", on)))
 	_captain = _check(options, "Line has a captain", func(_on): reset())
-	_pursues = _check(options, "Line pursues", func(on): _line_pursues(on))
+	_pursues = _check(options, "Line pursues", func(on): scene.act(_toggle("pursues", on)))
 	_seed = LineEdit.new()
 	_seed.placeholder_text = "seed (random)"
 	_seed.custom_minimum_size = Vector2(110, 0)
@@ -50,30 +52,31 @@ func build(scene: Node) -> void:
 	_button(options, "Pause (Space)", scene.toggle_pause)
 	_status = Label.new()
 	rows.add_child(_status)
+	var logged := HBoxContainer.new()
+	rows.add_child(logged)
+	_log_view = TextEdit.new()
+	_log_view.editable = false
+	_log_view.custom_minimum_size = Vector2(420, 72)
+	logged.add_child(_log_view)
+	_button(logged, "Copy log", func(): DisplayServer.clipboard_set(scene.action_log()))
 
 
-## A fresh field: the seed typed in, or a random one; the ticked options kept.
+## A fresh field: the seed typed in, or a random one; the ticked options kept (and logged).
 func reset() -> void:
 	var text := _seed.text.strip_edges()
 	var battle_seed := int(text) if text.is_valid_int() else randi() % 1000000
 	_scene.restart(_captain.button_pressed, battle_seed)
 	for key in _autos:
-		_scene.field().set_auto(key, _autos[key].button_pressed)
-	_scene.field().set_wait(_wait.button_pressed)
-	_route_a(_via_c.button_pressed)
-	_line_pursues(_pursues.button_pressed)
+		if _autos[key].button_pressed:
+			_scene.act(_toggle("auto " + key, true))
+	for option in [[_wait, "wait"], [_via_c, "via_c"], [_pursues, "pursues"]]:
+		if option[0].button_pressed:
+			_scene.act(_toggle(option[1], true))
 
 
-## The kingdom's line and reserve follow a retreating wave (Decision 95), or hold.
-func _line_pursues(on: bool) -> void:
-	_scene.field().kingdom_line.pursues = on
-	_scene.field().kingdom_reserve.pursues = on
-
-
-## Sends A's waves down route C (the slanted path) or back down route A.
-func _route_a(via_c: bool) -> void:
-	var field: FormationField = _scene.field()
-	field.waves["A"].route = field.routes["C" if via_c else "A"]
+## An on/off action's words.
+static func _toggle(action: String, on: bool) -> String:
+	return "%s %s" % [action, "on" if on else "off"]
 
 
 func show_status(field: FormationField, paused: bool, battle_seed: int) -> void:
@@ -97,6 +100,10 @@ func show_status(field: FormationField, paused: bool, battle_seed: int) -> void:
 			"   (paused)" if paused else "",
 		]
 	)
+	var log: String = _scene.action_log()
+	if _log_view.text != log:
+		_log_view.text = log
+		_log_view.scroll_vertical = _log_view.get_line_count()
 
 
 ## "B 8/8 + leader 1/1": rank and file and leaders counted apart.

@@ -7,28 +7,23 @@ extends Node2D
 ## arrive together, or have B wait in the wood (its detection range ringed) until it sees
 ## A engage (Decision 87). In a fight units seek contact and face their own foes (Decision
 ## 88); "Line has a captain" restarts with a led line that turns to meet a flank; Reset
-## starts afresh under a battle seed (Decision 93). Controls: FormationFieldHud.
+## starts afresh under a battle seed (Decision 93). Every action is logged with its tick
+## (FormationFieldActions), for copying out and replaying. Controls: FormationFieldHud.
 ## Engine glue - the rules live in sim/skirmish/formation/.
 ##
 ##   godot --path . res://presentation/skirmish/formation_2d/formation_field.tscn
 
 const SkirmishClock = preload("res://sim/skirmish/skirmish_clock.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
+const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 
-const GREM := preload("res://content/units/grem.tres")
-const MILITIA := preload("res://content/units/kingdom_militia.tres")
-const CHIEFTAIN := preload("res://content/units/grem_chieftain.tres")
-const CAPTAIN := preload("res://content/units/kingdom_captain.tres")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
-const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationFieldHud = preload("res://presentation/skirmish/formation_2d/formation_field_hud.gd")
-const UnitDef = preload("res://content/definitions/unit_def.gd")
 
 const CELL_PX := 8.0
 const ORIGIN := Vector2(16, 56)
-const BUILDERS := 4
 const FLASH_SECONDS := 0.3
 const COLOURS := {
 	"grass": Color(0.33, 0.45, 0.25),
@@ -54,6 +49,9 @@ var _current := {}  # unit id -> position (cells) at the latest tick
 var _flashes := {}  # unit id -> seconds left
 var _hud: FormationFieldHud
 var _battle_seed := 0
+var _log := PackedStringArray()  # "<tick> <action>", after a "seed <n> captain <on|off>"
+var _squads_before := {}  # squad id -> its front's position at the previous tick
+var _squads_now := {}
 
 
 func field() -> FormationField:
@@ -87,10 +85,8 @@ func _ready() -> void:
 ## (Decision 93: the same seed and orders replay a battle).
 func restart(captained: bool, battle_seed: int) -> void:
 	_battle_seed = battle_seed
-	var captain: UnitDef = CAPTAIN if captained else null
-	_field = FormationField.new(
-		_clock.tick_seconds, GREM, BUILDERS, MILITIA, CHIEFTAIN, captain, battle_seed
-	)
+	_field = FormationFieldActions.field(battle_seed, captained)
+	_log = PackedStringArray(["seed %d captain %s" % [battle_seed, "on" if captained else "off"]])
 	_previous = {}
 	_current = {}
 	_snapshot()
@@ -190,7 +186,10 @@ func _draw_morale(squad: SkirmishSquad) -> void:
 	var band_colours := [Color(0.3, 0.9, 0.3), Color(0.95, 0.85, 0.2), Color(1, 0.5, 0.1)]
 	var band: int = FormationMorale.band(squad)
 	var colour: Color = band_colours[band] if band < band_colours.size() else Color.RED
-	var top := ORIGIN + squad.position * CELL_PX + Vector2(-12, -6 * CELL_PX)
+	var fraction := 1.0 if _clock.is_paused() else _clock.fraction()
+	var before: Vector2 = _squads_before.get(squad.id, squad.position)
+	var front: Vector2 = before.lerp(_squads_now.get(squad.id, squad.position), fraction)
+	var top := ORIGIN + front * CELL_PX + Vector2(-12, -6 * CELL_PX)  # eased, as its units
 	draw_rect(Rect2(top, Vector2(24, 3)), Color(0, 0, 0, 0.5))
 	draw_rect(Rect2(top, Vector2(24 * squad.morale / 100.0, 3)), colour)
 
@@ -202,20 +201,24 @@ func _cells(area: Rect2) -> Rect2:
 func _snapshot() -> void:
 	_previous = _current
 	_current = {}
+	_squads_before = _squads_now
+	_squads_now = {}
+	for squad in _field.sim.squads():
+		_squads_now[squad.id] = squad.position
 	for squad in _field.sim.squads():
 		for unit in squad.units:
 			_current[unit.id] = unit.position
 
 
-func _on_send(key: String) -> void:
-	_field.send(key)
+## Applies a player action (FormationFieldActions' words) and logs it with its tick.
+func act(action: String) -> void:
+	if FormationFieldActions.apply(_field, action):
+		_log.append("%d %s" % [_field.sim.tick_number(), action])
 
 
-## Orders every wave out on a route to retreat home (Decision 95).
-func retreat(key: String) -> void:
-	for squad in _field.sim.squads():
-		if squad.faction_id == "player" and squad.route == _field.waves[key].route:
-			_field.sim.order(squad.id, SkirmishUnit.Order.RETREAT)
+## The session so far, to copy out: a replay of it gives the same battle.
+func action_log() -> String:
+	return "\n".join(_log)
 
 
 func toggle_pause() -> void:
