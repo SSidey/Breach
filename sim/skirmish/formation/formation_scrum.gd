@@ -15,8 +15,7 @@ extends RefCounted
 ## - **Engaging:** squads whose units come within reach fight, whatever their faces.
 ## - **Regrouping:** when the fight ends the squad closes ranks over its dead (SquadRanks)
 ##   and its units walk to their places at its re-form pace; it moves on once all are back.
-## - **Manoeuvres:** settled each tick by priority (FormationManoeuvre, Decision 94).
-## - **A stalled fight** (nobody touching or seeking for STALL_SECONDS) is released.
+## - **Manoeuvres** go by priority (Decision 94); a fight stalled STALL_SECONDS is released.
 ## Each phase decides from where units stood before it began, never letting a squad listed
 ## earlier move first and change what a later one sees (Decision 97).
 ## Squads keep `loose`, `stance`, `fight_since` and `stall_ticks`. Pure over the squads.
@@ -151,8 +150,11 @@ static func _seek(ctx: Dictionary) -> void:
 	)
 	for squad in fighting:  # in the crush, but at the march pace in a pursuit
 		_walk(squad, ctx["pace"] * (CROWDING if squad.pursuit.is_empty() else 1.0), ctx["seconds"])
-	for squad in fighting:  # after everyone has moved, so a unit stepped up to is seen
-		_face(squad, ctx)
+	var turns := []  # after all have moved (a unit stepped up to is seen), before any turn
+	for squad in fighting:
+		turns.append_array(_faces(squad, ctx))
+	for turn in turns:
+		UnitMotion.turn(turn[0], turn[1], ctx["seconds"])
 
 
 ## [[key, squad, unit, foe cells], ...] for the squad's units free to seek; the rest stand
@@ -215,11 +217,12 @@ static func _walk(squad: SkirmishSquad, pace: float, seconds: float) -> void:
 			entry["next"] = entry["at"]
 
 
-## Each unit turns once a tick, at its turn rate: towards the nearest foe it touches, or
-## else so as to arrive facing what it will do - its foe at the cell it seeks, or its
-## squad's way at its place - the quicker way (UnitShuffle).
-static func _face(squad: SkirmishSquad, ctx: Dictionary) -> void:
+## [[unit, the bearing it turns towards], ...]: each unit turns once a tick towards the
+## nearest foe it touches, or else so as to arrive facing what it will do - its foe at the
+## cell it seeks, or its squad's way at its place - the quicker way (UnitShuffle).
+static func _faces(squad: SkirmishSquad, ctx: Dictionary) -> Array:
 	var foes := _foe_units(squad, ctx["squads"])
+	var out := []
 	for unit in squad.living():
 		var entry: Dictionary = squad.loose[unit.id]
 		var look = ScrumBlows.nearest_touching(squad, unit, foes, ctx["seed"])
@@ -228,8 +231,8 @@ static func _face(squad: SkirmishSquad, ctx: Dictionary) -> void:
 		if look == null:
 			look = entry.get("toward")
 		if look != null:
-			var wanted := UnitMotion.bearing_to(entry["at"], look, unit.bearing)
-			UnitMotion.turn(unit, wanted, ctx["seconds"])
+			out.append([unit, UnitMotion.bearing_to(entry["at"], look, unit.bearing)])
+	return out
 
 
 ## Where a unit seeking `entry`'s goal cell looks: so as to arrive facing the foe nearest
