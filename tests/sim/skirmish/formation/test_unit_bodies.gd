@@ -80,6 +80,20 @@ func test_a_unit_in_its_frame_resists_but_gives_way_to_its_own_squad() -> void:
 	assert_float(shover_moved).is_equal_approx(0.4, 0.0001)
 
 
+func test_a_unit_in_its_frame_is_not_moved_by_its_own_squad_only_brushing_it() -> void:
+	var framed := _unit(1)
+	var brusher := _unit(2)
+	var line := SkirmishSquad.new(1, "player", 1, 0.0, 2, [framed, brusher] as Array[SkirmishUnit])
+	framed.position = Vector2(5, 5)
+	var near := Vector2(5.0 + 1.0 - UnitBodies.BRUSH / 2.0, 5)
+	line.loose[brusher.id] = {"unit": brusher, "at": near, "goal": null, "next": near}
+
+	UnitBodies.step([line], 7)
+
+	assert_bool(line.loose.has(framed.id)).is_false()  # it keeps its place
+	assert_vector(_at(line, brusher)).is_equal_approx(Vector2(6, 5), Vector2(0.0001, 0.0001))
+
+
 func test_a_unit_in_its_frame_holds_its_space_against_another_squads_loose_unit() -> void:
 	var framed := _unit(1)
 	var line := SkirmishSquad.new(1, "player", 1, 0.0, 1, [framed] as Array[SkirmishUnit])

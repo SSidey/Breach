@@ -173,6 +173,8 @@ func compact() -> Array[SkirmishUnit]:
 			func(a, b): return a.rank < b.rank or (a.rank == b.rank and a.column < b.column)
 		)
 		for unit in order_by_place:
+			if swaps.any(func(swap): return swap["to"].has(unit)):
+				continue  # mid-move: it takes the place its move is heading for
 			var into_front_ok := unit.rank > 1 or unit.preferred_position == 0
 			if unit.rank > 0 and into_front_ok and _clear_ahead(unit):
 				unit.rank -= 1
@@ -200,6 +202,16 @@ func _clear_ahead(unit: SkirmishUnit) -> bool:
 		)
 		if rows_overlap and columns_overlap:
 			return false
+	for swap in swaps:  # nor a place a move under way is heading for
+		for mover in swap["to"]:
+			var to: Vector2i = swap["to"][mover]
+			var rows_meet: bool = to.x <= row and row < to.x + mover.footprint_depth
+			var columns_meet: bool = (
+				to.y < unit.column + unit.footprint_width
+				and unit.column < to.y + mover.footprint_width
+			)
+			if mover != unit and rows_meet and columns_meet:
+				return false
 	return true
 
 
