@@ -14,10 +14,13 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const EPSILON := 0.000001
 
 
-## The unit vector of a bearing.
+## The unit vector of a bearing; exact on the quarter bearings (no 1e-16 residue to tip a
+## point across a cell's edge).
 static func vector(bearing: float) -> Vector2:
 	var angle := deg_to_rad(bearing)
-	return Vector2(sin(angle), -cos(angle))
+	var x := sin(angle)
+	var y := -cos(angle)
+	return Vector2(x if absf(x) > EPSILON else 0.0, y if absf(y) > EPSILON else 0.0)
 
 
 ## The bearing of a squad facing (SquadFrame: 0 north, 1 east, 2 south, 3 west).
