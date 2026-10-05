@@ -45,6 +45,7 @@ const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.g
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationNarrowing = preload("res://sim/skirmish/formation/formation_narrowing.gd")
+const FormationWheel = preload("res://sim/skirmish/formation/formation_wheel.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const FormationFronts = preload("res://sim/skirmish/formation/formation_fronts.gd")
 const FormationJoins = preload("res://sim/skirmish/formation/formation_joins.gd")
@@ -212,9 +213,14 @@ func _move(events: Array) -> void:
 		if FormationNarrowing.holds(mover, terrain, _tick, tick_seconds, events):
 			continue
 		var cells_per_second := mover.speed() * TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
+		var before := mover.heading
 		FormationSweep.step(mover, cells_per_second, tick_seconds)  # round bends (Decision 105)
 		var open_step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		var step := FormationMarch.pace(mover, terrain, open_step, _tick, events)
+		var walk := step / maxf(mover.speed(), EPSILON) * MapLayoutDef.CELLS_PER_TILE
+		var share := FormationWheel.share(mover, before, travel * step, walk)  # Decision 116
+		FormationWheel.cut_sweep(mover, before, share)
+		step *= share
 		marching[mover.id] = [mover, FormationMarch.toward(mover, travel * step, end), end]
 	_march(marching, events)
 	for mover in waiting:
