@@ -140,3 +140,13 @@ func test_a_re_form_is_quicker_when_disciplined() -> void:
 
 	assert_int(drilled).is_greater(0)
 	assert_int(drilled).is_less(ragged)
+
+
+func test_the_steadier_a_formation_the_shorter_it_pursues() -> void:
+	var leashes := []
+	for discipline in [80, 75, 60, 50, 30, 25, 24, 150]:
+		var sim := _sim()
+		var squad := sim.spawn_squad(2, _row(_def(discipline), 2), "player", true)
+		leashes.append(FormationDiscipline.pursuit_leash(squad))
+
+	assert_array(leashes).is_equal([32.0, 32.0, 64.0, 64.0, 128.0, 128.0, INF, 32.0])
