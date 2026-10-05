@@ -39,7 +39,7 @@ static func touching(a: Rect2, b: Rect2) -> bool:
 
 
 ## True if `point` lies in the front of a unit at `from` on `bearing` (UnitMotion).
-static func in_front(bearing: int, from: Vector2, point: Vector2) -> bool:
+static func in_front(bearing: float, from: Vector2, point: Vector2) -> bool:
 	var direction := point - from
 	if direction.length() < 0.000001:
 		return true

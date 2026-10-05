@@ -15,14 +15,14 @@ const EPSILON := 0.000001
 ## The point the unit should look towards walking from `at` to its place `to`, to arrive
 ## facing `bearing` soonest; `speed` is its full speed in cells a second.
 static func look(
-	unit: SkirmishUnit, at: Vector2, to: Vector2, bearing: int, speed: float
+	unit: SkirmishUnit, at: Vector2, to: Vector2, bearing: float, speed: float
 ) -> Vector2:
 	var way := to - at
 	var ahead := at + UnitMotion.vector(bearing)
 	if way.length() < EPSILON or speed < EPSILON:
 		return ahead
 	var heading := UnitMotion.bearing_to(at, to, unit.bearing)
-	var facing_pace := _pace(unit, bearing, way)
+	var facing_pace := maxf(UnitMotion.pace(unit, way, bearing), EPSILON)
 	var shuffling := _turning(unit, unit.bearing, bearing) + way.length() / (speed * facing_pace)
 	var walking := (
 		_turning(unit, unit.bearing, heading)
@@ -33,14 +33,6 @@ static func look(
 
 
 ## Seconds the unit takes to turn from one bearing to another.
-static func _turning(unit: SkirmishUnit, from: int, to: int) -> float:
-	var steps := posmod(to - from, 8)
-	steps = mini(steps, 8 - steps)
-	return steps * UnitMotion.STEP_DEGREES / maxf(unit.turn_rate, EPSILON)
-
-
-## The share of its speed the unit makes along `way` while facing `bearing`.
-static func _pace(unit: SkirmishUnit, bearing: int, way: Vector2) -> float:
-	var cosine := clampf(way.normalized().dot(UnitMotion.vector(bearing)), -1.0, 1.0)
-	var off := rad_to_deg(acos(cosine)) / 180.0
-	return maxf(1.0 - (1.0 - unit.backward_pace) * off, EPSILON)
+static func _turning(unit: SkirmishUnit, from: float, to: float) -> float:
+	var cosine := clampf(UnitMotion.vector(from).dot(UnitMotion.vector(to)), -1.0, 1.0)
+	return rad_to_deg(acos(cosine)) / maxf(unit.turn_rate, EPSILON)
