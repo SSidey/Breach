@@ -73,15 +73,15 @@ func build(scene: Node) -> void:
 func replay() -> void:
 	var read := FormationFieldActions.parse(_replay_view.text)
 	if read.is_empty():
-		_replay_status.text = 'Not a log: it starts\n"seed <n> captain <on|off>"'
+		_replay_status.text = 'Not a record: it starts\n"record 1 seed <n> captain <on|off>"'
 		_replaying = 0
 		return
 	_seed.text = str(read["seed"])
 	_captain.set_pressed_no_signal(read["captained"])
 	for box in [_wait, _via_c, _holds] + _autos.values():
 		box.set_pressed_no_signal(false)
-	_scene.restart(read["captained"], read["seed"], read["actions"])
-	_replaying = read["actions"].size()
+	_scene.restart(read["captained"], read["seed"], read["commands"])
+	_replaying = read["commands"].size()
 
 
 ## A fresh field: the seed typed in, or a random one; the ticked options kept (and logged).

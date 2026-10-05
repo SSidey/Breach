@@ -1,5 +1,5 @@
 extends SceneTree
-## Replays a feel-test session from its action log (FormationFieldActions), printing what
+## Replays a feel-test session from its record of play (FormationRecord), printing what
 ## happened, so a reported battle can be seen tick for tick:
 ##   godot --headless --path . --script res://tools/formation_replay.gd -- \
 ##       log=<path to the log> [extra=600] [every=100]

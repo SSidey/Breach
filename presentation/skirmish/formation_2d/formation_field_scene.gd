@@ -7,8 +7,8 @@ extends Node2D
 ## arrive together, or have B wait in the wood (its detection range ringed) until it sees
 ## A engage (Decision 87). In a fight units seek contact and face their own foes (Decision
 ## 88); "Line has a captain" restarts with a led line that turns to meet a flank; Reset
-## starts afresh under a battle seed (Decision 93). Every action is logged with its tick
-## (FormationFieldActions), for copying out; a log pasted back replays live.
+## starts afresh under a battle seed (Decision 93). Every order is recorded with its tick
+## (FormationRecord, Decision 115), for copying out; a record pasted back replays live.
 ## Controls: FormationFieldHud.
 ## Engine glue - the rules live in sim/skirmish/formation/.
 ##
@@ -17,6 +17,7 @@ extends Node2D
 const SkirmishClock = preload("res://sim/skirmish/skirmish_clock.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
+const FormationRecord = preload("res://sim/skirmish/formation/formation_record.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
@@ -52,10 +53,10 @@ var _current := {}  # unit id -> position (cells) at the latest tick
 var _flashes := {}  # unit id -> seconds left
 var _hud: FormationFieldHud
 var _battle_seed := 0
-var _log := PackedStringArray()  # "<tick> <action>", after a "seed <n> captain <on|off>"
+var _log := PackedStringArray()  # the record of play (FormationRecord): header, commands
 var _squads_before := {}  # squad id -> its front's position at the previous tick
 var _squads_now := {}
-var _queued := []  # [tick, action] still to replay, in order
+var _queued := []  # commands (FormationRecord) still to replay, in order
 
 
 func field() -> FormationField:
@@ -69,8 +70,8 @@ func clock() -> SkirmishClock:
 ## Runs `count` ticks at once (the frame loop runs whatever the clock says is due).
 func run_ticks(count: int) -> void:
 	for _i in range(count):
-		while not _queued.is_empty() and _queued[0][0] <= _field.sim.tick_number():
-			act(_queued.pop_front()[1])
+		while not _queued.is_empty() and _queued[0]["tick"] <= _field.sim.tick_number():
+			act(_queued.pop_front())
 		for event in _field.step():
 			if event["type"] == "hit" and event["flank"]:
 				_flashes[event["target"]] = FLASH_SECONDS
@@ -88,13 +89,13 @@ func _ready() -> void:
 
 
 ## A fresh field, its line led by a captain or not, its battle under `battle_seed`
-## (Decision 93: the same seed and orders replay a battle). `queued` ([tick, action] pairs,
-## FormationFieldActions.parse) are played at their ticks as the clock runs: a replay.
+## (Decision 93: the same seed and orders replay a battle). `queued` (commands,
+## FormationRecord.parse) are given at their ticks as the clock runs: a replay.
 func restart(captained: bool, battle_seed: int, queued: Array = []) -> void:
 	_battle_seed = battle_seed
 	_queued = queued.duplicate()
 	_field = FormationFieldActions.field(battle_seed, captained)
-	_log = PackedStringArray(["seed %d captain %s" % [battle_seed, "on" if captained else "off"]])
+	_log = PackedStringArray([FormationRecord.header(battle_seed, captained)])
 	_previous = {}
 	_current = {}
 	_snapshot()
@@ -233,10 +234,18 @@ func _snapshot() -> void:
 			_current[unit.id] = unit.position
 
 
-## Applies a player action (FormationFieldActions' words) and logs it with its tick.
-func act(action: String) -> void:
-	if FormationFieldActions.apply(_field, action):
-		_log.append("%d %s" % [_field.sim.tick_number(), action])
+## Gives an order now - a command (FormationRecord) or the feel test's words for one
+## (FormationRecord.from_words) - and records it at this tick.
+func act(order: Variant) -> void:
+	var tick := _field.sim.tick_number()
+	var now: Dictionary = (
+		order.duplicate() if order is Dictionary else FormationRecord.from_words(tick, order)
+	)
+	if now.is_empty():
+		return
+	now["tick"] = tick
+	if FormationFieldActions.apply(_field, now):
+		_log.append(FormationRecord.line(now))
 
 
 ## The session so far, to copy out: a replay of it gives the same battle.

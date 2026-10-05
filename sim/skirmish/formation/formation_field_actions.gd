@@ -1,17 +1,16 @@
 class_name FormationFieldActions
 extends RefCounted
-## The feel test's player actions as words, so a session can be logged and replayed tick
-## for tick (Decision 93: the same seed and orders replay a battle). The scene's buttons
-## apply them through here and log "<tick> <action>"; a log replays the same battle
-## (tools/formation_replay.gd, or the scene's Replay log button). A log opens with
-## "seed <n> captain <on|off>". Actions:
-##   send A | send B | send A+B | retreat A | retreat B | auto A on | auto B off |
-##   wait on | via_c on | pursues on   (on or off)
-## Pure over the field it is given.
+## The feel test's orders on its field, so a session can be recorded and replayed tick for
+## tick (Decision 93: the same seed and orders replay a battle). The scene's buttons give
+## them through here as commands of the record of play (FormationRecord, Decision 115),
+## logged one a line; a record replays the same battle (tools/formation_replay.gd, or the
+## scene's Replay button), and so does a version 0 log of the feel test's words. Pure over
+## the field it is given.
 
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
+const FormationRecord = preload("res://sim/skirmish/formation/formation_record.gd")
 
 const BUILDERS := 4
 const TICK_SECONDS := 0.1
@@ -31,50 +30,54 @@ static func field(battle_seed: int, captained: bool) -> FormationField:
 	)
 
 
-## Applies one action (as the log words it) to the field; false if it isn't one.
-static func apply(field: FormationField, action: String) -> bool:
-	var words := action.strip_edges().split(" ", false)
-	if words.size() < 2:
+## Gives one command (FormationRecord) to the field; false if it isn't one the field
+## takes from that side.
+static func apply(field: FormationField, given: Dictionary) -> bool:
+	if given.is_empty():
 		return false
-	var on := words.size() > 2 and words[2] == "on"
-	match words[0]:
+	var on: bool = given["value"] == "on"
+	var wave: String = given["target"]
+	if given["who"] == FormationRecord.KINGDOM:
+		if given["order"] != "pursue":
+			return false
+		field.kingdom_line.pursues = on
+		field.kingdom_reserve.pursues = on
+		return true
+	if given["who"] != FormationRecord.PLAYER:
+		return false
+	match given["order"]:
 		"send":
-			if words[1] == "A+B":
+			if wave == "A+B":
 				field.send_together(["A", "B"])
+			elif field.waves.has(wave):
+				field.send(wave)
 			else:
-				field.send(words[1])
+				return false
 		"retreat":
+			if not field.waves.has(wave):
+				return false
 			for squad in field.sim.squads():
-				if squad.faction_id == "player" and squad.route == field.waves[words[1]].route:
+				if squad.faction_id == "player" and squad.route == field.waves[wave].route:
 					field.sim.order(squad.id, SkirmishUnit.Order.RETREAT)
 		"auto":
-			field.set_auto(words[1], on)
+			if not field.waves.has(wave):
+				return false
+			field.set_auto(wave, on)
 		"wait":
-			field.set_wait(words[1] == "on")
-		"via_c":
-			field.waves["A"].route = field.routes["C" if words[1] == "on" else "A"]
-		"pursues":
-			field.kingdom_line.pursues = words[1] == "on"
-			field.kingdom_reserve.pursues = words[1] == "on"
+			field.set_wait(on)
+		"route":
+			if not field.waves.has(wave) or not field.routes.has(given["value"]):
+				return false
+			field.waves[wave].route = field.routes[given["value"]]
 		_:
 			return false
 	return true
 
 
-## A log read back: {"seed", "captained", "actions": [[tick, action], ...]} in order.
+## A record read back (FormationRecord.parse): its seed, set-up and commands; {} if it
+## isn't one.
 static func parse(log: String) -> Dictionary:
-	var lines := log.strip_edges().split("\n", false)
-	var head := lines[0].split(" ", false) if lines.size() > 0 else PackedStringArray()
-	var read := {"seed": 0, "captained": false, "actions": []}
-	if head.size() < 2 or head[0] != "seed" or not head[1].is_valid_int():
-		return {}
-	read["seed"] = int(head[1])
-	read["captained"] = head.size() > 3 and head[3] == "on"
-	for line in lines.slice(1):
-		var parts := line.strip_edges().split(" ", false, 1)
-		if parts.size() == 2 and parts[0].is_valid_int():
-			read["actions"].append([int(parts[0]), parts[1]])
-	return read
+	return FormationRecord.parse(log)
 
 
 ## The field a log leaves after its last action and `extra` more ticks; after every tick
@@ -83,11 +86,11 @@ static func replay(log: String, extra: int, on_events: Callable = Callable()) ->
 	var read := parse(log)
 	var played := field(read["seed"], read["captained"])
 	var tick := 0
-	for queued in read["actions"]:
-		while tick < queued[0]:
+	for queued in read["commands"]:
+		while tick < queued["tick"]:
 			_step(played, on_events)
 			tick += 1
-		apply(played, queued[1])
+		apply(played, queued)
 	for _i in range(extra):
 		_step(played, on_events)
 	return played
