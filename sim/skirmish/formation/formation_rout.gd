@@ -10,7 +10,7 @@ extends RefCounted
 ##   and that friend's formation takes panic shock.
 ## - **Rally:** a router that reaches a friendly formation with a leader joins its rear
 ##   ranks. One that runs into any standing friendly formation (Decisions 89 and 98) is
-##   caught there: it stops (with contact-seeking, in the nearest free cell: RoutSettle),
+##   caught there: it stops (in the nearest free cell: RoutSettle),
 ##   and after STEADY_RALLY_SECONDS with that formation steady joins its rear, walking to
 ##   its place. A shaken formation holds its routers until it steadies.
 ##   A routing formation whose own leader lives, with no enemy near for a few seconds,
@@ -66,7 +66,6 @@ static func step(
 	cells_per_second: float,
 	tick_seconds: float,
 	terrain: FormationTerrain = null,
-	one_per_cell := false,
 	fight_seed := 0
 ) -> Array:
 	var events := []
@@ -85,9 +84,9 @@ static func step(
 		_join(entry[1], entry[2], entry[3], tick, events)
 	for squad in routing:
 		_regroup(squad, squads, tick, tick_seconds, events, fight_seed)
-	if one_per_cell:
-		RoutSettle.settle(routing, squads, pace, where, fight_seed)
-		RoutFlight.part(routing, [pace, fight_seed], where)
+	routing = routing.filter(func(s): return s.state == SkirmishSquad.State.ROUTING)
+	RoutSettle.settle(routing, squads, pace, where, fight_seed)  # not those that re-formed
+	RoutFlight.part(routing, [pace, fight_seed], where)
 	for squad in breaking:
 		_break(squad, squads, tick, events, terrain)
 	return events

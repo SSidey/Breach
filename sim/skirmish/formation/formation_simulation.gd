@@ -68,8 +68,9 @@ var tick_seconds: float
 var combat_width := 0
 ## Overlapping front units walk round an enemy line's end (Decision 81) rather than wrap.
 var walk_wings := false
-## Both sides' units seek contact in a fight (Decision 88), in place of edges and wings.
-var seek_contact := false
+## Both sides' units seek contact in a fight (Decision 88), in place of edges and wings:
+## the only fight from spec 30 on, so the flag and the old modes are going.
+var seek_contact := true
 ## The battle seed (Decision 93): every random draw comes from it - contests for cells,
 ## and each blow's damage, rolled within damage_band of its value (0: no roll).
 var fight_seed := 0
@@ -159,9 +160,7 @@ func step() -> Array:
 	if not seek_contact:  # the scrum ends stalled fights itself
 		FormationEdges.prune(_squads, _tick, events)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
-	events.append_array(
-		FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, seek_contact, fight_seed)
-	)
+	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, fight_seed))
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
 	FormationMarch.sync_units(_squads)

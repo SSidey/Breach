@@ -1,9 +1,9 @@
 extends GdUnitTestSuite
 ## Units hold their preferred band, per Decision 47: a back-preferring unit never steps up
-## into the front rank; melee happens only at the front rank, so an enemy facing an empty
-## front cell wraps onto the nearest front unit; when the whole front has fallen the
-## squad re-anchors on its foremost rank and the enemy must advance to it; a squad with
-## no front units holds once an enemy is within its ranged reach.
+## into the front rank; an enemy facing an empty front cell seeks another foe (Decision
+## 88); when the whole front has fallen the squad re-anchors on its foremost rank and the
+## enemy must advance to it; a squad with no front units holds once an enemy is within its
+## ranged reach.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -81,7 +81,7 @@ func test_a_spitter_does_not_step_into_a_fallen_front_cell() -> void:
 	assert_float(spitter.distance).is_equal_approx(where, 0.0001)
 
 
-func test_the_enemy_facing_the_empty_cell_wraps_onto_the_flank() -> void:
+func test_the_enemy_facing_the_empty_cell_seeks_another_foe() -> void:
 	var sim := FormationSimulation.new(ROUTE, TICK)
 	var placements := [
 		[_melee(1, 1), Vector2i(0, 0)],
@@ -94,14 +94,10 @@ func test_the_enemy_facing_the_empty_cell_wraps_onto_the_flank() -> void:
 	var opposite: SkirmishUnit = theirs.units[1]  # mirrored: it faces our column 0
 	_until(sim, func(): return not weak.is_alive())
 
-	var log := _steps(sim, 20)
+	var log := _steps(sim, 40)  # it walks round to the next foe
 
 	var its_hits := log.filter(func(e): return e["type"] == "hit" and e["unit"] == opposite.id)
-	assert_bool(its_hits.is_empty()).is_false()
-	(
-		assert_bool(its_hits.all(func(e): return e["flank"] and e["target"] == mine.units[1].id))
-		. is_true()
-	)
+	assert_bool(its_hits.is_empty()).is_false()  # it doesn't stand idle
 
 
 func test_when_the_whole_front_falls_the_enemy_must_advance_to_the_back_rank() -> void:
@@ -116,7 +112,6 @@ func test_when_the_whole_front_falls_the_enemy_must_advance_to_the_back_rank() -
 
 	assert_int(spitter.rank).is_equal(0)  # re-anchored where it stood
 	assert_float(spitter.distance).is_equal_approx(where, 0.0001)
-	assert_int(theirs.engaged_with).is_equal(0)  # the lock is released
 	var log := _until(sim, func(): return mine.state == SkirmishSquad.State.FIGHTING, 200)
 	log.append_array(_steps(sim, 20))
 

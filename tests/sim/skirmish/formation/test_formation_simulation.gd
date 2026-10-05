@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## FormationSimulation, per specs/22-formation-feel-test.md and Decision 40: squads in
-## formation on one lane - front ranks fight, the ranks behind step up, and a wider line
-## wraps onto the flanks.
+## formation on one lane - front ranks fight and the ranks behind step up. Units seek
+## contact (Decision 88): the scrum is the only fight (spec 30, round 1 part 1).
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -68,12 +68,11 @@ func test_the_spec_21_duel_still_holds() -> void:
 	var sim := FormationSimulation.new(ROUTE, TICK)
 	var mine := sim.spawn_squad(1, _line(_grem(), 1), "player", true)
 	var theirs := sim.spawn_squad(1, _line(_militia(), 1), "the_kingdom", false)
-	_run(sim, func(): return mine.state == SkirmishSquad.State.FIGHTING)
-	var engaged_at := sim.tick_number()
 
-	_run(sim, func(): return mine.is_destroyed())
+	var log := _run(sim, func(): return mine.is_destroyed())
 
-	assert_float((sim.tick_number() - engaged_at) * TICK).is_equal_approx(3.0, 0.0001)
+	var first: int = _of(log, "hit")[0]["tick"]  # from the first blow, as spec 21 counts
+	assert_float((sim.tick_number() - first) * TICK).is_equal_approx(3.0, 0.0001)
 	assert_int(theirs.units[0].hp).is_equal(2)
 
 
@@ -95,38 +94,22 @@ func test_only_the_front_rank_fights_and_the_rank_behind_steps_up() -> void:
 	assert_array(_of(log, "stepped_up").map(func(e): return e["unit"])).contains([back_id])
 
 
-func test_a_wider_line_wraps_onto_the_flanks_for_bonus_damage() -> void:
-	var sim := FormationSimulation.new(ROUTE, TICK)
-	var mine := sim.spawn_squad(5, _line(_grem(), 5), "player", true)
-	sim.spawn_squad(3, _line(_militia(), 3), "the_kingdom", false)
-
-	var log := _run(sim, func(): return mine.state == SkirmishSquad.State.FIGHTING)
-	var first := _of(log, "hit").filter(func(e): return e["tick"] == sim.tick_number())
-	var exchange := first.filter(func(e): return e["faction"] == "player")
-
-	assert_int(exchange.size()).is_equal(5)
-	var flanks := exchange.filter(func(e): return e["flank"])
-	assert_int(flanks.size()).is_equal(2)
-	assert_bool(flanks.all(func(e): return e["dmg"] == 9)).is_true()
-	(
-		assert_bool(
-			exchange.filter(func(e): return not e["flank"]).all(func(e): return e["dmg"] == 6)
-		)
-		. is_true()
-	)
-
-
 func test_a_unit_struck_by_several_takes_every_blow_but_strikes_once() -> void:
 	var sim := FormationSimulation.new(ROUTE, TICK)
-	var mine := sim.spawn_squad(5, _line(_grem(), 5), "player", true)
+	sim.spawn_squad(5, _line(_grem(), 5), "player", true)
 	var theirs := sim.spawn_squad(3, _line(_militia(), 3), "the_kingdom", false)
 
-	var log := _run(sim, func(): return mine.state == SkirmishSquad.State.FIGHTING)
-	var hits := _of(log, "hit").filter(func(e): return e["tick"] == sim.tick_number())
-	var end_militia := theirs.units[2].id  # its column is the player's left flank end
+	var log := _run(sim, func(): return theirs.is_destroyed(), 600)
 
-	assert_int(hits.filter(func(e): return e["target"] == end_militia).size()).is_equal(2)
-	assert_int(hits.filter(func(e): return e["unit"] == end_militia).size()).is_equal(1)
+	var crowded := false
+	for tick in range(1, sim.tick_number() + 1):
+		var hits := _of(log, "hit").filter(func(e): return e["tick"] == tick)
+		var strikers := hits.map(func(e): return e["unit"])
+		for striker in strikers:
+			assert_int(strikers.count(striker)).is_equal(1)  # one blow a striker a tick
+		var targets := hits.map(func(e): return e["target"])
+		crowded = crowded or targets.any(func(t): return targets.count(t) > 1)
+	assert_bool(crowded).is_true()  # the wider line's ends close in: some take two at once
 
 
 func test_a_holding_squad_stays_put_and_still_fights() -> void:
@@ -146,17 +129,16 @@ func test_a_retreating_squad_disengages_and_the_enemy_is_freed() -> void:
 	var mine := sim.spawn_squad(1, _line(_grem(), 1), "player", true)
 	var theirs := sim.spawn_squad(1, _line(_militia(), 1), "the_kingdom", false)
 	_run(sim, func(): return mine.state == SkirmishSquad.State.FIGHTING)
-	var at := mine.front_distance
+	var at := mine.units[0].position.x
 
 	sim.order(mine.id, SkirmishUnit.Order.RETREAT)
 	var events := sim.step()
 
-	assert_array(events.map(func(e): return e["type"])).contains(["disengaged", "turning"])
+	assert_array(events.map(func(e): return e["type"])).contains(["disengaged", "withdrawing"])
 	assert_int(theirs.engaged_with).is_equal(0)
-	# It about-faces first (Decision 74), then marches home.
-	_run(sim, func(): return mine.state == SkirmishSquad.State.MOVING)
-	sim.step()
-	assert_float(mine.front_distance).is_less(at)
+	# It withdraws from where it stands (Decision 99), heading home.
+	_run(sim, func(): return false, 20)
+	assert_float(mine.units[0].position.x).is_less(at)
 
 
 func test_reaching_the_enemy_end_is_arrival() -> void:
@@ -177,7 +159,7 @@ func test_a_destroyed_squad_frees_its_opponent_to_move_on() -> void:
 
 	assert_int(mine.state).is_equal(SkirmishSquad.State.DESTROYED)
 	var at := theirs.front_distance
-	sim.step()
+	_run(sim, func(): return theirs.front_distance < at, 100)  # it re-forms, then marches on
 	assert_float(theirs.front_distance).is_less(at)
 
 
