@@ -28,6 +28,13 @@ static func engageable(target: SkirmishSquad) -> bool:
 	return target.state != SkirmishSquad.State.DESTROYED and not target.living().is_empty()
 
 
+## True if the squad's units stand in its frame, so its fronts and edges are where its
+## frame is: not a routing squad's, whose units flee on their own - they are met unit by
+## unit where they are (ScrumEngage).
+static func framed(target: SkirmishSquad) -> bool:
+	return target.state != SkirmishSquad.State.ROUTING
+
+
 ## True if the squad seeks combat: not one retreating or routing (it is getting away), nor
 ## one that has arrived or is waiting (Decision 111).
 static func can_engage(candidate: SkirmishSquad) -> bool:
@@ -48,7 +55,7 @@ static func nearest_hostile(
 	var best: SkirmishSquad = null
 	var best_key := []
 	for other in squads:
-		if other.faction_id == from.faction_id or not engageable(other):
+		if other.faction_id == from.faction_id or not engageable(other) or not framed(other):
 			continue
 		if not SquadGeometry.facing_off(from, other) or not SquadGeometry.overlaps(from, other):
 			continue

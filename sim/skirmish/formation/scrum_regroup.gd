@@ -19,6 +19,8 @@ const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const UnitShuffle = preload("res://sim/skirmish/formation/unit_shuffle.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const ScrumTrade = preload("res://sim/skirmish/formation/scrum_trade.gd")
+const ScrumSlots = preload("res://sim/skirmish/formation/scrum_slots.gd")
+const UnitSteer = preload("res://sim/skirmish/formation/unit_steer.gd")
 
 
 ## Units of squads out of the fight walk to their places (in the stance, if any) at the
@@ -33,8 +35,10 @@ static func step(squads: Array, pace: float, seconds: float, fight_seed: int) ->
 		if squad.state == SkirmishSquad.State.MOVING and held:
 			squad.state = SkirmishSquad.State.HOLDING  # it stands while its units regroup
 		regrouping.append([squad, _foes_faced(squad, squads, fight_seed)])
+	var moving := {"pace": pace, "seconds": seconds, "seed": fight_seed}
+	moving["bodies"] = ScrumSlots.bodies(squads)
 	for entry in regrouping:
-		_walk_back(entry[0], entry[1], pace, seconds)
+		_walk_back(entry[0], entry[1], moving)
 		ScrumTrade.trade(entry[0], fight_seed)  # a unit its own ranks hold off trades places
 
 
@@ -51,14 +55,16 @@ static func _foes_faced(squad: SkirmishSquad, squads: Array, fight_seed: int) ->
 	return out
 
 
-static func _walk_back(squad: SkirmishSquad, foes: Dictionary, pace: float, seconds: float) -> void:
+## `moving` = {pace, seconds, seed, bodies}: they step round bodies in their way (UnitSteer).
+static func _walk_back(squad: SkirmishSquad, foes: Dictionary, moving: Dictionary) -> void:
+	var seconds: float = moving["seconds"]
 	for unit_id in squad.loose.keys():
 		if ScrumPursuit.away(squad, unit_id):
 			continue
 		var entry: Dictionary = squad.loose[unit_id]
 		var unit: SkirmishUnit = entry["unit"]
 		var place := ScrumStance.anchor(squad, unit)
-		var step := unit.speed * pace * FormationDiscipline.reform_pace(squad)
+		var step: float = unit.speed * moving["pace"] * FormationDiscipline.reform_pace(squad)
 		var heading: float = squad.stance.get("heading", squad.heading)
 		var foe_at = foes.get(unit_id)
 		if foe_at == null:  # it takes its place the quicker way, arriving facing its squad's
@@ -67,7 +73,8 @@ static func _walk_back(squad: SkirmishSquad, foes: Dictionary, pace: float, seco
 		ScrumTrade.track(entry, gap, seconds)
 		var arrived := gap < 0.000001
 		if gap >= 0.000001:  # a drilled retreat backs away facing the foe it touches
-			entry["at"] = UnitMotion.walk(unit, entry["at"], place, step, seconds, foe_at)
+			var to := UnitSteer.toward(unit, entry["at"], place, moving["bodies"], moving["seed"])
+			entry["at"] = UnitMotion.walk(unit, entry["at"], to, step, seconds, foe_at)
 		entry["next"] = entry["at"]
 		entry["goal"] = null
 		var faced := arrived and UnitMotion.turn(unit, heading, seconds)

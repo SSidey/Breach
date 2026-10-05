@@ -102,15 +102,22 @@ func test_a_unit_struck_by_several_takes_every_blow_but_strikes_once() -> void:
 
 	var log := _run(sim, func(): return theirs.is_destroyed(), 600)
 
-	var crowded := false
 	for tick in range(1, sim.tick_number() + 1):
 		var hits := _of(log, "hit").filter(func(e): return e["tick"] == tick)
 		var strikers := hits.map(func(e): return e["unit"])
 		for striker in strikers:
 			assert_int(strikers.count(striker)).is_equal(1)  # one blow a striker a tick
-		var targets := hits.map(func(e): return e["target"])
-		crowded = crowded or targets.any(func(t): return targets.count(t) > 1)
-	assert_bool(crowded).is_true()  # the wider line's ends close in: some take two at once
+	var crowded := false
+	for target in theirs.units:
+		var taken := _of(log, "hit").filter(func(e): return e["target"] == target.id)
+		for i in range(1, taken.size()):  # every blow lands in full, however many strike
+			var before: int = taken[i - 1]["target_hp"]
+			assert_int(taken[i]["target_hp"]).is_equal(before - taken[i]["dmg"])
+		var strikers := {}
+		for hit in taken:
+			strikers[hit["unit"]] = true
+		crowded = crowded or strikers.size() > 1
+	assert_bool(crowded).is_true()  # the wider line's ends close in: some are struck by two
 
 
 func test_a_holding_squad_stays_put_and_still_fights() -> void:
