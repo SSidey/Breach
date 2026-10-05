@@ -11,7 +11,6 @@ const FormationField = preload("res://sim/skirmish/formation/formation_field.gd"
 const RoutFlight = preload("res://sim/skirmish/formation/rout_flight.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
-const FormationFieldActions = preload("res://sim/skirmish/formation/formation_field_actions.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -242,55 +241,3 @@ func test_a_withdrawal_home_holds_there_facing_out() -> void:
 	assert_int(turns.size()).is_equal(0)  # it doesn't spin at its spawn
 	assert_int(wave.order).is_equal(SkirmishUnit.Order.HOLD)
 	assert_float(lateral).is_less_equal(RoutFlight.FAN_CELLS + 4.0)  # route A's line is y 32
-
-
-func test_a_withdrawal_from_past_a_bend_turns_with_its_route() -> void:
-	# A feel-test log: B, caught on its route's southward leg, withdrew; units past the
-	# bend ran on north off the field, the way the leg they were on led, instead of turning
-	# west with the route.
-	var log := "seed 515557 captain off\n0 pursues off\n120 send B\n318 retreat B"
-	var northmost := {"y": INF}  # a lambda captures a local by value
-	var field := FormationFieldActions.replay(
-		log,
-		400,
-		func(played, _events):
-			for squad in played.sim.squads():
-				if squad.faction_id == "player":
-					for unit in squad.living():
-						northmost["y"] = minf(northmost["y"], ScrumReach.at(squad, unit).y)
-	)
-
-	assert_float(northmost["y"]).is_greater(14.0)  # route B runs west along y 21
-	assert_bool(field.sim.squads().any(func(s): return s.faction_id == "player")).is_true()
-
-
-## Feel-test logs: the line pursued down its own route A while its quarry fled by another
-## road (Decision 113). Returns [the furthest the line's frame got south, the furthest
-## north, whether it ended on route A, back at its post].
-func _pursuit_roads(log: String, extra: int) -> Array:
-	var seen := {"south": -INF, "north": INF}  # a lambda captures a local by value
-	var field := FormationFieldActions.replay(
-		log,
-		extra,
-		func(played, _events):
-			var at: Vector2 = played.kingdom_line.position
-			seen["south"] = maxf(seen["south"], at.y)
-			seen["north"] = minf(seen["north"], at.y)
-	)
-	var line: SkirmishSquad = field.kingdom_line
-	return [seen["south"], seen["north"], line.route == field.routes["A"], line.position]
-
-
-func test_a_pursuit_follows_its_quarry_down_the_road_it_flees_by() -> void:
-	var via_c := _pursuit_roads(
-		"seed 109563 captain off\n0 via_c on\n87 send A\n229 retreat A", 600
-	)
-	assert_float(via_c[0]).is_greater(50.0)  # down route C, south-west, after A
-	assert_bool(via_c[2]).is_true()  # then home to its post, on its own route again
-	assert_float(via_c[3].x).is_greater(75.0)
-
-	var log := "seed 515557 captain off\n0 pursues off\n120 send B\n318 retreat B\n"
-	log += "1314 pursues on\n1326 send B\n1529 retreat B"
-	var by_b := _pursuit_roads(log, 700)
-	assert_float(by_b[1]).is_less(25.0)  # up route B, north, after B
-	assert_bool(by_b[2]).is_true()

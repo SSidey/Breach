@@ -4,9 +4,9 @@ extends RefCounted
 ## front-band units make for slots beside their foes' bodies (ScrumSlots), in contest order
 ## (ScrumContest) - first those keeping a slot still open, then the rest picking the
 ## nearest open one - so the earliest arrival takes a slot and the rest look further; with
-## none open, it waits just behind the nearest (Decision 108; in a pursuit it keeps to its
-## place: the squad pursues as a body, Decision 103). A unit touching a foe stands; one not
-## free to seek keeps to its place. Pure over the squads.
+## none open, it waits just behind the nearest (Decision 108), in a pursuit too (Decision
+## 113). A unit touching a foe stands; one not free to seek keeps to its place. Pure over
+## the squads.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -46,7 +46,7 @@ static func plan(ctx: Dictionary) -> void:
 		]
 		var at: Vector2 = squad.loose[unit.id]["at"]
 		var slot := ScrumSlots.pick(unit, at, seeker[3], ground)
-		if slot.is_empty() and squad.pursuit.is_empty():  # it waits behind the nearest
+		if slot.is_empty():  # it waits behind the nearest, a pursuit too (Decision 113)
 			_press(seeker, ScrumSlots.pick(unit, at, seeker[3], ground, true), ctx)
 		else:
 			_aim(seeker, slot, claimed, ctx)

@@ -5668,6 +5668,14 @@ to that target, use that route given all is well".
   own route there again.
 - **The leash** (Decision 107) is now measured as the crow flies from the post, the
   formation's road no longer being one line; the feel test rings the post at the leash.
+- **On the road:** a pursuing frame judges its quarry ahead along the road it travels and
+  sweeps round its bends as a marching one does (Decision 105). Its units aren't held to
+  their places as it goes - the user: "they don't need to verbatim follow a formation
+  point on the line" - so one with no slot open waits by the fight in a pursuit too,
+  retiring Decision 108's pursuit exception (the leash no longer measures from its units).
+- Found with it in the feel test: a withdrawing unit fanned beside its road that met water
+  it couldn't cross ran on along the road's line into it, beside the ford; it now turns
+  back onto the road.
 
 **Alternatives:**
 

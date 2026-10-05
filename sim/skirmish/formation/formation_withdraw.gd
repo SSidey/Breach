@@ -13,7 +13,8 @@ extends RefCounted
 ##   has turned, a unit still facing a foe it touches strikes it (ScrumBlows). The less
 ##   ordered the formation, the wider its units fan out from the route's line: up to
 ##   RoutFlight.FAN_DEGREES either side, by a seeded angle per unit, for one with no
-##   discipline. Ground it can't cross holds it.
+##   discipline. Ground it can't cross turns it back onto the route (a ford it fanned
+##   away from), and holds it only if that is barred too.
 ## - **Safe:** with no enemy within FormationRout.ENEMY_NEAR of it, and none pursuing it,
 ##   for FormationRout.RALLY_SECONDS - the test a rout rallies by - it re-forms on its route
 ##   where its units stand, facing home, and marches home (its order). One whose units are
@@ -113,7 +114,8 @@ static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, motion: Array, terra
 	if absf(aside) >= RoutFlight.FAN_CELLS * disorder(squad) and heading.dot(side) * aside > 0.0:
 		heading = homeward  # fanned out as far as its disorder takes it (a rout's at most)
 	if terrain != null and terrain.factor(unit.height, at, at + heading) <= 0.0:
-		heading = homeward  # it can't fan that way: it keeps to the line
+		var onto: Vector2 = squad.route.point_at(move_toward(along, home, LOOK_CELLS)) - at
+		heading = onto.normalized() if onto.length() > 0.000001 else homeward  # back to the road
 	if terrain != null:
 		full *= terrain.factor(unit.height, at, at + heading)
 	var to := at + heading * maxf(full, 0.000001)

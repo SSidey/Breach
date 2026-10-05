@@ -21,6 +21,7 @@ const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
+const FormationSweep = preload("res://sim/skirmish/formation/formation_sweep.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -81,7 +82,7 @@ static func step(
 		if _given_up(squad, foe):
 			_go_back(squad, squads, tick, events)
 		else:
-			_advance(squad, foe, cells_per_second * seconds)
+			_advance(squad, foe, cells_per_second, seconds)
 
 
 ## [cells its frame has gone from its post, as the crow flies, cells its leash allows (INF:
@@ -101,16 +102,28 @@ static func _given_up(squad: SkirmishSquad, foe: SkirmishSquad) -> bool:
 
 
 ## Its frame moves along its route towards the enemy while the enemy is ahead.
-static func _advance(squad: SkirmishSquad, foe: SkirmishSquad, step_cells: float) -> void:
-	var ahead := (_spread(foe).get_center() - squad.position).dot(SquadFrame.forward(squad.facing))
+static func _advance(
+	squad: SkirmishSquad, foe: SkirmishSquad, cells_per_second: float, seconds: float
+) -> void:
+	var ahead := _ahead(squad, _spread(foe).get_center())
 	if ahead <= CLOSE_ENOUGH or _lagging(squad):
 		return
-	var tiles := minf(squad.speed() * step_cells, ahead - CLOSE_ENOUGH)
+	FormationSweep.step(squad, squad.speed() * cells_per_second, seconds)  # round bends
+	var tiles := minf(squad.speed() * cells_per_second * seconds, ahead - CLOSE_ENOUGH)
 	tiles /= MapLayoutDef.CELLS_PER_TILE
 	var length := 1e9
 	if squad.route != null:
 		length = squad.route.length_cells() / MapLayoutDef.CELLS_PER_TILE
 	squad.front_distance = clampf(squad.front_distance + squad.direction * tiles, 0.0, length)
+
+
+## Cells `at` lies ahead of the squad's front along the route it travels (as the crow flies
+## along its facing, with no route).
+static func _ahead(squad: SkirmishSquad, at: Vector2) -> float:
+	if squad.route == null:
+		return (at - squad.position).dot(SquadFrame.forward(squad.facing))
+	var own := squad.front_distance * MapLayoutDef.CELLS_PER_TILE
+	return (squad.route.distance_of(at) - own) * squad.direction
 
 
 ## True if any of its units lags more than LAG_CELLS behind its place: a formation
