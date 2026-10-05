@@ -60,10 +60,16 @@ static func pursuit_leash(squad: SkirmishSquad) -> float:
 	return _leash(of(squad), shift)
 
 
-## How far (cells from where it broke ranks) a unit chases on its own: its own discipline's
-## step (Decision 109).
-static func unit_leash(unit: SkirmishUnit) -> float:
-	return _leash(unit.discipline, 0)
+## A unit's own discipline, bolstered as its formation's is by its best leader: what holds
+## it in the ranks (Decisions 81 and 112).
+static func unit_discipline(squad: SkirmishSquad, unit: SkirmishUnit) -> int:
+	return unit.discipline + PER_LEADERSHIP * FormationMorale.leadership(squad)
+
+
+## How far (cells from where it broke ranks) a unit chases on its own: the step of its own
+## discipline, bolstered by its leader (Decisions 109 and 112).
+static func unit_leash(squad: SkirmishSquad, unit: SkirmishUnit) -> float:
+	return _leash(unit_discipline(squad, unit), 0)
 
 
 static func _leash(discipline: float, shift: int) -> float:

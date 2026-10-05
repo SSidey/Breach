@@ -171,15 +171,23 @@ func test_a_unit_breaking_ranks_chases_no_further_than_its_own_leash() -> void:
 	assert_float(furthest).is_less_equal(128.0 + 1.0)
 
 
-func test_a_wave_caught_at_home_by_units_breaking_ranks_fights_back() -> void:
-	# A feel-test log: the line's chasers ran A's last three down at its spawn and A never
-	# struck back, the line marching home counting as retreating, so it could not be engaged.
-	var log := "seed 233831 captain on\n0 pursues off\n115 send A\n186 pursues on\n223 retreat A"
+func _caught_at_home(captain: String) -> Array:
+	var log := (
+		"seed 233831 captain %s\n0 pursues off\n115 send A\n186 pursues on\n223 retreat A" % captain
+	)
 	var events := []
 	var field := FormationFieldActions.replay(
 		log, 480, func(_f, tick_events): events.append_array(tick_events)
 	)
-	var wave: SkirmishSquad = field.sim.squads()[-1]
+	return [field, field.sim.squads()[-1], events]
+
+
+func test_a_wave_caught_at_home_by_units_breaking_ranks_fights_back() -> void:
+	# A feel-test log: the line's chasers ran A's last three down at its spawn and A never
+	# struck back (Decision 111). Without a captain, the militia break ranks to chase.
+	var setup := _caught_at_home("off")
+	var wave: SkirmishSquad = setup[1]
+	var events: Array = setup[2]
 
 	var homes := events.filter(func(e): return e["type"] == "returned" and e["squad"] == wave.id)
 	var home: int = homes[0]["tick"]
@@ -187,4 +195,33 @@ func test_a_wave_caught_at_home_by_units_breaking_ranks_fights_back() -> void:
 		func(e): return e["type"] == "engaged" and e["squad"] == wave.id and e["tick"] > home
 	)
 	assert_bool(fought_back).is_true()
-	assert_int(wave.living().size()).is_greater(0)
+	assert_int(setup[0].kingdom_line.living().size()).is_less(12)  # it cut chasers down
+
+
+func test_a_captain_holds_its_units_from_breaking_ranks() -> void:
+	# The same log, the line led: its militia, steadied by their captain, don't run on past
+	# their formation's leash (Decision 112), and A's last three get home alive.
+	var setup := _caught_at_home("on")
+
+	assert_int(setup[1].living().size()).is_equal(3)
+	assert_int(setup[0].kingdom_line.living().size()).is_equal(12)
+
+
+func test_a_formation_marches_home_without_waiting_for_its_runaways() -> void:
+	var log := "seed 233831 captain off\n0 pursues off\n115 send A\n186 pursues on\n223 retreat A"
+	var seen := {"last": null, "moved": 0.0}  # a lambda captures a local by value
+	FormationFieldActions.replay(
+		log,
+		480,
+		func(field, _events):
+			var line: SkirmishSquad = field.kingdom_line
+			var homeward: bool = not line.pursuit.is_empty() and line.pursuit["returning"]
+			if homeward and not line.chasers.is_empty():
+				if seen["last"] != null:
+					seen["moved"] += absf(line.front_distance - seen["last"])
+				seen["last"] = line.front_distance
+			else:
+				seen["last"] = null
+	)
+
+	assert_float(seen["moved"]).is_greater(0.0)  # its runaways make their own way back

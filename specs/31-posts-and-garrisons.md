@@ -57,3 +57,6 @@ a fort with two gates runs two lanes.
 5. **Upkeep:** whether garrisons cost anything over time (spec 29's workers and
    logistics) - not decided.
 6. **The field:** a feel-test scene with a capturable fort with two egresses.
+7. **Falling back on a node:** a wave retreating to a held node meets its garrison, which
+   should help it against pursuers and undisciplined units breaking ranks after it
+   (raised in the spec 30 feel test; a standing force at the field's spawn can stand in).

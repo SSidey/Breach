@@ -5612,3 +5612,38 @@ surrounded as they ought not fight back".
 
 **Rules over cases:** general. One rule for who may be engaged and one for who seeks it.
 **Order:** locks are chosen from one snapshot, ties by the squads' seeded draws, as before.
+
+### Decision 112 — A formation doesn't wait for its runaways; a leader steadies its units against breaking ranks
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised in the feel test: a pursuing line stood waiting for its units that
+had broken ranks before marching home, and its undisciplined militia ran on past the
+formation's leash even under a captain. The user: "I would expect them to march back and
+let the runaways come back on their own if at all", and "Leadership bonus ought to
+prevent runaways more yes, they should be at least less likely to chase beyond the
+overall group".
+- **Runaways:** a unit whose chase ends straggles back on its own to its place, wherever
+  its formation now is, and rejoins there. Units out chasing or straggling don't hold
+  their formation's march or its pursuit.
+- **Steadied by a leader:** a unit's roll to break ranks and its own leash use its
+  discipline bolstered by its formation's best leader, as the formation's own discipline
+  is (Decision 81): a captain lifts a militiaman's 30 to 50, so he no longer breaks
+  ranks, and would chase no further than his formation.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| The formation waits for its runaways | The user: they make their own way back, if at all. |
+| A unit's own discipline alone | A leader should hold its units together. |
+
+**Consequences:** `FormationDiscipline.unit_discipline` and `unit_leash(squad, unit)`; a
+chase that ends keeps its unit as a straggler (`returning`) until it reaches its place;
+`FormationScrum.regrouping` and the pursuit's laggard check leave chasers out.
+
+**Rules over cases:** general. One rule for every unit out on its own, one bolster for
+every unit under a leader.
+**Order:** unchanged: the roll to break ranks is seeded by battle, tick and unit.
+

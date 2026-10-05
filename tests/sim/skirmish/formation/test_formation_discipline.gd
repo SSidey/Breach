@@ -171,6 +171,20 @@ func test_a_unit_breaking_ranks_is_leashed_by_its_own_discipline() -> void:
 	var placements := [[_def(80), Vector2i(0, 0)], [_def(10), Vector2i(0, 1)]]
 	var squad := sim.spawn_squad(2, placements, "player", true)
 
-	var leashes: Array = squad.living().map(func(u): return FormationDiscipline.unit_leash(u))
+	var leashes: Array = squad.living().map(
+		func(u): return FormationDiscipline.unit_leash(squad, u)
+	)
 	assert_bool(leashes.has(32.0)).is_true()
 	assert_bool(leashes.has(INF)).is_true()
+
+
+func test_a_leader_steadies_its_units_against_breaking_ranks() -> void:
+	var sim := _sim()
+	var placements := [[_def(30), Vector2i(0, 0)], [_def(30, 2), Vector2i(0, 1)]]
+	var led := sim.spawn_squad(2, placements, "player", true)  # a captain: leadership 2
+	var unled := sim.spawn_squad(1, [[_def(30), Vector2i(0, 0)]], "the_kingdom", true)
+
+	var ranker: SkirmishUnit = led.living()[0]
+	assert_int(FormationDiscipline.unit_discipline(led, ranker)).is_equal(50)
+	assert_float(FormationDiscipline.unit_leash(led, ranker)).is_equal(64.0)  # the group's
+	assert_float(FormationDiscipline.unit_leash(unled, unled.living()[0])).is_equal(128.0)
