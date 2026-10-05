@@ -26,7 +26,8 @@ extends RefCounted
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
-const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
+const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
@@ -46,10 +47,9 @@ const SEEN_ROUT := 5
 ## How near (cells, from a router's centre to a friend's body) a router must come to a led
 ## formation to rally to it.
 const RALLY_REACH := 1.5
-## A router running into a standing friendly formation - its centre within a body's
+## A router running into a standing friendly formation - its centre within its own body's
 ## breadth of a friend's body, shoving past it (Decision 106) - is caught there, and
 ## rallies to it after a while steady (Decisions 89 and 98).
-const CAUGHT_REACH := 1.0
 const STEADY_RALLY_SECONDS := 3.0
 ## Seconds with no enemy within ENEMY_NEAR cells before a led rout re-forms.
 const RALLY_SECONDS := 5.0
@@ -192,7 +192,8 @@ static func _rallies(
 			out.append([_key(leader, unit, at, fight_seed), squad, unit, leader])
 			continue
 		var entry: Dictionary = squad.fleeing[unit.id]
-		var friend := RoutCatch.holder(squad, entry, at, squads, CAUGHT_REACH, fight_seed)
+		var breadth := 2.0 * ScrumReach.radius(unit)  # its own body's breadth
+		var friend := RoutCatch.holder(squad, entry, at, squads, breadth, fight_seed)
 		var calm := friend != null and FormationMorale.band(friend) == FormationMorale.Band.STEADY
 		var held: int = entry.get("caught", 0)
 		entry["caught"] = 0 if friend == null else (held + 1 if calm else maxi(held, 1))
@@ -265,11 +266,10 @@ static func _reform(squad: SkirmishSquad, tick: int, events: Array, fight_seed: 
 	squad.front_distance = squad.fleeing[leader.id]["along"] / CELLS
 	squad.fleeing.clear()
 	squad.direction = 1 if is_zero_approx(squad.home_distance) else -1
+	var way := Vector2.RIGHT * squad.direction  # it faces the enemy's end along its route
 	if squad.route != null:
-		var cells := squad.front_distance * CELLS
-		squad.facing = squad.route.facing_at(cells, squad.direction, squad.facing)
-	else:
-		squad.facing = SquadFrame.EAST if squad.direction > 0 else SquadFrame.WEST
+		way = squad.route.heading_at(squad.front_distance * CELLS) * squad.direction
+	squad.heading = UnitMotion.bearing_to(Vector2.ZERO, way, squad.heading)
 	squad.order = SkirmishUnit.Order.HOLD
 	squad.state = SkirmishSquad.State.HOLDING
 	squad.morale = REFORMED_MORALE

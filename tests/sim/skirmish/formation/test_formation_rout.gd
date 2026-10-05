@@ -167,3 +167,19 @@ func test_a_rout_replays_the_same() -> void:
 		logs.append(_run(setup[0], 40).map(func(e): return [e["type"], e["tick"]]))
 
 	assert_array(logs[1]).is_equal(logs[0])
+
+
+func test_a_rout_re_forms_facing_its_route_s_true_heading() -> void:
+	# Spec 30 round 2's tidy: it re-formed facing the nearest of four ways, not a slanting
+	# route square on.
+	var FormationRoute = load("res://sim/skirmish/formation/formation_route.gd")
+	var FormationRout = load("res://sim/skirmish/formation/formation_rout.gd")
+	var route = FormationRoute.new(PackedVector2Array([Vector2(0, 0), Vector2(30, 40)]))
+	var sim := FormationSimulation.new(10.0, TICK)
+	var squad := sim.spawn_squad(2, _line(_def(10, 1, 1.0, 1), 2), "player", true, 0, route)
+	for unit in squad.living():
+		squad.fleeing[unit.id] = {"along": 10.0, "offset": Vector2.ZERO}
+
+	FormationRout._reform(squad, 0, [], 1)
+
+	assert_float(squad.heading).is_equal_approx(rad_to_deg(atan2(30, -40)) + 0.0, 0.01)

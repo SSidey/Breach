@@ -58,8 +58,7 @@ static func _lock_on(
 	if not held.has([victim, edge]):  # a nearer attacker already holds it this tick
 		held[[victim, edge]] = true
 		victim.flank_contacts[edge] = {"foe": attacker.id, "since": tick}
-	if victim.state != SkirmishSquad.State.TURNING:
-		victim.state = SkirmishSquad.State.FIGHTING
+	victim.state = SkirmishSquad.State.FIGHTING
 	for unit in SquadEdges.edge_units(victim, edge):
 		unit.attack_cooldown = 1
 	var extra := {"by": attacker.id, "edge": edge}
@@ -71,11 +70,7 @@ static func _lock_on(
 
 
 static func _free(attacker: SkirmishSquad) -> bool:
-	return (
-		FormationContact.can_engage(attacker)
-		and attacker.engaged_with == 0
-		and attacker.state != SkirmishSquad.State.TURNING
-	)
+	return FormationContact.can_engage(attacker) and attacker.engaged_with == 0
 
 
 ## True if the attacker's front reaches a hostile's side or rear face, overlapping it.

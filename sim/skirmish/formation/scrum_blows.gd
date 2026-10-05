@@ -45,10 +45,7 @@ static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 				and not ScrumReach.in_front(unit.bearing, where, target_at)
 			):
 				continue  # turned away: it no longer strikes
-			var flank := (
-				target_squad.state == SkirmishSquad.State.TURNING
-				or not ScrumReach.in_front(target.bearing, target_at, where)
-			)
+			var flank := not ScrumReach.in_front(target.bearing, target_at, where)
 			var blow := maxi(1, roundi(FormationCombat.damage(unit, flank) * share))
 			out.append([unit, target, blow, flank])
 	return out
