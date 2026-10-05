@@ -1,61 +1,70 @@
 class_name UnitMotion
 extends RefCounted
-## How a unit moves and turns on its own (Decision 95, spec 27 round 8; model C). A unit
-## faces one of 8 bearings (45 degree steps, clockwise from north: 0 north, 2 east, 4
-## south, 6 west). It may move any way, at a pace set by the angle between its bearing and
-## its heading - its full speed straight ahead, down to its backward pace straight back -
-## while its bearing turns towards its heading, or stays on a foe it backs away from, at
-## its turn rate (degrees a second). Both are unit stats: a grem is nimbler than a brute.
-## A unit turning to its places or its foe is exposed, as a blow from outside its front is
-## a flank blow (Decision 88). Pure.
+## How a unit moves and turns on its own (Decisions 95 and 105, spec 27 round 8; model C).
+## A unit faces a bearing: an angle in degrees, clockwise from north (0 north, 90 east, 180
+## south, 270 west), turned freely. It may move any way, at a pace set by the angle
+## between its bearing and its heading - its full speed straight ahead, down to its
+## backward pace straight back - while its bearing turns towards its heading, or stays on
+## a foe it backs away from, at its turn rate (degrees a second). Both are unit stats: a
+## grem is nimbler than a brute. A unit turning to its places or its foe is exposed, as a
+## blow from outside its front is a flank blow (Decision 88). Pure.
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 
-const STEP_DEGREES := 45.0
 const EPSILON := 0.000001
 
 
-## The unit vector of a bearing.
-static func vector(bearing: int) -> Vector2:
-	var angle := deg_to_rad(posmod(bearing, 8) * STEP_DEGREES)
-	return Vector2(sin(angle), -cos(angle))
+## The unit vector of a bearing; exact on the quarter bearings (no 1e-16 residue to tip a
+## point across a cell's edge).
+static func vector(bearing: float) -> Vector2:
+	var angle := deg_to_rad(bearing)
+	var x := sin(angle)
+	var y := -cos(angle)
+	return Vector2(x if absf(x) > EPSILON else 0.0, y if absf(y) > EPSILON else 0.0)
 
 
 ## The bearing of a squad facing (SquadFrame: 0 north, 1 east, 2 south, 3 west).
-static func of_facing(facing: int) -> int:
-	return posmod(facing, 4) * 2
+static func of_facing(facing: int) -> float:
+	return posmod(facing, 4) * 90.0
 
 
-## The bearing nearest the way from `from` to `to` (unchanged if they coincide).
-static func bearing_to(from: Vector2, to: Vector2, current: int) -> int:
+## The bearing of the way from `from` to `to` (`current` if they coincide).
+static func bearing_to(from: Vector2, to: Vector2, current: float) -> float:
 	var way := to - from
 	if way.length() < EPSILON:
 		return current
-	var degrees := rad_to_deg(atan2(way.x, -way.y))
-	return posmod(roundi(degrees / STEP_DEGREES), 8)
+	return fposmod(rad_to_deg(atan2(way.x, -way.y)), 360.0)
+
+
+## Degrees from bearing `from` to `to` the short way round: positive clockwise, in
+## (-180, 180]. An exact about-turn goes clockwise (to the unit's right).
+static func _apart(from: float, to: float) -> float:
+	var turn := fposmod(to - from, 360.0)
+	return turn - 360.0 if turn > 180.0 + EPSILON else turn
 
 
 ## Turns the unit towards `wanted` by what its turn rate allows in `seconds`; true once it
 ## faces it.
-static func turn(unit: SkirmishUnit, wanted: int, seconds: float) -> bool:
-	var apart := posmod(wanted - unit.bearing, 8)
-	if apart == 0:
-		unit.turn_spare = 0.0
+static func turn(unit: SkirmishUnit, wanted: float, seconds: float) -> bool:
+	var left := _apart(unit.bearing, wanted)
+	if absf(left) < EPSILON:
+		unit.bearing = fposmod(wanted, 360.0)
 		return true
-	unit.turn_spare += unit.turn_rate * seconds
-	var way := 1 if apart <= 4 else -1
-	while unit.turn_spare >= STEP_DEGREES - EPSILON and unit.bearing != wanted:
-		unit.bearing = posmod(unit.bearing + way, 8)
-		unit.turn_spare -= STEP_DEGREES
-	return unit.bearing == wanted
+	var reach := unit.turn_rate * seconds
+	if reach >= absf(left) - EPSILON:
+		unit.bearing = fposmod(wanted, 360.0)
+		return true
+	unit.bearing = fposmod(unit.bearing + signf(left) * reach, 360.0)
+	return false
 
 
-## The share of its speed the unit makes moving along `heading`, by how far that is from
-## its bearing: 1 straight ahead, its backward pace straight back.
-static func pace(unit: SkirmishUnit, heading: Vector2) -> float:
+## The share of its speed the unit makes moving along `heading` while facing `bearing`
+## (its own, if not given): 1 straight ahead, its backward pace straight back.
+static func pace(unit: SkirmishUnit, heading: Vector2, bearing = null) -> float:
 	if heading.length() < EPSILON:
 		return 1.0
-	var cosine := clampf(heading.normalized().dot(vector(unit.bearing)), -1.0, 1.0)
+	var facing: float = unit.bearing if bearing == null else bearing
+	var cosine := clampf(heading.normalized().dot(vector(facing)), -1.0, 1.0)
 	var off := rad_to_deg(acos(cosine)) / 180.0
 	return 1.0 - (1.0 - unit.backward_pace) * off
 
