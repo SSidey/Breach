@@ -5443,9 +5443,9 @@ retreating, or when its frame has gone as far from the post it held as its disci
 | 25% to 50% | 128 cells |
 | under 25% | none: as long as it can see its enemy |
 
-Discipline over the maximum is allowed but leashes no shorter. The user's tiers read "X>75%
-… they leash at 64 cells, 50%<X<75% … after 64m"; the top tier is taken as 32 cells (their
-"leash shortly e.g. 32 cells"), so each step halves the leash: to confirm.
+Discipline over the maximum is allowed but leashes no shorter. The top tier is 32 cells,
+confirmed by the user: "such that a high discipline force can keep a 1 tile area clear
+before reforming at their rally point"; each step down doubles the leash.
 
 **Alternatives:**
 
