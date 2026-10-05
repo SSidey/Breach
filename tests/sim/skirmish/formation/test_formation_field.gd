@@ -86,7 +86,8 @@ func test_a_wave_on_route_b_strikes_the_lines_side() -> void:
 	var flanked: Array = log.filter(func(e): return e["type"] == "flanked")
 	assert_int(flanked.size()).is_equal(1)
 	assert_int(flanked[0]["squad"]).is_equal(field.kingdom_line.id)
-	assert_int(log.filter(func(e): return e["type"] == "turned").size()).is_greater_equal(1)
+	var wave: SkirmishSquad = field.sim.squad(flanked[0]["by"])
+	assert_float(wave.heading).is_equal_approx(180.0, 1.0)  # swept round its bend: south
 
 
 func test_a_wider_waves_overhanging_units_fight_the_lines_corners() -> void:

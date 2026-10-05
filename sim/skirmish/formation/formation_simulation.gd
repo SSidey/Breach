@@ -10,11 +10,12 @@ extends RefCounted
 ##   2. engage  - hostile squads whose fronts are within MELEE_REACH lock together, and a
 ##                free squad whose front reaches a hostile's side or rear locks onto that
 ##                edge (FormationEdges, Decision 78)
-##   3. move    - a squad turns first if it must, a re-form (ScrumTurn); a staged one holds
-##                until its trigger (Decision 87); free squads move together as blocks at
-##                their slowest unit's pace, stopping at contact or behind where a friend
-##                stood, or join a friend from the back (Decisions 44, 51, FormationJoins);
-##                then units seek contact (FormationScrum, Decision 88)
+##   3. move    - a squad going back the way it faces about-faces first, a re-form
+##                (ScrumTurn); a staged one holds until its trigger (Decision 87); free
+##                squads move together as blocks at their slowest unit's pace, sweeping
+##                round bends (FormationSweep, Decision 105), stopping at contact or behind
+##                where a friend stood, or join a friend from the back (Decisions 44, 51,
+##                FormationJoins); then units seek contact (FormationScrum, Decision 88)
 ##   4. combat  - melee blows (FormationMelee) and ranged blows (Decision 46)
 ##   5. deaths  - the fallen die, the ranks behind step up, an empty squad is destroyed
 ##   6. re-form - units swap toward their preferred places (FormationShuffle, Decision 46)
@@ -34,6 +35,7 @@ const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
+const FormationSweep = preload("res://sim/skirmish/formation/formation_sweep.gd")
 const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
 const FormationMelee = preload("res://sim/skirmish/formation/formation_melee.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
@@ -201,10 +203,12 @@ func _move(events: Array) -> void:
 		mover.state = SkirmishSquad.State.MOVING
 		var end := FormationMarch.length(mover, route_length)
 		var travel := FormationMarch.travel_sign(mover, end)
-		if ScrumTurn.begin(mover, travel, _tick, events):
-			continue  # a turn is a re-form: its units walk to their new places (Decision 92)
+		if travel != mover.direction and ScrumTurn.begin(mover, travel, _tick, events):
+			continue  # an about-face is a re-form: its units walk to their places (Decision 92)
 		if FormationNarrowing.holds(mover, terrain, _tick, tick_seconds, events):
 			continue
+		var cells_per_second := mover.speed() * TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
+		FormationSweep.step(mover, cells_per_second, tick_seconds)  # round bends (Decision 105)
 		var open_step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		var step := FormationMarch.pace(mover, terrain, open_step, _tick, events)
 		marching[mover.id] = [mover, FormationMarch.toward(mover, travel * step, end), end]

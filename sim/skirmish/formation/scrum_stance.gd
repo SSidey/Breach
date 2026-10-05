@@ -27,10 +27,9 @@ const ANTICIPATE := 12.0
 ## The place a unit keeps to: in its squad's stance if it has one.
 static func anchor(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 	if squad.stance.is_empty():
-		var rect := SquadFrame.unit_rect(
-			squad.position, squad.facing, squad.width, squad.centre_shift, unit
+		return SquadFrame.place(
+			squad.position, squad.heading, squad.width, squad.centre_shift, unit
 		)
-		return rect.get_center()
 	var place := SquadFrame.unit_rect(
 		squad.stance["anchor"], squad.stance["facing"], squad.width, 0.0, unit
 	)

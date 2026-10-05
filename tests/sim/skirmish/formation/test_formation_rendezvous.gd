@@ -52,9 +52,7 @@ func test_the_prediction_matches_the_march_round_bends() -> void:
 	var predicted := FormationRendezvous.ticks_to(route, 100.0, 8, CELLS_PER_SECOND, TICK)
 	var actual := _arrival(sim, {"x": squad}, {"x": 100.0})
 
-	# Within the re-form at each bend: its units walk to their new places (Decision 92),
-	# which the prediction times as a wheel. Spec 30's sweep (part 3) brings this back to 1.
-	assert_int(absi(actual["x"] - predicted)).is_less_equal(15)
+	assert_int(absi(actual["x"] - predicted)).is_less_equal(1)
 
 
 func test_waves_on_routes_of_different_lengths_arrive_together() -> void:

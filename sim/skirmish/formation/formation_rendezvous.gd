@@ -3,13 +3,12 @@ extends RefCounted
 ## Planned rendezvous (Decision 87, spec 27 round 2): the overlord's timing, given before
 ## departure, so waves on different routes reach their points together. The march is
 ## predicted as FormationSimulation runs it - a cell pace per tick, slowed by the ground
-## along the route (Decision 85), at each bend a wheel (SquadTurn.wheel_ticks, plus the
-## tick it starts on), and at a gap narrower than the squad the pauses to narrow and widen
-## - so it holds until something interferes on the way (a fight, a queue). Pure.
+## along the route (Decision 85), sweeping round bends without halting (Decision 105), and
+## at a gap narrower than the squad the pauses to narrow and widen - so it holds until
+## something interferes on the way (a fight, a queue). Pure.
 
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
-const SquadTurn = preload("res://sim/skirmish/formation/squad_turn.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationNarrowing = preload("res://sim/skirmish/formation/formation_narrowing.gd")
 
@@ -31,12 +30,7 @@ static func ticks_to(
 	var ticks := 0
 	var narrowed := false
 	while travelled < cells - 0.000001 and ticks < 1000000:
-		var wanted := route.facing_at(travelled, 1, facing)
-		if wanted != facing:
-			var turn := SquadTurn.wheel_ticks(width, cells_per_second, tick_seconds)
-			ticks += 1 + (turn * 2 if wanted == SquadFrame.opposite(facing) else turn)
-			facing = wanted
-			continue
+		facing = route.facing_at(travelled, 1, facing)
 		var here := route.point_at(travelled)
 		var share := 1.0
 		if terrain != null:
