@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
-## One unit to a cell, and one call on a threat, per spec 27 round 9 (the round 8 feel
-## test): routers caught by a friend come to rest in free cells behind it, not inside it;
-## units resting in one cell in the scrum step apart; and a line that has turned to meet
+## Bodies apart, and one call on a threat, per spec 27 round 9 and Decision 106: routers
+## caught by a friend come to rest behind it, their bodies clear of its own and of each
+## other; units resting on one spot in the scrum part; and a line that has turned to meet
 ## one wave holds that call while it presses, rather than swinging between two.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
@@ -9,7 +9,7 @@ const FormationField = preload("res://sim/skirmish/formation/formation_field.gd"
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
-const ScrumSpacing = preload("res://sim/skirmish/formation/scrum_spacing.gd")
+const UnitBodies = preload("res://sim/skirmish/formation/unit_bodies.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -47,7 +47,7 @@ func _cell(at: Vector2) -> Vector2i:
 	return Vector2i(floori(at.x), floori(at.y))
 
 
-func test_routers_caught_by_a_friend_rest_in_free_cells() -> void:
+func test_routers_caught_by_a_friend_rest_behind_it_bodies_apart() -> void:
 	var sim := FormationSimulation.new(2.0, 0.1)
 	var mine := sim.spawn_squad(4, _line(4), "player", true)
 	mine.front_distance = 30.0 / 64.0
@@ -59,25 +59,27 @@ func test_routers_caught_by_a_friend_rest_in_free_cells() -> void:
 	for _i in range(5):
 		sim.step()
 	mine.morale = 0
-	for _i in range(45):  # they run through the friend to rest behind it
+	for _i in range(45):  # they shove through the friend to rest behind it
 		sim.step()
 
-	var friend_cells := {}
-	for unit in friend.living():
-		friend_cells[_cell(unit.position)] = true
-	var resting := {}
 	var front: float = friend.living().map(func(u): return u.position.x).min()
+	var bodies := []
+	for unit in friend.living():
+		bodies.append(UnitBodies.at(friend, unit))
+	var caught := 0
 	for unit in mine.living():
 		if mine.fleeing[unit.id].get("caught", 0) > 0:
-			assert_float(FormationRout.where(mine, unit.id).x).is_less_equal(front)  # behind it
-			var spot := _cell(FormationRout.where(mine, unit.id))
-			assert_bool(friend_cells.has(spot)).is_false()
-			assert_bool(resting.has(spot)).is_false()
-			resting[spot] = true
-	assert_bool(resting.is_empty()).is_false()
+			var at := FormationRout.where(mine, unit.id)
+			assert_float(at.x).is_less_equal(front)  # behind it
+			bodies.append(at)
+			caught += 1
+	assert_int(caught).is_greater(0)
+	for i in range(bodies.size()):
+		for j in range(i + 1, bodies.size()):
+			assert_float(bodies[i].distance_to(bodies[j])).is_greater_equal(0.99)
 
 
-func test_units_resting_in_one_cell_step_apart() -> void:
+func test_units_resting_on_one_spot_part() -> void:
 	var sim := FormationSimulation.new(2.0, 0.1)
 	var squad := sim.spawn_squad(2, _line(2), "player", true)
 	sim.step()
@@ -85,11 +87,10 @@ func test_units_resting_in_one_cell_step_apart() -> void:
 		squad.loose[unit.id] = {"unit": unit, "at": Vector2(10.5, 10.5), "goal": null}
 		squad.loose[unit.id]["next"] = Vector2(10.5, 10.5)
 
-	for _i in range(5):
-		ScrumSpacing.step([squad], 0.8, 1)
+	UnitBodies.step([squad], 1)
 
-	var spots := squad.units.map(func(u): return _cell(squad.loose[u.id]["at"]))
-	assert_that(spots[0]).is_not_equal(spots[1])
+	var spots := squad.units.map(func(u): return squad.loose[u.id]["at"])
+	assert_float(spots[0].distance_to(spots[1])).is_equal_approx(1.0, 0.0001)
 
 
 func test_a_captained_line_makes_one_call_between_two_waves() -> void:
