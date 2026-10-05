@@ -40,3 +40,25 @@ func test_a_log_replays_the_same_battle() -> void:
 
 	assert_int(replayed.sim.tick_number()).is_equal(field.sim.tick_number())
 	assert_str(_state(replayed)).is_equal(_state(field))
+
+
+func test_a_log_reads_back_as_its_seed_and_actions() -> void:
+	var read := FormationFieldActions.parse("seed 9 captain on\n0 wait on\n12 send A+B\n")
+
+	assert_int(read["seed"]).is_equal(9)
+	assert_bool(read["captained"]).is_true()
+	assert_array(read["actions"]).is_equal([[0, "wait on"], [12, "send A+B"]])
+	assert_bool(FormationFieldActions.parse("not a log").is_empty()).is_true()
+
+
+func test_waves_that_merge_after_a_fight_regroup_and_march_on() -> void:
+	# A feel-test log: A (via C) and B beat the line at the crossroads, their places
+	# overlapping; they used to stand there regrouping forever, knocking each other loose.
+	var log := "seed 492625 captain off\n96 via_c on\n158 send A+B"
+
+	var field := FormationFieldActions.replay(log, 800)
+
+	for squad in field.sim.squads():
+		if squad.faction_id == "player" and squad.state != SkirmishSquad.State.DESTROYED:
+			assert_bool(squad.loose.is_empty()).is_true()
+			assert_int(squad.state).is_equal(SkirmishSquad.State.ARRIVED)
