@@ -4,10 +4,10 @@ extends RefCounted
 ## hostile squads whose units come within REACH of each other lock into a fight, whatever
 ## their faces - a squad passing beside a line, or a line it brushes, fights rather than
 ## walking by. A squad already fighting is joined by the one that reached it, and keeps
-## its own foe. A squad with units out chasing can be engaged even while it marches away:
-## its units are attacking (Decision 109). Every free squad picks the nearest hostile it has
-## come within reach of, all from one snapshot before any lock lands, a tie going to the
-## squads' seeded draws - never to the order they are listed in (Decision 97). Pure over
+## its own foe. Any standing squad may be engaged, one retreating or routing too; only one
+## not getting away seeks combat (Decision 111). Every free squad picks the nearest hostile
+## it has come within reach of, all from one snapshot before any lock lands, a tie going to
+## the squads' seeded draws - never to the order they are listed in (Decision 97). Pure over
 ## the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -55,10 +55,7 @@ static func _nearest(squad: SkirmishSquad, squads: Array, fight_seed: int) -> Sk
 	var best: SkirmishSquad = null
 	var best_key := []
 	for other in squads:
-		var attacking: bool = not other.chasers.is_empty()  # whatever its order
-		if other.faction_id == squad.faction_id:
-			continue
-		if not FormationContact.can_engage(other) and not attacking:
+		if other.faction_id == squad.faction_id or not FormationContact.engageable(other):
 			continue
 		var gap := _gap(squad, other)
 		var key := [snappedf(gap, 0.000001), ScrumContest.squad_draw(other, fight_seed)]
