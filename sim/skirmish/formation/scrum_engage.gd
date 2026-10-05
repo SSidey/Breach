@@ -63,14 +63,10 @@ static func _nearest(squad: SkirmishSquad, squads: Array, fight_seed: int) -> Sk
 	return best
 
 
-## Cells between the two squads' nearest units (0 where they touch or overlap).
+## Cells between the two squads' nearest units' bodies (0 where they touch or overlap).
 static func _gap(squad: SkirmishSquad, other: SkirmishSquad) -> float:
 	var least := INF
 	for unit in squad.living():
-		var mine := ScrumReach.area(squad, unit)
 		for foe in other.living():
-			var theirs := ScrumReach.area(other, foe)
-			var gap_x := maxf(mine.position.x - theirs.end.x, theirs.position.x - mine.end.x)
-			var gap_y := maxf(mine.position.y - theirs.end.y, theirs.position.y - mine.end.y)
-			least = minf(least, maxf(maxf(gap_x, gap_y), 0.0))
+			least = minf(least, ScrumReach.gap(squad, unit, other, foe))
 	return least

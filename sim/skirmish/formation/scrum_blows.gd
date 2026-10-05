@@ -56,9 +56,8 @@ static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 
 ## True if the unit touches a living unit of any of `foes` ([[unit, squad], ...]).
 static func touches_any(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array) -> bool:
-	var mine := ScrumReach.area(squad, unit)
 	for entry in foes:
-		if ScrumReach.touching(mine, ScrumReach.area(entry[1], entry[0])):
+		if ScrumReach.touching(squad, unit, entry[1], entry[0]):
 			return true
 	return false
 
@@ -98,13 +97,12 @@ static func _hostile(squad: SkirmishSquad, squads: Array) -> Array:
 
 ## [target, its squad, where it stands] for the enemy the unit strikes; [] if it touches none.
 static func _pick(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array, fight_seed: int) -> Array:
-	var mine := ScrumReach.area(squad, unit)
 	var where := ScrumReach.at(squad, unit)
 	var best := []
 	var best_key := []
 	for entry in foes:
 		var other: SkirmishUnit = entry[0]
-		if not ScrumReach.touching(mine, ScrumReach.area(entry[1], other)):
+		if not ScrumReach.touching(squad, unit, entry[1], other):
 			continue
 		var there := ScrumReach.at(entry[1], other)
 		var front := 0 if ScrumReach.in_front(unit.bearing, where, there) else 1

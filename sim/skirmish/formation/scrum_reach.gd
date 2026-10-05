@@ -1,17 +1,17 @@
 class_name ScrumReach
 extends RefCounted
-## Who touches whom in the scrum (Decision 88, spec 27 round 5): a unit reaches an enemy
-## whose cells touch its own on a face or a corner, the 8 cells round it. A unit's front
-## is the 3 cells ahead of it, diagonals included; a blow from anywhere else is a flank
-## blow. Pure; cells.
+## Who touches whom in the scrum (Decisions 88 and 106, spec 30): a unit's body is the
+## circle in its footprint, and it reaches an enemy whose body comes within CONTACT of its
+## own. A unit's front is the arc within 60 degrees of its bearing; a blow from anywhere
+## else is a flank blow. Pure; cells.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 
-## How far apart (cells) two units' cells may be and still touch: a unit stepping between
-## cells still reaches the one it is leaving.
+## How far apart (cells) two units' bodies may be and still touch: a unit stepping back
+## still reaches the one it is leaving.
 const CONTACT := 0.25
 ## A point lies in a unit's front when its direction is within 60 degrees of its bearing.
 const FRONT_ARC := 0.5
@@ -32,10 +32,22 @@ static func area(squad: SkirmishSquad, unit: SkirmishUnit) -> Rect2:
 	return Rect2(at(squad, unit) - size / 2.0, size)
 
 
-static func touching(a: Rect2, b: Rect2) -> bool:
-	var gap_x := maxf(a.position.x - b.end.x, b.position.x - a.end.x)
-	var gap_y := maxf(a.position.y - b.end.y, b.position.y - a.end.y)
-	return maxf(gap_x, gap_y) <= CONTACT
+## The radius of the unit's body: the circle in its footprint (a grem 0.5, a brute 1).
+static func radius(unit: SkirmishUnit) -> float:
+	return minf(unit.footprint_width, unit.footprint_depth) / 2.0
+
+
+## Cells between two units' bodies (0 where they touch or overlap).
+static func gap(squad: SkirmishSquad, unit: SkirmishUnit, other: SkirmishSquad, foe) -> float:
+	var apart := at(squad, unit).distance_to(at(other, foe))
+	return maxf(apart - radius(unit) - radius(foe), 0.0)
+
+
+## True if the two units' bodies touch: within CONTACT.
+static func touching(
+	squad: SkirmishSquad, unit: SkirmishUnit, other: SkirmishSquad, foe: SkirmishUnit
+) -> bool:
+	return gap(squad, unit, other, foe) <= CONTACT
 
 
 ## True if `point` lies in the front of a unit at `from` on `bearing` (UnitMotion).
@@ -52,12 +64,3 @@ static func facing_to(from: Vector2, to: Vector2) -> int:
 	if absf(direction.x) >= absf(direction.y):
 		return SquadFrame.EAST if direction.x >= 0.0 else SquadFrame.WEST
 	return SquadFrame.SOUTH if direction.y > 0.0 else SquadFrame.NORTH
-
-
-## The cell holding a point.
-static func cell(point: Vector2) -> Vector2i:
-	return Vector2i(floori(point.x), floori(point.y))
-
-
-static func centre(of_cell: Vector2i) -> Vector2:
-	return Vector2(of_cell) + Vector2(0.5, 0.5)
