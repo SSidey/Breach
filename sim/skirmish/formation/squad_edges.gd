@@ -64,10 +64,15 @@ static func edge_units(squad: SkirmishSquad, edge: int) -> Array[SkirmishUnit]:
 	return out
 
 
+## How far the squad's living footprints reach along `way`: (least, most).
+static func reach(squad: SkirmishSquad, way: Vector2) -> Vector2:
+	return SquadFrame.extent(_all_corners(squad), way)
+
+
 ## How far `to`'s near face lies ahead of `from`'s front along `from`'s heading, in tiles.
 static func face_gap(from: SkirmishSquad, to: SkirmishSquad) -> float:
 	var ahead := UnitMotion.vector(from.heading)
-	var near := SquadFrame.extent(_all_corners(to), ahead).x
+	var near := reach(to, ahead).x
 	return (near - from.position.dot(ahead)) / MapLayoutDef.CELLS_PER_TILE
 
 
@@ -78,7 +83,7 @@ static func overlap_across(from: SkirmishSquad, to: SkirmishSquad) -> bool:
 	for unit in from.living():
 		var span := from.lateral_span(unit, axis)
 		mine = Vector2(minf(mine.x, span.x), maxf(mine.y, span.y))
-	var theirs := SquadFrame.extent(_all_corners(to), axis)
+	var theirs := reach(to, axis)
 	return minf(mine.y, theirs.y) - maxf(mine.x, theirs.x) > EPSILON
 
 

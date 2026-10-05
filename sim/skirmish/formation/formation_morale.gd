@@ -24,7 +24,7 @@ const BLOW_SHARE := [1.0, 0.8, 0.6, 0.0]
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadEdges = preload("res://sim/skirmish/formation/squad_edges.gd")
-const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 
 const SIDE_IMPACT := 15
@@ -122,7 +122,7 @@ static func _supported(squad: SkirmishSquad, squads: Array, sides: Array) -> int
 	for edge in [SquadEdges.LEFT, SquadEdges.RIGHT]:
 		if not sides.has(edge):
 			continue
-		var outward := SquadFrame.forward(squad.facing + edge)
+		var outward := UnitMotion.vector(squad.heading + edge * 90.0)
 		for friend in squads:
 			if friend == squad or friend.faction_id != squad.faction_id or friend.is_destroyed():
 				continue

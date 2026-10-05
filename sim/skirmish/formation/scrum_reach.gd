@@ -7,7 +7,6 @@ extends RefCounted
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
-const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 
 ## How far apart (cells) two units' bodies may be and still touch: a unit stepping back
@@ -24,11 +23,12 @@ static func at(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 	return unit.position
 
 
-## The cells the unit covers, centred where it stands, turned to its squad's facing.
+## The cells the unit covers, centred where it stands, turned to its squad's heading (the
+## box round its turned footprint).
 static func area(squad: SkirmishSquad, unit: SkirmishUnit) -> Rect2:
-	var size := Vector2(unit.footprint_width, unit.footprint_depth)
-	if absf(SquadFrame.forward(squad.facing).x) > 0.5:
-		size = Vector2(unit.footprint_depth, unit.footprint_width)
+	var ahead := UnitMotion.vector(squad.heading).abs()
+	var right := Vector2(ahead.y, ahead.x)
+	var size := right * unit.footprint_width + ahead * unit.footprint_depth
 	return Rect2(at(squad, unit) - size / 2.0, size)
 
 
@@ -56,11 +56,3 @@ static func in_front(bearing: float, from: Vector2, point: Vector2) -> bool:
 	if direction.length() < 0.000001:
 		return true
 	return direction.normalized().dot(UnitMotion.vector(bearing)) >= FRONT_ARC - 0.000001
-
-
-## The facing nearest the way from `from` to `to` (ties: along x).
-static func facing_to(from: Vector2, to: Vector2) -> int:
-	var direction := to - from
-	if absf(direction.x) >= absf(direction.y):
-		return SquadFrame.EAST if direction.x >= 0.0 else SquadFrame.WEST
-	return SquadFrame.SOUTH if direction.y > 0.0 else SquadFrame.NORTH

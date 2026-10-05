@@ -140,11 +140,9 @@ static func _walk(squad: SkirmishSquad, pace: float, seconds: float) -> void:
 			entry["at"] = UnitMotion.move(unit, entry["at"], entry["next"], full)
 		elif not entry.get("touch", false):
 			var place := ScrumStance.anchor(squad, unit)
-			var facing: int = squad.stance.get("facing", squad.facing)
+			var heading: float = squad.stance.get("heading", squad.heading)
 			var speed := full / seconds
-			entry["toward"] = UnitShuffle.look(
-				unit, entry["at"], place, UnitMotion.of_facing(facing), speed
-			)
+			entry["toward"] = UnitShuffle.look(unit, entry["at"], place, heading, speed)
 			entry["at"] = UnitMotion.move(unit, entry["at"], place, full)
 			entry["next"] = entry["at"]
 

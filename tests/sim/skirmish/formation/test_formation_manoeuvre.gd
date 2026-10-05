@@ -10,7 +10,6 @@ const FormationField = preload("res://sim/skirmish/formation/formation_field.gd"
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
-const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -52,7 +51,7 @@ func _faced_south(sim: FormationSimulation) -> SkirmishSquad:
 	var squad := sim.spawn_squad(4, _row(4), "player", true, 0, east)
 	squad.front_distance = 30.0 / 64.0
 	sim.step()
-	squad.stance = {"anchor": squad.position, "facing": SquadFrame.SOUTH}
+	squad.stance = {"anchor": squad.position, "heading": 180.0}
 	return squad
 
 

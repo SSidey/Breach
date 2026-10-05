@@ -59,12 +59,10 @@ static func _walk_back(squad: SkirmishSquad, foes: Dictionary, pace: float, seco
 		var unit: SkirmishUnit = entry["unit"]
 		var place := ScrumStance.anchor(squad, unit)
 		var step := unit.speed * pace * FormationDiscipline.reform_pace(squad)
-		var facing: int = squad.facing if squad.stance.is_empty() else squad.stance["facing"]
+		var heading: float = squad.stance.get("heading", squad.heading)
 		var foe_at = foes.get(unit_id)
 		if foe_at == null:  # it takes its place the quicker way, arriving facing its squad's
-			foe_at = UnitShuffle.look(
-				unit, entry["at"], place, UnitMotion.of_facing(facing), step / seconds
-			)
+			foe_at = UnitShuffle.look(unit, entry["at"], place, heading, step / seconds)
 		var gap: float = entry["at"].distance_to(place)
 		ScrumTrade.track(entry, gap, seconds)
 		var arrived := gap < 0.000001
@@ -72,6 +70,6 @@ static func _walk_back(squad: SkirmishSquad, foes: Dictionary, pace: float, seco
 			entry["at"] = UnitMotion.walk(unit, entry["at"], place, step, seconds, foe_at)
 		entry["next"] = entry["at"]
 		entry["goal"] = null
-		var faced := arrived and UnitMotion.turn(unit, UnitMotion.of_facing(facing), seconds)
+		var faced := arrived and UnitMotion.turn(unit, heading, seconds)
 		if squad.stance.is_empty() and faced:
 			squad.loose.erase(unit_id)  # in its place and facing the squad's way

@@ -30,9 +30,9 @@ func test_a_withdrawal_from_past_a_bend_turns_with_its_route() -> void:
 
 ## Feel-test logs: the line pursued down its own route A while its quarry fled by another
 ## road (Decision 113). Returns [the furthest the line's frame got south, the furthest
-## north, whether it ended on route A, back at its post].
+## north, whether it ended on route A, back at its post, the routes it travelled].
 func _pursuit_roads(log: String, extra: int) -> Array:
-	var seen := {"south": -INF, "north": INF}  # a lambda captures a local by value
+	var seen := {"south": -INF, "north": INF, "roads": []}  # a lambda captures by value
 	var field := FormationFieldActions.replay(
 		log,
 		extra,
@@ -40,9 +40,13 @@ func _pursuit_roads(log: String, extra: int) -> Array:
 			var at: Vector2 = played.kingdom_line.position
 			seen["south"] = maxf(seen["south"], at.y)
 			seen["north"] = minf(seen["north"], at.y)
+			for key in played.routes:
+				if played.kingdom_line.route == played.routes[key] and key not in seen["roads"]:
+					seen["roads"].append(key)
 	)
 	var line: SkirmishSquad = field.kingdom_line
-	return [seen["south"], seen["north"], line.route == field.routes["A"], line.position]
+	var home: bool = line.route == field.routes["A"]
+	return [seen["south"], seen["north"], home, line.position, seen["roads"]]
 
 
 func test_a_pursuit_follows_its_quarry_down_the_road_it_flees_by() -> void:
@@ -57,7 +61,7 @@ func test_a_pursuit_follows_its_quarry_down_the_road_it_flees_by() -> void:
 	log += "1314 pursues on\n1326 send B\n1529 retreat B"
 	var by_b := _pursuit_roads(log, 700)
 	assert_float(by_b[1]).is_less(25.0)  # up route B, north, after B
-	assert_bool(by_b[2]).is_true()
+	assert_array(by_b[4]).contains(["B"])  # its quarry's road, whatever then befalls it
 
 
 func test_a_unit_fanned_off_its_road_finds_the_ford_again() -> void:
