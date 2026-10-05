@@ -35,7 +35,6 @@ func _row(unit_def: UnitDef) -> Array:
 ## on the order's tick, the damage it took in it].
 func _retreat(mine: UnitDef, theirs: UnitDef, battle_seed: int = 1, pursue := false) -> Array:
 	var sim := FormationSimulation.new(2.0, 0.1)
-	sim.seek_contact = true
 	sim.fight_seed = battle_seed
 	sim.damage_band = 0.25
 	var me := sim.spawn_squad(8, _row(mine), "player", true)
@@ -103,7 +102,6 @@ func test_a_leader_who_pursues_leads_the_pursuit() -> void:
 
 func test_undisciplined_units_break_ranks_to_chase_one_by_one() -> void:
 	var sim := FormationSimulation.new(2.0, 0.1)
-	sim.seek_contact = true
 	var me := sim.spawn_squad(8, _row(_def(60)), "player", true)
 	var ragged := sim.spawn_squad(8, _row(_def(0)), "the_kingdom", false)
 	for _i in range(400):
@@ -123,7 +121,6 @@ func test_undisciplined_units_break_ranks_to_chase_one_by_one() -> void:
 
 func test_a_pursuing_formation_follows_as_a_body_then_returns_to_its_post() -> void:
 	var sim := FormationSimulation.new(2.0, 0.1)
-	sim.seek_contact = true
 	var route := FormationRoute.new(PackedVector2Array([Vector2(0, 32), Vector2(128, 32)]))
 	var me := sim.spawn_squad(8, _row(_def(20)), "player", true, 0, route)
 	var line := sim.spawn_squad(8, _row(_def(60)), "the_kingdom", false, 0, route)

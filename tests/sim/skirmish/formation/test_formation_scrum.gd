@@ -38,7 +38,6 @@ func _row(unit_def: UnitDef, columns: int, ranks: int = 1) -> Array:
 
 func _sim() -> FormationSimulation:
 	var sim := FormationSimulation.new(1.0, TICK)
-	sim.seek_contact = true
 	return sim
 
 

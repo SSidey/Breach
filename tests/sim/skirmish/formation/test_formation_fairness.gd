@@ -24,7 +24,6 @@ func _row(columns: int) -> Array:
 ## [player front x, kingdom front x] when they engage, the kingdom spawned first if asked.
 func _meeting(kingdom_first: bool) -> Array:
 	var sim := FormationSimulation.new(2.0, 0.1)
-	sim.seek_contact = true
 	var squads := []
 	if kingdom_first:
 		squads = [

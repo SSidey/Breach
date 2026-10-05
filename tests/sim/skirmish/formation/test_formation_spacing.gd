@@ -49,7 +49,6 @@ func _cell(at: Vector2) -> Vector2i:
 
 func test_routers_caught_by_a_friend_rest_in_free_cells() -> void:
 	var sim := FormationSimulation.new(2.0, 0.1)
-	sim.seek_contact = true
 	var mine := sim.spawn_squad(4, _line(4), "player", true)
 	mine.front_distance = 30.0 / 64.0
 	var theirs := sim.spawn_squad(4, _line(4), "the_kingdom", false)

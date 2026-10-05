@@ -71,7 +71,6 @@ func _first_difference(make: Callable, step: Callable, ticks: int) -> int:
 func _mirror(scenario: String, battle_seed: int) -> Callable:
 	return func():
 		var sim := FormationSimulation.new(2.0, TICK)
-		sim.seek_contact = true
 		sim.fight_seed = battle_seed
 		sim.damage_band = FormationField.DAMAGE_BAND
 		for spawn in BattleTrials._mirror_spawns(scenario, sim):
@@ -96,10 +95,9 @@ func test_a_flank_mirror_is_the_same_with_its_lists_reversed() -> void:
 
 
 ## A player line facing two kingdom squads side by side at the same gap.
-func _between_two(battle_seed: int, scrum: bool) -> Callable:
+func _between_two(battle_seed: int) -> Callable:
 	return func():
 		var sim := FormationSimulation.new(2.0, TICK)
-		sim.seek_contact = scrum
 		sim.fight_seed = battle_seed
 		sim.spawn_squad(4, _row(4), "player", true)
 		for _i in range(2):
@@ -118,26 +116,24 @@ func _locked_onto(sim: FormationSimulation) -> int:
 
 
 func test_a_squad_between_two_equal_foes_locks_onto_one_by_the_draw_not_the_list() -> void:
-	for scrum in [false, true]:
-		var picked := {}
-		for battle_seed in range(1, 13):
-			var make := _between_two(battle_seed, scrum)
-			var usual: FormationSimulation = make.call()
-			var reversed: FormationSimulation = make.call()
-			_reverse(reversed.squads())
-			var foe := _locked_onto(usual)
-			assert_int(_locked_onto(reversed)).is_equal(foe)
-			picked[foe] = true
-		assert_int(picked.size()).is_equal(2)  # each foe is the draw's pick in some battles
+	var picked := {}
+	for battle_seed in range(1, 13):
+		var make := _between_two(battle_seed)
+		var usual: FormationSimulation = make.call()
+		var reversed: FormationSimulation = make.call()
+		_reverse(reversed.squads())
+		var foe := _locked_onto(usual)
+		assert_int(_locked_onto(reversed)).is_equal(foe)
+		picked[foe] = true
+	assert_int(picked.size()).is_equal(2)  # each foe is the draw's pick in some battles
 
 
 func test_a_squad_between_two_equal_foes_is_the_same_with_its_lists_reversed() -> void:
-	for scrum in [false, true]:
-		assert_int(_first_difference(_between_two(3, scrum), _plain_step, 300)).is_equal(0)
+	assert_int(_first_difference(_between_two(3), _plain_step, 300)).is_equal(0)
 
 
-## [player front x, kingdom front x] when lines that march at each other engage, without
-## contact-seeking, the kingdom spawned first if asked.
+## [player front x, kingdom front x] when lines that march at each other engage, the
+## kingdom spawned first if asked.
 func _meeting(kingdom_first: bool) -> Array:
 	var sim := FormationSimulation.new(2.0, TICK)
 	var spawns := [

@@ -43,11 +43,10 @@ func _of(log: Array, kind: String) -> Array:
 	return log.filter(func(e): return e["type"] == kind)
 
 
-## A sim with contact-seeking, and a kingdom line 4 wide facing west, its front at x 40
+## A sim, and a kingdom line 4 wide facing west, its front at x 40
 ## (it covers x 40 to 41, y 30 to 34).
 func _with_line(led: int = 0) -> Array:
 	var sim := FormationSimulation.new(1.0, TICK)
-	sim.seek_contact = true
 	var route := FormationRoute.new(PackedVector2Array([Vector2(40, 32), Vector2(0, 32)]))
 	var line := sim.spawn_squad(4, _row(_def(400, 2, led), 4), "the_kingdom", true, 0, route)
 	sim.order(line.id, SkirmishUnit.Order.HOLD)
