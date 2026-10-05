@@ -5,7 +5,7 @@ extends RefCounted
 ## block at its slowest unit's speed, and takes orders as a whole. Only the foremost unit
 ## of each column fights; when one falls the ranks behind step up (compact()).
 
-enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DESTROYED, TURNING, ROUTING }
+enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DESTROYED, ROUTING }
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")

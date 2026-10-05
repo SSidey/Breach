@@ -45,7 +45,6 @@ static func _free(squad: SkirmishSquad) -> bool:
 		and squad.engaged_with == 0
 		and squad.flank_contacts.is_empty()
 		and squad.state != SkirmishSquad.State.FIGHTING
-		and squad.state != SkirmishSquad.State.TURNING
 	)
 
 

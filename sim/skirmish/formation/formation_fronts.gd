@@ -1,11 +1,10 @@
 class_name FormationFronts
 extends RefCounted
-## Front-to-front locks (Decisions 40 and 97): every free squad that isn't turning picks
-## the nearest hostile front within melee reach (FormationContact.nearest_hostile), all
-## from one snapshot, then the locks land together - a squad between two foes isn't taken
-## by whichever was listed first. A foe that picked no one (it is turning, Decision 74)
-## locks onto the nearest of the squads that picked it, and fights once its turn ends -
-## unless it is getting away, retreating or routing: it may be engaged, but doesn't turn
+## Front-to-front locks (Decisions 40 and 97): every free squad picks the nearest hostile
+## front within melee reach (FormationContact.nearest_hostile), all from one snapshot, then
+## the locks land together - a squad between two foes isn't taken by whichever was listed
+## first. A free foe that picked no one locks onto the nearest of the squads that picked it
+## - unless it is getting away, retreating or routing: it may be engaged, but doesn't turn
 ## to fight (Decision 111).
 ## Pure over the squads it is given.
 
@@ -21,8 +20,6 @@ static func engage(squads: Array, tick: int, fight_seed: int, events: Array) -> 
 	for attacker in squads:
 		if not FormationContact.can_engage(attacker) or attacker.engaged_with != 0:
 			continue
-		if attacker.state == SkirmishSquad.State.TURNING:
-			continue  # it turns first (Decision 74)
 		var foe := FormationContact.nearest_hostile(attacker, squads, fight_seed)
 		if foe != null:
 			picks[attacker] = foe
