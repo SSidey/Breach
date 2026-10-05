@@ -53,7 +53,7 @@ static func _target(attacker: SkirmishSquad, squads: Array, fight_seed: int) -> 
 static func _lock_on(
 	attacker: SkirmishSquad, victim: SkirmishSquad, tick: int, events: Array, held: Dictionary
 ) -> void:
-	var edge := SquadEdges.edge_hit(victim, attacker.facing)
+	var edge := SquadEdges.edge_hit(victim, attacker.heading)
 	FormationLocks.lock(attacker, victim)
 	if not held.has([victim, edge]):  # a nearer attacker already holds it this tick
 		held[[victim, edge]] = true
