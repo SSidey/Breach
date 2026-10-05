@@ -1,6 +1,7 @@
 # Spec 30: Continuous positioning
 
-Decision 102 (continuous footprints, rotated rectangles, any facing). It builds on
+Decisions 102 (continuous footprints, rotated rectangles, any facing), 105 (free
+bearings, sweeping round bends, pushing apart by size) and 106 (a body and a space). It builds on
 Decisions 74 and 75 (squads on routes), 84 (claimed cells, overtaking), 85 (terrain per
 cell), 88 (seeking contact), 95 (movement by facing), 97 (no ids or order in outcomes)
 and 100 (one unit to a cell).
@@ -17,17 +18,19 @@ faces its route's true heading.
 
 ## Status
 
-**Agreed (Decision 102); not started.** To be built after the list-order audit's
-follow-ups, on top of the spec 27 stack (#90).
+**Round 1 agreed (Decisions 102 and 105); building.** The spec 27 stack is merged. Round 1
+is built as stacked PRs, in the order under "Round 1 plan".
 
 ## Agreed
 
-- **Footprints:** a unit is a rectangle its own width by depth (a grem 1 x 1, a brute
-  2 x 2), turned to its bearing. No two footprints overlap, ever: moving units steer
-  round friends and stop short of foes; a unit at rest is never inside another.
+- **Bodies and spaces (Decision 106):** a unit's body is the circle inscribed in its
+  footprint (a grem 1 across, a brute 2); its space is the footprint rectangle turned to
+  its bearing. No two bodies overlap, ever: they push apart by mass, and units stop short
+  of foes. A unit in control keeps its space; a router keeps only its body and shoves
+  through, crushing as it goes.
 - **Facing:** a formation's frame faces any angle, the route's heading where it is. Its
   places are laid out in that turned frame. Units keep turning at their turn rate
-  (Decision 95); whether their bearings stay 8 steps or go free is settled in round 1.
+  (Decision 95), and their bearings turn freely (Decision 105).
 - **Terrain stays a grid,** read at a unit's position and the ground ahead of it
   (Decision 85).
 - **One rule everywhere:** no cell-only exceptions at rest or in transit (Decision 96).
@@ -67,3 +70,40 @@ follow-ups, on top of the spec 27 stack (#90).
    is never released; it exists only in the edge mode.)
 7. **Tests to carry over:** which cell-exact tests become footprint tests, and the
    fairness checks (mirrors both ways round, reversed lists) to run throughout.
+
+## Round 1 answers
+
+1. **Separation (Decision 105):** after every unit has moved, each pair of overlapping
+   friends is pushed apart the shortest way, the push split by footprint area. All
+   pushes are worked out from one snapshot, then applied together, a few passes a tick
+   (placeholder 3). A unit steering to a goal slides along a friend: it keeps the part of
+   its step that doesn't close on it. Foes are never pushed: a unit's step stops short of
+   touching an enemy's footprint. Pairs are found through a bucket grid two cells wide,
+   so a full field costs about the number of units, not its square.
+2. **Slots beside a foe:** round an enemy's footprint, in its own frame, a slot a
+   seeker's width apart along each face and one off each corner, at touching distance.
+   A grem round a grem has 8, as the cells gave; round a brute it has 12. Slots are
+   claimed by the same contest key (Decision 88), arrival time first.
+3. **Bearings turn freely** (Decision 105).
+4. **The frame sweeps round bends** at its wheel rate (Decision 105).
+5. **Ties in the unit's own frame:** as the agenda says. The mirror test is built with
+   part 7.
+6. **The old combat modes go first** (part 1), so nothing built on cells needs porting
+   twice: the one-lane scene moves onto the scrum, then the wrap, edge and walking-wing
+   modes are removed.
+7. **Tests:** each part converts the cell-exact tests it touches into footprint tests,
+   and runs the mirror trials both ways round and the reversed-lists tests.
+
+## Round 1 plan
+
+Each part is a PR, stacked on the one before. No part opens more than 11 existing files.
+
+| Part | What |
+|---|---|
+| 1 | Retire the wrap, edge and walking-wing modes; the scrum is the only fight. |
+| 2 | Free bearings (`UnitMotion`): an angle turned at the turn rate. |
+| 3 | The turned frame (`SquadFrame`): a heading, swept round bends at the wheel rate. |
+| 4 | Turned footprints (`UnitFootprint`): a unit's space. |
+| 5 | Bodies: one push step by mass for scrum, rout and withdrawal (`ScrumSpacing`, `RoutSettle`, `RoutFlight.part`). |
+| 6 | Slots round a foe's body, and contact between bodies (`ScrumPaths`, `ScrumContest`, `ScrumReach`). |
+| 7 | Narrowing across the heading; the scene draws turned units; the mirror test; trials. |

@@ -5331,3 +5331,93 @@ Rules:
 lane rule for every held node.
 **Order:** not affected. A garrison's lanes share by the domain's rule, which has no list
 order (Decision 97).
+
+### Decision 105 — Units turn freely; a formation sweeps round bends at its wheel rate; friends that overlap are pushed apart by size
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Spec 30's round-1 agenda (Decision 102). The user chose the recommended
+option on each of its open questions:
+- **Unit bearings turn freely.** A unit's bearing is an angle, turned at its turn rate
+  (Decision 95), not one of 8 steps. It can face its formation's true front, or a foe at
+  any angle. Its front arc and flank blows are measured from that angle.
+- **A formation sweeps round bends.** Its frame turns towards its route's heading all the
+  time, no faster than its outer file can march the arc: today's wheel time, as a turn
+  rate. A 5 degree bend and a 90 degree bend follow the same rule. It may cut a sharp
+  corner a little. A turn of more than 90 degrees stays an about-face, its ranks reversed
+  (Decision 74).
+- **Friends that overlap are pushed apart by size.** Each overlap is pushed apart the
+  shortest way, split by footprint area: a brute moves a grem more than a grem moves a
+  brute. A unit steering to a goal slides along friends rather than stopping. Foes are
+  never pushed: a unit stops short at contact.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Keep 8 bearing steps | On a 30 degree route the units face 0 or 45 while their frame faces 30. |
+| Turn at each bend as a re-form | Every small bend costs a halt. |
+| Movers give way to units at rest | A moving-or-still distinction: a second rule (Decision 96). |
+
+**Consequences:**
+- `UnitMotion`'s bearing becomes an angle; `SquadFrame`'s facing becomes a heading.
+- `FormationTurning`'s wheel becomes a turn rate the frame sweeps at.
+- `ScrumSpacing`, `RoutSettle` and `RoutFlight.part` become one separation step.
+
+**Rules over cases:** general. One turn rule for any bearing; one sweep rule for any bend
+(the about-face is the same rule's shorter way round); one push rule for every pair of
+friends.
+**Order:** separation is decided from one snapshot each tick and applied together, so list
+order can't matter (Decision 97). Ties go by the unit's own frame, then its seeded draw
+(spec 30, agenda 5).
+
+### Decision 106 — A unit is a body and a space: bodies never overlap and push apart by mass; only a unit in control keeps its space
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Raised while building spec 30 round 1: under Decision 102's "no footprints
+ever overlap", routers could no longer run through a friend's ranks, which is how a crush
+happens (Decision 82). The user, asked to choose between crushing on contact and letting
+routers overlap: "Rather than introducing a specific case, we should refine the rule or
+our unit sizes e.g. a grem may only need 0.5cells to stand but prefer 1cell total space
+which would leave space to bypass? Alternatively we could just allow routing units to
+bypass the restriction with the rule holding that units 'in control' adhere to their
+footprint where a unit has lost control on 'rout'… On the footprints, i can see issues
+with rotation in melee, do we need smaller circles as their spaces? Such that the new
+circles fit in the old squares i.e. a grem has circle diameter 1 cell… how would
+something like total war handle this? I feel like units would push their way in between
+or push gaps larger". As Total War does, each soldier is a physical body that pushes
+others by mass, and the formation's spacing is a looser layer that gives under pressure.
+The user chose:
+- **Body:** a circle inscribed in the unit's footprint (a grem 1 cell across, a brute 2),
+  the same at every bearing, so turning in melee doesn't change it. A unit longer than
+  it is wide gets a capsule when one exists. Bodies never overlap, for any unit, routers
+  included.
+- **Space:** the footprint rectangle turned to its bearing (Decision 102). A unit in
+  control keeps its space; a unit that has lost control (a router) keeps only its body.
+- **Pushing:** bodies that meet are pushed apart by mass (footprint area until there is a
+  mass stat; Decision 105's split by size). A router shoves into a friend's ranks and
+  widens the gap as it goes; the crush (Decision 82) lands as it shoves. Formed units
+  resist but give way.
+- **Body size:** the body fills its space, so formed ranks leave no gap to slip through
+  without pushing.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Routers crush on contact and never pass | Ranks would be walls to their own routers. |
+| Routers exempt from separation | A special case (Decision 96). |
+| Rotated rectangles as hard bodies | Turning in melee changes a unit's reach. |
+| Bodies smaller than their space | The user chose bodies that fill it. |
+
+**Consequences:**
+- Spec 30 round 1 part 5 separates bodies by mass; part 6 places slots round bodies and
+  measures contact between bodies. `UnitFootprint` stays as the space.
+- The no-overlap rule of Decision 102 applies to bodies; spaces are kept by control.
+
+**Rules over cases:** general. One body rule for every unit; "keeps its space" is what
+being in control means, not a router exception.
+**Order:** pushes are decided from one snapshot and applied together (Decision 97).
