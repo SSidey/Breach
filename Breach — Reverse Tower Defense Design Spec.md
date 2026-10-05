@@ -5487,3 +5487,39 @@ with no slot open: it pursues as a body (Decision 103).
 **Rules over cases:** general. Any seeker short of a slot, any size of fight.
 **Order:** the nearest slot is chosen by the same key as an open one (distance, its own
 frame, seeded draws); no ids or list order.
+
+### Decision 110 — A unit its own ranks hold off its place trades places with a like friend
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-05
+
+**Rationale:** Found building pursuit by default (Decision 109): after a pursuit, a
+line's units could end up on the wrong side of their own ranks, and the line stood
+re-forming for good, its units shoving each other out of their places. In a real line
+the soldiers would sort themselves out by trading places, not by forcing a way through.
+A unit walking back to its place that has come no nearer than its closest for half a
+second trades places with the friend whose place is nearest it, if that place is nearer
+than its own and the two are interchangeable: the same kind of unit, in the same band.
+The friend walks to the place it left. With no such friend its own place is the nearest
+one, and it takes it there and then. Places stay one unit each.
+
+Two fixes ride with it:
+- **Stepping up:** closing up after a move stepped units into places that other moves
+  under way were heading for, so two units could share a place. It no longer does.
+- **A brush is not a shove:** a unit in its frame keeps its place against its own
+  squad's loose units overlapping it by under 0.05 cells, and gives way to a real push.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Rejoin where it stands | Its body stays off its place, and is pushed loose again. |
+| Move it onto its place | Units jumped up to 4 cells. |
+| Trade with any friend | It would scramble the layout the player painted. |
+
+**Consequences:** `ScrumTrade` (new), called from `ScrumRegroup`; `SkirmishSquad.compact`
+skips places moves under way are heading for; `UnitBodies.BRUSH`.
+
+**Rules over cases:** general. One rule for any regrouping unit held off its place.
+**Order:** stalled units trade in the order of their seeded draws; the friend is picked by
+distance, then its seeded draw. No ids or list order.

@@ -2,12 +2,13 @@ class_name ScrumRegroup
 extends RefCounted
 ## Regrouping after a fight (Decisions 88 and 92, spec 27 rounds 5 and 6): units of squads
 ## out of the fight walk back to their places - in the squad's stance, if it holds one - at
-## its re-form pace (FormationDiscipline), and rejoin its frame once in place - or as near
-## as the press lets it get - and facing its way. A drilled retreat's units back away
-## facing the foe they touch (a fighting withdrawal, Decision 95). Every squad's units
-## face the foes they touched as the phase began, so no squad listed earlier moves first
-## and changes what a later one sees (Decision 97). Chasers and withdrawing units are
-## left to ScrumPursuit and FormationWithdraw. Pure over the squads it is given.
+## its re-form pace (FormationDiscipline), and rejoin its frame once in place and facing its
+## way; one held off its place trades places or takes it (ScrumTrade, Decision 110). A
+## drilled retreat's units back away facing the foe they touch (a fighting withdrawal,
+## Decision 95). Every squad's units face the foes they touched as the phase began, so no
+## squad listed earlier moves first and changes what a later one sees (Decision 97).
+## Chasers and withdrawing units are left to ScrumPursuit and FormationWithdraw. Pure over
+## the squads it is given.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -17,10 +18,7 @@ const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const UnitShuffle = preload("res://sim/skirmish/formation/unit_shuffle.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
-
-## Cells a unit must close on its place in a tick to keep walking: one that gets no nearer
-## (others' bodies hold it off) is as close as the press allows, and takes its place.
-const PROGRESS := 0.001
+const ScrumTrade = preload("res://sim/skirmish/formation/scrum_trade.gd")
 
 
 ## Units of squads out of the fight walk to their places (in the stance, if any) at the
@@ -36,6 +34,7 @@ static func step(squads: Array, pace: float, seconds: float, fight_seed: int) ->
 		regrouping.append([squad, _foes_faced(squad, squads, fight_seed)])
 	for entry in regrouping:
 		_walk_back(entry[0], entry[1], pace, seconds)
+		ScrumTrade.trade(entry[0], fight_seed)  # a unit its own ranks hold off trades places
 
 
 ## unit id -> where the foe it touches stands, for a drilled retreat's units ({} for any
@@ -66,8 +65,8 @@ static func _walk_back(squad: SkirmishSquad, foes: Dictionary, pace: float, seco
 				unit, entry["at"], place, UnitMotion.of_facing(facing), step / seconds
 			)
 		var gap: float = entry["at"].distance_to(place)
-		var arrived: bool = gap < 0.000001 or gap > entry.get("gap", INF) - PROGRESS
-		entry["gap"] = gap
+		ScrumTrade.track(entry, gap, seconds)
+		var arrived := gap < 0.000001
 		if gap >= 0.000001:  # a drilled retreat backs away facing the foe it touches
 			entry["at"] = UnitMotion.walk(unit, entry["at"], place, step, seconds, foe_at)
 		entry["next"] = entry["at"]

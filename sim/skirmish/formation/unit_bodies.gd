@@ -7,8 +7,9 @@ extends RefCounted
 ##   grem moves a brute. A unit in its formation's frame resists, RESIST times its mass,
 ##   but gives way: pushed, it leaves its place and walks back to it (its squad re-forms).
 ##   To another squad's loose unit it doesn't give way - a squad's space is kept by its
-##   units in control of it - so the loose one takes the whole push; routers in flight
-##   still push through, and its own squad's loose units still make their way through it.
+##   units in control of it - so the loose one takes the whole push; nor to its own
+##   squad's when only brushed (under BRUSH deep). Routers in flight still push through,
+##   and its own squad's loose units still shove their way through it.
 ## - **Foes** are not pushed (Decision 105): two that overlap - one shoved into the other by
 ##   its friends - each step back half the overlap, so no one is pushed into an enemy.
 ## - **Two units both in their frames** are kept apart by the frames (their own places, and
@@ -30,6 +31,9 @@ const RESIST := 4.0
 const PASSES := 3
 ## Cells a bucket of the pair search spans: at least the widest body.
 const BUCKET := 2.0
+## A loose friend of its own squad overlapping a unit in its frame by less than this (cells)
+## only brushes it: it keeps its place (placeholder).
+const BRUSH := 0.05
 ## Overlaps shallower than this (cells) are left: Vector2's float32 rounding, not a push.
 const EPSILON := 0.001
 
@@ -114,9 +118,9 @@ static func _push(bodies: Array, pair: Array, fight_seed: int, moves: Dictionary
 	var share := 0.5
 	if a[0].faction_id == b[0].faction_id:
 		share = _mass(b) / (_mass(a) + _mass(b))
-		if a[0] != b[0] and _keeps(a, b):
+		if _keeps(a, b, depth):
 			share = 0.0
-		elif a[0] != b[0] and _keeps(b, a):
+		elif _keeps(b, a, depth):
 			share = 1.0
 	if share > 0.0:  # a body that holds its space isn't moved, so stays in its frame
 		moves[pair[0]] = moves.get(pair[0], Vector2.ZERO) - way * depth * share
@@ -124,10 +128,13 @@ static func _push(bodies: Array, pair: Array, fight_seed: int, moves: Dictionary
 		moves[pair[1]] = moves.get(pair[1], Vector2.ZERO) + way * depth * (1.0 - share)
 
 
-## True if `keeper`, in its frame, holds its space against `other`, a loose unit (one in
-## flight, out of control, still pushes through).
-static func _keeps(keeper: Array, other: Array) -> bool:
-	return _framed(keeper) and other[0].loose.has(other[1].id)
+## True if `keeper`, in its frame, holds its space against `other`, a loose unit: always
+## against another squad's, and against its own squad's when only brushed (one in flight,
+## out of control, still pushes through).
+static func _keeps(keeper: Array, other: Array, depth: float) -> bool:
+	if not _framed(keeper) or not other[0].loose.has(other[1].id):
+		return false
+	return keeper[0] != other[0] or depth < BRUSH
 
 
 ## What a body weighs against a push: its footprint's area, RESIST times over in its frame.
