@@ -1,7 +1,7 @@
 class_name FormationNarrowing
 extends RefCounted
 ## Gaps narrower than a squad (Decision 85, spec 27 round 4). Looking a few cells ahead,
-## a squad measures the passable run of ground across its facing, centred on its route.
+## a squad measures the passable run of ground across its heading, centred on its route.
 ## - **Narrowing:** if its line doesn't lie within the run, it narrows into a column that
 ##   fits: front band first and nearest the centre first, the extra columns folding into
 ##   the ranks behind (the fold of Decision 42). It keeps its painted places, and holds
@@ -16,7 +16,7 @@ extends RefCounted
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
-const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
+const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 
@@ -47,26 +47,26 @@ static func holds(
 	return false
 
 
-## [width, centre offset] of the passable run across the squad's facing, the narrowest
+## [width, centre offset] of the passable run across the squad's heading, the narrowest
 ## within LOOK cells ahead of its front (cells; the offset along its right hand).
 static func gap_ahead(squad: SkirmishSquad, terrain: FormationTerrain) -> Vector2:
-	var ahead := SquadFrame.forward(squad.facing)
+	var ahead := UnitMotion.vector(squad.heading)
 	var best := Vector2(INF, 0.0)
 	for step in range(1, LOOK + 1):
 		var centre := squad.position + ahead * (step - 0.5)
-		var run := run_across(terrain, centre, squad.facing, _shortest(squad))
+		var run := run_across(terrain, centre, squad.heading, _shortest(squad))
 		if run.x < best.x:
 			best = run
 	return best
 
 
-## [width, centre offset] of the passable run through `centre` across `facing` for units
-## `height` tall (cells; the offset along the facing's right hand).
+## [width, centre offset] of the passable run through `centre` across `heading` (degrees)
+## for units `height` tall (cells; the offset along the heading's right hand).
 static func run_across(
-	terrain: FormationTerrain, centre: Vector2, facing: int, height: float
+	terrain: FormationTerrain, centre: Vector2, heading: float, height: float
 ) -> Vector2:
-	var ahead := SquadFrame.forward(facing)
-	var right := SquadFrame.right(facing)
+	var ahead := UnitMotion.vector(heading)
+	var right := UnitMotion.vector(heading + 90.0)
 	var sides := [0, 0]
 	for side in [0, 1]:
 		var sign := 1.0 if side == 0 else -1.0
@@ -132,7 +132,7 @@ static func _fold(squad: SkirmishSquad, columns: int) -> void:
 
 
 static func _open_for_painted(squad: SkirmishSquad, terrain: FormationTerrain) -> bool:
-	var back := -SquadFrame.forward(squad.facing)
+	var back := -UnitMotion.vector(squad.heading)
 	for unit in squad.living():
 		if not squad.painted.has(unit.id):
 			continue
@@ -142,10 +142,9 @@ static func _open_for_painted(squad: SkirmishSquad, terrain: FormationTerrain) -
 		ghost.column = place[1]
 		ghost.footprint_width = unit.footprint_width
 		ghost.footprint_depth = unit.footprint_depth
-		var rect := SquadFrame.unit_rect(
-			squad.position, squad.facing, squad.painted_width, squad.painted_shift, ghost
+		var at := SquadFrame.place(
+			squad.position, squad.heading, squad.painted_width, squad.painted_shift, ghost
 		)
-		var at := rect.get_center()
 		if terrain.factor(unit.height, at + back, at) <= 0.0:
 			return false
 	return true
@@ -168,12 +167,18 @@ static func _widen(squad: SkirmishSquad, tick: int, tick_seconds: float, events:
 ## True if the squad's living line lies within the gap, not only narrower than it: a
 ## partial wave keeps its painted columns and can stand off to one side of a ford.
 static func _inside(squad: SkirmishSquad, gap: Vector2) -> bool:
-	var line := SquadGeometry.lateral(squad)
-	var right := SquadFrame.right(squad.facing)
-	var near := squad.position + right * (gap.y - gap.x / 2.0)
-	var far := squad.position + right * (gap.y + gap.x / 2.0)
-	var span := SquadFrame.lateral_interval(Rect2(near.min(far), (far - near).abs()), squad.facing)
-	return line.x >= span.x - 0.0001 and line.y <= span.y + 0.0001
+	var right := UnitMotion.vector(squad.heading + 90.0)
+	for unit in squad.living():
+		var place := SquadFrame.place(
+			squad.position, squad.heading, squad.width, squad.centre_shift, unit
+		)
+		var across := (place - squad.position).dot(right)
+		var half := unit.footprint_width / 2.0
+		if across - half < gap.y - gap.x / 2.0 - 0.0001:
+			return false
+		if across + half > gap.y + gap.x / 2.0 + 0.0001:
+			return false
+	return true
 
 
 ## The shortest living unit's height: the gap must pass all of them.
