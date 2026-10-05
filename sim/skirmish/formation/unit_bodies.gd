@@ -27,7 +27,8 @@ const RESIST := 4.0
 const PASSES := 3
 ## Cells a bucket of the pair search spans: at least the widest body.
 const BUCKET := 2.0
-const EPSILON := 0.000001
+## Overlaps shallower than this (cells) are left: Vector2's float32 rounding, not a push.
+const EPSILON := 0.001
 
 
 ## The body's radius in cells.

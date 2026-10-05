@@ -2,7 +2,7 @@ class_name FormationFieldScene
 extends Node2D
 ## The 2D formation feel test (Decision 86, spec 27 rounds 1 and 2): a top-down view of the
 ## FormationField - the kingdom's line across the middle, the player's routes A and B with
-## their corridors, and every unit drawn in its cells, turned to its squad's facing and
+## their corridors, and every unit drawn as its body (Decision 106), a tick at its front,
 ## eased between ticks. Send a route's wave, let it depart when full, send both timed to
 ## arrive together, or have B wait in the wood (its detection range ringed) until it sees
 ## A engage (Decision 87). In a fight units seek contact and face their own foes (Decision
@@ -14,7 +14,6 @@ extends Node2D
 
 const SkirmishClock = preload("res://sim/skirmish/skirmish_clock.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
-const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 
 const GREM := preload("res://content/units/grem.tres")
@@ -148,21 +147,15 @@ func _draw_unit(squad, unit, fraction: float) -> void:
 	var before: Vector2 = _previous.get(unit.id, unit.position)
 	var after: Vector2 = _current.get(unit.id, unit.position)
 	var centre := ORIGIN + before.lerp(after, fraction) * CELL_PX
-	var across := absf(SquadFrame.right(squad.facing).x) > 0.5
-	var cells := (
-		Vector2(unit.footprint_width, unit.footprint_depth)
-		if across
-		else Vector2(unit.footprint_depth, unit.footprint_width)
-	)
-	var size := cells * CELL_PX - Vector2.ONE
+	var radius := minf(unit.footprint_width, unit.footprint_depth) / 2.0 * CELL_PX - 0.5
 	var colour: Color = COLOURS["flash"] if _flashes.has(unit.id) else COLOURS[squad.faction_id]
 	if unit.leadership > 0 and not _flashes.has(unit.id):
 		colour = COLOURS["leader"]
 	if squad.state == SkirmishSquad.State.ROUTING:
 		colour.a = 0.45  # routers flee one by one
-	draw_rect(Rect2(centre - size * 0.5, size), colour)
+	draw_circle(centre, radius, colour)  # its body (Decision 106)
 	if unit.rank == 0 or squad.loose.has(unit.id):
-		var front := centre + UnitMotion.vector(unit.bearing) * size * 0.5
+		var front := centre + UnitMotion.vector(unit.bearing) * radius
 		draw_circle(front, 1.5, Color.WHITE)
 
 

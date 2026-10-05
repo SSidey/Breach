@@ -6,19 +6,23 @@ extends RefCounted
 ## seeker makes for the nearest open slot within the leash of its place (Decision 75): one
 ## no other body stands on, no seeker nearer in the contest (ScrumContest) has claimed, and
 ## on ground it can cross. Equally near slots go by the seeker's own frame - the one most
-## ahead of it, then the one nearest its place - then by the foes' draws (Decision 97). It
-## walks straight there, bodies parting round it (UnitBodies). Pure; cells.
+## ahead of it, then the one nearest its place - then by the foes' draws, and two mirror
+## images of each other (left and right of it, round one foe) by a draw seeded by the battle,
+## the seeker and the slot: no world direction and no handedness is preferred (Decision 97,
+## spec 30 agenda 5). It walks straight there, bodies parting round it (UnitBodies). Pure.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
+const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 
 ## Cells a unit may go from its place (Decision 75's leash; placeholder).
 const LEASH := 16.0
-const EPSILON := 0.000001
+## Tolerance (cells) for bodies just touching: well above Vector2's float32 rounding.
+const EPSILON := 0.001
 
 
 ## [[where, radius, unit], ...]: every living unit's body in standing squads.
@@ -40,7 +44,7 @@ static func round_foes(foes: Array, radius: float) -> Array:
 		var foe: SkirmishUnit = entry[0]
 		var centre := ScrumReach.at(entry[1], foe)
 		var reach := ScrumReach.radius(foe) + radius
-		var count := maxi(3, floori(PI * reach / radius + EPSILON))
+		var count := maxi(3, floori(PI * reach / radius + 0.000001))
 		for slot in range(count):
 			var way := UnitMotion.vector(foe.bearing + slot * 360.0 / count)
 			out.append([centre + way * reach, foe, entry[1], slot])
@@ -71,7 +75,7 @@ static func pick(seeker: SkirmishUnit, at: Vector2, slots: Array, ground: Array)
 			-snappedf((slot[0] - at).dot(ahead), 0.000001),
 			snappedf(slot[0].distance_to(ground[0]), 0.000001),
 			ScrumContest.draw(slot[1], ground[4]),
-			slot[3],
+			BattleRolls.uniform(ground[4], [seeker.id, slot[1].id, slot[3], "slot"]),
 		]
 		if best.is_empty() or key < best_key:
 			best = slot
