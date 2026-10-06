@@ -249,6 +249,9 @@ fewer drawn at the time limit. The field moved toward the kingdom: its spearmen 
 grems' claws can't (Decision 124), so field_b, which the player won about a quarter of the
 time, it now rarely wins. That is the rule as agreed; how far is for the feel test.
 
+With gaits and the breather (#153 to #155) the mirror and field trials above are unchanged,
+run for run: no scenario there runs a formation long enough for it to tell.
+
 **Fatigue trial** (#155, 20 seeds): a line of grems fought for a while, then left by a wave
 that turns away at a run.
 
