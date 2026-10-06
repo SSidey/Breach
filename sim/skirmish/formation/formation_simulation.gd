@@ -37,6 +37,7 @@ const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd"
 const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.gd")
 const FormationWounds = preload("res://sim/skirmish/formation/formation_wounds.gd")
 const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
+const FormationStamina = preload("res://sim/skirmish/formation/formation_stamina.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
@@ -162,6 +163,7 @@ func step() -> Array:
 	FormationWounds.mend(_squads, tick_seconds, _tick, events)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
 	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, fight_seed))
+	FormationStamina.step(_squads, tick_seconds)  # runners tire, the rest recover
 	UnitBodies.step(_squads, fight_seed)  # after every move: friends' bodies part (Decision 106)
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
@@ -279,6 +281,7 @@ func _fight(events: Array) -> void:
 		blow[1].hp -= blow[2]
 		events.append(FormationEvents.hit(_tick, blow))
 	FormationWounds.surrender(blows, _squads, fight_seed, _tick, events)
+	FormationStamina.strike(blows + shots)
 
 
 ## Ticks in a second: a weapon's attack interval is in seconds (Decision 120).

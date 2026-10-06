@@ -94,6 +94,15 @@ var resistances: Array[String] = []
 var immunities: Array[String] = []
 var armour := 0
 var ward := 0
+## Formation sim: its stamina (spec 28 part 7) - now and at most - its pace fresh, how
+## fast it tires and how well it dodges under its load (UnitArms.load_stage), and whether
+## it exerted itself this tick.
+var stamina := 100.0
+var max_stamina := 100.0
+var fresh_speed := 0.0
+var tiring := 1.0
+var dodging := 1.0
+var exerted := false
 ## Formation sim: its regeneration (Decision 121): HP a second, HP it has left to regain
 ## before it must rest, the damage types that stop it, seconds it stays stopped, and the
 ## part of a point regained so far.

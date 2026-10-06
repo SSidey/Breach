@@ -3,16 +3,17 @@ extends RefCounted
 ## Lands a tick's blows (Decision 118, spec 28 part 4): each blow's roll, seeded by the
 ## battle, the tick and the striker (Decision 93; never the list, Decision 97), read by
 ## BlowRoll against its target, with the striker's margin shifted by its formation's
-## morale band, by high ground, and by each foe beyond the first that the target is
-## fighting off. With rolls off (the plain arithmetic the rule tests lean on) every blow
-## is a hit at its weapons' full damage. What each deals is BlowDamage's. Pure over the
-## squads it is given.
+## morale band, by high ground, by each foe beyond the first that the target is fighting
+## off, and by how tired it is (FormationStamina). With rolls off (the plain arithmetic
+## the rule tests lean on) every blow is a hit at its weapons' full damage. What each
+## deals is BlowDamage's. Pure over the squads it is given.
 
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const BlowRoll = preload("res://sim/skirmish/formation/blow_roll.gd")
 const BlowDamage = preload("res://sim/skirmish/formation/blow_damage.gd")
 const FormationWounds = preload("res://sim/skirmish/formation/formation_wounds.gd")
+const FormationStamina = preload("res://sim/skirmish/formation/formation_stamina.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
@@ -65,7 +66,7 @@ static func _land(
 	if terrain != null and terrain.high_ground(striker.position, target.position):
 		shift += tuning.blow_high_ground
 	shift += maxi(0, pressed.get(target.id, 0) - 1) * tuning.blow_surrounded
-	shift += BlowDamage.spill(striker, ranged)
+	shift += BlowDamage.spill(striker, ranged) + FormationStamina.skill_shift(striker)
 	var roll := BattleRolls.uniform(rolls[0], [rolls[1], striker.id, "blow", ranged])
 	var side := BlowRoll.side(target, striker.position, flank)
 	var landed := BlowRoll.outcome(

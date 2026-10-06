@@ -29,6 +29,7 @@ const FormationEvents = preload("res://sim/skirmish/formation/formation_events.g
 const FormationWithdraw = preload("res://sim/skirmish/formation/formation_withdraw.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
+const FormationStamina = preload("res://sim/skirmish/formation/formation_stamina.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const ScrumSlots = preload("res://sim/skirmish/formation/scrum_slots.gd")
 const UnitSteer = preload("res://sim/skirmish/formation/unit_steer.gd")
@@ -99,11 +100,12 @@ static func step(
 			walk[0].loose.erase(unit.id)
 
 
-## True if a chase is over: the chaser at its leash, its quarry out of its sight, or gone.
+## True if a chase is over: the chaser at its leash or too tired, its quarry out of its
+## sight, or gone.
 static func _done(
 	chase: Dictionary, at: Vector2, unit: SkirmishUnit, foe: SkirmishSquad, fight_seed: int
 ) -> bool:
-	if foe == null or foe.is_destroyed():
+	if foe == null or foe.is_destroyed() or FormationStamina.gives_up(unit):
 		return true
 	var quarry := _nearest(at, foe, fight_seed)
 	return (

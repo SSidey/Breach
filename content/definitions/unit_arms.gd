@@ -5,8 +5,8 @@ extends RefCounted
 ## requirement times the weapon's own scaling (a maul much, a dagger little); the skill
 ## it wields them at - less without proficiency in their tags, more mastered, less for
 ## each point of strength it lacks; how far its damage may fall short (the weapons'
-## floors); and its armour and ward, its own and what it wears. Numbers: BattleTuning.
-## Pure.
+## floors); its armour and ward, its own and what it wears; and its encumbrance. Numbers:
+## BattleTuning. Pure.
 
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -47,6 +47,23 @@ static func skill(unit_def: UnitDef, ranged: bool) -> int:
 		short = maxi(short, weapon.strength_requirement - unit_def.strength)
 	var shift: float = [tuning.item_untrained_skill, 0.0, tuning.item_mastered_skill][least]
 	return maxi(0, roundi(trained + shift - short * tuning.item_weak_skill))
+
+
+## Its encumbrance (Decision 120): 0 none, 1 mild, 2 steep, 3 immobile - the weight of what
+## it carries (innate parts weigh nothing) against its carry limit from strength, a hauler
+## carrying more before it can't move.
+static func load_stage(unit_def: UnitDef) -> int:
+	var tuning := BattleTuning.current()
+	var carried := 0.0
+	for item in unit_def.items:
+		carried += item.weight
+	var limit := unit_def.strength * tuning.load_per_strength
+	var most := tuning.load_most + unit_def.trait_level("hauler") * tuning.load_hauler
+	if carried <= limit * tuning.load_easy:
+		return 0
+	if carried <= limit:
+		return 1
+	return 2 if carried <= limit * most else 3
 
 
 ## Its armour (against mundane blows) and its ward (against magical ones): its own and

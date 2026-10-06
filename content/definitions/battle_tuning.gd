@@ -95,6 +95,33 @@ static var _current: BattleTuning = null
 ## Skill lost per point of strength short of a weapon's requirement.
 @export var item_weak_skill := 0.0
 
+@export_group("Load and stamina (Decision 120, spec 28 part 7)")
+## Load a unit carries without trouble, per point of strength: its carry limit.
+@export var load_per_strength := 0.0
+## Encumbrance by stage - none (to load_easy of its limit), mild (to its limit), steep (to
+## load_most times its limit, a hauler's level adding load_hauler each) and immobile
+## beyond: its pace, how fast it tires and its dodge, times these.
+@export var load_easy := 0.0
+@export var load_most := 0.0
+@export var load_hauler := 0.0
+@export var load_pace: Array[float] = []
+@export var load_tiring: Array[float] = []
+@export var load_dodge: Array[float] = []
+## Stamina per point of constitution; spent a second running (pursuing, chasing, fleeing)
+## and per blow struck, regained a second otherwise.
+@export var stamina_per_constitution := 0.0
+@export var stamina_run := 0.0
+@export var stamina_blow := 0.0
+@export var stamina_recovery := 0.0
+## Below these shares of its stamina a unit is tired, then spent: its pace times
+## stamina_pace and its skill shifted by stamina_skill, by stage (fresh, tired, spent). A
+## pursuer (or chaser) whose stamina falls below stamina_give_up gives up the chase.
+@export var stamina_tired := 0.0
+@export var stamina_spent := 0.0
+@export var stamina_pace: Array[float] = []
+@export var stamina_skill: Array[float] = []
+@export var stamina_give_up := 0.0
+
 @export_group("Wounds (Decision 121)")
 ## Cells within which a standing unit finishes or takes a downed foe; a friend standing
 ## within wounds_guard_reach of the downed guards it, and a unit with a standing foe that

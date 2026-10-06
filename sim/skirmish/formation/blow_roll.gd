@@ -33,7 +33,8 @@ static func outcome(margin: float, target: SkirmishUnit, side: int, ranged: bool
 		parry = target.melee_skill * tuning.blow_parry_share
 	var dodge := 0.0
 	if side != Side.REAR:
-		dodge = target.attributes.get("agility", UnitDef.AVERAGE) * tuning.blow_dodge_per_agility
+		var agility: float = target.attributes.get("agility", UnitDef.AVERAGE)
+		dodge = agility * tuning.blow_dodge_per_agility * target.dodging
 	var layers := [
 		[PARRIED, parry],
 		[DODGED, dodge],

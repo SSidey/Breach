@@ -6,7 +6,8 @@ extends RefCounted
 ## faster than its rearmost unit keeps up (Decision 103) - its units seeking contact as
 ## they go at the march pace. When the enemy is out of its sight, gone, or no longer
 ## retreating, or it has gone as far from its post as its discipline leashes it
-## (FormationDiscipline.pursuit_leash, Decision 107), it gives up: it marches back along the
+## (FormationDiscipline.pursuit_leash, Decision 107), or most of it has tired
+## (FormationStamina), it gives up: it marches back along the
 ## route it is on to the post it held, takes up its own route there and turns to face the
 ## way it held it, taking up its order again. Squads keep `pursuit` ({"foe", "route",
 ## "post", "post_at", "home", "direction", "order", "returning"}). Pure over the squads.
@@ -24,6 +25,7 @@ const FormationEvents = preload("res://sim/skirmish/formation/formation_events.g
 const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
 const FormationSweep = preload("res://sim/skirmish/formation/formation_sweep.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
+const FormationStamina = preload("res://sim/skirmish/formation/formation_stamina.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 ## It advances while its enemy is more than this many cells ahead of its front, and its
@@ -95,8 +97,8 @@ static func reach(squad: SkirmishSquad) -> Array:
 static func _given_up(squad: SkirmishSquad, foe: SkirmishSquad) -> bool:
 	if foe == null or foe.is_destroyed() or foe.order != SkirmishUnit.Order.RETREAT:
 		return true
-	if not FormationSight.detects(squad, foe):
-		return true
+	if not FormationSight.detects(squad, foe) or FormationStamina.squad_gives_up(squad):
+		return true  # out of sight, or too tired to go on (spec 28 part 7)
 	var reached := reach(squad)
 	return reached[0] >= reached[1]
 

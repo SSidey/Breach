@@ -7,6 +7,7 @@ extends RefCounted
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 const UnitArms = preload("res://content/definitions/unit_arms.gd")
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 
 
 static func make(
@@ -71,6 +72,14 @@ static func _arm(unit: SkirmishUnit, unit_def: UnitDef) -> void:
 	unit.weaknesses = unit_def.weaknesses.duplicate()
 	unit.resistances = unit_def.resistances.duplicate()
 	unit.immunities = unit_def.immunities.duplicate()
+	var tuning := BattleTuning.current()
+	var stage := UnitArms.load_stage(unit_def)
+	unit.speed = unit_def.speed * tuning.load_pace[stage]
+	unit.fresh_speed = unit.speed
+	unit.tiring = tuning.load_tiring[stage]
+	unit.dodging = tuning.load_dodge[stage]
+	unit.max_stamina = unit_def.constitution * tuning.stamina_per_constitution
+	unit.stamina = unit.max_stamina
 	unit.regeneration = unit_def.regeneration
 	unit.regeneration_left = unit_def.regeneration_limit * unit_def.hp
 	unit.regeneration_stops = unit_def.regeneration_stops.duplicate()
