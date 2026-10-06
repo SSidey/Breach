@@ -29,9 +29,6 @@ const AVERAGE := 10
 @export var traits: Dictionary = {}
 @export var cost_food: int = 0
 @export var hp: int = 0
-## Retiring (Decision 120): its blow without weapons, until every unit strikes with an
-## innate weapon (WeaponDef.innate_weapon).
-@export var dmg: int = 0
 @export var speed: float = 0.0
 ## Formation slots the unit occupies, depth (ranks) x width (columns), per Decision 40:
 ## 1x1 a grem, 2x1 cavalry, 2x2 a brute, up to 8x8 (a dragon, the widest lane).
@@ -86,8 +83,6 @@ func validate() -> PackedStringArray:
 		errors.append("cost_food must be >= 0, got %d" % cost_food)
 	if hp < 0:
 		errors.append("hp must be >= 0, got %d" % hp)
-	if dmg < 0:
-		errors.append("dmg must be >= 0, got %d" % dmg)
 	if speed < 0.0:
 		errors.append("speed must be >= 0, got %f" % speed)
 	for field in ["footprint_depth", "footprint_width"]:
@@ -126,14 +121,10 @@ func trait_level(trait_id: String) -> int:
 	return level
 
 
-## The damage of one melee strike: every melee weapon together (`dmg` without weapons,
-## while it retires).
+## The damage of one melee strike: every melee weapon together (0 without one).
 func melee_damage() -> int:
-	var weapons := _weapons()
-	if weapons.is_empty():
-		return dmg
 	var total := 0
-	for weapon in weapons:
+	for weapon in _weapons():
 		if weapon.is_melee():
 			total += weapon.damage
 	return total

@@ -15,7 +15,7 @@ const TICK := 0.1
 func _def(hp: int, dmg: int, speed: float, depth: int = 1, width: int = 1) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = dmg
+	unit_def.items = [WeaponDef.innate_weapon(dmg)]
 	unit_def.speed = speed
 	unit_def.footprint_depth = depth
 	unit_def.footprint_width = width

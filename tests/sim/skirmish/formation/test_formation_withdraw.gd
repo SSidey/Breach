@@ -22,7 +22,7 @@ const UnitDef = preload("res://content/definitions/unit_def.gd")
 func _def(discipline: int) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 60
-	unit_def.dmg = 3
+	unit_def.items = [WeaponDef.innate_weapon(3)]
 	unit_def.speed = 1.0
 	unit_def.discipline = discipline
 	return unit_def

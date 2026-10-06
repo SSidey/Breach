@@ -19,7 +19,7 @@ func _terrain() -> FormationTerrain:
 func _def() -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 20
-	unit_def.dmg = 1
+	unit_def.items = [WeaponDef.innate_weapon(1)]
 	unit_def.speed = 1.0
 	return unit_def
 

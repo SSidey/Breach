@@ -11,7 +11,7 @@ const UnitDef = preload("res://content/definitions/unit_def.gd")
 func _def(detection: float = 40.0) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 10
-	unit_def.dmg = 1
+	unit_def.items = [WeaponDef.innate_weapon(1)]
 	unit_def.speed = 1.0
 	unit_def.detection_range = detection
 	return unit_def
