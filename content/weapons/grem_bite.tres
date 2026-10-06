@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1_tpi6l")
-weapon_name = "bite"
+item_name = "bite"
 damage = 3
 damage_type = "piercing"

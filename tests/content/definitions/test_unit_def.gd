@@ -81,10 +81,10 @@ func test_negative_priority_is_invalid() -> void:
 func test_melee_damage_is_the_sum_of_its_melee_weapons() -> void:
 	var unit := UnitDef.new()
 	unit.dmg = 9
-	unit.weapons = [_weapon("bite", 3, 0), _weapon("claw", 3, 0), _weapon("spit", 4, 5)]
+	unit.items = [_weapon("bite", 3, 0), _weapon("claw", 3, 0), _weapon("spit", 4, 5)]
 
 	assert_int(unit.melee_damage()).is_equal(6)
-	assert_str(unit.ranged_weapon().weapon_name).is_equal("spit")
+	assert_str(unit.ranged_weapon().item_name).is_equal("spit")
 
 
 func test_a_unit_without_weapons_strikes_with_dmg() -> void:
@@ -97,7 +97,7 @@ func test_a_unit_without_weapons_strikes_with_dmg() -> void:
 
 func test_an_invalid_weapon_makes_the_unit_invalid() -> void:
 	var unit := UnitDef.new()
-	unit.weapons = [_weapon("claw", -1, 0)]
+	unit.items = [_weapon("claw", -1, 0)]
 
 	(
 		assert_bool(Array(unit.validate()).any(func(message): return message.contains("claw")))
@@ -107,7 +107,7 @@ func test_an_invalid_weapon_makes_the_unit_invalid() -> void:
 
 func _weapon(weapon_name: String, damage: int, attack_range: int) -> WeaponDef:
 	var weapon := WeaponDef.new()
-	weapon.weapon_name = weapon_name
+	weapon.item_name = weapon_name
 	weapon.damage = damage
 	weapon.attack_range = attack_range
 	return weapon

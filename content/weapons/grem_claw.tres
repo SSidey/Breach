@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1_jcpwr")
-weapon_name = "claw"
+item_name = "claw"
 damage = 3
 damage_type = "slashing"

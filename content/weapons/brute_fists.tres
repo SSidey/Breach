@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_sqbii")
-weapon_name = "fists"
+item_name = "fists"
 damage = 7
 damage_type = "bludgeoning"
 traits = {

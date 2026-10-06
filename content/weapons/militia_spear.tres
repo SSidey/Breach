@@ -4,6 +4,10 @@
 
 [resource]
 script = ExtResource("1_1v7dk")
-weapon_name = "spear"
+item_name = "spear"
 damage = 5
 damage_type = "piercing"
+slots = Array[String](["hand", "hand"])
+weight = 3.0
+strength_requirement = 8
+tags = Array[String](["polearm"])

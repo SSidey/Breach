@@ -30,7 +30,7 @@ const AVERAGE := 10
 @export var cost_food: int = 0
 @export var hp: int = 0
 ## Its natural blow (fists, bite), struck when it has no melee weapon; every unit so far
-## carries its natural weapons as weapons. Retires when weapons become items (spec 28).
+## carries its natural weapons as items.
 @export var dmg: int = 0
 @export var speed: float = 0.0
 ## Formation slots the unit occupies, depth (ranks) x width (columns), per Decision 40:
@@ -66,8 +66,15 @@ const AVERAGE := 10
 ## it turns, and the share of its speed it makes moving straight back (sideways is between).
 @export var turn_rate: float = 450.0
 @export var backward_pace: float = 0.4
-## What it fights with (Decision 47). Without weapons it strikes once for `dmg`.
-@export var weapons: Array[WeaponDef] = []
+## What it carries (Decisions 47 and 120): weapons, armour and tools (ItemDef). Without
+## weapons it strikes once for `dmg`.
+@export var items: Array[ItemDef] = []
+## The slots its body has for items (hand, hand, back...): an item fits if its slots are
+## free. A creature with no hands has no hand slot.
+@export var slots: Array[String] = []
+## How well it handles items by tag (axe, polearm...), tag -> level: 0 untrained (none
+## listed), 1 trained, 2 mastered.
+@export var proficiencies: Dictionary = {}
 
 
 func validate() -> PackedStringArray:
@@ -85,11 +92,14 @@ func validate() -> PackedStringArray:
 			errors.append("%s must be 1..%d, got %d" % [field, MAX_FOOTPRINT, get(field)])
 	if position_priority < 0:
 		errors.append("position_priority must be >= 0, got %d" % position_priority)
-	for weapon in weapons:
-		if weapon == null:
-			errors.append("weapons must not contain an empty entry")
+	for item in items:
+		if item == null:
+			errors.append("items must not contain an empty entry")
 		else:
-			errors.append_array(weapon.validate())
+			errors.append_array(item.validate())
+	var short := _slots_short()
+	if not short.is_empty():
+		errors.append("its items need slots it hasn't free: %s" % ", ".join(short))
 	if build_seconds <= 0.0:
 		errors.append("build_seconds must be > 0, got %f" % build_seconds)
 	for attribute in ATTRIBUTES:
@@ -101,13 +111,19 @@ func validate() -> PackedStringArray:
 	return errors
 
 
-## The level of a rated trait it has (0: not at all).
+## The level of a rated trait it has, its own or one an item it carries grants, the
+## higher (0: not at all).
 func trait_level(trait_id: String) -> int:
-	return int(traits.get(trait_id, 0))
+	var level := int(traits.get(trait_id, 0))
+	for item in items:
+		if not item is WeaponDef:  # a weapon's traits mark what it does, not its holder
+			level = maxi(level, int(item.traits.get(trait_id, 0)))
+	return level
 
 
 ## The damage of one melee strike: every melee weapon together, or `dmg` without weapons.
 func melee_damage() -> int:
+	var weapons := _weapons()
 	if weapons.is_empty():
 		return dmg
 	var total := 0
@@ -120,7 +136,31 @@ func melee_damage() -> int:
 ## The hardest-hitting ranged weapon, or null for a melee-only unit.
 func ranged_weapon() -> WeaponDef:
 	var best: WeaponDef = null
-	for weapon in weapons:
+	for weapon in _weapons():
 		if not weapon.is_melee() and (best == null or weapon.damage > best.damage):
 			best = weapon
 	return best
+
+
+## The items it carries that are weapons.
+func _weapons() -> Array[WeaponDef]:
+	var out: Array[WeaponDef] = []
+	for item in items:
+		if item is WeaponDef:
+			out.append(item)
+	return out
+
+
+## The slots its items need that its body hasn't free (none: they all fit).
+func _slots_short() -> Array[String]:
+	var free := slots.duplicate()
+	var short: Array[String] = []
+	for item in items:
+		if item == null:
+			continue
+		for slot in item.slots:
+			if free.has(slot):
+				free.erase(slot)
+			else:
+				short.append(slot)
+	return short

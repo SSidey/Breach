@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1_40tb5")
-weapon_name = "claw"
+item_name = "claw"
 damage = 1
 damage_type = "slashing"

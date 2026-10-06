@@ -6,7 +6,7 @@ const WeaponDef = preload("res://content/definitions/weapon_def.gd")
 
 func _weapon(damage: int, attack_range: int) -> WeaponDef:
 	var weapon := WeaponDef.new()
-	weapon.weapon_name = "claw"
+	weapon.item_name = "claw"
 	weapon.damage = damage
 	weapon.damage_type = "slashing"
 	weapon.attack_range = attack_range
