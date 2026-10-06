@@ -64,6 +64,29 @@ static var _current: BattleTuning = null
 ## contested slot (0: stats alone).
 @export var combat_contest_die := 0
 
+@export_group("Blows (Decision 118)")
+## A blow's roll spans this much, centred on the striker's skill: its margin is the skill
+## plus a roll from minus half this to plus half.
+@export var blow_die := 0.0
+## The parry a unit holding a weapon or shield puts up: this share of its melee skill.
+@export var blow_parry_share := 0.0
+## The dodge a unit puts up per point of agility.
+@export var blow_dodge_per_agility := 0.0
+## How wide the hit band is above the target's defence; a margin past it is a critical.
+@export var blow_hit_band := 0.0
+## A graze's share of the blow's damage.
+@export var blow_graze_share := 0.0
+## Added to the margin of a striker on higher ground than its target.
+@export var blow_high_ground := 0.0
+## Added to the margin for each foe beyond the first striking the target this tick.
+@export var blow_surrounded := 0.0
+## A blow from within this many degrees of straight behind the target is from its rear,
+## denying its dodge as well as its parry.
+@export var blow_rear_arc_degrees := 0.0
+## Added to a formation's units' margins by its morale band: steady, shaken, wavering,
+## routing.
+@export var blow_morale_shift: Array[float] = []
+
 @export_group("Routs and flight (Decisions 82, 89, 98 and 99)")
 ## Crush damage per cell of a router's footprint, to friends it shoves past.
 @export var rout_crush := 0

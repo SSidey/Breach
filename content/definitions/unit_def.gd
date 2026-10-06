@@ -63,6 +63,15 @@ const AVERAGE := 10
 ## it turns, and the share of its speed it makes moving straight back (sideways is between).
 @export var turn_rate: float = 450.0
 @export var backward_pace: float = 0.4
+## How well it fights hand to hand and at range (Decision 118), 0 to 100: a blow's roll
+## is centred on it. Its parry comes from its melee skill, its dodge from its agility.
+@export var melee_skill: int = 40
+@export var ranged_skill: int = 40
+## What a blow must get past, after its parry and dodge, to land fully: short of it, it
+## grazes (Decision 118).
+@export var defence: int = 10
+## A critical blow's damage, times a hit's (Decision 118).
+@export var critical: float = 1.5
 ## What it carries (Decisions 47 and 120): weapons, armour and tools (ItemDef), and its
 ## innate weapons (fists, a bite) - its every blow comes from a weapon.
 @export var items: Array[ItemDef] = []
@@ -90,19 +99,14 @@ func validate() -> PackedStringArray:
 			errors.append("%s must be 1..%d, got %d" % [field, MAX_FOOTPRINT, get(field)])
 	if position_priority < 0:
 		errors.append("position_priority must be >= 0, got %d" % position_priority)
-	for item in items:
-		if item == null:
-			errors.append("items must not contain an empty entry")
-		else:
-			errors.append_array(item.validate())
-	var short := _slots_short()
-	if not short.is_empty():
-		errors.append("its items need slots it hasn't free: %s" % ", ".join(short))
-	for item in items:
-		if item != null and item.innate and not _has_slots(slots, item.slots):
-			errors.append("%s: part of a body part it hasn't" % item.item_name)
+	errors.append_array(_item_errors())
 	if build_seconds <= 0.0:
 		errors.append("build_seconds must be > 0, got %f" % build_seconds)
+	for skill in ["melee_skill", "ranged_skill", "defence"]:
+		if get(skill) < 0:
+			errors.append("%s must be >= 0, got %d" % [skill, get(skill)])
+	if critical < 1.0:
+		errors.append("critical must be >= 1, got %f" % critical)
 	if attack_speed <= 0.0:
 		errors.append("attack_speed must be > 0, got %f" % attack_speed)
 	for attribute in ATTRIBUTES:
@@ -133,6 +137,15 @@ func melee_damage() -> int:
 	return total
 
 
+## Whether it can parry (Decision 118): it holds a melee weapon, not an innate one, or a
+## shield.
+func can_parry() -> bool:
+	for weapon in _weapons():
+		if weapon.is_melee() and not weapon.innate:
+			return true
+	return items.any(func(item): return item != null and item.tags.has("shield"))
+
+
 ## Seconds between its melee blows: its melee weapons strike together, as often as the
 ## slowest of them allows, scaled by its attack speed (a second without weapons).
 func melee_seconds() -> float:
@@ -150,6 +163,22 @@ func ranged_weapon() -> WeaponDef:
 		if not weapon.is_melee() and (best == null or weapon.damage > best.damage):
 			best = weapon
 	return best
+
+
+## What is wrong with its items: an invalid one, or one its body has no room or part for.
+func _item_errors() -> PackedStringArray:
+	var errors := PackedStringArray()
+	for item in items:
+		if item == null:
+			errors.append("items must not contain an empty entry")
+			continue
+		errors.append_array(item.validate())
+		if item.innate and not _has_slots(slots, item.slots):
+			errors.append("%s: part of a body part it hasn't" % item.item_name)
+	var short := _slots_short()
+	if not short.is_empty():
+		errors.append("its items need slots it hasn't free: %s" % ", ".join(short))
+	return errors
 
 
 ## The weapons it can use: those it carries, and its innate ones whose body parts no

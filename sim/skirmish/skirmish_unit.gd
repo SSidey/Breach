@@ -73,6 +73,13 @@ var position_priority: int = 0
 var attack_range: int = 0
 var ranged_dmg: int = 0
 var damage_type: String = ""
+## Formation sim: its skills, defence and critical multiplier, and whether it can parry
+## (Decision 118, UnitDef).
+var melee_skill := 40
+var ranged_skill := 40
+var defence := 10
+var critical := 1.5
+var parries := false
 ## Seconds between its melee blows and its ranged shots (Decision 120): its weapons'
 ## intervals, scaled by its attack speed.
 var melee_seconds := 1.0

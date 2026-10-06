@@ -9,6 +9,7 @@ script = ExtResource("1_unit")
 tags = Array[String](["human", "martial", "leader"])
 hp = 30
 speed = 0.8
+melee_skill = 55
 build_seconds = 6.0
 preferred_position = 1
 position_priority = 2

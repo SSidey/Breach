@@ -41,6 +41,11 @@ static func make(
 			if unit_def.trait_level(trait_id) > 0:
 				unit.traits[trait_id] = unit_def.trait_level(trait_id)
 	unit.melee_seconds = unit_def.melee_seconds()
+	unit.melee_skill = unit_def.melee_skill
+	unit.ranged_skill = unit_def.ranged_skill
+	unit.defence = unit_def.defence
+	unit.critical = unit_def.critical
+	unit.parries = unit_def.can_parry()
 	var ranged := unit_def.ranged_weapon()
 	if ranged != null:
 		unit.attack_range = ranged.attack_range
