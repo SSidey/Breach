@@ -7,7 +7,8 @@ extends RefCounted
 ## margin past the hit band a critical (the striker's critical multiplier). High ground
 ## and being surrounded add to the margin, and morale shifts it by band; a blow from the
 ## target's flank finds no parry, one from its rear no dodge either. These replace the
-## flank, high ground and morale multipliers on damage. All numbers: BattleTuning. Pure.
+## flank, high ground and morale multipliers on damage; what a blow deals is BlowDamage's.
+## All numbers: BattleTuning. Pure.
 
 enum Side { FRONT, FLANK, REAR }
 
@@ -70,18 +71,3 @@ static func side(target: SkirmishUnit, from: Vector2, flank: bool) -> int:
 ## Whether a shot from `from` comes from outside the target's front.
 static func from_flank(target: SkirmishUnit, from: Vector2) -> bool:
 	return not ScrumReach.in_front(target.bearing, target.position, from)
-
-
-## A blow's damage once landed: none parried or dodged, a share grazed (at least 1), its
-## full damage hit, the striker's critical multiple on a critical.
-static func damage(base: int, landed: String, critical: float) -> int:
-	match landed:
-		PARRIED, DODGED:
-			return 0
-		GRAZED:
-			return (
-				maxi(1, roundi(base * BattleTuning.current().blow_graze_share)) if base > 0 else 0
-			)
-		CRITICAL:
-			return roundi(base * critical)
-	return base

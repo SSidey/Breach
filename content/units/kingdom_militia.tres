@@ -15,3 +15,6 @@ turn_rate = 360.0
 backward_pace = 0.4
 items = Array[ExtResource("2_ary88")]([ExtResource("3_5ht27")])
 slots = Array[String](["hand", "hand"])
+proficiencies = {
+"polearm": 1
+}

@@ -72,6 +72,15 @@ const AVERAGE := 10
 @export var defence: int = 10
 ## A critical blow's damage, times a hit's (Decision 118).
 @export var critical: float = 1.5
+## Damage types it takes more of, less of, or none of (Decision 119): weak x1.5,
+## resistant x0.5, immune x0 (BattleTuning).
+@export var weaknesses: Array[String] = []
+@export var resistances: Array[String] = []
+@export var immunities: Array[String] = []
+## Its own armour (a hide) and ward (a charm), taken off each mundane or magical blow
+## before what it wears adds (Decision 119, ArmourDef).
+@export var armour: int = 0
+@export var ward: int = 0
 ## What it carries (Decisions 47 and 120): weapons, armour and tools (ItemDef), and its
 ## innate weapons (fists, a bite) - its every blow comes from a weapon.
 @export var items: Array[ItemDef] = []
@@ -102,7 +111,7 @@ func validate() -> PackedStringArray:
 	errors.append_array(_item_errors())
 	if build_seconds <= 0.0:
 		errors.append("build_seconds must be > 0, got %f" % build_seconds)
-	for skill in ["melee_skill", "ranged_skill", "defence"]:
+	for skill in ["melee_skill", "ranged_skill", "defence", "armour", "ward"]:
 		if get(skill) < 0:
 			errors.append("%s must be >= 0, got %d" % [skill, get(skill)])
 	if critical < 1.0:
@@ -179,6 +188,11 @@ func _item_errors() -> PackedStringArray:
 	if not short.is_empty():
 		errors.append("its items need slots it hasn't free: %s" % ", ".join(short))
 	return errors
+
+
+## The weapons it can use: those it carries, and its innate ones free to strike.
+func weapons() -> Array[WeaponDef]:
+	return _weapons()
 
 
 ## The weapons it can use: those it carries, and its innate ones whose body parts no

@@ -5,11 +5,13 @@ extends RefCounted
 ## BlowRoll against its target, with the striker's margin shifted by its formation's
 ## morale band, by high ground, and by each foe beyond the first that the target is
 ## fighting off. With rolls off (the plain arithmetic the rule tests lean on) every blow
-## is a hit. Pure over the squads it is given.
+## is a hit at its weapons' full damage. What each deals is BlowDamage's. Pure over the
+## squads it is given.
 
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const BlowRoll = preload("res://sim/skirmish/formation/blow_roll.gd")
+const BlowDamage = preload("res://sim/skirmish/formation/blow_damage.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
@@ -23,8 +25,12 @@ static func land(
 	melee: Array, shots: Array, squads: Array, terrain: FormationTerrain, rolls: Array
 ) -> void:
 	if rolls.is_empty():
-		for blow in melee + shots:
+		for blow in melee:
+			blow[2] = BlowDamage.dealt(blow[0], blow[1], blow[2], BlowRoll.HIT, false, 1.0)
 			blow.append(BlowRoll.HIT)
+		for shot in shots:
+			shot[2] = BlowDamage.dealt(shot[0], shot[1], shot[2], BlowRoll.HIT, true, 1.0)
+			shot.append(BlowRoll.HIT)
 		return
 	var squad_of := {}  # unit id -> [unit, its squad]
 	for squad in squads:
@@ -56,12 +62,14 @@ static func _land(
 	if terrain != null and terrain.high_ground(striker.position, target.position):
 		shift += tuning.blow_high_ground
 	shift += maxi(0, pressed.get(target.id, 0) - 1) * tuning.blow_surrounded
+	shift += BlowDamage.spill(striker, ranged)
 	var roll := BattleRolls.uniform(rolls[0], [rolls[1], striker.id, "blow", ranged])
 	var side := BlowRoll.side(target, striker.position, flank)
 	var landed := BlowRoll.outcome(
 		BlowRoll.margin(striker, ranged, shift, roll), target, side, ranged
 	)
-	blow[2] = BlowRoll.damage(blow[2], landed, striker.critical)
+	var spread := BattleRolls.uniform(rolls[0], [rolls[1], striker.id, "damage", ranged])
+	blow[2] = BlowDamage.dealt(striker, target, blow[2], landed, ranged, spread)
 	blow.append(landed)
 
 

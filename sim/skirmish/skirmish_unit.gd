@@ -80,6 +80,18 @@ var ranged_skill := 40
 var defence := 10
 var critical := 1.5
 var parries := false
+## Formation sim: what its blows are made of and what stands against them (Decision 119,
+## UnitArms): its melee and ranged weapons' parts [[damage, type, magical], ...], their
+## floor shares, its weaknesses, resistances and immunities, and its armour and ward.
+var melee_parts := []
+var ranged_parts := []
+var melee_floor := 1.0
+var ranged_floor := 1.0
+var weaknesses: Array[String] = []
+var resistances: Array[String] = []
+var immunities: Array[String] = []
+var armour := 0
+var ward := 0
 ## Seconds between its melee blows and its ranged shots (Decision 120): its weapons'
 ## intervals, scaled by its attack speed.
 var melee_seconds := 1.0

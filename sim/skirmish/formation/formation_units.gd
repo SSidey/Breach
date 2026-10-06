@@ -6,6 +6,7 @@ extends RefCounted
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
+const UnitArms = preload("res://content/definitions/unit_arms.gd")
 
 
 static func make(
@@ -16,7 +17,6 @@ static func make(
 	unit.faction_id = faction_id
 	unit.hp = unit_def.hp
 	unit.max_hp = unit_def.hp
-	unit.dmg = unit_def.melee_damage()
 	unit.speed = unit_def.speed
 	unit.footprint_depth = unit_def.footprint_depth
 	unit.footprint_width = unit_def.footprint_width
@@ -41,18 +41,36 @@ static func make(
 			if unit_def.trait_level(trait_id) > 0:
 				unit.traits[trait_id] = unit_def.trait_level(trait_id)
 	unit.melee_seconds = unit_def.melee_seconds()
-	unit.melee_skill = unit_def.melee_skill
-	unit.ranged_skill = unit_def.ranged_skill
 	unit.defence = unit_def.defence
 	unit.critical = unit_def.critical
 	unit.parries = unit_def.can_parry()
+	_arm(unit, unit_def)
 	var ranged := unit_def.ranged_weapon()
 	if ranged != null:
 		unit.attack_range = ranged.attack_range
-		unit.ranged_dmg = ranged.damage
 		unit.damage_type = ranged.damage_type
 		unit.ranged_seconds = ranged.attack_seconds / unit_def.attack_speed
 	unit.rank = place.x
 	unit.column = place.y
 	unit.advance_direction = direction
 	return unit
+
+
+## Its weapons as the fight reckons them (UnitArms, Decision 119): their parts and damage
+## with its strength, the skill it wields them at, and what it wears.
+static func _arm(unit: SkirmishUnit, unit_def: UnitDef) -> void:
+	unit.melee_parts = UnitArms.parts(unit_def, false)
+	unit.ranged_parts = UnitArms.parts(unit_def, true)
+	unit.melee_floor = UnitArms.floor_share(unit_def, false)
+	unit.ranged_floor = UnitArms.floor_share(unit_def, true)
+	unit.melee_skill = UnitArms.skill(unit_def, false)
+	unit.ranged_skill = UnitArms.skill(unit_def, true)
+	unit.dmg = roundi(unit.melee_parts.reduce(func(sum, part): return sum + part[0], 0.0))
+	if not unit.ranged_parts.is_empty():
+		unit.ranged_dmg = roundi(unit.ranged_parts[0][0])
+	unit.weaknesses = unit_def.weaknesses.duplicate()
+	unit.resistances = unit_def.resistances.duplicate()
+	unit.immunities = unit_def.immunities.duplicate()
+	var protection := UnitArms.protection(unit_def)
+	unit.armour = protection.x
+	unit.ward = protection.y

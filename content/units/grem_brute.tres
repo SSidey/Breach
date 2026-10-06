@@ -12,6 +12,7 @@ hp = 60
 speed = 0.7
 melee_skill = 35
 defence = 15
+strength = 14
 footprint_depth = 2
 footprint_width = 2
 build_seconds = 4.0

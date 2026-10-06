@@ -80,6 +80,23 @@ static var _current: BattleTuning = null
 ## routing.
 @export var blow_morale_shift: Array[float] = []
 
+@export_group("Damage (Decision 119)")
+## A blow's worth against a target weak to, resistant to or immune to its damage type.
+@export var damage_weak := 0.0
+@export var damage_resist := 0.0
+@export var damage_immune := 0.0
+## The skill at which a blow's damage floor has risen to its full; each point of skill
+## past it adds damage_spill to the blow's margin (crits) instead.
+@export var damage_floor_skill := 0.0
+@export var damage_spill := 0.0
+
+@export_group("Items (Decision 120)")
+## Skill shifted wielding a weapon untrained or mastered in its tags.
+@export var item_untrained_skill := 0.0
+@export var item_mastered_skill := 0.0
+## Skill lost per point of strength short of a weapon's requirement.
+@export var item_weak_skill := 0.0
+
 @export_group("Routs and flight (Decisions 82, 89, 98 and 99)")
 ## Crush damage per cell of a router's footprint, to friends it shoves past.
 @export var rout_crush := 0

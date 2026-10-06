@@ -71,15 +71,6 @@ func test_the_side_a_blow_falls_on() -> void:
 	assert_bool(BlowRoll.from_flank(target, Vector2(-3, 0))).is_true()
 
 
-func test_what_each_outcome_deals() -> void:
-	assert_int(BlowRoll.damage(6, BlowRoll.PARRIED, 1.5)).is_equal(0)
-	assert_int(BlowRoll.damage(6, BlowRoll.DODGED, 1.5)).is_equal(0)
-	assert_int(BlowRoll.damage(6, BlowRoll.GRAZED, 1.5)).is_equal(3)
-	assert_int(BlowRoll.damage(1, BlowRoll.GRAZED, 1.5)).is_equal(1)
-	assert_int(BlowRoll.damage(6, BlowRoll.HIT, 1.5)).is_equal(6)
-	assert_int(BlowRoll.damage(6, BlowRoll.CRITICAL, 1.5)).is_equal(9)
-
-
 func test_a_unit_parries_with_a_held_weapon_or_a_shield_not_its_claws() -> void:
 	var claws := UnitDef.new()
 	claws.items = [WeaponDef.innate_weapon(3, "claw")]
@@ -99,7 +90,9 @@ func test_a_unit_in_the_field_carries_its_skills() -> void:
 	var captain: UnitDef = load("res://content/units/kingdom_captain.tres")
 	var unit := FormationUnits.make(captain, Vector2i.ZERO, "the_kingdom", -1, 1)
 
-	assert_int(unit.melee_skill).is_equal(captain.melee_skill)
+	assert_int(unit.melee_skill).is_equal(
+		captain.melee_skill + roundi(BattleTuning.current().item_mastered_skill)
+	)  # a mastered polearm
 	assert_int(unit.defence).is_equal(captain.defence)
 	assert_float(unit.critical).is_equal(captain.critical)
 	assert_bool(unit.parries).is_true()
