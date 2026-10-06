@@ -129,6 +129,21 @@ static var _current: BattleTuning = null
 ## Seconds a unit walking back to its place may come no nearer before it trades places.
 @export var scrum_trade_seconds := 0.0
 
+@export_group("Reach and movement (Decisions 85, 88, 103 and 106)")
+## How far apart (cells) two units' bodies may be and still touch: a unit stepping back
+## still reaches the one it is leaving.
+@export var reach_contact := 0.0
+## A point lies in a unit's front when its direction is within this many degrees of its
+## bearing; a blow from anywhere else is a flank blow.
+@export var reach_front_arc_degrees := 0.0
+## How far apart (cells, between their cells) two units may be for their squads to engage.
+@export var reach_engage := 0.0
+## How far (cells) a pursuing formation's foremost unit may lag behind its place before the
+## frame waits for it.
+@export var reach_pursuit_lag := 0.0
+## Seconds a squad holds while narrowing at a gap or widening past it.
+@export var reach_narrow_seconds := 0.0
+
 
 ## The tuning in play: content/tuning/battle_tuning.tres, loaded once.
 static func current() -> BattleTuning:

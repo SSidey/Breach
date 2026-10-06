@@ -8,6 +8,7 @@ extends RefCounted
 ## the pauses to narrow and widen - so it holds until something interferes on the way (a
 ## fight, a queue). Pure.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
@@ -41,7 +42,7 @@ static func ticks_to(
 			var heading := UnitMotion.bearing_to(Vector2.ZERO, ahead, 0.0)
 			if not narrowed and _narrows(terrain, here + ahead, heading, width):
 				narrowed = true
-				ticks += 2 * roundi(FormationNarrowing.REFORM_SECONDS / tick_seconds)
+				ticks += 2 * roundi(BattleTuning.current().reach_narrow_seconds / tick_seconds)
 		var wanted := UnitMotion.bearing_to(Vector2.ZERO, ahead, facing)
 		var left := fposmod(wanted - facing + 180.0, 360.0) - 180.0  # the short way
 		var turned := facing + clampf(left, -sweep, sweep)  # as FormationSweep sweeps

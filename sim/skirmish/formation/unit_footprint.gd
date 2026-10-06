@@ -3,7 +3,7 @@ extends RefCounted
 ## A unit's footprint (Decision 102, spec 30): a rectangle its own width by depth - a grem
 ## 1 x 1, a brute 2 x 2 - centred where it stands and turned to its bearing, its depth
 ## along it and its width across. No two footprints overlap; two units touch when their
-## footprints come within ScrumReach.CONTACT. Pure; cells.
+## footprints come within reach_contact (BattleTuning). Pure; cells.
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")

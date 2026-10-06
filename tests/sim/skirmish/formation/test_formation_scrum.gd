@@ -86,8 +86,8 @@ func test_units_touch_face_to_face_and_at_a_slant_but_not_across_a_gap() -> void
 	var here := Vector2(0.5, 0.5)
 
 	assert_float(_gap(here, Vector2(1.5, 0.5))).is_equal_approx(0.0, 0.0001)
-	assert_float(_gap(here, Vector2(1.2, 1.2))).is_less_equal(ScrumReach.CONTACT)
-	assert_float(_gap(here, Vector2(2.0, 0.5))).is_greater(ScrumReach.CONTACT)
+	assert_float(_gap(here, Vector2(1.2, 1.2))).is_less_equal(BattleTuning.current().reach_contact)
+	assert_float(_gap(here, Vector2(2.0, 0.5))).is_greater(BattleTuning.current().reach_contact)
 
 
 func test_a_units_front_is_the_three_cells_ahead() -> void:

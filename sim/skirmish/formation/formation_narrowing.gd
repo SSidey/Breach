@@ -13,6 +13,7 @@ extends RefCounted
 ## Squads keep `painted` (unit id -> [rank, column]), `painted_width`, `painted_shift` and
 ## `narrow_ticks`. Pure.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
@@ -23,8 +24,6 @@ const FormationEvents = preload("res://sim/skirmish/formation/formation_events.g
 ## Cells ahead of its front a squad looks for a gap, and the widest run it measures.
 const LOOK := 3
 const REACH := 16
-## Seconds a squad holds while narrowing or widening.
-const REFORM_SECONDS := 1.0
 
 
 ## True if the squad holds this tick to narrow or widen (or can't fit through).
@@ -97,7 +96,7 @@ static func _narrow(
 	_fold(squad, columns)
 	squad.centre_shift = gap.y
 	squad.swaps.clear()
-	squad.narrow_ticks = roundi(REFORM_SECONDS / tick_seconds)
+	squad.narrow_ticks = roundi(BattleTuning.current().reach_narrow_seconds / tick_seconds)
 	events.append(FormationEvents.squad_event("narrowed", tick, squad, {"width": columns}))
 	return true
 
@@ -160,7 +159,7 @@ static func _widen(squad: SkirmishSquad, tick: int, tick_seconds: float, events:
 	squad.painted.clear()
 	squad.compact()
 	squad.reforming = true
-	squad.narrow_ticks = roundi(REFORM_SECONDS / tick_seconds)
+	squad.narrow_ticks = roundi(BattleTuning.current().reach_narrow_seconds / tick_seconds)
 	events.append(FormationEvents.squad_event("widened", tick, squad, {"width": squad.width}))
 
 
