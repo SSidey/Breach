@@ -6012,3 +6012,47 @@ user's direction while it was built:
 
 **Rules over cases:** general: every unit and item.
 **Order:** rolls are seeded by the battle, the tick and the unit (Decisions 93 and 97).
+
+### Decision 125 — Gaits; stamina spent running and striking, regained after a breather; status and condition named apart
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** From the user, after spec 28 part 7 was built and found to let fighting never tire a
+unit (it recovered between its blows).
+- **Gaits.** A unit marches at its speed or **runs** at its speed times its own **run
+  pace** (1.5 by default; a creature's own, cavalry more, a brute less). Gaits are within a
+  movement mode (Decision 117's march, swim, climb...), not modes themselves. A formation
+  runs while it **flees** (routing), **pursues**, or moves **hurried** - the user: up to
+  "commander traits or if a player can command them directly i.e. can communicate the
+  order": the player's Hurry order, or a leader who **hastens** on a retreat. A plain
+  retreat walks. A spent unit can't run, so a tired formation slows to a walk.
+- **Costs.** Marching costs nothing unless something makes it hard - its load (steep or
+  worse), later a poor condition. Running costs stamina a second; each blow costs too;
+  both faster the heavier the load.
+- **Recovery after a breather.** Every cost restarts a **breather**; only once it has run
+  (2 s for a unit of average constitution) is stamina regained (3 a second). The delay is
+  shorter and the rate faster the hardier the unit (its constitution). So a unit striking
+  every second never recovers mid-fight, a rear rank that isn't striking catches its
+  breath, and a pursuer recovers only once it stops.
+- **Status and condition are two words for two things.** A **status** is a discrete thing
+  on a unit, with a duration, stacking and a resistance (Decision 122's status effects):
+  bleeding, poisoned, burning, stunned - and well-fed, rested, starving, cold, inspired.
+  A unit's **condition** is the one number its statuses, traits (tolerances) and
+  surroundings make of its state: 1 as things stand, each contribution adding or taking
+  away, clamped from 0 to a cap (1.25) - so a well-fed, rested, comfortable unit is better
+  than 1. Condition multiplies a named list - stamina recovery, regeneration and morale
+  recovery to start - and at 0 the unit doesn't recover. Decision 82's "conditions (fed,
+  rested, comfortable)" are statuses under this naming; they feed condition. Until stores,
+  rest and weather produce statuses, condition is 1.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A reduced recovery rate in combat | A second rule for what the breather already does. |
+| Every retreat running | The user: a retreat runs only if hurried by an order the player can give, or a leader's trait. |
+| "Condition" for both the overall state and things like bleeding | The user asked to separate the lexicon: statuses are the things, condition the number. |
+
+**Rules over cases:** general: every unit's gait, costs and recovery, one rule.
+**Order:** no ordering: each unit's stamina is its own.

@@ -12,7 +12,7 @@ traits: bonuses and new capabilities that plug into the same pairs.
 
 ## Status
 
-**Round 1 built (Decisions 117 to 124), in stacked PRs #130 to #152; ready for its feel
+**Round 1 built (Decisions 117 to 125), in stacked PRs #130 to #155; ready for its feel
 test.** See "Round 1 as built" under Rounds. Spec 30 is built
 and merged, so what a unit needs for the fights it now has is clear. Round 1 took stock of
 the unit as built and the placeholders it leans on, and the user answered with the unit
@@ -226,7 +226,7 @@ round. Choices made while building are Decision 124.
 | 4 | #144 to #146 | Skill, defence and critical on the sheet; every blow one seeded roll read as parried, dodged, grazed, hit or critical; morale, high ground and being surrounded shift it, a flank finds no parry and the rear no dodge; the flank, high ground and morale damage multipliers retired |
 | 5 | #147, #148 | Damage within the weapon's range, its floor lifted by skill (skill past it into crits); strength scaling; proficiency and too little strength costing skill; weakness, resistance, immunity by type; armour and ward (`ArmourDef`), magic a flag; the ±25% band retired |
 | 6 | #149, #150 | Downed at 0 hp, killed outright past minus constitution; death's door; the unguarded downed captured, sent home by a messenger, or finished; routers surrendering; regeneration to a limit per rest, stopped by its fears, raising the downed with the trait; bodies on the ground slowing a march |
-| 7 | #151, #152 | Load: four stages of encumbrance from strength, a hauler carrying more; stamina from constitution, spent running and striking, regained otherwise; tired units slower and less skilled; tired pursuers giving up; the scene draws the downed (#152) |
+| 7 | #151 to #155 | Load: four stages of encumbrance from strength, a hauler carrying more; stamina from constitution, spent running and striking, regained otherwise; tired units slower and less skilled; tired pursuers giving up; the scene draws the downed (#152); gaits - running at a run pace when fleeing, pursuing or hurried (the scene's Hurry A/B) - and stamina regained only after a breather from its last cost, so fighting tires (#153, #154, Decision 125); the fatigue trial (#155) |
 
 The rule tests keep plain arithmetic (rolls off: every blow a hit at full damage); the
 field and the trials roll (Decision 124).
@@ -248,6 +248,16 @@ way on the next (across 2,372 part 5 battles, 50.6%). Fights now end decisively 
 fewer drawn at the time limit. The field moved toward the kingdom: its spearmen parry and
 grems' claws can't (Decision 124), so field_b, which the player won about a quarter of the
 time, it now rarely wins. That is the rule as agreed; how far is for the feel test.
+
+**Fatigue trial** (#155, 20 seeds): a line of grems fought for a while, then left by a wave
+that turns away at a run.
+
+| Contact | Line stamina at the turn | Pursued (cells) | Ticks chasing | Chase ended tired |
+|---|---|---|---|---|
+| 3 s | 97% | 127.0 (the whole lane) | 178 | 0 / 20 |
+| 30 s | 70% | 126.9 | 193 | 0 / 20 |
+| 60 s | 40% | 44.6 | 70 | 20 / 20 |
+| 90 s | 10% | 0 | 0 | 20 / 20 |
 
 **For the feel test:** whether the kingdom's parrying line is too strong for the grems;
 whether crits and dodges read in play; the downed lying and being finished after a fight;
