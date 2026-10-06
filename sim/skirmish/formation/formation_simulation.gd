@@ -34,7 +34,6 @@ const FormationUnits = preload("res://sim/skirmish/formation/formation_units.gd"
 const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.gd")
-const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
@@ -70,11 +69,11 @@ var tick_seconds: float
 ## each squad within its own columns.
 var combat_width := 0
 ## The battle seed (Decision 93): every random draw comes from it - contests for cells,
-## and each blow's damage, rolled within damage_band of its value (0: no roll).
+## and each blow's roll.
 var fight_seed := 0
-var damage_band := 0.0
-## Whether each blow is rolled against its target's parry, dodge and defence (Decision 118,
-## BlowLanding); off, every blow lands as a plain hit.
+## Whether each blow is rolled against its target's parry, dodge and defence, and its damage
+## within its weapons' range (Decisions 118 and 119, BlowLanding); off, every blow lands as
+## a plain hit at its weapons' full damage.
 var blow_rolls := false
 ## The ground (Decision 85); null is open, level ground everywhere.
 var terrain: FormationTerrain = null
@@ -260,10 +259,6 @@ func _fight(events: Array) -> void:
 	var interval := _attack_interval_ticks()
 	var blows := FormationMelee.blows(_squads, interval, fight_seed)
 	var shots := FormationCombat.ranged_blows(_squads, interval, fight_seed)
-	for shot in shots:
-		shot[2] = BattleRolls.damage(shot[2], damage_band, fight_seed, [_tick, shot[0].id, 1])
-	for blow in blows:
-		blow[2] = BattleRolls.damage(blow[2], damage_band, fight_seed, [_tick, blow[0].id, 0])
 	BlowLanding.land(blows, shots, _squads, terrain, [fight_seed, _tick] if blow_rolls else [])
 	for shot in shots:
 		shot[1].hp -= shot[2]

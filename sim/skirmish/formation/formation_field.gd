@@ -16,7 +16,6 @@ extends RefCounted
 ## wood slows and hides, B's wave narrows through the ford, and the reserve fights down
 ## from the hill. The player's domain builders fill both waves in turn. Pure.
 
-const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -104,7 +103,6 @@ func _init(
 	sim = FormationSimulation.new(float(SIZE.x) / MapLayoutDef.CELLS_PER_TILE, seconds_per_tick)
 	sim.combat_width = WAVE_WIDTH
 	sim.fight_seed = battle_seed
-	sim.damage_band = BattleTuning.current().combat_damage_band
 	sim.blow_rolls = true
 	sim.terrain = _ground()
 	var points := route_points()

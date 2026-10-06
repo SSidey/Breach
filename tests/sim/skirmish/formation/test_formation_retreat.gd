@@ -38,7 +38,7 @@ func _row(unit_def: UnitDef) -> Array:
 func _retreat(mine: UnitDef, theirs: UnitDef, battle_seed: int = 1, pursue := true) -> Array:
 	var sim := FormationSimulation.new(2.0, 0.1)
 	sim.fight_seed = battle_seed
-	sim.damage_band = 0.25
+	sim.blow_rolls = true
 	var me := sim.spawn_squad(8, _row(mine), "player", true)
 	var foe := sim.spawn_squad(8, _row(theirs), "the_kingdom", false)
 	foe.pursues = pursue

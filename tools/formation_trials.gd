@@ -4,7 +4,7 @@ extends SceneTree
 ## losses (mean ± sd, min to max) - for judging a rule or a tuning value.
 ##
 ##   godot --headless --path . --script res://tools/formation_trials.gd -- \
-##       [scenario=all|<name>] [runs=50] [band=0.25] [rolls=off] [captain] \
+##       [scenario=all|<name>] [runs=50] [rolls=off] [captain] \
 ##       [first_seed=1] [swap]
 ##
 ## Scenarios: mirror_headon, mirror_flank, field_a, field_b, field_b_waits, field_together.
@@ -23,8 +23,6 @@ func _init() -> void:
 		"first_seed": int(args.get("first_seed", 1)),
 		"rolls": args.get("rolls", "on") != "off",
 	}
-	if args.has("band"):
-		options["band"] = float(args["band"])
 	var scenario: String = args.get("scenario", "all")
 	var names: Array = BattleTrials.SCENARIOS if scenario == "all" else [scenario]
 	print("runs %s, options %s" % [args.get("runs", "50"), options])

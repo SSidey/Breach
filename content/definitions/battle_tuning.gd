@@ -51,8 +51,6 @@ static var _current: BattleTuning = null
 @export var discipline_leash_shares: Array[float] = []
 
 @export_group("Combat (Decisions 88 and 93)")
-## Each blow's damage rolls within this share either side of its value (0: no roll).
-@export var combat_damage_band := 0.0
 ## The contest die: a roll from 0 to this, added to initiative, decides who takes a
 ## contested slot (0: stats alone).
 @export var combat_contest_die := 0
