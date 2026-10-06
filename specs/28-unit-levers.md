@@ -240,8 +240,8 @@ field and the trials roll (Decision 124).
 | mirror_headon, seeds 9001+ (600) | | | 284 / 310, 321 / 268 | | |
 | mirror_flank (100+) | 300 / 0 | 299 / 1 | 100 / 0 | 100 / 0 | 100 / 0 |
 | field_a (100) | 0 / 100, 4.9 | 0 / 100, 3.0 | 0 / 100, 3.0 | 0 / 100, 3.0 | 0 / 100, 3.0 |
-| field_b (100) | 27 / 73, 9.2 | 4 / 96, 5.1 | 1 / 99, 5.2 | 1 / 99, 5.2 | (running) |
-| field_together (100) | 100 / 0, 8.2 | 100 / 0, 7.2 | 100 / 0, 7.0 | 100 / 0, 7.0 | (running) |
+| field_b (100) | 27 / 73, 9.2 | 4 / 96, 5.1 | 1 / 99, 5.2 | 1 / 99, 5.2 | 1 / 99, 5.2 |
+| field_together (100) | 100 / 0, 8.2 | 100 / 0, 7.2 | 100 / 0, 7.0 | 100 / 0, 7.0 | 100 / 0, 7.0 |
 
 The mirror is fair: which side spawns first leans one way on one seed range and the other
 way on the next (across 2,372 part 5 battles, 50.6%). Fights now end decisively - far
