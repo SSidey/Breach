@@ -24,6 +24,7 @@ const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.g
 const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
+const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationFieldHud = preload("res://presentation/skirmish/formation_2d/formation_field_hud.gd")
 
 const CELL_PX := 8.0
@@ -132,6 +133,10 @@ func _draw() -> void:
 	var fraction := 1.0 if _clock.is_paused() else _clock.fraction()
 	_draw_staging()
 	for squad in _field.sim.squads():
+		for unit in squad.units:
+			if unit.state == SkirmishUnit.State.DOWNED:
+				_draw_downed(squad, unit)
+	for squad in _field.sim.squads():
 		for unit in squad.living():
 			_draw_unit(squad, unit, fraction)
 		_draw_morale(squad)
@@ -147,6 +152,20 @@ func _draw_route(key: String) -> void:
 	corridor.a = 0.12
 	draw_polyline(drawn, corridor, _field.routes[key].corridor_half_width * 2.0 * CELL_PX)
 	draw_polyline(drawn, COLOURS[key], 2.0)
+
+
+## A downed unit (Decision 121): a faded body where it fell, crossed out.
+func _draw_downed(squad, unit) -> void:
+	var centre: Vector2 = ORIGIN + unit.position * CELL_PX
+	var radius := minf(unit.footprint_width, unit.footprint_depth) / 2.0 * CELL_PX - 0.5
+	var colour: Color = COLOURS[squad.faction_id].darkened(0.4)
+	colour.a = 0.6
+	draw_circle(centre, radius, colour)
+	var arm := Vector2(radius, radius) * 0.6
+	draw_line(centre - arm, centre + arm, COLOURS["flash"], 1.0)
+	draw_line(
+		centre + Vector2(arm.x, -arm.y), centre - Vector2(arm.x, -arm.y), COLOURS["flash"], 1.0
+	)
 
 
 func _draw_unit(squad, unit, fraction: float) -> void:
