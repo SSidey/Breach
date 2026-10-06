@@ -5765,3 +5765,193 @@ before it is made (FormationRendezvous) is cut back the same way.
 units can walk.
 **Order:** each squad's share is worked out from where it stood as the tick began; no ties.
 
+### Decision 117 — A unit is archetype tags, five attributes and the stats derived from them
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1, from the user's list of what a unit needs. A unit type carries
+**archetype tags** (human, martial, cavalry, archer...) that tech can target as a group, as
+well as its own type. Its **attributes** are strength (carry and wield limits, damage
+scaling by weapon, shoving), agility (dodge, attack speed, turn rate, part of initiative),
+constitution (bonus HP, stamina, resisting physical maladies, the death's door band),
+willpower (resisting magical maladies and fear, part of courage, ward) and wits (casting
+speed, mana, part of initiative, perception). **Derived stats** (max load, initiative,
+dodge...) are shown but never set by hand; their formulas live in the tuning file
+(Decision 123). Courage, discipline and leadership stay mind stats beside the attributes;
+senses (sight, hearing, and special ones such as heartsense) are their own stats; speed is
+kept per movement mode (march, swim, climb, fly, burrow), a mode a unit lacks being 0.
+Rated traits (Decision 64) come onto units. `dmg` retires: a unit with no weapon fights
+with a natural one.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Stats set directly, no attributes | Tech and ranks would edit dozens of numbers; attributes give one lever that feeds many. |
+| More attributes (perception, charisma) | Perception folds into wits and senses, charisma into leadership. |
+
+**Rules over cases:** general: every unit, of either side, is one sheet.
+**Order:** no ordering: a sheet is data.
+
+### Decision 118 — A blow is one seeded opposed roll, its margin read as dodged, parried, grazed, hit or critical
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1. The user: skill opposed by parry, dodge and defence, "parry reduces
+first, then dodge, then defense for grazing hits, then a direct hit", with excess skill
+into criticals at a baseline ×1.5. Chosen: each blow is **one** seeded roll (Decision 93):
+the striker's skill (melee or ranged), weapon and conditions against the target's defence;
+the margin falls in a band - **parried** (melee only, needs a weapon or shield),
+**dodged**, **grazed** (part damage), **hit**, **critical** (×1.5, the crit multiplier a
+stat) - the higher the margin, the further along. **High ground** adds to the striker's
+margin (more crits) rather than multiplying damage; a blow from a **flank** denies the
+target its parry, from the **rear** its dodge too, and being **surrounded** lowers its
+defence: these replace the flank ×1.5 and high ground ×1.25 multipliers. A parry doesn't
+counter; **riposte** is an ability (Decision 122). Morale bands and conditions shift skill,
+replacing the blow shares by band.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A roll per layer (parry, then dodge, then defence) | Three rolls a blow for the same layering; one margin read in bands keeps the order the user gave. |
+| Percent chances per outcome | Not opposed: a master and a novice would dodge the same blow alike. |
+| Damage multipliers for flank and high ground | The user preferred them to shift the hit: high ground to crits, flanks to the target's defence. |
+
+**Rules over cases:** general: every blow, melee or ranged, unit or structure.
+**Order:** the roll is seeded by the battle and the two units, never by the list (Decision 97).
+
+### Decision 119 — Damage: weakness ×1.5, resistance ×0.5, immunity ×0, then armour and ward; variance narrows with skill into crits; strength scales by weapon
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1. A blow's damage is the weapon's, rolled within its range (variance
+belongs to the weapon); **skill raises the roll's floor** towards the weapon's maximum,
+and skill beyond that spills into crit chance rather than past the maximum. **Strength**
+scales a weapon by its own factor above its strength requirement (a maul much, a dagger
+little, a bow by draw weight, a spell from wits instead); below the requirement the
+wielder loses skill. Against the target, a damage type it is **weak** to deals ×1.5,
+**resistant** ×0.5, **immune** ×0; then **armour** (slashing, piercing, blunt) or **ward**
+(fire, acid and the magic types) takes a flat amount off. Magic damage types come now so
+abilities can use them later; their names are spec 28's to settle, amending Decision 79's
+list.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Strength added flat to every weapon | A dagger would gain as much as a maul. |
+| Variance growing past the weapon's maximum with skill | Two routes to big damage; crits carry it instead. |
+| A ×1.25 damage step for everything | Superseded by the hit roll (Decision 118) and these multipliers. |
+
+**Rules over cases:** general: one damage rule for every blow.
+**Order:** seeded rolls only (Decision 93).
+
+### Decision 120 — Items: one group with equipment slots, load, proficiency tags and a strength requirement; the weapon sets the attack interval
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1. **Item** is the one group (weapons, armour, tools - Decision 54's
+tools granting trait levels). Each item names the **slots** it needs; each unit type has
+its own slots, so a creature that can't hold a weapon has no hand slot. Items carry
+**weight** (load), a **strength requirement**, and **tags** (axe, polearm, heavy armour)
+met by a unit's **proficiency** per tag: untrained wields at reduced skill, and tech or
+ranks grant proficiency (axe proficiency for a unit type). A weapon sets its **attack
+interval** in ticks; the unit's attack speed scales it (0.8 makes a 6-tick weapon strike
+every 5), so unwieldy items strike more slowly (Decision 79). **Load:** strength derives
+a carry limit and a wield limit; encumbrance has four stages - none to half the carry
+limit, a mild drain on speed, stamina and dodge to the limit, steep penalties beyond it to
+a maximum multiple, immobile past that - a hauler trait raising the multiple.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Attack speeds added (2 + 4 = 6) | Higher would be worse, and percentages from tech wouldn't compose. |
+| The higher of unit and weapon | The unit's speed would vanish behind a slow weapon. |
+
+**Rules over cases:** general: every item and every unit type.
+**Order:** no ordering.
+
+### Decision 121 — At 0 HP a unit is downed; below it lies death's door, constitution deep; regeneration is HP only and keeps running
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1, the user's model. At 0 HP a unit is **downed**: it stops fighting and
+leaves its formation, and counts not as a combatant for spacing - only as a body on the
+ground, an obstacle by its mass (crossable slowly, a great one blocking) and something to
+haul (captives, food). HP below 0 is **death's door**, constitution deep: a downed unit
+struck again goes into it, and dies at minus that depth; a blow that takes a standing unit
+straight past it kills outright. Whether attackers finish the downed is the creature's (a
+merciless or predator trait); by default a unit leaves downed foes while standing ones are
+near. **Surrender in place** may be an alternative to a rout (to settle). **Regeneration**
+is HP only, keeps running when struck (a trait may stop it, a troll's by fire or acid),
+stops while downed unless a trait keeps it running, and has a per-conflict limit, a
+multiple of max HP, so no unit is unkillable by it; other pools fill by their own rules
+(Decision 122). A unit left alone recovers.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Downed, then a separate death's door pool | One negative-HP band says the same with one number. |
+| Regeneration stopping on damage | The user: only by a trait, such as a troll's to fire or acid. |
+| Death at 0 | Leaves no wounded, captives or recovery. |
+
+**Rules over cases:** general: every unit, of either side.
+**Order:** no ordering: a blow is resolved from its roll.
+
+### Decision 122 — Pools, abilities and status effects
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1. **Pools** beyond HP (stamina, mana, rage, hatred...) each have a
+maximum and their own means of gain - stamina recovers resting, hatred grows on hitting an
+enemy. **Abilities** are a trigger, a condition, an effect, a cost and a cooldown, either
+**passive** (every third attack ×1.25, a chance on hit of one more blow up to a limit, a
+riposte on a parry) or **activated** on command (a spell costing mana, a fury costing
+rage). **Status effects** (bleed, poison, burning, stun, slow, fear) have a duration,
+stacking rules and a resistance (constitution for the physical, willpower for the
+magical). Attack shapes - what a weapon or ability hits - belong to the weapon or ability
+(spec 32).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Hard-coded unit behaviours | Every new unit would need code; the same few parts compose them. |
+
+**Rules over cases:** general: one ability model for every unit and item.
+**Order:** triggers resolve from the tick's snapshot; chances are seeded (Decisions 93 and 97).
+
+### Decision 123 — Tech can change anything about a unit, in a fixed modifier order; everything persists for the map; one tuning file
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1. **Tech** may change anything about a unit: its cost, its stats, its
+traits and abilities, or turn it into a **subtype** that inherits its parent's upgrades
+(a four-armed grem). Modifiers apply in a fixed order - unit type, archetype tags, tech,
+items, rank, status effects; flat amounts first, then percentages, then caps - so stacking
+is predictable. **Experience** fills ranks that tech unlocks, each rank granting stats,
+traits or abilities; a veteran may be promoted to a hero. **Everything persists for the
+whole map**; a **rest** (somewhere comfortable, N hours) resets fatigue, the regeneration
+limit and some cooldowns. Commanders, heroes and lords are named characters who persist
+across maps; whether rank and file carry over is still open. Every tuning number that
+isn't a unit's or an item's lives in **one tuning file**.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Tech as raw stat edits only | The user wants tech to change anything, including what a unit is. |
+| Tuning constants in code | The user: keep them to a single config file for easy view and tune. |
+
+**Rules over cases:** general: one modifier order for every source.
+**Order:** no ordering beyond the fixed modifier order.

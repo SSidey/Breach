@@ -1,7 +1,7 @@
 # Spec 28: Unit levers
 
 Decisions 41 (tech trees), 47 (weapons), 52 (discipline), 54 (sizes, traits), 64 (rated
-traits), 77 and 79 (items, damage types, breaking).
+traits), 77 and 79 (items, damage types, breaking); round 1: Decisions 117 to 123.
 
 ## Purpose
 
@@ -12,10 +12,10 @@ traits: bonuses and new capabilities that plug into the same pairs.
 
 ## Status
 
-**Round 1 agenda drafted, for the user's answers.** Spec 30 is built and merged
-(Decisions 102 to 116), so what a unit needs for the fights it now has is clear. Round 1
-takes stock of the unit as built, the placeholders it leans on, and asks the questions
-below; the original agenda (kept below) is folded into them.
+**Round 1 agreed (Decisions 117 to 123), plan below; not yet built.** Spec 30 is built
+and merged, so what a unit needs for the fights it now has is clear. Round 1 took stock of
+the unit as built and the placeholders it leans on, and the user answered with the unit
+they want; the original agenda (kept below) is folded in.
 
 ## The unit as built
 
@@ -113,6 +113,67 @@ Each item has a recommendation; answer, change or reject it.
     (8) and the tuning resource (13); bleed and healing, leaders and progression (10 to 12)
     in a round 2.
 
+## Round 1 answers
+
+The user's own list of what a unit needs, with the gaps found between it and the agenda:
+
+1. **The sheet (Decision 117):** archetype tags (human, martial, cavalry, archer) for tech
+   to target, beside the unit type; five attributes - **strength, agility, constitution,
+   willpower, wits** - and stats derived from them, shown not set; mind stats (courage,
+   discipline, leadership); senses (sight, hearing, special ones such as heartsense);
+   speed per movement mode (march, swim, climb, fly, burrow); turn speed; rated traits;
+   body (footprint, height, mass); band; cost. `dmg` retires.
+2. **A blow (Decision 118):** one seeded opposed roll, skill against defence, its margin
+   read as parried, dodged, grazed, hit or critical (×1.5 baseline, a stat). High ground
+   adds to the striker's margin; a flank denies the target its parry, the rear its dodge
+   too; being surrounded lowers defence. A parry doesn't counter: riposte is an ability.
+3. **Damage (Decision 119):** the weapon's range, skill raising its floor and spilling into
+   crits; strength scaling per weapon over its requirement; weakness ×1.5, resistance
+   ×0.5, immunity ×0; then armour (physical) or ward (fire, acid, magic) flat. Magic damage
+   types come now.
+4. **Items (Decision 120):** one group; slots per item and per unit type; weight; strength
+   requirement; proficiency tags; the weapon's attack interval scaled by the unit's attack
+   speed; carry and wield limits from strength, encumbrance in four stages, a hauler trait
+   raising the limit.
+5. **HP, wounds and death (Decision 121):** downed at 0 HP, a body on the ground (an
+   obstacle by mass, haulable); death's door below 0, constitution deep, a blow past it
+   killing outright; finishing the downed is the creature's choice; regeneration HP only,
+   running through damage (traits may stop it, or keep it running while downed), a
+   per-conflict limit.
+6. **Pools, abilities, status effects (Decision 122):** pools with their own gain;
+   abilities as trigger, condition, effect, cost and cooldown, passive or activated; status
+   effects with duration, stacking and resistance. Attack shapes belong to weapons and
+   abilities (spec 32).
+7. **Progression and tuning (Decision 123):** tech can change anything, in a fixed modifier
+   order; subtypes inherit their parent's upgrades; experience fills ranks tech unlocks;
+   everything persists for the map, a rest resetting some of it; named leaders persist
+   across maps; one tuning file.
+
+**Still open:**
+- The magic damage types' names (amending Decision 79's list).
+- Surrender in place as an alternative to a rout.
+- Whether rank and file carry over between maps.
+- Each derived stat's formula, and the starting numbers for the six units (the mirror
+  trials judge them).
+
+## Round 1 plan
+
+Stacked PRs, each within the 11-file limit; the mirror trials both ways round on every
+part that moves outcomes:
+
+| Part | What |
+|---|---|
+| 1 | The tuning file: every placeholder in `content/tuning/`, read by the simulation |
+| 2 | The sheet: tags, attributes, derived stats, mind and senses, movement modes, traits; `dmg` retired |
+| 3 | Items: one item group, slots, weight, proficiency tags, the weapon's attack interval and the unit's attack speed |
+| 4 | The blow: skill and defence, the opposed roll and its bands, crits; high ground and flanks shift the roll |
+| 5 | Damage: weapon range and skill, strength scaling, weakness, resistance and immunity, armour and ward |
+| 6 | HP and wounds: downed, death's door, bodies on the ground, finishing; regeneration and its limit |
+| 7 | Load and stamina: encumbrance, stamina drain and recovery, tiredness slowing and weakening |
+
+Round 2: abilities, pools and status effects (bleed, medic, riposte), experience and ranks,
+the tech modifier order and subtypes, persistence and rest, leaders as named characters.
+
 ## The original agenda (folded into round 1)
 
 1. **The levers there are today:** stats, traits, items, size, band, discipline. What each
@@ -149,4 +210,4 @@ Each item has a recommendation; answer, change or reject it.
 
 ## Rounds
 
-None yet.
+Round 1 agreed (above); not yet built.
