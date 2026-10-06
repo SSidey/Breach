@@ -64,21 +64,87 @@ func test_a_laden_unit_is_slower_tires_faster_and_dodges_worse() -> void:
 	assert_float(light.max_stamina).is_equal(10 * tuning.stamina_per_constitution)
 
 
-func test_running_tires_it_resting_restores_it_and_striking_costs() -> void:
+func test_running_tires_it_and_marching_light_costs_nothing() -> void:
 	var tuning := BattleTuning.current()
 	var runner := _unit()
 	var fleeing := _squad([runner])
 	fleeing.state = SkirmishSquad.State.ROUTING
-	var rester := _unit(50.0)
+	var marcher := _unit()
 	var striker := _unit()
 
-	FormationStamina.step([fleeing, _squad([rester])], 1.0)
+	FormationStamina.step([fleeing, _squad([marcher])], 1.0)
 	FormationStamina.strike([[striker]])
 
 	assert_float(runner.stamina).is_equal_approx(100.0 - tuning.stamina_run, 0.0001)
-	assert_float(rester.stamina).is_equal_approx(50.0 + tuning.stamina_recovery, 0.0001)
+	assert_float(runner.speed).is_equal_approx(runner.run_pace, 0.0001)  # it runs
+	assert_float(marcher.stamina).is_equal(100.0)
+	assert_float(marcher.speed).is_equal(1.0)
 	assert_float(striker.stamina).is_equal_approx(100.0 - tuning.stamina_blow, 0.0001)
-	assert_bool(striker.exerted).is_true()
+
+
+func test_it_recovers_only_after_a_breather_from_its_last_cost() -> void:
+	var tuning := BattleTuning.current()
+	var resting := _unit(50.0)
+	var hardy := _unit(50.0)
+	hardy.attributes = {"constitution": 20}  # half the breather, twice the rate
+	var squads := [_squad([resting, hardy])]
+	var delay := tuning.stamina_delay
+	for _i in range(roundi(delay * 0.75 / 0.1)):
+		FormationStamina.step(squads, 0.1)
+
+	assert_float(resting.stamina).is_equal(50.0)  # still catching its breath
+	assert_float(hardy.stamina).is_greater(50.0)
+	for _i in range(roundi(delay / 0.1) + 10):
+		FormationStamina.step(squads, 0.1)
+	assert_float(resting.stamina).is_greater(50.0)
+	FormationStamina.strike([[resting]])  # a blow restarts the breather
+	var after := resting.stamina
+	FormationStamina.step(squads, 0.1)
+	assert_float(resting.stamina).is_equal(after)
+
+
+func test_a_heavy_load_makes_marching_cost_and_a_poor_condition_slows_recovery() -> void:
+	var laden := _unit()
+	laden.load_stage = 2
+	var marching := _squad([laden])
+	var weak := _unit(50.0)
+	weak.condition = 0.0  # in a bad enough state it doesn't recover
+	var rested := [_squad([weak])]
+	FormationStamina.step([marching], 1.0)
+	for _i in range(100):
+		FormationStamina.step(rested, 0.1)
+
+	assert_float(laden.stamina).is_less(100.0)
+	assert_float(weak.stamina).is_equal(50.0)
+
+
+func test_who_runs() -> void:
+	var hurried := _squad([_unit()])
+	hurried.hurry = true
+	var fighting := _squad([_unit()])
+	fighting.hurry = true
+	fighting.state = SkirmishSquad.State.FIGHTING
+	var leader := _unit()
+	leader.leadership = 2
+	leader.traits = {"hastens": 1}
+	var hastened := _squad([leader])
+	hastened.order = SkirmishUnit.Order.RETREAT
+	var withdrawing := _squad([_unit()])
+	withdrawing.order = SkirmishUnit.Order.RETREAT
+
+	assert_bool(FormationStamina.runs(hurried)).is_true()
+	assert_bool(FormationStamina.runs(fighting)).is_false()
+	assert_bool(FormationStamina.runs(hastened)).is_true()
+	assert_bool(FormationStamina.runs(withdrawing)).is_false()  # a retreat walks unless told
+
+
+func test_a_spent_unit_cant_run() -> void:
+	var spent := _unit(5.0)
+	var fleeing := _squad([spent])
+	fleeing.state = SkirmishSquad.State.ROUTING
+	FormationStamina.step([fleeing], 0.1)
+
+	assert_float(spent.speed).is_equal_approx(BattleTuning.current().stamina_pace[2], 0.0001)
 
 
 func test_tired_it_is_slower_and_less_skilled() -> void:

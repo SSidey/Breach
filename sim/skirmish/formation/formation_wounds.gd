@@ -159,7 +159,8 @@ static func mend(squads: Array, seconds: float, tick: int, events: Array) -> voi
 			if unit.regeneration_halt > 0.0:
 				unit.regeneration_halt = maxf(0.0, unit.regeneration_halt - seconds)
 				continue
-			var gain := minf(unit.regeneration * seconds, unit.regeneration_left)
+			var condition := clampf(unit.condition, 0.0, BattleTuning.current().condition_cap)
+			var gain := minf(unit.regeneration * condition * seconds, unit.regeneration_left)
 			gain = minf(gain, float(unit.max_hp - unit.hp) - unit.regeneration_carry)
 			if gain <= 0.0:
 				continue

@@ -103,6 +103,13 @@ var fresh_speed := 0.0
 var tiring := 1.0
 var dodging := 1.0
 var exerted := false
+## Formation sim: how much faster it runs than it marches, its stage of load, seconds since
+## it last spent stamina (Decision 125), and its condition - the one number its statuses,
+## traits and surroundings make of its state, 1 as things stand.
+var run_pace := 1.5
+var load_stage := 0
+var breather := 0.0
+var condition := 1.0
 ## Formation sim: its regeneration (Decision 121): HP a second, HP it has left to regain
 ## before it must rest, the damage types that stop it, seconds it stays stopped, and the
 ## part of a point regained so far.

@@ -30,6 +30,9 @@ const AVERAGE := 10
 @export var cost_food: int = 0
 @export var hp: int = 0
 @export var speed: float = 0.0
+## How much faster than its march it runs (Decision 125): a formation hurrying, pursuing or
+## fleeing runs at its slowest unit's run, spending stamina.
+@export var run_pace: float = 1.5
 ## Formation slots the unit occupies, depth (ranks) x width (columns), per Decision 40:
 ## 1x1 a grem, 2x1 cavalry, 2x2 a brute, up to 8x8 (a dragon, the widest lane).
 @export var footprint_depth: int = 1

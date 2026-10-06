@@ -77,6 +77,8 @@ var morale := -1
 ## Routing (FormationRout): each fleeing unit's place, and ticks with no enemy near.
 var fleeing := {}
 var rally_ticks := 0
+## Ordered to hurry (Decision 125): it runs while it moves, spending stamina.
+var hurry := false
 ## Halted by ground it can't cross (FormationMarch.pace); reported once.
 var blocked := false
 ## Narrowed through a gap (FormationNarrowing): its painted places (unit id -> [rank,

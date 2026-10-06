@@ -87,12 +87,21 @@ static func step(squads: Array, tick: int, ticks_per_second: int, events: Array)
 		var sides := _sides_engaged(squad)
 		var morale := _morale(squad)
 		if sides.is_empty():
-			morale += _tuning().morale_recovery + leadership(squad)
+			morale += roundi(_tuning().morale_recovery * _condition(squad)) + leadership(squad)
 		else:
 			var count := maxi(1, sides.size() - _supported(squad, squads, sides))
 			var pressure := _tuning().morale_pressure
 			morale -= pressure[mini(count, pressure.size() - 1)]
 		_set_morale(squad, mini(morale, ceiling(squad)), tick, events)
+
+
+## Its units' mean condition (Decision 125), which their morale recovers by.
+static func _condition(squad: SkirmishSquad) -> float:
+	var living := squad.living()
+	if living.is_empty():
+		return 1.0
+	var total: float = living.reduce(func(sum, u): return sum + u.condition, 0.0)
+	return clampf(total / living.size(), 0.0, _tuning().condition_cap)
 
 
 ## The edges (SquadEdges) a squad is fought on: its front and its flank contacts.

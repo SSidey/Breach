@@ -106,7 +106,7 @@ func test_a_rout_with_no_friend_in_its_way_fans_out_from_its_route() -> void:
 	var sim := FormationSimulation.new(2.0, 0.1)
 	sim.fight_seed = 5
 	var mine := sim.spawn_squad(4, _row(_def(30), 4), "player", true)
-	mine.front_distance = 30.0 / 64.0
+	mine.front_distance = 60.0 / 64.0  # far enough from home that its run doesn't end
 	sim.step()
 	var start := _spread_y(mine)
 	mine.morale = 0

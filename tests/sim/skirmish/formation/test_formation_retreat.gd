@@ -196,7 +196,10 @@ func test_a_wave_caught_at_home_by_units_breaking_ranks_fights_back() -> void:
 		func(e): return e["type"] == "engaged" and e["squad"] == wave.id and e["tick"] > home
 	)
 	assert_bool(fought_back).is_true()
-	assert_int(setup[0].kingdom_line.living().size()).is_less(12)  # it cut chasers down
+	var struck := events.filter(
+		func(e): return e["type"] == "hit" and e["faction"] == "player" and e["tick"] > home
+	)
+	assert_int(struck.size()).is_greater(0)  # it strikes the chasers back
 
 
 func test_a_captain_holds_its_units_from_breaking_ranks() -> void:

@@ -107,12 +107,19 @@ static var _current: BattleTuning = null
 @export var load_pace: Array[float] = []
 @export var load_tiring: Array[float] = []
 @export var load_dodge: Array[float] = []
-## Stamina per point of constitution; spent a second running (pursuing, chasing, fleeing)
-## and per blow struck, regained a second otherwise.
+## Stamina a second marching under each stage of load (marching light costs nothing).
+@export var load_march_tiring: Array[float] = []
+## Stamina per point of constitution; spent a second running and per blow struck (Decision
+## 125). Each cost restarts a breather: once stamina_delay seconds have passed with none,
+## it is regained at stamina_recovery a second - both for a unit of average constitution,
+## the delay shorter and the rate faster the hardier it is, the rate times its condition.
 @export var stamina_per_constitution := 0.0
 @export var stamina_run := 0.0
 @export var stamina_blow := 0.0
+@export var stamina_delay := 0.0
 @export var stamina_recovery := 0.0
+## The most a unit's condition (Decision 125) may lift what it multiplies.
+@export var condition_cap := 0.0
 ## Below these shares of its stamina a unit is tired, then spent: its pace times
 ## stamina_pace and its skill shifted by stamina_skill, by stage (fresh, tired, spent). A
 ## pursuer (or chaser) whose stamina falls below stamina_give_up gives up the chase.
