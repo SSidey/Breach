@@ -7,3 +7,4 @@ script = ExtResource("1_jcpwr")
 item_name = "claw"
 damage = 3
 damage_type = "slashing"
+innate = true

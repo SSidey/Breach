@@ -16,6 +16,16 @@ extends ItemDef
 @export var attack_seconds: float = 1.0
 
 
+## A natural melee weapon striking for `damage` (Decision 120): what a unit fights
+## with when it carries nothing else.
+static func innate_weapon(damage_of: int, named: String = "fists") -> WeaponDef:
+	var weapon := WeaponDef.new()
+	weapon.item_name = named
+	weapon.damage = damage_of
+	weapon.innate = true
+	return weapon
+
+
 func is_melee() -> bool:
 	return attack_range == 0
 

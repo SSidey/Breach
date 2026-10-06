@@ -10,3 +10,4 @@ damage_type = "bludgeoning"
 traits = {
 "siege": 1
 }
+innate = true

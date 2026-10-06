@@ -9,7 +9,6 @@
 script = ExtResource("1_unit")
 tags = Array[String](["grem", "brute"])
 hp = 60
-dmg = 10
 speed = 0.7
 footprint_depth = 2
 footprint_width = 2

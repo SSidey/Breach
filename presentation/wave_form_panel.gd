@@ -23,7 +23,7 @@ func on_queue_grem_pressed(unit_def: UnitDef) -> bool:
 		return false
 	if not economy.spend("food", unit_def.cost_food):
 		return false
-	_pending_units.append({"hp": unit_def.hp, "dmg": unit_def.dmg})
+	_pending_units.append({"hp": unit_def.hp, "dmg": unit_def.melee_damage()})
 	return true
 
 

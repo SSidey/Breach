@@ -29,8 +29,8 @@ const AVERAGE := 10
 @export var traits: Dictionary = {}
 @export var cost_food: int = 0
 @export var hp: int = 0
-## Its natural blow (fists, bite), struck when it has no melee weapon; every unit so far
-## carries its natural weapons as items.
+## Retiring (Decision 120): its blow without weapons, until every unit strikes with an
+## innate weapon (WeaponDef.innate_weapon).
 @export var dmg: int = 0
 @export var speed: float = 0.0
 ## Formation slots the unit occupies, depth (ranks) x width (columns), per Decision 40:
@@ -66,8 +66,8 @@ const AVERAGE := 10
 ## it turns, and the share of its speed it makes moving straight back (sideways is between).
 @export var turn_rate: float = 450.0
 @export var backward_pace: float = 0.4
-## What it carries (Decisions 47 and 120): weapons, armour and tools (ItemDef). Without
-## weapons it strikes once for `dmg`.
+## What it carries (Decisions 47 and 120): weapons, armour and tools (ItemDef), and its
+## innate weapons (fists, a bite) - its every blow comes from a weapon.
 @export var items: Array[ItemDef] = []
 ## The slots its body has for items (hand, hand, back...): an item fits if its slots are
 ## free. A creature with no hands has no hand slot.
@@ -126,7 +126,8 @@ func trait_level(trait_id: String) -> int:
 	return level
 
 
-## The damage of one melee strike: every melee weapon together, or `dmg` without weapons.
+## The damage of one melee strike: every melee weapon together (`dmg` without weapons,
+## while it retires).
 func melee_damage() -> int:
 	var weapons := _weapons()
 	if weapons.is_empty():

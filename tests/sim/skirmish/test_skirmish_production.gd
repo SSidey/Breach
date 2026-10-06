@@ -10,7 +10,7 @@ const UnitDef = preload("res://content/definitions/unit_def.gd")
 func _production(departure: int) -> SkirmishProduction:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 20
-	unit_def.dmg = 6
+	unit_def.items = [WeaponDef.innate_weapon(6)]
 	unit_def.speed = 1.0
 	var production := SkirmishProduction.new(unit_def, "player", true)
 	production.wave_size = 3

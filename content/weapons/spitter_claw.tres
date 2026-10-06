@@ -7,3 +7,4 @@ script = ExtResource("1_40tb5")
 item_name = "claw"
 damage = 1
 damage_type = "slashing"
+innate = true

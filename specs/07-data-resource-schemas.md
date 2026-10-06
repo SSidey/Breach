@@ -29,8 +29,11 @@ these shapes, so they need to exist and be validated first.
   - `preferred_position` (FRONT / MID / BACK, default FRONT) and `position_priority`
     (>= 0), from Decision 46
   - `weapons: Array[WeaponDef]`, from Decision 47. A unit in melee strikes with all its
-    melee weapons; without weapons it strikes once for `dmg`, which the spec 21 and lane
-    sims still use.
+    melee weapons. Now `items: Array[ItemDef]` (Decision 120, spec 28). `dmg` is retired:
+    every blow comes from a weapon. A creature's natural weapons (fists, a bite, a claw,
+    spit) are innate items (`ItemDef.innate`) that can't be dropped, weigh nothing and
+    take no slot. `melee_damage()` sums the melee weapons and feeds the spec 21 and lane
+    sims.
 - `WeaponDef` (`content/definitions/weapon_def.gd`, Decision 47): `weapon_name`,
   `damage` (>= 0), `damage_type` (no effect yet), `attack_range` in ranks (>= 0; 0 is
   melee; a rank is 0.06 map cells, per Decision 48) and `traits` (e.g. `{"siege": 1}`).
@@ -90,7 +93,7 @@ than stopping at the first one.
 
 ```gherkin
 Scenario: A UnitDef with all non-negative fields is valid
-  Given a UnitDef with cost_food = 5, hp = 10, dmg = 2, speed = 1.0
+  Given a UnitDef with cost_food = 5, hp = 10, an innate weapon of damage 2, speed = 1.0
   When validate() is called
   Then it returns an empty array
 

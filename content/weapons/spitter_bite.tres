@@ -7,3 +7,4 @@ script = ExtResource("1_d6re4")
 item_name = "bite"
 damage = 1
 damage_type = "piercing"
+innate = true

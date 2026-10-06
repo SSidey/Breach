@@ -7,3 +7,4 @@ script = ExtResource("1_kixot")
 item_name = "bite"
 damage = 3
 damage_type = "piercing"
+innate = true

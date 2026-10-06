@@ -38,12 +38,13 @@ func test_items_fit_only_the_slots_a_body_has_free() -> void:
 	assert_array(no_hands).is_not_empty()
 
 
-func test_a_natural_weapon_takes_no_slot() -> void:
-	var bite := WeaponDef.new()
-	bite.item_name = "bite"
-	bite.damage = 3
+func test_an_innate_weapon_takes_no_slot_and_weighs_nothing() -> void:
+	var bite := WeaponDef.innate_weapon(3, "bite")
 
 	assert_array(_unit([], [bite]).validate()).is_empty()
+	bite.weight = 1.0
+	bite.slots = ["hand"]
+	assert_bool(Array(bite.validate()).any(func(e): return e.contains("innate"))).is_true()
 
 
 func test_a_tool_grants_its_traits_but_a_weapons_traits_are_its_own() -> void:
@@ -72,3 +73,4 @@ func test_the_units_in_play_carry_items_that_fit() -> void:
 		var unit: UnitDef = load("res://content/units/%s.tres" % name)
 		assert_array(unit.validate()).is_empty()
 		assert_bool(unit.items.is_empty()).is_false()
+		assert_int(unit.melee_damage()).is_greater(0)  # it fights with its innate weapons
