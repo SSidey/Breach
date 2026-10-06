@@ -12,7 +12,8 @@ traits: bonuses and new capabilities that plug into the same pairs.
 
 ## Status
 
-**Round 1 agreed (Decisions 117 to 123), plan below; not yet built.** Spec 30 is built
+**Round 1 built (Decisions 117 to 124), in stacked PRs #130 to #152; ready for its feel
+test.** See "Round 1 as built" under Rounds. Spec 30 is built
 and merged, so what a unit needs for the fights it now has is clear. Round 1 took stock of
 the unit as built and the placeholders it leans on, and the user answered with the unit
 they want; the original agenda (kept below) is folded in.
@@ -212,4 +213,54 @@ the tech modifier order and subtypes, persistence and rest, leaders as named cha
 
 ## Rounds
 
-Round 1 agreed (above); not yet built.
+### Round 1 as built
+
+Built in stacked PRs, each within the 11-file limit, judged by the mirror trials both ways
+round. Choices made while building are Decision 124.
+
+| Part | PRs | What |
+|---|---|---|
+| 1 | #130 to #135 | Every placeholder in one tuning file, `content/tuning/battle_tuning.tres` (`BattleTuning`) |
+| 2 | #136 | The sheet: archetype tags, the five attributes, rated traits on units |
+| 3 | #137 to #143 | Items (`ItemDef`: slots, weight, strength, tags, tool traits); the weapon's attack interval and the unit's attack speed; innate weapons belonging to body parts, out of use while a carried item holds one; `dmg` retired |
+| 4 | #144 to #146 | Skill, defence and critical on the sheet; every blow one seeded roll read as parried, dodged, grazed, hit or critical; morale, high ground and being surrounded shift it, a flank finds no parry and the rear no dodge; the flank, high ground and morale damage multipliers retired |
+| 5 | #147, #148 | Damage within the weapon's range, its floor lifted by skill (skill past it into crits); strength scaling; proficiency and too little strength costing skill; weakness, resistance, immunity by type; armour and ward (`ArmourDef`), magic a flag; the ±25% band retired |
+| 6 | #149, #150 | Downed at 0 hp, killed outright past minus constitution; death's door; the unguarded downed captured, sent home by a messenger, or finished; routers surrendering; regeneration to a limit per rest, stopped by its fears, raising the downed with the trait; bodies on the ground slowing a march |
+| 7 | #151, #152 | Load: four stages of encumbrance from strength, a hauler carrying more; stamina from constitution, spent running and striking, regained otherwise; tired units slower and less skilled; tired pursuers giving up; the scene draws the downed (#152) |
+
+The rule tests keep plain arithmetic (rolls off: every blow a hit at full damage); the
+field and the trials roll (Decision 124).
+
+**Trials** (player / kingdom wins; kingdom units lost, mean):
+
+| Scenario | Before (main) | Part 4 | Part 5 | Part 6 | Part 7 |
+|---|---|---|---|---|---|
+| mirror_headon, seeds 1+ (300) | 135 / 119, 122 / 127 swapped | 131 / 164, 159 / 138 | | | |
+| mirror_headon, seeds 5001+ (600) | | 315 / 276, 289 / 303 | 323 / 271, 269 / 326 | 328 / 267, 272 / 324 | 328 / 267, 272 / 324 |
+| mirror_headon, seeds 9001+ (600) | | | 284 / 310, 321 / 268 | | |
+| mirror_flank (100+) | 300 / 0 | 299 / 1 | 100 / 0 | 100 / 0 | 100 / 0 |
+| field_a (100) | 0 / 100, 4.9 | 0 / 100, 3.0 | 0 / 100, 3.0 | 0 / 100, 3.0 | 0 / 100, 3.0 |
+| field_b (100) | 27 / 73, 9.2 | 4 / 96, 5.1 | 1 / 99, 5.2 | 1 / 99, 5.2 | (running) |
+| field_together (100) | 100 / 0, 8.2 | 100 / 0, 7.2 | 100 / 0, 7.0 | 100 / 0, 7.0 | (running) |
+
+The mirror is fair: which side spawns first leans one way on one seed range and the other
+way on the next (across 2,372 part 5 battles, 50.6%). Fights now end decisively - far
+fewer drawn at the time limit. The field moved toward the kingdom: its spearmen parry and
+grems' claws can't (Decision 124), so field_b, which the player won about a quarter of the
+time, it now rarely wins. That is the rule as agreed; how far is for the feel test.
+
+**For the feel test:** whether the kingdom's parrying line is too strong for the grems;
+whether crits and dodges read in play; the downed lying and being finished after a fight;
+pursuers tiring.
+
+**What waits** (round 2, or the passes named):
+- Derived stats beyond those built (dodge from agility, stamina from constitution, carry
+  from strength, death's door from constitution): initiative, perception, ward from
+  willpower, casting from wits; senses (hearing, heartsense); speed per movement mode, and
+  running as a mode of its own.
+- Walking out to finish or capture a distant body, and bodies slowing units loose in a
+  fight: spec 30's movement pass.
+- Rest and persistence across a map (Decision 123): regeneration limits and stamina start
+  full each battle.
+- Abilities, pools and status effects (Decision 122): bleed, medic, riposte; experience and
+  ranks; tech modifiers and subtypes; leaders as named characters.

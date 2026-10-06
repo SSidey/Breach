@@ -5966,3 +5966,49 @@ isn't a unit's or an item's lives in **one tuning file**.
 
 **Rules over cases:** general: one modifier order for every source.
 **Order:** no ordering beyond the fixed modifier order.
+
+### Decision 124 — Spec 28 round 1 as built: innate weapons belong to body parts; rolls and wounds as the fight's rules, plain arithmetic for rule tests
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** The choices made building spec 28 round 1 (Decisions 117 to 121), the first from the
+user's direction while it was built:
+- **Innate weapons** (Decision 117's natural weapons): fists, a bite, a claw, a spitter's spit
+  are items that can't be dropped and weigh nothing. Their slots are the **body parts** they
+  belong to - fists the hands, a bite or spit the mouth - and a carried item holding one
+  puts the innate weapon out of use (the user: "if unarmed is tied to a body part with an
+  equipment slot, the unarmed should be disabled", spit included). `dmg` is gone.
+- **Who parries:** a unit holding a melee weapon that isn't innate, or a shield; claws
+  don't parry. The kingdom's spearmen parry, grems don't.
+- **Surrounded:** each foe beyond the first touching a unit and fighting it adds to blows'
+  margins against it.
+- **Rule tests and the fight:** the field and the trials roll every blow and its damage;
+  the simulation's rule tests keep plain arithmetic (rolls off: every blow a hit at its
+  weapons' full damage), so a rule is tested apart from chance.
+- **Damage variance** is the weapon's: the battle-wide ±25% band (Decision 93) is retired.
+- **Downed** is decided once a tick, from the hp the tick's blows leave: past minus the
+  unit's constitution kills outright, else it stops at 0.
+- **Taking the downed** is done by a foe already beside the body (wounds_reach); walking
+  out to a body waits for spec 30's movement pass. A taker strikes on its blows' interval.
+- **A great body blocks** a marching front only at eight times its mass; lesser ones slow
+  it. Loose units in a fight aren't slowed by bodies yet.
+- **A downed regenerator rises** at a quarter of its max HP and rejoins its formation at the
+  back, if the formation still stands.
+- **Running** is pursuing, chasing or fleeing until movement modes come (Decision 117's
+  speeds per mode); a formation gives up a chase when most of it is tired.
+- **The wield limit** is each weapon's strength requirement; the carry limit is strength
+  times load_per_strength.
+- **Rest** isn't modelled yet: the regeneration limit and stamina start full each battle,
+  until units persist across a map (Decision 123).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Innate weapons always usable | The user: a body part holding an item can't also strike with its innate weapon. |
+| Rolling in every test | A rule's tests would hang on chance; the trials judge the rolled fight. |
+| Units walking out to finish distant bodies now | Needs the movement pass (spec 30); bodies beside the fight are taken now. |
+
+**Rules over cases:** general: every unit and item.
+**Order:** rolls are seeded by the battle, the tick and the unit (Decisions 93 and 97).
