@@ -32,6 +32,27 @@ func test_orders_apply_as_the_buttons_do() -> void:
 	assert_bool(FormationFieldActions.apply(field, _words("dance"))).is_false()
 
 
+func test_a_hurried_wave_runs_ahead_of_a_marching_one() -> void:
+	var marching := FormationFieldActions.field(7, false)
+	var hurried := FormationFieldActions.field(7, false)
+	assert_bool(FormationFieldActions.apply(hurried, _words("hurry A on"))).is_true()
+	var record := FormationRecord.line(_words("hurry A on"))
+	for field in [marching, hurried]:
+		for _i in range(300):  # A's wave built
+			field.step()
+		field.send("A")
+		for _i in range(30):
+			field.step()
+
+	var ahead := func(field): return field.sim.squads()[-1].front_distance
+	assert_float(ahead.call(hurried)).is_greater(ahead.call(marching))
+	assert_bool(hurried.sim.squads()[-1].hurry).is_true()
+	assert_str(record).is_equal("0 player hurry A on")
+	FormationFieldActions.apply(hurried, _words("hurry A off"))
+	hurried.step()
+	assert_bool(hurried.sim.squads()[-1].hurry).is_false()
+
+
 func test_an_order_is_taken_only_from_the_side_that_gives_it() -> void:
 	var field := FormationFieldActions.field(7, false)
 	var theirs := FormationRecord.command(0, FormationRecord.KINGDOM, "send", "A")

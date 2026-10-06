@@ -19,6 +19,7 @@ const WAYS := ["north", "east", "south", "west"]
 
 var _scene: Node
 var _autos := {}  # route key -> CheckBox
+var _hurries := {}  # route key -> CheckBox (Decision 125: its waves run)
 var _wait: CheckBox
 var _via_c: CheckBox
 var _holds: CheckBox  # the line won't pursue (it does by default, Decision 109)
@@ -40,9 +41,7 @@ func build(scene: Node) -> void:
 	var bar := HBoxContainer.new()
 	rows.add_child(bar)
 	for key in ["A", "B"]:
-		_button(bar, "Send %s" % key, func(): scene.act("send " + key))
-		_autos[key] = _check(bar, "Auto %s" % key, func(on): scene.act(_toggle("auto " + key, on)))
-		_button(bar, "Retreat %s" % key, func(): scene.act("retreat " + key))
+		_wave_controls(bar, scene, key)
 	_button(bar, "Send A+B", func(): scene.act("send A+B"))
 	var options := HBoxContainer.new()  # a second row, so the controls fit the window
 	rows.add_child(options)
@@ -69,6 +68,14 @@ func build(scene: Node) -> void:
 	logs.add_child(_replay_status)
 
 
+## A route's controls: send it, send automatically, order it back, hurry it.
+func _wave_controls(bar: Container, scene: Node, key: String) -> void:
+	_button(bar, "Send %s" % key, func(): scene.act("send " + key))
+	_autos[key] = _check(bar, "Auto %s" % key, func(on): scene.act(_toggle("auto " + key, on)))
+	_button(bar, "Retreat %s" % key, func(): scene.act("retreat " + key))
+	_hurries[key] = _check(bar, "Hurry %s" % key, func(on): scene.act(_toggle("hurry " + key, on)))
+
+
 ## Restarts on the pasted log's seed and replays its actions; the options are the log's.
 func replay() -> void:
 	var read := FormationFieldActions.parse(_replay_view.text)
@@ -78,7 +85,7 @@ func replay() -> void:
 		return
 	_seed.text = str(read["seed"])
 	_captain.set_pressed_no_signal(read["captained"])
-	for box in [_wait, _via_c, _holds] + _autos.values():
+	for box in [_wait, _via_c, _holds] + _autos.values() + _hurries.values():
 		box.set_pressed_no_signal(false)
 	_scene.restart(read["captained"], read["seed"], read["commands"])
 	_replaying = read["commands"].size()
@@ -94,6 +101,8 @@ func reset() -> void:
 	for key in _autos:
 		if _autos[key].button_pressed:
 			_scene.act(_toggle("auto " + key, true))
+		if _hurries[key].button_pressed:
+			_scene.act(_toggle("hurry " + key, true))
 	for option in [[_wait, "wait"], [_via_c, "via_c"]]:
 		if option[0].button_pressed:
 			_scene.act(_toggle(option[1], true))

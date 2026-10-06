@@ -69,6 +69,9 @@ var routes := {}  # "A" / "B" -> FormationRoute
 var waves := {}  # "A" / "B" -> FormationProduction
 var kingdom_line: SkirmishSquad
 var kingdom_reserve: SkirmishSquad
+## Routes whose waves the player has ordered to hurry (Decision 125): key -> true; each
+## step its waves in the field run (sent before the order or after).
+var hurried := {}
 
 var _tick := 0
 
@@ -128,6 +131,9 @@ func _init(
 ## One tick: the builders fill the waves, full waves announce (and depart if automatic),
 ## then the fight.
 func step() -> Array:
+	for squad in sim.squads():  # a hurried route's waves run, sent before or after the order
+		if squad.faction_id == "player":
+			squad.hurry = hurried.keys().any(func(key): return squad.route == waves[key].route)
 	var events := player.step(waves, tick_seconds, _tick)
 	for key in waves:
 		events.append_array(waves[key].step(sim))

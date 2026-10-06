@@ -7,8 +7,9 @@ extends RefCounted
 ##   0 kingdom pursue all off
 ##   88 player send B
 ##   304 player retreat B
-## Orders so far: send <A|B|A+B>, retreat <A|B>, auto <wave> <on|off>, wait waves <on|off>,
-## route <wave> <route> (player); pursue all <on|off> (kingdom). The feel test's words map
+## Orders so far: send <A|B|A+B>, retreat <A|B>, auto <wave> <on|off>, hurry <wave>
+## <on|off>, wait waves <on|off>, route <wave> <route> (player); pursue all <on|off>
+## (kingdom). The feel test's words map
 ## onto them (from_words), and a version 0 log - "seed <n> captain <on|off>", then
 ## "<tick> <words>" - still reads. The vocabulary grows as real orders come (spec 31). Pure.
 
@@ -47,8 +48,8 @@ static func from_words(tick: int, words: String) -> Dictionary:
 	match parts[0]:
 		"send", "retreat":
 			return command(tick, PLAYER, parts[0], parts[1])
-		"auto":
-			return command(tick, PLAYER, "auto", parts[1], on) if parts.size() == 3 else {}
+		"auto", "hurry":
+			return command(tick, PLAYER, parts[0], parts[1], on) if parts.size() == 3 else {}
 		"wait":
 			return command(tick, PLAYER, "wait", "waves", on)
 		"via_c":
