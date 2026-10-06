@@ -7,9 +7,11 @@ extends SceneTree
 ##       [scenario=all|<name>] [runs=50] [rolls=off] [captain] \
 ##       [first_seed=1] [swap]
 ##
-## Scenarios: mirror_headon, mirror_flank, field_a, field_b, field_b_waits, field_together.
+## Scenarios: mirror_headon, mirror_flank, field_a, field_b, field_b_waits, field_together;
+## and fatigue (FatigueTrials): how far a line pursues after 3, 30, 60 and 90 s of contact.
 
 const BattleTrials = preload("res://sim/skirmish/formation/battle_trials.gd")
+const FatigueTrials = preload("res://sim/skirmish/formation/fatigue_trials.gd")
 
 
 func _init() -> void:
@@ -24,6 +26,10 @@ func _init() -> void:
 		"rolls": args.get("rolls", "on") != "off",
 	}
 	var scenario: String = args.get("scenario", "all")
+	if scenario == "fatigue":
+		_fatigue(int(args.get("runs", 50)), int(args.get("first_seed", 1)))
+		quit(0)
+		return
 	var names: Array = BattleTrials.SCENARIOS if scenario == "all" else [scenario]
 	print("runs %s, options %s" % [args.get("runs", "50"), options])
 	print(
@@ -54,3 +60,24 @@ func _row(name: String, summary: Dictionary) -> String:
 
 func _spread(values: Array) -> String:
 	return "%.1f ± %.1f (%d-%d)" % [values[0], values[1], values[2], values[3]]
+
+
+func _fatigue(runs: int, first_seed: int) -> void:
+	print(
+		"%-10s %-10s %-16s %-12s %s" % ["contact", "stamina", "pursued (cells)", "ticks", "tired"]
+	)
+	for seconds in [3.0, 30.0, 60.0, 90.0]:
+		var result := FatigueTrials.run(seconds, runs, first_seed)
+		print(
+			(
+				"%-10s %-10s %-16s %-12s %d / %d"
+				% [
+					"%d s" % seconds,
+					"%d%%" % roundi(result["stamina"] * 100),
+					"%.1f" % result["pursued"],
+					"%.1f" % result["ticks"],
+					result["tired"],
+					runs
+				]
+			)
+		)
