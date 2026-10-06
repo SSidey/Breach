@@ -150,6 +150,8 @@ func test_routers_reaching_home_leave_the_field() -> void:
 	var setup := _fight()
 	var mine: SkirmishSquad = setup[1]
 	mine.morale = 0
+	for unit in mine.units:
+		unit.courage = 100  # none surrenders when struck (FormationWounds)
 
 	var log := _run(setup[0], 60)
 

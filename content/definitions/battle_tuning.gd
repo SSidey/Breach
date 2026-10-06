@@ -95,6 +95,18 @@ static var _current: BattleTuning = null
 ## Skill lost per point of strength short of a weapon's requirement.
 @export var item_weak_skill := 0.0
 
+@export_group("Wounds (Decision 121)")
+## Cells within which a standing unit finishes or takes a downed foe; a friend standing
+## within wounds_guard_reach of the downed guards it, and a unit with a standing foe that
+## near is still fighting, not finishing.
+@export var wounds_reach := 0.0
+@export var wounds_guard_reach := 0.0
+## Morale lost by each standing formation of a side one of its own is sent home to.
+@export var wounds_messenger_shock := 0
+## The chance a routing unit struck surrenders, times its want of courage (1 - courage
+## / 100).
+@export var wounds_surrender := 0.0
+
 @export_group("Routs and flight (Decisions 82, 89, 98 and 99)")
 ## Crush damage per cell of a router's footprint, to friends it shoves past.
 @export var rout_crush := 0

@@ -5,8 +5,10 @@ extends RefCounted
 
 ## The player's standing instruction. Applied by the simulation on the next tick.
 enum Order { ADVANCE, HOLD, RETREAT }
-## What the unit is doing right now (derived by the simulation each tick).
-enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DEAD }
+## What the unit is doing right now (derived by the simulation each tick). Out of the
+## fight (Decision 121): DEAD; DOWNED, on the ground at 0 HP or below it at death's door;
+## TAKEN, captured or surrendered; RELEASED, let go to carry word home.
+enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DEAD, DOWNED, TAKEN, RELEASED }
 
 var id: int = 0
 var faction_id: String = ""
@@ -98,8 +100,9 @@ var melee_seconds := 1.0
 var ranged_seconds := 1.0
 
 
+## Still in the fight: standing, not dead, downed, taken or released.
 func is_alive() -> bool:
-	return state != State.DEAD
+	return state < State.DEAD
 
 
 func is_hostile_to(other: SkirmishUnit) -> bool:

@@ -104,9 +104,7 @@ static func _mirror(scenario: String, battle_seed: int, options: Dictionary) -> 
 		spawn.call()
 	var lost := {"player": 0, "the_kingdom": 0}
 	for tick in range(LIMIT_TICKS):
-		for event in sim.step():
-			if event["type"] == "died":
-				lost[event["faction"]] += 1
+		_count(sim.step(), lost)
 		var standing := FACTIONS.filter(func(f): return _stands(sim.squads(), f))
 		if standing.size() < 2:
 			var winner: String = standing[0] if standing.size() == 1 else ""
@@ -174,7 +172,8 @@ static func _send(field: FormationField, scenario: String) -> Array:
 	return events
 
 
+## A unit lost leaves the fight: killed outright, downed, or surrendered (Decision 121).
 static func _count(events: Array, lost: Dictionary) -> void:
 	for event in events:
-		if event["type"] == "died":
+		if event["type"] in ["died", "downed", "surrendered"]:
 			lost[event["faction"]] += 1

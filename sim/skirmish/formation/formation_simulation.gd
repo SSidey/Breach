@@ -18,7 +18,8 @@ extends RefCounted
 ##                FormationJoins); then units seek contact (FormationScrum, Decision 88)
 ##   4. combat  - melee blows (FormationMelee) and ranged blows (Decision 46), each rolled
 ##                against its target (BlowLanding, Decision 118)
-##   5. deaths  - the fallen die, the ranks behind step up, an empty squad is destroyed
+##   5. deaths  - the fallen are downed or die, the ranks behind step up, an empty squad is
+##                destroyed; the downed nobody guards are finished or taken (FormationWounds)
 ##   6. bodies  - friends' bodies that overlap are pushed apart by mass (UnitBodies, Decision
 ##                106)
 ##   7. re-form - units swap toward their preferred places (FormationShuffle, Decision 46)
@@ -34,6 +35,7 @@ const FormationUnits = preload("res://sim/skirmish/formation/formation_units.gd"
 const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.gd")
+const FormationWounds = preload("res://sim/skirmish/formation/formation_wounds.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
@@ -155,6 +157,7 @@ func step() -> Array:
 	)
 	_fight(events)
 	FormationDeaths.bury(_squads, _tick, events)
+	FormationWounds.tend(_squads, _tick, _attack_interval_ticks(), fight_seed, events)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
 	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, fight_seed))
 	UnitBodies.step(_squads, fight_seed)  # after every move: friends' bodies part (Decision 106)
@@ -272,6 +275,7 @@ func _fight(events: Array) -> void:
 	for blow in blows:
 		blow[1].hp -= blow[2]
 		events.append(FormationEvents.hit(_tick, blow))
+	FormationWounds.surrender(blows, _squads, fight_seed, _tick, events)
 
 
 ## Ticks in a second: a weapon's attack interval is in seconds (Decision 120).
