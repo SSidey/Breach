@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 const FormationUnits = preload("res://sim/skirmish/formation/formation_units.gd")
+const ItemDef = preload("res://content/definitions/item_def.gd")
 
 
 func _def() -> UnitDef:
@@ -59,3 +60,18 @@ func test_the_units_in_play_carry_archetype_tags() -> void:
 	for name in ["kingdom_militia", "kingdom_captain"]:
 		var unit_def: UnitDef = load("res://content/units/%s.tres" % name)
 		assert_array(unit_def.tags).contains(["human", "martial"])
+
+
+func test_a_tool_carried_grants_its_traits_to_the_battle_unit() -> void:
+	var shovel := ItemDef.new()
+	shovel.item_name = "shovel"
+	shovel.slots = ["hand"]
+	shovel.traits = {"burrower": 1}
+	var unit_def := _def()
+	unit_def.slots = ["hand"]
+	unit_def.items = [shovel]
+
+	var unit := FormationUnits.make(unit_def, Vector2i(0, 0), "player", 1, 1)
+
+	assert_int(unit.traits.get("burrower", 0)).is_equal(1)
+	assert_dict(unit_def.traits).is_empty()  # its type's own traits are untouched

@@ -36,7 +36,7 @@ static func blows(squads: Array, interval: int, fight_seed: int = 0) -> Array:
 			fighter.target_id = target.id
 			fighter.attack_cooldown -= 1
 			if fighter.attack_cooldown <= 0:
-				fighter.attack_cooldown = interval
+				fighter.attack_cooldown = maxi(1, roundi(interval * fighter.melee_seconds))
 				out.append([fighter, target, FormationCombat.damage(fighter, true), true])
 	return out
 

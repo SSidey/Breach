@@ -26,7 +26,6 @@ static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 		var foes := _struck_by(squad, squads)
 		if foes.is_empty():
 			continue
-		var pace := FormationMorale.interval(squad, interval)
 		var share: float = BattleTuning.current().morale_blow_share[FormationMorale.band(squad)]
 		for unit in squad.living():
 			var pick := _pick(squad, unit, foes, fight_seed)
@@ -39,7 +38,7 @@ static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 			unit.attack_cooldown -= 1
 			if unit.attack_cooldown > 0:
 				continue
-			unit.attack_cooldown = pace
+			unit.attack_cooldown = FormationMorale.interval(squad, _ticks(interval, unit))
 			var target_squad: SkirmishSquad = pick[1]
 			if (
 				squad.order == SkirmishUnit.Order.RETREAT
@@ -117,3 +116,8 @@ static func nearest_touching(
 ):
 	var pick := _pick(squad, unit, foes, fight_seed)
 	return null if pick.is_empty() else pick[2]
+
+
+## Ticks between the unit's melee blows, `second` ticks making a second (Decision 120).
+static func _ticks(second: int, unit: SkirmishUnit) -> int:
+	return maxi(1, roundi(second * unit.melee_seconds))

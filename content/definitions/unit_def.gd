@@ -75,6 +75,9 @@ const AVERAGE := 10
 ## How well it handles items by tag (axe, polearm...), tag -> level: 0 untrained (none
 ## listed), 1 trained, 2 mastered.
 @export var proficiencies: Dictionary = {}
+## How quickly it strikes (Decision 120): its weapons' intervals are divided by this, so
+## 1.25 makes a 1-second weapon strike every 0.8 s.
+@export var attack_speed: float = 1.0
 
 
 func validate() -> PackedStringArray:
@@ -102,6 +105,8 @@ func validate() -> PackedStringArray:
 		errors.append("its items need slots it hasn't free: %s" % ", ".join(short))
 	if build_seconds <= 0.0:
 		errors.append("build_seconds must be > 0, got %f" % build_seconds)
+	if attack_speed <= 0.0:
+		errors.append("attack_speed must be > 0, got %f" % attack_speed)
 	for attribute in ATTRIBUTES:
 		if get(attribute) < 0:
 			errors.append("%s must be >= 0, got %d" % [attribute, get(attribute)])
@@ -131,6 +136,16 @@ func melee_damage() -> int:
 		if weapon.is_melee():
 			total += weapon.damage
 	return total
+
+
+## Seconds between its melee blows: its melee weapons strike together, as often as the
+## slowest of them allows, scaled by its attack speed (a second without weapons).
+func melee_seconds() -> float:
+	var longest := 0.0
+	for weapon in _weapons():
+		if weapon.is_melee():
+			longest = maxf(longest, weapon.attack_seconds)
+	return (longest if longest > 0.0 else 1.0) / attack_speed
 
 
 ## The hardest-hitting ranged weapon, or null for a melee-only unit.

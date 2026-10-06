@@ -73,6 +73,10 @@ var position_priority: int = 0
 var attack_range: int = 0
 var ranged_dmg: int = 0
 var damage_type: String = ""
+## Seconds between its melee blows and its ranged shots (Decision 120): its weapons'
+## intervals, scaled by its attack speed.
+var melee_seconds := 1.0
+var ranged_seconds := 1.0
 
 
 func is_alive() -> bool:

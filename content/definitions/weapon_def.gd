@@ -11,6 +11,9 @@ extends ItemDef
 @export var damage_type: String = ""
 ## Reach in ranks (a rank is one cell - Decisions 48 and 68); 0 is melee.
 @export var attack_range: int = 0
+## Seconds between its blows (Decision 120): an unwieldy weapon strikes more slowly. The
+## wielder's attack speed scales it.
+@export var attack_seconds: float = 1.0
 
 
 func is_melee() -> bool:
@@ -23,4 +26,6 @@ func validate() -> PackedStringArray:
 		errors.append("%s: damage must be >= 0, got %d" % [item_name, damage])
 	if attack_range < 0:
 		errors.append("%s: attack_range must be >= 0, got %d" % [item_name, attack_range])
+	if attack_seconds <= 0.0:
+		errors.append("%s: attack_seconds must be > 0, got %f" % [item_name, attack_seconds])
 	return errors

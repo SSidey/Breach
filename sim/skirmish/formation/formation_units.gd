@@ -36,11 +36,17 @@ static func make(
 	for attribute in UnitDef.ATTRIBUTES:
 		unit.attributes[attribute] = unit_def.get(attribute)
 	unit.traits = unit_def.traits.duplicate()
+	for item in unit_def.items:  # a tool's traits are its carrier's (Decision 120)
+		for trait_id in item.traits:
+			if unit_def.trait_level(trait_id) > 0:
+				unit.traits[trait_id] = unit_def.trait_level(trait_id)
+	unit.melee_seconds = unit_def.melee_seconds()
 	var ranged := unit_def.ranged_weapon()
 	if ranged != null:
 		unit.attack_range = ranged.attack_range
 		unit.ranged_dmg = ranged.damage
 		unit.damage_type = ranged.damage_type
+		unit.ranged_seconds = ranged.attack_seconds / unit_def.attack_speed
 	unit.rank = place.x
 	unit.column = place.y
 	unit.advance_direction = direction

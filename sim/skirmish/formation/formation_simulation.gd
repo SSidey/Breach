@@ -52,7 +52,6 @@ const FormationJoins = preload("res://sim/skirmish/formation/formation_joins.gd"
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 const MELEE_REACH := FormationContact.MELEE_REACH
-const ATTACK_INTERVAL_SECONDS := 1.0
 const TRAVEL_SCALE := 0.125  # tiles per second at speed 1: 8 cells a second (Decision 68)
 const EPSILON := 0.000001
 ## States in which a squad doesn't march (a rout flees on its own: FormationRout).
@@ -267,5 +266,6 @@ func _fight(events: Array) -> void:
 		events.append(FormationEvents.hit(_tick, blow))
 
 
+## Ticks in a second: a weapon's attack interval is in seconds (Decision 120).
 func _attack_interval_ticks() -> int:
-	return maxi(1, roundi(ATTACK_INTERVAL_SECONDS / tick_seconds))
+	return maxi(1, roundi(1.0 / tick_seconds))

@@ -38,7 +38,7 @@ static func ranged_blows(squads: Array, interval_ticks: int, fight_seed: int = 0
 			shooter.target_id = target.id
 			shooter.attack_cooldown -= 1
 			if shooter.attack_cooldown <= 0:
-				shooter.attack_cooldown = interval_ticks
+				shooter.attack_cooldown = maxi(1, roundi(interval_ticks * shooter.ranged_seconds))
 				blows.append([shooter, target, shooter.ranged_dmg, own])
 	return blows
 
