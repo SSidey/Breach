@@ -1,20 +1,19 @@
 class_name ScrumTrade
 extends RefCounted
 ## Trading places while regrouping (Decision 110): a unit walking back to its place that has
-## come no nearer than its closest for STALL_SECONDS - its own ranks in the way - trades
+## come no nearer than its closest for scrum_trade_seconds - its own ranks in the way - trades
 ## places with the friend whose place is nearest it, if that place is nearer it than its
 ## own and the two are interchangeable (one kind, one band); the friend walks to the place
 ## it left. With no such friend, its own place is the nearest: it takes it. Places stay one
 ## unit each. Stalled units trade in the order of their seeded draws, never the list's
 ## (Decision 97). Pure over the squad it is given.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 
-## How long (seconds) a unit may come no nearer its place before it trades (placeholder).
-const STALL_SECONDS := 0.5
 ## Cells nearer than its closest yet that count as getting nearer.
 const PROGRESS := 0.001
 
@@ -33,7 +32,10 @@ static func track(entry: Dictionary, gap: float, seconds: float) -> void:
 static func trade(squad: SkirmishSquad, fight_seed: int) -> void:
 	var stalled := []
 	for unit_id in squad.loose:
-		if squad.loose[unit_id].get("stuck", 0.0) >= STALL_SECONDS - 0.000001:
+		if (
+			squad.loose[unit_id].get("stuck", 0.0)
+			>= BattleTuning.current().scrum_trade_seconds - 0.000001
+		):
 			stalled.append(squad.loose[unit_id]["unit"])
 	stalled.sort_custom(
 		func(a, b): return ScrumContest.draw(a, fight_seed) < ScrumContest.draw(b, fight_seed)

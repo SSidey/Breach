@@ -16,14 +16,13 @@ extends RefCounted
 ##   keeps fighting. A death of anyone involved cancels it.
 ## A squad re-forms until no further move can start. Pure over the squad it is given.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 
 ## How terrain changes the speed units pass one another at; 1 until lanes carry terrain.
 const TERRAIN_FACTOR := 1.0
-## Moving within a fighting squad is slowed by the crush (Decision 48).
-const CROWDING := 0.2
 ## How far behind its place a passed unit may look for free space.
 const SEARCH_RANKS := 64
 const EPSILON := 0.000001
@@ -103,7 +102,11 @@ static func _start_moves(squad: SkirmishSquad, tick_seconds: float, travel_scale
 		var slowest: float = involved.reduce(func(least, u): return minf(least, u.speed), INF)
 		if slowest <= 0.0:
 			continue
-		var crowding := CROWDING if squad.state == SkirmishSquad.State.FIGHTING else 1.0
+		var crowding := (
+			BattleTuning.current().scrum_crowding
+			if squad.state == SkirmishSquad.State.FIGHTING
+			else 1.0
+		)
 		var pace := travel_scale * slowest * TERRAIN_FACTOR * crowding
 		var seconds: float = plan["distance"] * SkirmishSquad.RANK_DEPTH / pace
 		var ticks := maxi(1, ceili(seconds / tick_seconds - EPSILON))

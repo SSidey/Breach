@@ -1,8 +1,9 @@
 extends GdUnitTestSuite
 ## Trading places while regrouping, per Decision 110: a unit held off its place for
-## STALL_SECONDS trades places with the interchangeable friend whose place is nearest it;
+## scrum_trade_seconds trades places with the interchangeable friend whose place is nearest it;
 ## with none, it takes its own place there and then.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const ScrumTrade = preload("res://sim/skirmish/formation/scrum_trade.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -28,7 +29,7 @@ func _held_in_front(front_kind: UnitDef, rear_kind: UnitDef) -> Array:
 	front.position = ScrumStance.anchor(squad, front)
 	var at := front.position + (front.position - ScrumStance.anchor(squad, rear))
 	squad.loose[rear.id] = {"unit": rear, "at": at, "goal": null, "next": at}
-	squad.loose[rear.id]["stuck"] = ScrumTrade.STALL_SECONDS
+	squad.loose[rear.id]["stuck"] = BattleTuning.current().scrum_trade_seconds
 	return [squad, front, rear]
 
 
@@ -56,7 +57,7 @@ func test_a_unit_with_no_like_friend_takes_its_own_place() -> void:
 func test_a_unit_not_yet_held_long_enough_does_not_trade() -> void:
 	var kind := UnitDef.new()
 	var setup := _held_in_front(kind, kind)
-	setup[0].loose[setup[2].id]["stuck"] = ScrumTrade.STALL_SECONDS / 2.0
+	setup[0].loose[setup[2].id]["stuck"] = BattleTuning.current().scrum_trade_seconds / 2.0
 
 	ScrumTrade.trade(setup[0], 7)
 

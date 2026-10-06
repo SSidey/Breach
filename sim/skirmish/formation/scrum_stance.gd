@@ -2,7 +2,7 @@ class_name ScrumStance
 extends RefCounted
 ## A disciplined squad meets a threat as a line (Decisions 88 and 92, spec 27 rounds 5
 ## and 6): marching or holding, with its front free, when it sees an enemy closing in on
-## another face within ANTICIPATE cells and is disciplined enough (FormationDiscipline), it
+## another face within scrum_anticipate cells and is disciplined enough (FormationDiscipline), it
 ## re-lays its places facing the threat at that face (its stance: its frame turned a
 ## quarter, half or three quarters about) before contact, and
 ## commits to it: it faces that enemy while it is still a threat, not swinging to another. Its
@@ -10,6 +10,7 @@ extends RefCounted
 ## gone; it doesn't march meanwhile. A less disciplined squad meets it unit by unit. Two
 ## threats equally near: the squads' seeded draw picks, not the list (Decision 97). Pure.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
@@ -20,9 +21,6 @@ const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd"
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
-
-## How far off (cells) a squad re-forms to meet a threat closing in (placeholder).
-const ANTICIPATE := 12.0
 
 
 ## The place a unit keeps to: in its squad's stance if it has one.
@@ -79,7 +77,7 @@ static func anticipate(
 
 
 ## True if the squad holds a re-formed line towards an enemy that is still a threat - alive,
-## not routing, within ANTICIPATE cells, and closing in (or near a line ordered to hold): it
+## not routing, within scrum_anticipate cells, and closing in (or near a line ordered to hold): it
 ## doesn't swing to another.
 static func _committed(squad: SkirmishSquad, squads: Array) -> bool:
 	if squad.stance.is_empty() or not squad.stance.has("foe"):
@@ -91,17 +89,17 @@ static func _committed(squad: SkirmishSquad, squads: Array) -> bool:
 			return false
 		var holding := squad.order == SkirmishUnit.Order.HOLD
 		var pressing := holding or _closing(other, squad)
-		return pressing and _gap(squad, other) <= ANTICIPATE
+		return pressing and _gap(squad, other) <= BattleTuning.current().scrum_anticipate
 	return false
 
 
 ## [edge, squad id]: the edge of the squad's frame (SquadEdges) facing the nearest seen
-## hostile within ANTICIPATE cells - closing in, if `closing` - or [-1, 0]. `seeing` = [the
+## hostile within scrum_anticipate cells - closing in, if `closing` - or [-1, 0]. `seeing` = [the
 ## terrain, the battle seed].
 static func _threat(squad: SkirmishSquad, squads: Array, seeing: Array, closing: bool) -> Array:
 	var terrain: FormationTerrain = seeing[0]
 	var area := SquadEdges.bounds(squad)
-	var best := [ANTICIPATE + 0.000001, 0]
+	var best := [BattleTuning.current().scrum_anticipate + 0.000001, 0]
 	var edge := -1
 	var foe := 0
 	for other in squads:

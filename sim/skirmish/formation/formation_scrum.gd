@@ -16,11 +16,12 @@ extends RefCounted
 ## - **Engaging:** squads whose units come within reach fight, whatever their faces.
 ## - **Regrouping:** when the fight ends the squad closes ranks over its dead (SquadRanks)
 ##   and its units walk to their places at its re-form pace; it moves on once all are back.
-## - **Manoeuvres** go by priority (Decision 94); a fight stalled STALL_SECONDS is released.
+## - **Manoeuvres** go by priority (Decision 94); a fight stalled scrum_stall_seconds is released.
 ## Each phase decides from where units stood before it began, never letting a squad listed
 ## earlier move first and change what a later one sees (Decision 97).
 ## Squads keep `loose`, `stance`, `fight_since` and `stall_ticks`. Pure over the squads.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
@@ -40,10 +41,6 @@ const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd"
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
-
-const STALL_SECONDS := 2.0
-## Walking within a fight is slowed by the crush (Decision 48; FormationShuffle.CROWDING).
-const CROWDING := 0.2
 
 
 ## One tick of the scrum. `cells_per_second` is the march pace at speed 1. Returns
@@ -119,7 +116,14 @@ static func _seek(ctx: Dictionary) -> void:
 		func(s): return s.state == SkirmishSquad.State.FIGHTING
 	)
 	for squad in fighting:  # in the crush, but at the march pace in a pursuit
-		_walk(squad, ctx["pace"] * (CROWDING if squad.pursuit.is_empty() else 1.0), ctx)
+		_walk(
+			squad,
+			(
+				ctx["pace"]
+				* (BattleTuning.current().scrum_crowding if squad.pursuit.is_empty() else 1.0)
+			),
+			ctx
+		)
 	var turns := []  # after all have moved (a unit stepped up to is seen), before any turn
 	for squad in fighting:
 		turns.append_array(_faces(squad, ctx))
@@ -175,7 +179,9 @@ static func _faces(squad: SkirmishSquad, ctx: Dictionary) -> Array:
 ## Where a unit making for `entry`'s slot looks: so as to arrive facing the foe it will
 ## touch there, the quicker way (UnitShuffle).
 static func _seeking_look(unit: SkirmishUnit, entry: Dictionary, ctx: Dictionary):
-	var speed: float = unit.speed * ctx["pace"] * CROWDING / ctx["seconds"]
+	var speed: float = (
+		unit.speed * ctx["pace"] * BattleTuning.current().scrum_crowding / ctx["seconds"]
+	)
 	var bearing := UnitMotion.bearing_to(entry["next"], entry["foe_at"], unit.bearing)
 	return UnitShuffle.look(unit, entry["at"], entry["next"], bearing, speed)
 
@@ -192,7 +198,7 @@ static func _stall(
 		for foe_id in ScrumSeek.foe_ids(squad, squads):
 			quiet = quiet and not active.has(foe_id)
 		squad.stall_ticks = squad.stall_ticks + 1 if quiet else 0
-		if squad.stall_ticks >= roundi(STALL_SECONDS / tick_seconds):
+		if squad.stall_ticks >= roundi(BattleTuning.current().scrum_stall_seconds / tick_seconds):
 			stalled.append(squad)
 	for squad in stalled:
 		squad.stall_ticks = 0

@@ -117,6 +117,18 @@ static var _current: BattleTuning = null
 @export var bodies_steer_look := 0.0
 @export var bodies_steer_clear := 0.0
 
+@export_group("Scrum (Decisions 48, 75, 88, 92 and 110)")
+## Cells a unit in a fight may go from its place to reach a foe.
+@export var scrum_leash := 0.0
+## How far off (cells) a disciplined squad re-forms to meet a threat closing in.
+@export var scrum_anticipate := 0.0
+## Seconds a fight may stand with nobody able to strike before it is released.
+@export var scrum_stall_seconds := 0.0
+## The share of its pace a unit makes walking within a fight: the crush.
+@export var scrum_crowding := 0.0
+## Seconds a unit walking back to its place may come no nearer before it trades places.
+@export var scrum_trade_seconds := 0.0
+
 
 ## The tuning in play: content/tuning/battle_tuning.tres, loaded once.
 static func current() -> BattleTuning:
