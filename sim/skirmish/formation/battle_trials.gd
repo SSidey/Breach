@@ -6,9 +6,10 @@ extends RefCounted
 ## - **mirror_flank:** 8 grems onto the side of a line of 8 grems holding its ground.
 ## - **field_a / field_b / field_b_waits / field_together:** the feel test's field, with
 ##   its content units, sent as in the scene.
-## Options: "band" (damage band, default the field's), "flank_bonus", "captain" (the
-## kingdom's line is led), "first_seed", "swap" (a mirror's sides spawn the other way
-## round: its results must agree with the usual order within noise, Decision 97).
+## Options: "band" (damage band, default the field's), "rolls" (blows rolled against
+## their targets, Decision 118; default on), "captain" (the kingdom's line is led),
+## "first_seed", "swap" (a mirror's sides spawn the other way round: its results must
+## agree with the usual order within noise, Decision 97).
 ## A run's result: {"lost": {faction: units}, "winner": faction or "", "ticks"}; the
 ## player wins a field run by breaking the line.
 
@@ -31,9 +32,6 @@ const FACTIONS := ["player", "the_kingdom"]
 
 ## Every run's result, one per seed from options' first_seed.
 static func run(scenario: String, runs: int, options: Dictionary = {}) -> Array:
-	var tuning := BattleTuning.current()
-	var usual := tuning.combat_flank_bonus
-	tuning.combat_flank_bonus = options.get("flank_bonus", usual)
 	var out := []
 	for index in range(runs):
 		var battle_seed: int = options.get("first_seed", 1) + index
@@ -41,7 +39,6 @@ static func run(scenario: String, runs: int, options: Dictionary = {}) -> Array:
 			out.append(_mirror(scenario, battle_seed, options))
 		else:
 			out.append(_field(scenario, battle_seed, options))
-	tuning.combat_flank_bonus = usual
 	return out
 
 
@@ -102,6 +99,7 @@ static func _mirror(scenario: String, battle_seed: int, options: Dictionary) -> 
 	var sim := FormationSimulation.new(2.0, TICK)
 	sim.fight_seed = battle_seed
 	sim.damage_band = options.get("band", BattleTuning.current().combat_damage_band)
+	sim.blow_rolls = options.get("rolls", true)
 	var spawns := _mirror_spawns(scenario, sim)
 	if options.get("swap", false):
 		spawns.reverse()  # the other side first: outcomes must not move (Decision 97)
@@ -145,6 +143,7 @@ static func _field(scenario: String, battle_seed: int, options: Dictionary) -> D
 		battle_seed
 	)
 	field.sim.damage_band = options.get("band", BattleTuning.current().combat_damage_band)
+	field.sim.blow_rolls = options.get("rolls", true)
 	for _i in range(LIMIT_TICKS):
 		if field.waves["A"].built() == 8 and field.waves["B"].built() == 9:  # B's chieftain
 			break

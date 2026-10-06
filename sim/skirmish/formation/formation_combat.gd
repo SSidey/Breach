@@ -3,16 +3,11 @@ extends RefCounted
 ## How hard a blow lands, and ranged strikes, per specs/22-formation-feel-test.md and
 ## Decision 40. Pure: FormationSimulation calls it each tick.
 ##
-## A flank blow (Decision 88: from outside the target's front) is worth the flank bonus
-## (BattleTuning).
-##
 ## Ranged units (Decisions 46-47) strike with their best ranged weapon from anywhere in
 ## their squad, moving or fighting: the nearest enemy unit within its range in ranks,
-## preferring one they overlap laterally, then by the seeded draw (Decision 97), with no
-## flank bonus. A ranged unit in the front
-## rank of an engaged squad strikes with its melee weapons instead.
+## preferring one they overlap laterally, then by the seeded draw (Decision 97). A ranged
+## unit in the front rank of an engaged squad strikes with its melee weapons instead.
 
-const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
@@ -43,8 +38,10 @@ static func ranged_blows(squads: Array, interval_ticks: int, fight_seed: int = 0
 	return blows
 
 
-static func damage(fighter: SkirmishUnit, is_flank: bool) -> int:
-	return roundi(fighter.dmg * (BattleTuning.current().combat_flank_bonus if is_flank else 1.0))
+## A melee blow's damage before it lands: all the striker's melee weapons together. How
+## it lands - a flank finding no parry - is BlowLanding's (Decision 118).
+static func damage(fighter: SkirmishUnit) -> int:
+	return fighter.dmg
 
 
 ## The nearest enemy unit within the shooter's range (ties: one it overlaps laterally,

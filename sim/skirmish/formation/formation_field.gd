@@ -105,6 +105,7 @@ func _init(
 	sim.combat_width = WAVE_WIDTH
 	sim.fight_seed = battle_seed
 	sim.damage_band = BattleTuning.current().combat_damage_band
+	sim.blow_rolls = true
 	sim.terrain = _ground()
 	var points := route_points()
 	for key in points:

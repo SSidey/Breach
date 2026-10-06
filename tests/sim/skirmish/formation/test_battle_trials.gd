@@ -3,7 +3,6 @@ extends GdUnitTestSuite
 ## seeded by the battle; the same seed replays a battle exactly, a new one varies it; and
 ## the trials runner fights a scenario once per seed and summarises the spread.
 
-const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const BattleTrials = preload("res://sim/skirmish/formation/battle_trials.gd")
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
@@ -44,10 +43,3 @@ func test_a_mirror_fight_is_even_and_a_mirror_flank_is_not() -> void:
 	var lost: Dictionary = headon["lost"]
 	assert_float(absf(lost["player"][0] - lost["the_kingdom"][0])).is_less(1.5)
 	assert_int(flank["wins"]["player"]).is_equal(6)
-
-
-func test_a_trial_restores_the_flank_bonus() -> void:
-	var usual := BattleTuning.current().combat_flank_bonus
-	BattleTrials.run("mirror_headon", 1, {"flank_bonus": 3.0})
-
-	assert_float(BattleTuning.current().combat_flank_bonus).is_equal(usual)

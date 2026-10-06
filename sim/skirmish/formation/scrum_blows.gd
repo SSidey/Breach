@@ -9,7 +9,6 @@ extends RefCounted
 ## unit fighting one foe is flanked by a second, and one turning away is struck from behind.
 ## Routing squads are left to FormationRout. Pure over the squads it is given.
 
-const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
@@ -26,7 +25,6 @@ static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 		var foes := _struck_by(squad, squads)
 		if foes.is_empty():
 			continue
-		var share: float = BattleTuning.current().morale_blow_share[FormationMorale.band(squad)]
 		for unit in squad.living():
 			var pick := _pick(squad, unit, foes, fight_seed)
 			if pick.is_empty():
@@ -46,8 +44,7 @@ static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 			):
 				continue  # turned away: it no longer strikes
 			var flank := not ScrumReach.in_front(target.bearing, target_at, where)
-			var blow := maxi(1, roundi(FormationCombat.damage(unit, flank) * share))
-			out.append([unit, target, blow, flank])
+			out.append([unit, target, FormationCombat.damage(unit), flank])
 	return out
 
 

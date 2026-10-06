@@ -16,7 +16,8 @@ extends RefCounted
 ##                round bends (FormationSweep, Decision 105), stopping at contact or behind
 ##                where a friend stood, or join a friend from the back (Decisions 44, 51,
 ##                FormationJoins); then units seek contact (FormationScrum, Decision 88)
-##   4. combat  - melee blows (FormationMelee) and ranged blows (Decision 46)
+##   4. combat  - melee blows (FormationMelee) and ranged blows (Decision 46), each rolled
+##                against its target (BlowLanding, Decision 118)
 ##   5. deaths  - the fallen die, the ranks behind step up, an empty squad is destroyed
 ##   6. bodies  - friends' bodies that overlap are pushed apart by mass (UnitBodies, Decision
 ##                106)
@@ -41,6 +42,7 @@ const UnitBodies = preload("res://sim/skirmish/formation/unit_bodies.gd")
 const FormationSweep = preload("res://sim/skirmish/formation/formation_sweep.gd")
 const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
 const FormationMelee = preload("res://sim/skirmish/formation/formation_melee.gd")
+const BlowLanding = preload("res://sim/skirmish/formation/blow_landing.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
@@ -71,6 +73,9 @@ var combat_width := 0
 ## and each blow's damage, rolled within damage_band of its value (0: no roll).
 var fight_seed := 0
 var damage_band := 0.0
+## Whether each blow is rolled against its target's parry, dodge and defence (Decision 118,
+## BlowLanding); off, every blow lands as a plain hit.
+var blow_rolls := false
 ## The ground (Decision 85); null is open, level ground everywhere.
 var terrain: FormationTerrain = null
 
@@ -253,15 +258,23 @@ func _fight(events: Array) -> void:
 		for unit in entry.living():
 			unit.target_id = 0
 	var interval := _attack_interval_ticks()
-	var blows := FormationMelee.blows(_squads, interval, fight_seed, terrain)
-	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks(), fight_seed)
+	var blows := FormationMelee.blows(_squads, interval, fight_seed)
+	var shots := FormationCombat.ranged_blows(_squads, interval, fight_seed)
 	for shot in shots:
 		shot[2] = BattleRolls.damage(shot[2], damage_band, fight_seed, [_tick, shot[0].id, 1])
-		shot[1].hp -= shot[2]
-		var spat := {"target": shot[1].id, "dmg": shot[2], "damage_type": shot[0].damage_type}
-		events.append(FormationEvents.unit_event("spat", _tick, shot[3], shot[0], spat))
 	for blow in blows:
 		blow[2] = BattleRolls.damage(blow[2], damage_band, fight_seed, [_tick, blow[0].id, 0])
+	BlowLanding.land(blows, shots, _squads, terrain, [fight_seed, _tick] if blow_rolls else [])
+	for shot in shots:
+		shot[1].hp -= shot[2]
+		var spat := {
+			"target": shot[1].id,
+			"dmg": shot[2],
+			"damage_type": shot[0].damage_type,
+			"blow": shot[4]
+		}
+		events.append(FormationEvents.unit_event("spat", _tick, shot[3], shot[0], spat))
+	for blow in blows:
 		blow[1].hp -= blow[2]
 		events.append(FormationEvents.hit(_tick, blow))
 
