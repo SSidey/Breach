@@ -317,6 +317,11 @@ mirror trials within noise: head-on 135/119 and 122/127 swapped, flank 300/0 bot
   - **Wheeling and re-forming as units:** each unit finding its own way to its place
     (Decision 116's rejected first approach), which first needs every move of a frame to
     say whether it walks or is set (placing, joining and re-forming set it).
+  - **Taking the downed** (spec 28, Decisions 121 and 124): units walking out from their
+    formation after a fight to finish or capture downed foes - "units must either kill or
+    capture" - and bodies on the ground slowing units loose in a fight. Until this pass,
+    only a foe already beside a body takes it, so a wave that marches on leaves its
+    downed foes lying.
 
 ## Round 2: the cost of bodies
 
