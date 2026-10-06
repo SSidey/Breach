@@ -5,16 +5,14 @@ extends RefCounted
 ## whether it blocks sight. Outside the grid is open, level ground. A unit's pace into a
 ## cell is the product of:
 ## - **ground:** the cell's move cost (a wood 0.5)
-## - **slope:** each quarter-cell risen costs 10%; downhill is no faster; a rise of more
-##   than a cell is a cliff, impassable until climbers come
-## - **liquid,** in bands of the unit's own height: under a quarter free, to a half 0.6
-##   (wading), to its height 0.3 (slow wading), deeper impassable until swimmers come
-## All numbers placeholders. Pure; the field paints it, the simulation reads it.
+## - **slope:** each quarter-cell risen costs a share of the pace; downhill is no faster; a
+##   rise past the cliff height is impassable until climbers come
+## - **liquid,** in bands of the unit's own height: under a quarter free, to a half wading,
+##   to its height slow wading, deeper impassable until swimmers come
+## The shares and heights are BattleTuning's (`ground_*`). Pure; the field paints it, the
+## simulation reads it.
 
-const CLIFF_QUARTERS := 4
-const SLOPE_COST := 0.1
-const WADING := 0.6
-const SLOW_WADING := 0.3
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 
 var size: Vector2i
 
@@ -66,16 +64,18 @@ func factor(unit_height: float, from: Vector2, to: Vector2) -> float:
 	if index < 0:
 		return 1.0
 	var rise := _height[index] - height_at(from)
-	if rise > CLIFF_QUARTERS:
+	if rise > BattleTuning.current().ground_cliff_quarters:
 		return 0.0
-	var share: float = _cost[index] * maxf(0.1, 1.0 - SLOPE_COST * maxi(rise, 0))
+	var share: float = (
+		_cost[index] * maxf(0.1, 1.0 - BattleTuning.current().ground_slope_cost * maxi(rise, 0))
+	)
 	var depth: float = _depth[index] / maxf(unit_height, 0.01)
 	if depth >= 1.0:
 		return 0.0
 	if depth >= 0.5:
-		return share * SLOW_WADING
+		return share * BattleTuning.current().ground_slow_wading
 	if depth >= 0.25:
-		return share * WADING
+		return share * BattleTuning.current().ground_wading
 	return share
 
 

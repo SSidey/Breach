@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## resisting but giving way (it leaves its place); overlapping foes each step back half,
 ## neither pushing the other; and nothing turns on the order units are listed in.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const UnitBodies = preload("res://sim/skirmish/formation/unit_bodies.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -85,7 +86,7 @@ func test_a_unit_in_its_frame_is_not_moved_by_its_own_squad_only_brushing_it() -
 	var brusher := _unit(2)
 	var line := SkirmishSquad.new(1, "player", 1, 0.0, 2, [framed, brusher] as Array[SkirmishUnit])
 	framed.position = Vector2(5, 5)
-	var near := Vector2(5.0 + 1.0 - UnitBodies.BRUSH / 2.0, 5)
+	var near := Vector2(5.0 + 1.0 - BattleTuning.current().bodies_brush / 2.0, 5)
 	line.loose[brusher.id] = {"unit": brusher, "at": near, "goal": null, "next": near}
 
 	UnitBodies.step([line], 7)

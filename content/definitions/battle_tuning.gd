@@ -94,6 +94,29 @@ static var _current: BattleTuning = null
 ## How near (cells) a unit must stand to a retreating enemy to be tempted to chase.
 @export var pursuit_tempted_within := 0.0
 
+@export_group("Ground (Decision 85)")
+## A rise of more than this many quarter-cells is a cliff: impassable until climbers come.
+@export var ground_cliff_quarters := 0
+## The pace each quarter-cell risen costs; downhill is no faster.
+@export var ground_slope_cost := 0.0
+## The pace in water a quarter to a half of a unit's height deep (wading), and from a half
+## to its height (slow wading); deeper is impassable until swimmers come.
+@export var ground_wading := 0.0
+@export var ground_slow_wading := 0.0
+
+@export_group("Bodies (Decisions 106 and 114)")
+## How many times over a unit in its formation's frame weighs, against being pushed.
+@export var bodies_resist := 0.0
+## How many times a tick overlapping bodies are pushed apart.
+@export var bodies_passes := 0
+## A loose friend of its own squad overlapping a unit in its frame by less than this
+## (cells) only brushes it: it keeps its place.
+@export var bodies_brush := 0.0
+## How far ahead (cells) a unit looks for a body in its way, and how far clear (cells) of
+## it it aims to pass.
+@export var bodies_steer_look := 0.0
+@export var bodies_steer_clear := 0.0
+
 
 ## The tuning in play: content/tuning/battle_tuning.tres, loaded once.
 static func current() -> BattleTuning:

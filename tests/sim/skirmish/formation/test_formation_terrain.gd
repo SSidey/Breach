@@ -3,6 +3,7 @@ extends GdUnitTestSuite
 ## slope, liquid in bands of a unit's height, cliffs and deep water impassable, and a squad
 ## keeping the pace of the worst cell its front rank steps into.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -65,11 +66,15 @@ func test_water_slows_by_depth_against_height() -> void:
 		return ground.factor(height, Vector2(x - 0.5, 0.5), Vector2(x + 0.5, 0.5))
 
 	assert_float(at.call(10, 1.0)).is_equal(1.0)
-	assert_float(at.call(11, 1.0)).is_equal_approx(FormationTerrain.WADING, 0.0001)
-	assert_float(at.call(12, 1.0)).is_equal_approx(FormationTerrain.SLOW_WADING, 0.0001)
+	assert_float(at.call(11, 1.0)).is_equal_approx(BattleTuning.current().ground_wading, 0.0001)
+	assert_float(at.call(12, 1.0)).is_equal_approx(
+		BattleTuning.current().ground_slow_wading, 0.0001
+	)
 	assert_float(at.call(13, 1.0)).is_equal(0.0)
 	# A brute, twice as tall, wades it.
-	assert_float(at.call(13, 2.0)).is_equal_approx(FormationTerrain.SLOW_WADING, 0.0001)
+	assert_float(at.call(13, 2.0)).is_equal_approx(
+		BattleTuning.current().ground_slow_wading, 0.0001
+	)
 
 
 func test_a_squad_half_in_a_wood_slows_as_a_whole() -> void:
