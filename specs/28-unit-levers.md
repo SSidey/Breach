@@ -129,17 +129,21 @@ The user's own list of what a unit needs, with the gaps found between it and the
    too; being surrounded lowers defence. A parry doesn't counter: riposte is an ability.
 3. **Damage (Decision 119):** the weapon's range, skill raising its floor and spilling into
    crits; strength scaling per weapon over its requirement; weakness ×1.5, resistance
-   ×0.5, immunity ×0; then armour (physical) or ward (fire, acid, magic) flat. Magic damage
-   types come now.
+   ×0.5, immunity ×0; then armour (mundane blows) or ward (magical ones) flat. Magic is a
+   source, not a type: a magical flag on any type (fire and magic fire are both fire), and
+   arcane for pure magic.
 4. **Items (Decision 120):** one group; slots per item and per unit type; weight; strength
    requirement; proficiency tags; the weapon's attack interval scaled by the unit's attack
    speed; carry and wield limits from strength, encumbrance in four stages, a hauler trait
    raising the limit.
-5. **HP, wounds and death (Decision 121):** downed at 0 HP, a body on the ground (an
-   obstacle by mass, haulable); death's door below 0, constitution deep, a blow past it
-   killing outright; finishing the downed is the creature's choice; regeneration HP only,
-   running through damage (traits may stop it, or keep it running while downed), a
-   per-conflict limit.
+5. **HP, wounds and death (Decision 121):** the blow that reaches 0 HP stops there and the
+   unit is downed, a body on the ground (an obstacle by mass, haulable); struck again it
+   enters death's door, constitution deep; a blow past minus its constitution kills
+   outright. Units kill or capture the downed once no standing foe is near - send a
+   messenger (a leader's trait) lets one go as a morale blow to its side. A caught router
+   may surrender in place, by a seeded chance from courage, morale and disposition.
+   Regeneration is HP only, runs through damage (traits may stop it, or keep it running
+   while downed), with a limit per rest.
 6. **Pools, abilities, status effects (Decision 122):** pools with their own gain;
    abilities as trigger, condition, effect, cost and cooldown, passive or activated; status
    effects with duration, stacking and resistance. Attack shapes belong to weapons and
@@ -147,14 +151,12 @@ The user's own list of what a unit needs, with the gaps found between it and the
 7. **Progression and tuning (Decision 123):** tech can change anything, in a fixed modifier
    order; subtypes inherit their parent's upgrades; experience fills ranks tech unlocks;
    everything persists for the map, a rest resetting some of it; named leaders persist
-   across maps; one tuning file.
+   across maps, and for now rank and file too; one tuning file.
 
 **Still open:**
-- The magic damage types' names (amending Decision 79's list).
-- Surrender in place as an alternative to a rout.
-- Whether rank and file carry over between maps.
-- Each derived stat's formula, and the starting numbers for the six units (the mirror
-  trials judge them).
+- Whether rank and file should carry over between maps: yes for now, to be judged in play.
+- Each derived stat's formula, and the starting numbers for the six units: set while
+  building, judged by the mirror trials.
 
 ## Round 1 plan
 
@@ -168,7 +170,7 @@ part that moves outcomes:
 | 3 | Items: one item group, slots, weight, proficiency tags, the weapon's attack interval and the unit's attack speed |
 | 4 | The blow: skill and defence, the opposed roll and its bands, crits; high ground and flanks shift the roll |
 | 5 | Damage: weapon range and skill, strength scaling, weakness, resistance and immunity, armour and ward |
-| 6 | HP and wounds: downed, death's door, bodies on the ground, finishing; regeneration and its limit |
+| 6 | HP and wounds: downed, death's door, bodies on the ground, kill or capture, surrender; regeneration and its per-rest limit |
 | 7 | Load and stamina: encumbrance, stamina drain and recovery, tiredness slowing and weakening |
 
 Round 2: abilities, pools and status effects (bleed, medic, riposte), experience and ranks,

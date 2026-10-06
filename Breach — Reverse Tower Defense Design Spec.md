@@ -5835,9 +5835,12 @@ scales a weapon by its own factor above its strength requirement (a maul much, a
 little, a bow by draw weight, a spell from wits instead); below the requirement the
 wielder loses skill. Against the target, a damage type it is **weak** to deals ×1.5,
 **resistant** ×0.5, **immune** ×0; then **armour** (slashing, piercing, blunt) or **ward**
-(fire, acid and the magic types) takes a flat amount off. Magic damage types come now so
-abilities can use them later; their names are spec 28's to settle, amending Decision 79's
-list.
+(magical damage) takes a flat amount off. **Magic is a source, not a type:** a damage
+type says what the blow is (slashing, piercing, blunt, fire, acid - Decision 79's list,
+plus **arcane** for pure magic with no element); a **magical** flag on the weapon or
+ability says where it comes from, so fire and magic fire are both fire. Armour stands
+against mundane blows, ward against magical ones; weakness, resistance and immunity are by
+type either way.
 
 **Alternatives:**
 
@@ -5877,34 +5880,42 @@ a maximum multiple, immobile past that - a hauler trait raising the multiple.
 **Rules over cases:** general: every item and every unit type.
 **Order:** no ordering.
 
-### Decision 121 — At 0 HP a unit is downed; below it lies death's door, constitution deep; regeneration is HP only and keeps running
+### Decision 121 — At 0 HP a unit is downed; struck again it enters death's door, constitution deep; units kill or capture; regeneration is HP only, limited per rest
 
 **Authorised by:** Simeon Sidey
 **Date:** 2026-10-06
 
-**Rationale:** Spec 28 round 1, the user's model. At 0 HP a unit is **downed**: it stops fighting and
-leaves its formation, and counts not as a combatant for spacing - only as a body on the
-ground, an obstacle by its mass (crossable slowly, a great one blocking) and something to
-haul (captives, food). HP below 0 is **death's door**, constitution deep: a downed unit
-struck again goes into it, and dies at minus that depth; a blow that takes a standing unit
-straight past it kills outright. Whether attackers finish the downed is the creature's (a
-merciless or predator trait); by default a unit leaves downed foes while standing ones are
-near. **Surrender in place** may be an alternative to a rout (to settle). **Regeneration**
-is HP only, keeps running when struck (a trait may stop it, a troll's by fire or acid),
-stops while downed unless a trait keeps it running, and has a per-conflict limit, a
-multiple of max HP, so no unit is unkillable by it; other pools fill by their own rules
-(Decision 122). A unit left alone recovers.
+**Rationale:** Spec 28 round 1, the user's model.
+- **Downed:** the blow that brings a unit to 0 HP stops there - its excess is lost - and
+  the unit is **downed**: it stops fighting and leaves its formation, and counts not as a
+  combatant for spacing, only as a body on the ground: an obstacle by its mass (crossable
+  slowly, a great one blocking) and something to haul (captives, food).
+- **Death's door:** a downed unit struck again goes below 0 into **death's door**,
+  constitution deep, and dies at minus that depth. A blow that would take a standing unit
+  past minus its constitution kills outright, bypassing downed.
+- **Kill or capture:** units don't leave the downed: once no standing foe is near, they
+  finish or capture them (by the creature: a merciless or predator kills, a captor
+  captures). The exception is **send a messenger**, a commander, hero or lord trait: a
+  survivor is let go to carry word home, a morale blow to its side.
+- **Surrender:** a routing unit caught with nowhere to run may surrender in place, by a
+  seeded chance from its courage and morale and its disposition (some never surrender).
+- **Regeneration** is HP only, keeps running when struck (a trait may stop it, a troll's by
+  fire or acid), stops while downed unless a trait keeps it running, and has a limit **per
+  rest**, a multiple of max HP: a unit that regenerates 60% of its limit in one fight and
+  40% in the next has none left for a third until it rests (Decision 123). So no unit is
+  unkillable by it; other pools fill by their own rules (Decision 122).
 
 **Alternatives:**
 
 | Option | Reason Rejected |
 |--------|-----------------|
-| Downed, then a separate death's door pool | One negative-HP band says the same with one number. |
+| Excess damage carrying on below 0 | The user: downed hard-stops at 0, unless a blow kills outright. |
+| Leaving the downed where they lie | The user: units kill or capture, a messenger the one exception. |
+| Regeneration limited per fight | The user: per rest, so fights in a row drain it. |
 | Regeneration stopping on damage | The user: only by a trait, such as a troll's to fire or acid. |
-| Death at 0 | Leaves no wounded, captives or recovery. |
 
 **Rules over cases:** general: every unit, of either side.
-**Order:** no ordering: a blow is resolved from its roll.
+**Order:** a blow is resolved from its roll; surrender is a seeded chance (Decision 93).
 
 ### Decision 122 — Pools, abilities and status effects
 
