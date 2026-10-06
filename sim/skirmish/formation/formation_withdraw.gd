@@ -23,6 +23,7 @@ extends RefCounted
 ##   disorder.
 ## Squads keep `withdraw` ({"safe_ticks"}). Pure over the squads it is given.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
@@ -58,7 +59,9 @@ static func begin(squad: SkirmishSquad, tick: int, events: Array) -> void:
 static func disorder(squad: SkirmishSquad) -> float:
 	if FormationDiscipline.meets_threats(squad):
 		return 0.0
-	return 1.0 - float(FormationDiscipline.of(squad)) / FormationDiscipline.MEETS_THREATS
+	return (
+		1.0 - float(FormationDiscipline.of(squad)) / BattleTuning.current().discipline_meets_threats
+	)
 
 
 ## One tick of withdrawals: units flee, and squads that have been safe long enough re-form.

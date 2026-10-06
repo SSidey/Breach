@@ -8,6 +8,7 @@ extends RefCounted
 ## reaches from one snapshot; two reaching one edge at once, the nearer holds it.
 ## Pure over the squads it is given; FormationSimulation calls it each tick.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SquadEdges = preload("res://sim/skirmish/formation/squad_edges.gd")
 const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
@@ -64,7 +65,9 @@ static func _lock_on(
 	var extra := {"by": attacker.id, "edge": edge}
 	events.append(FormationEvents.squad_event("flanked", tick, victim, extra))
 	var impact := (
-		FormationMorale.REAR_IMPACT if edge == SquadEdges.REAR else FormationMorale.SIDE_IMPACT
+		BattleTuning.current().morale_rear_impact
+		if edge == SquadEdges.REAR
+		else BattleTuning.current().morale_side_impact
 	)
 	FormationMorale.shock(victim, impact, tick, events)
 

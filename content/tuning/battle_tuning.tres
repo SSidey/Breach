@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="BattleTuning" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://content/definitions/battle_tuning.gd" id="1_tuning"]
+
+[resource]
+script = ExtResource("1_tuning")
+morale_blow_share = Array[float]([1.0, 0.8, 0.6, 0.0])
+morale_side_impact = 15
+morale_rear_impact = 30
+morale_loss = 4
+morale_leader_loss = 10
+morale_recovery = 2
+morale_pressure = Array[int]([0, 0, 3, 9, 18])
+morale_support_cells = 2.0
+morale_per_leadership = 10
+morale_steady_at = 50
+morale_shaken_at = 25
+discipline_per_leadership = 10
+discipline_meets_threats = 50
+discipline_march_pace_at = 50.0
+discipline_slowest = 0.4
+discipline_fastest = 1.5
+discipline_expected_max = 100.0
+discipline_leash_steps = Array[float]([16.0, 32.0, 64.0, 128.0, inf])
+discipline_leash_shares = Array[float]([0.75, 0.5, 0.25])

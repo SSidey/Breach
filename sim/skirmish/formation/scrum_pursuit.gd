@@ -16,6 +16,7 @@ extends RefCounted
 ## Squads keep `pursues` and `chasers` (unit id -> {"unit", "foe", "from", "leash"}). Pure
 ## over the squads it is given.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
@@ -35,7 +36,8 @@ const UnitSteer = preload("res://sim/skirmish/formation/unit_steer.gd")
 ## The scaled rout of a ragged retreat: up to this much shock, for a formation with no
 ## discipline at all (placeholder).
 const RAGGED_SHOCK := 20
-## A unit breaks ranks to chase with a chance of (MEETS_THREATS - its discipline) / 100.
+## A unit breaks ranks to chase with a chance of (discipline_meets_threats - its
+## discipline) / 100.
 ## How near (cells) a unit must stand to a retreating enemy to be tempted to chase.
 const TEMPTED_WITHIN := 2.0
 
@@ -132,7 +134,7 @@ static func _tempt(enemy: SkirmishSquad, squad: SkirmishSquad, tick: int, battle
 		if _nearest(at, squad, battle_seed).distance_to(at) > TEMPTED_WITHIN:
 			continue
 		var steadied := FormationDiscipline.unit_discipline(enemy, unit)  # its leader's too
-		var chance := float(FormationDiscipline.MEETS_THREATS - steadied) / 100.0
+		var chance := float(BattleTuning.current().discipline_meets_threats - steadied) / 100.0
 		if BattleRolls.uniform(battle_seed, [tick, unit.id, "chase"]) >= chance:
 			continue
 		if not enemy.loose.has(unit.id):
