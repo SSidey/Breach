@@ -53,6 +53,17 @@ static var _current: BattleTuning = null
 ## out, "cautious" one in.
 @export var discipline_leash_shares: Array[float] = []
 
+@export_group("Combat (Decisions 85, 88 and 93)")
+## A flank blow's worth (from outside the target's front), times its damage.
+@export var combat_flank_bonus := 0.0
+## A striker on higher ground than its target hits this many times harder.
+@export var combat_high_ground := 0.0
+## Each blow's damage rolls within this share either side of its value (0: no roll).
+@export var combat_damage_band := 0.0
+## The contest die: a roll from 0 to this, added to initiative, decides who takes a
+## contested slot (0: stats alone).
+@export var combat_contest_die := 0
+
 @export_group("Routs and flight (Decisions 82, 89, 98 and 99)")
 ## Crush damage per cell of a router's footprint, to friends it shoves past.
 @export var rout_crush := 0

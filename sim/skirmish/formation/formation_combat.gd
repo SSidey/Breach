@@ -3,7 +3,8 @@ extends RefCounted
 ## How hard a blow lands, and ranged strikes, per specs/22-formation-feel-test.md and
 ## Decision 40. Pure: FormationSimulation calls it each tick.
 ##
-## A flank blow (Decision 88: from outside the target's front) is worth FLANK_BONUS.
+## A flank blow (Decision 88: from outside the target's front) is worth the flank bonus
+## (BattleTuning).
 ##
 ## Ranged units (Decisions 46-47) strike with their best ranged weapon from anywhere in
 ## their squad, moving or fighting: the nearest enemy unit within its range in ranks,
@@ -11,16 +12,13 @@ extends RefCounted
 ## flank bonus. A ranged unit in the front
 ## rank of an engaged squad strikes with its melee weapons instead.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 
-const FLANK_BONUS := 1.5
 const EPSILON := 0.000001
-
-## The flank bonus in use: FLANK_BONUS unless a tuning trial overrides it (BattleTrials).
-static var flank_bonus := FLANK_BONUS
 
 
 ## This tick's ranged strikes: [[shooter, target, damage, shooter's squad], ...]. Updates
@@ -46,7 +44,7 @@ static func ranged_blows(squads: Array, interval_ticks: int, fight_seed: int = 0
 
 
 static func damage(fighter: SkirmishUnit, is_flank: bool) -> int:
-	return roundi(fighter.dmg * (flank_bonus if is_flank else 1.0))
+	return roundi(fighter.dmg * (BattleTuning.current().combat_flank_bonus if is_flank else 1.0))
 
 
 ## The nearest enemy unit within the shooter's range (ties: one it overlaps laterally,

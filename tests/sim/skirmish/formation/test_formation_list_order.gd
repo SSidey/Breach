@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## must come out the same, tick for tick; where squads tie on where they stand, the seeded
 ## draw decides, not the list.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -72,7 +73,7 @@ func _mirror(scenario: String, battle_seed: int) -> Callable:
 	return func():
 		var sim := FormationSimulation.new(2.0, TICK)
 		sim.fight_seed = battle_seed
-		sim.damage_band = FormationField.DAMAGE_BAND
+		sim.damage_band = BattleTuning.current().combat_damage_band
 		for spawn in BattleTrials._mirror_spawns(scenario, sim):
 			spawn.call()
 		return sim

@@ -36,3 +36,7 @@ rout_fan_degrees = 45.0
 rout_fan_cells = 6.0
 pursuit_ragged_shock = 20
 pursuit_tempted_within = 2.0
+combat_flank_bonus = 1.5
+combat_high_ground = 1.25
+combat_damage_band = 0.25
+combat_contest_die = 10

@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 ## flank blows; a led line turns to meet a threat before contact; a fight that can't go on
 ## is released rather than frozen; and when it ends units regroup and march on.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
@@ -102,7 +103,8 @@ func test_a_units_front_is_the_three_cells_ahead() -> void:
 func test_contests_go_to_the_earliest_then_the_readiest() -> void:
 	var quick := SkirmishUnit.new()
 	quick.id = 1
-	quick.initiative = 10 + ScrumContest.DIE + 1  # out-rolls any roll of the other
+	var die := BattleTuning.current().combat_contest_die
+	quick.initiative = 10 + die + 1  # out-rolls any roll of the other
 	var slow := SkirmishUnit.new()
 	slow.id = 2
 	slow.initiative = 10

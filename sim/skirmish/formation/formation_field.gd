@@ -16,6 +16,7 @@ extends RefCounted
 ## wood slows and hides, B's wave narrows through the ford, and the reserve fights down
 ## from the hill. The player's domain builders fill both waves in turn. Pure.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -61,8 +62,6 @@ const HILL := Rect2(92, 16, 20, 32)
 const STREAM_DEPTH := 1.2
 const FORD_DEPTH := 0.4
 const HILL_QUARTERS := 8
-## Each blow's damage rolls within this band (Decision 93; placeholder until spec 28).
-const DAMAGE_BAND := 0.25
 
 var tick_seconds: float
 var sim: FormationSimulation
@@ -105,7 +104,7 @@ func _init(
 	sim = FormationSimulation.new(float(SIZE.x) / MapLayoutDef.CELLS_PER_TILE, seconds_per_tick)
 	sim.combat_width = WAVE_WIDTH
 	sim.fight_seed = battle_seed
-	sim.damage_band = DAMAGE_BAND
+	sim.damage_band = BattleTuning.current().combat_damage_band
 	sim.terrain = _ground()
 	var points := route_points()
 	for key in points:

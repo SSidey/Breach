@@ -2,6 +2,7 @@ extends GdUnitTestSuite
 ## Sight and high ground on terrain, per Decisions 85 and 87 and spec 27 round 4: a wood
 ## blocks a sight line deeper than its edge, and a striker on higher ground hits harder.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
@@ -65,5 +66,5 @@ func test_a_striker_on_higher_ground_hits_harder() -> void:
 	var downhill := hits.filter(func(h): return h["faction"] == "the_kingdom")
 	var uphill := hits.filter(func(h): return h["faction"] == "player")
 	assert_bool(downhill.is_empty() or uphill.is_empty()).is_false()
-	assert_int(downhill[0]["dmg"]).is_equal(roundi(4 * FormationMelee.HIGH_GROUND))
+	assert_int(downhill[0]["dmg"]).is_equal(roundi(4 * BattleTuning.current().combat_high_ground))
 	assert_int(uphill[0]["dmg"]).is_equal(4)

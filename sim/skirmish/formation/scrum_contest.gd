@@ -9,15 +9,14 @@ extends RefCounted
 ## practice. The roll is the unit's seeded variance, drawn once per contest from the fight's
 ## seed, the tick and the unit, so a replay repeats. Pure.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
-
-## The roll's die: 0 to DIE (placeholder; its size is spec 28's). 0 decides by stats alone.
-const DIE := 10
 
 
 ## The unit's key for a cell it would reach in `arrival` seconds.
 static func key(unit: SkirmishUnit, arrival: float, fight_seed: int, tick: int) -> Array:
-	var roll := posmod(hash([fight_seed, tick, unit.id]), DIE + 1) if DIE > 0 else 0
+	var die := BattleTuning.current().combat_contest_die  # 0 decides by stats alone
+	var roll := posmod(hash([fight_seed, tick, unit.id]), die + 1) if die > 0 else 0
 	return [
 		arrival, -(roll + unit.initiative), -unit.initiative, -unit.speed, draw(unit, fight_seed)
 	]
