@@ -4,7 +4,6 @@
 
 [resource]
 script = ExtResource("1_tuning")
-morale_blow_share = Array[float]([1.0, 0.8, 0.6, 0.0])
 morale_side_impact = 15
 morale_rear_impact = 30
 morale_loss = 4
@@ -36,8 +35,6 @@ rout_fan_degrees = 45.0
 rout_fan_cells = 6.0
 pursuit_ragged_shock = 20
 pursuit_tempted_within = 2.0
-combat_flank_bonus = 1.5
-combat_high_ground = 1.25
 combat_damage_band = 0.25
 combat_contest_die = 10
 blow_die = 100.0
