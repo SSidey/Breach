@@ -1,11 +1,12 @@
 class_name RoutBlows
 extends RefCounted
 ## Blows on routers (Decision 82): any hostile front-rank unit free to fight that comes
-## within FormationRout.STRIKE_REACH of a router strikes it from behind, a flank blow. It
+## within rout_strike_reach (BattleTuning) of a router strikes it from behind, a flank blow. It
 ## strikes the nearest router it reaches, of whichever routing formation, a tie going to
 ## the routers' seeded draws (Decision 97), and strikes once a tick however many it
 ## reaches. Pure over the squads it is given.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
@@ -51,7 +52,7 @@ static func _nearest(
 			continue
 		var gap := fighter.position.distance_to(router[1])
 		var key := [snappedf(gap, 0.000001), ScrumContest.draw(router[0], fight_seed)]
-		if gap <= FormationRout.STRIKE_REACH and (best == null or key < best_key):
+		if gap <= BattleTuning.current().rout_strike_reach and (best == null or key < best_key):
 			best = router[0]
 			best_key = key
 	return best

@@ -12,11 +12,11 @@ extends RefCounted
 ##   (flank blows) while it turns. Once clear it is in flight, at its full pace. Until it
 ##   has turned, a unit still facing a foe it touches strikes it (ScrumBlows). The less
 ##   ordered the formation, the wider its units fan out from the route's line: up to
-##   RoutFlight.FAN_DEGREES either side, by a seeded angle per unit, for one with no
+##   rout_fan_degrees (BattleTuning) either side, by a seeded angle per unit, for one with no
 ##   discipline. Ground it can't cross turns it back onto the route (a ford it fanned
 ##   away from), and holds it only if that is barred too.
-## - **Safe:** with no enemy within FormationRout.ENEMY_NEAR of it, and none pursuing it,
-##   for FormationRout.RALLY_SECONDS - the test a rout rallies by - it re-forms on its route
+## - **Safe:** with no enemy within rout_enemy_near of it, and none pursuing it,
+##   for rout_rally_seconds - the test a rout rallies by - it re-forms on its route
 ##   where its units stand, facing home, and marches home (its order). One whose units are
 ##   all home, with nowhere further to go, re-forms there at once, facing out the way it
 ##   will hold, and fights as any other. Its units fan out no further than a rout's, by its
@@ -93,7 +93,7 @@ static func step(
 			_flee(squad, unit, [pace, seconds, fight_seed, entry[2].has(unit.id)], terrain)
 		squad.withdraw["safe_ticks"] = squad.withdraw["safe_ticks"] + 1 if entry[1] else 0
 		var long_enough: bool = (
-			squad.withdraw["safe_ticks"] * seconds >= FormationRout.RALLY_SECONDS
+			squad.withdraw["safe_ticks"] * seconds >= BattleTuning.current().rout_rally_seconds
 		)
 		if long_enough or _home(squad):
 			_reform_here(squad, tick, events)
@@ -114,7 +114,10 @@ static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, motion: Array, terra
 	var heading := homeward.rotated(RoutFlight.fan(unit, motion[2]) * disorder(squad))
 	var side := homeward.orthogonal()
 	var aside: float = (at - squad.route.point_at(along)).dot(side)
-	if absf(aside) >= RoutFlight.FAN_CELLS * disorder(squad) and heading.dot(side) * aside > 0.0:
+	if (
+		absf(aside) >= BattleTuning.current().rout_fan_cells * disorder(squad)
+		and heading.dot(side) * aside > 0.0
+	):
 		heading = homeward  # fanned out as far as its disorder takes it (a rout's at most)
 	if terrain != null and terrain.factor(unit.height, at, at + heading) <= 0.0:
 		var onto: Vector2 = squad.route.point_at(move_toward(along, home, LOOK_CELLS)) - at
@@ -157,7 +160,10 @@ static func _safe(squad: SkirmishSquad, squads: Array, foes: Array) -> bool:
 	for unit in squad.living():
 		var at := ScrumReach.at(squad, unit)
 		for entry in foes:
-			if ScrumReach.at(entry[1], entry[0]).distance_to(at) <= FormationRout.ENEMY_NEAR:
+			if (
+				ScrumReach.at(entry[1], entry[0]).distance_to(at)
+				<= BattleTuning.current().rout_enemy_near
+			):
 				return false
 	return true
 

@@ -33,13 +33,8 @@ const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const ScrumSlots = preload("res://sim/skirmish/formation/scrum_slots.gd")
 const UnitSteer = preload("res://sim/skirmish/formation/unit_steer.gd")
 
-## The scaled rout of a ragged retreat: up to this much shock, for a formation with no
-## discipline at all (placeholder).
-const RAGGED_SHOCK := 20
 ## A unit breaks ranks to chase with a chance of (discipline_meets_threats - its
 ## discipline) / 100.
-## How near (cells) a unit must stand to a retreating enemy to be tempted to chase.
-const TEMPTED_WITHIN := 2.0
 
 
 ## Applies a retreat order to `squad`: ends its fight, costs a ragged one its scaled rout,
@@ -53,7 +48,9 @@ static func retreat(
 	events.append(FormationEvents.squad_event("disengaged", tick, squad))
 	var short := FormationWithdraw.disorder(squad)
 	if short > 0.0:
-		FormationMorale.shock(squad, roundi(RAGGED_SHOCK * short), tick, events)
+		FormationMorale.shock(
+			squad, roundi(BattleTuning.current().pursuit_ragged_shock * short), tick, events
+		)
 	FormationWithdraw.begin(squad, tick, events)
 	for enemy in enemies:
 		if enemy.pursues:
@@ -131,7 +128,10 @@ static func _fights(other: SkirmishSquad, squad: SkirmishSquad) -> bool:
 static func _tempt(enemy: SkirmishSquad, squad: SkirmishSquad, tick: int, battle_seed: int) -> void:
 	for unit in enemy.living():
 		var at := ScrumReach.at(enemy, unit)
-		if _nearest(at, squad, battle_seed).distance_to(at) > TEMPTED_WITHIN:
+		if (
+			_nearest(at, squad, battle_seed).distance_to(at)
+			> BattleTuning.current().pursuit_tempted_within
+		):
 			continue
 		var steadied := FormationDiscipline.unit_discipline(enemy, unit)  # its leader's too
 		var chance := float(BattleTuning.current().discipline_meets_threats - steadied) / 100.0

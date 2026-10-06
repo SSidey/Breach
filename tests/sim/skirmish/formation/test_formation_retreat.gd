@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 ## ordered to pursue, or led by a pursuer, follows; one that isn't returns to formation,
 ## though its undisciplined units may break ranks to chase, decided unit by unit.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -83,7 +84,7 @@ func test_a_ragged_retreat_takes_a_scaled_rout() -> void:
 	var ragged := _retreat(_def(20), _def(60))
 	var drilled := _retreat(_def(60), _def(60))
 
-	assert_int(ragged[5]).is_greater_equal(ScrumPursuit.RAGGED_SHOCK * 3 / 5 - 2)
+	assert_int(ragged[5]).is_greater_equal(BattleTuning.current().pursuit_ragged_shock * 3 / 5 - 2)
 	assert_int(drilled[5]).is_less(ragged[5])
 
 

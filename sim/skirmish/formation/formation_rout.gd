@@ -11,8 +11,8 @@ extends RefCounted
 ## - **Rally:** a router that reaches a friendly formation with a leader joins its rear
 ##   ranks. One that runs into any standing friendly formation (Decisions 89 and 98) is
 ##   caught there: it stops (shoving in among them, its body kept apart: UnitBodies),
-##   and after STEADY_RALLY_SECONDS with that formation steady joins its rear, walking to
-##   its place. A shaken formation holds its routers until it steadies.
+##   and after a few seconds with that formation steady (BattleTuning) joins its rear,
+##   walking to its place. A shaken formation holds its routers until it steadies.
 ##   A routing formation whose own leader lives, with no enemy near for a few seconds,
 ##   re-forms where its leader stands and holds there.
 ## - **Home:** routers that reach home leave the field ("fled_home"; the player's routers
@@ -24,6 +24,7 @@ extends RefCounted
 ## A routing squad's `fleeing`: unit id -> {"along": cells along its route, "offset":
 ## its spread from the route}. Pure over the squads it is given.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
@@ -40,23 +41,6 @@ const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 const CELLS := float(MapLayoutDef.CELLS_PER_TILE)
-## Crush damage per cell of the router's footprint (placeholder).
-const CRUSH := 2
-const PANIC := 5
-const SEEN_ROUT := 5
-## How near (cells, from a router's centre to a friend's body) a router must come to a led
-## formation to rally to it.
-const RALLY_REACH := 1.5
-## A router running into a standing friendly formation - its centre within its own body's
-## breadth of a friend's body, shoving past it (Decision 106) - is caught there, and
-## rallies to it after a while steady (Decisions 89 and 98).
-const STEADY_RALLY_SECONDS := 3.0
-## Seconds with no enemy within ENEMY_NEAR cells before a led rout re-forms.
-const RALLY_SECONDS := 5.0
-const ENEMY_NEAR := 6.0
-const REFORMED_MORALE := 30
-## How near (cells, centre to centre) a pursuer must be to strike a router.
-const STRIKE_REACH := 1.5
 
 
 ## One tick of routs: formations at 0 morale break, routers flee (crushing friends in the
@@ -122,7 +106,7 @@ static func _break(
 	for friend in squads:
 		if friend != squad and friend.faction_id == squad.faction_id and not friend.is_destroyed():
 			if FormationSight.detects(friend, squad, terrain):
-				FormationMorale.shock(friend, SEEN_ROUT, tick, events)
+				FormationMorale.shock(friend, BattleTuning.current().rout_seen, tick, events)
 
 
 ## `motion` is [pace (cells a tick at speed 1), fight seed, terrain or null].
@@ -168,14 +152,16 @@ static func _crush(
 				hit = [key, friend, unit]
 	if hit.is_empty():
 		return
-	var damage := CRUSH * router.footprint_width * router.footprint_depth
+	var damage := (
+		BattleTuning.current().rout_crush * router.footprint_width * router.footprint_depth
+	)
 	router.hp -= damage
 	hit[2].hp -= damage
 	var extra := {"unit": router.id, "target": hit[2].id, "dmg": damage}
 	events.append(FormationEvents.squad_event("crushed", tick, hit[1], extra))
 	if not panicked.has(hit[1].id):
 		panicked[hit[1].id] = true
-		FormationMorale.shock(hit[1], PANIC, tick, events)
+		FormationMorale.shock(hit[1], BattleTuning.current().rout_panic, tick, events)
 
 
 ## [[key, squad, unit, friend], ...]: the squad's routers that join a friend this tick,
@@ -187,7 +173,9 @@ static func _rallies(
 	var out := []
 	for unit in squad.living():
 		var at := where(squad, unit.id)
-		var leader := RoutCatch.friend_near(squad, at, squads, RALLY_REACH, true, fight_seed)
+		var leader := RoutCatch.friend_near(
+			squad, at, squads, BattleTuning.current().rout_rally_reach, true, fight_seed
+		)
 		if leader != null:
 			out.append([_key(leader, unit, at, fight_seed), squad, unit, leader])
 			continue
@@ -198,7 +186,10 @@ static func _rallies(
 		var held: int = entry.get("caught", 0)
 		entry["caught"] = 0 if friend == null else (held + 1 if calm else maxi(held, 1))
 		entry["held_by"] = null if friend == null else friend.id
-		if calm and entry["caught"] * tick_seconds >= STEADY_RALLY_SECONDS:
+		if (
+			calm
+			and entry["caught"] * tick_seconds >= BattleTuning.current().rout_steady_rally_seconds
+		):
 			out.append([_key(friend, unit, at, fight_seed), squad, unit, friend])
 	return out
 
@@ -220,7 +211,7 @@ static func _regroup(
 	if squad.living().is_empty() or FormationMorale.leadership(squad) == 0:
 		return
 	squad.rally_ticks = 0 if _enemy_near(squad, squads) else squad.rally_ticks + 1
-	if squad.rally_ticks * tick_seconds >= RALLY_SECONDS:
+	if squad.rally_ticks * tick_seconds >= BattleTuning.current().rout_rally_seconds:
 		_reform(squad, tick, events, fight_seed)
 
 
@@ -248,7 +239,10 @@ static func _enemy_near(squad: SkirmishSquad, squads: Array) -> bool:
 			continue
 		for enemy in other.living():
 			for unit in squad.living():
-				if enemy.position.distance_to(where(squad, unit.id)) <= ENEMY_NEAR:
+				if (
+					enemy.position.distance_to(where(squad, unit.id))
+					<= BattleTuning.current().rout_enemy_near
+				):
 					return true
 	return false
 
@@ -272,7 +266,7 @@ static func _reform(squad: SkirmishSquad, tick: int, events: Array, fight_seed: 
 	squad.heading = UnitMotion.bearing_to(Vector2.ZERO, way, squad.heading)
 	squad.order = SkirmishUnit.Order.HOLD
 	squad.state = SkirmishSquad.State.HOLDING
-	squad.morale = REFORMED_MORALE
+	squad.morale = BattleTuning.current().rout_reformed_morale
 	squad.reforming = true
 	events.append(FormationEvents.squad_event("reformed", tick, squad))
 

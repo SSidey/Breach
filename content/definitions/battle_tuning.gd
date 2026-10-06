@@ -53,6 +53,36 @@ static var _current: BattleTuning = null
 ## out, "cautious" one in.
 @export var discipline_leash_shares: Array[float] = []
 
+@export_group("Routs and flight (Decisions 82, 89, 98 and 99)")
+## Crush damage per cell of a router's footprint, to friends it shoves past.
+@export var rout_crush := 0
+## Morale lost by a friend a router crushes, and by a friend that sees a formation rout.
+@export var rout_panic := 0
+@export var rout_seen := 0
+## How near (cells, a router's centre to a friend's body) a router must come to a led
+## formation to rally to it.
+@export var rout_rally_reach := 0.0
+## Seconds a caught router waits with its friend steady before it joins it.
+@export var rout_steady_rally_seconds := 0.0
+## Seconds with no enemy within rout_enemy_near cells before a led rout re-forms (and a
+## withdrawal is safe).
+@export var rout_rally_seconds := 0.0
+@export var rout_enemy_near := 0.0
+## The morale a re-formed rout starts at.
+@export var rout_reformed_morale := 0
+## How near (cells, centre to centre) a pursuer must be to strike a router.
+@export var rout_strike_reach := 0.0
+## How far a wholly disorderly flight fans out: degrees off its route's line, and cells out.
+@export var rout_fan_degrees := 0.0
+@export var rout_fan_cells := 0.0
+
+@export_group("Pursuit (Decisions 103 and 109)")
+## The rout a ragged retreat costs: up to this much shock, for a formation with no
+## discipline at all.
+@export var pursuit_ragged_shock := 0
+## How near (cells) a unit must stand to a retreating enemy to be tempted to chase.
+@export var pursuit_tempted_within := 0.0
+
 
 ## The tuning in play: content/tuning/battle_tuning.tres, loaded once.
 static func current() -> BattleTuning:
