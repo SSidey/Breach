@@ -17,4 +17,4 @@ position_priority = 2
 turn_rate = 270.0
 backward_pace = 0.25
 items = Array[ExtResource("2_k78dx")]([ExtResource("3_3k071"), ExtResource("4_fyq4l")])
-slots = Array[String](["hand", "hand"])
+slots = Array[String](["hand", "hand", "mouth"])

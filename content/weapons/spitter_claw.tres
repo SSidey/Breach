@@ -8,3 +8,4 @@ item_name = "claw"
 damage = 1
 damage_type = "slashing"
 innate = true
+slots = Array[String](["hand"])

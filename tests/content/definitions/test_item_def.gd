@@ -40,11 +40,46 @@ func test_items_fit_only_the_slots_a_body_has_free() -> void:
 
 func test_an_innate_weapon_takes_no_slot_and_weighs_nothing() -> void:
 	var bite := WeaponDef.innate_weapon(3, "bite")
+	bite.slots = ["mouth"]
+	var spear := _spear()
 
-	assert_array(_unit([], [bite]).validate()).is_empty()
+	assert_array(_unit(["hand", "hand", "mouth"], [spear, bite]).validate()).is_empty()
 	bite.weight = 1.0
-	bite.slots = ["hand"]
 	assert_bool(Array(bite.validate()).any(func(e): return e.contains("innate"))).is_true()
+
+
+func test_an_innate_weapon_is_part_of_a_body_part_the_unit_has() -> void:
+	var fists := WeaponDef.innate_weapon(2)
+	fists.slots = ["hand", "hand"]
+
+	var errors := Array(_unit(["hand", "mouth"], [fists]).validate())
+	assert_bool(errors.any(func(e): return e.contains("body part"))).is_true()
+
+
+func test_a_carried_item_in_its_body_part_puts_an_innate_weapon_out_of_use() -> void:
+	var fists := WeaponDef.innate_weapon(2)
+	fists.slots = ["hand"]
+	var spit := WeaponDef.innate_weapon(4, "spit")
+	spit.slots = ["mouth"]
+	spit.attack_range = 5
+	var bare := _unit(["hand", "hand", "mouth"], [fists, spit])
+	var armed := _unit(["hand", "hand", "mouth"], [_spear(), fists, spit])
+	var one_handed := _unit(["hand", "hand", "mouth"], [_item("shield", ["hand"]), fists])
+
+	assert_int(bare.melee_damage()).is_equal(2)
+	assert_int(armed.melee_damage()).is_equal(5)  # the spear; its fists are full
+	assert_int(one_handed.melee_damage()).is_equal(2)  # a hand still free
+	assert_str(armed.ranged_weapon().item_name).is_equal("spit")  # its mouth is free
+	armed.items.append(_item("gag", ["mouth"]))
+	assert_object(armed.ranged_weapon()).is_null()
+
+
+func _spear() -> WeaponDef:
+	var spear := WeaponDef.new()
+	spear.item_name = "spear"
+	spear.damage = 5
+	spear.slots = ["hand", "hand"]
+	return spear
 
 
 func test_a_tool_grants_its_traits_but_a_weapons_traits_are_its_own() -> void:

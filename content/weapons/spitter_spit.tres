@@ -9,3 +9,4 @@ damage = 4
 damage_type = "acid"
 attack_range = 5
 innate = true
+slots = Array[String](["mouth"])

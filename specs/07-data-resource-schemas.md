@@ -31,8 +31,9 @@ these shapes, so they need to exist and be validated first.
   - `weapons: Array[WeaponDef]`, from Decision 47. A unit in melee strikes with all its
     melee weapons. Now `items: Array[ItemDef]` (Decision 120, spec 28). `dmg` is retired:
     every blow comes from a weapon. A creature's natural weapons (fists, a bite, a claw,
-    spit) are innate items (`ItemDef.innate`) that can't be dropped, weigh nothing and
-    take no slot. `melee_damage()` sums the melee weapons and feeds the spec 21 and lane
+    spit) are innate items (`ItemDef.innate`) that can't be dropped and weigh nothing.
+    An innate item's slots are the body parts it belongs to (fists the hands, a bite or
+    spit the mouth): it takes none, but it is out of use while a carried item holds one. `melee_damage()` sums the melee weapons and feeds the spec 21 and lane
     sims.
 - `WeaponDef` (`content/definitions/weapon_def.gd`, Decision 47): `weapon_name`,
   `damage` (>= 0), `damage_type` (no effect yet), `attack_range` in ranks (>= 0; 0 is

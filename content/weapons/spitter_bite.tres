@@ -8,3 +8,4 @@ item_name = "bite"
 damage = 1
 damage_type = "piercing"
 innate = true
+slots = Array[String](["mouth"])

@@ -11,3 +11,4 @@ traits = {
 "siege": 1
 }
 innate = true
+slots = Array[String](["hand", "hand"])

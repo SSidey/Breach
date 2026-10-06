@@ -98,6 +98,9 @@ func validate() -> PackedStringArray:
 	var short := _slots_short()
 	if not short.is_empty():
 		errors.append("its items need slots it hasn't free: %s" % ", ".join(short))
+	for item in items:
+		if item != null and item.innate and not _has_slots(slots, item.slots):
+			errors.append("%s: part of a body part it hasn't" % item.item_name)
 	if build_seconds <= 0.0:
 		errors.append("build_seconds must be > 0, got %f" % build_seconds)
 	if attack_speed <= 0.0:
@@ -149,21 +152,33 @@ func ranged_weapon() -> WeaponDef:
 	return best
 
 
-## The items it carries that are weapons.
+## The weapons it can use: those it carries, and its innate ones whose body parts no
+## carried item holds (fists are no use with a spear in both hands).
 func _weapons() -> Array[WeaponDef]:
+	var free := _free_slots()
 	var out: Array[WeaponDef] = []
 	for item in items:
-		if item is WeaponDef:
+		if item is WeaponDef and (not item.innate or _has_slots(free, item.slots)):
 			out.append(item)
 	return out
 
 
-## The slots its items need that its body hasn't free (none: they all fit).
+## The slots its body has left once its carried items take theirs.
+func _free_slots() -> Array[String]:
+	var free := slots.duplicate()
+	for item in items:
+		if item != null and not item.innate:
+			for slot in item.slots:
+				free.erase(slot)
+	return free
+
+
+## The slots its carried items need that its body hasn't free (none: they all fit).
 func _slots_short() -> Array[String]:
 	var free := slots.duplicate()
 	var short: Array[String] = []
 	for item in items:
-		if item == null:
+		if item == null or item.innate:
 			continue
 		for slot in item.slots:
 			if free.has(slot):
@@ -171,3 +186,13 @@ func _slots_short() -> Array[String]:
 			else:
 				short.append(slot)
 	return short
+
+
+## Whether `have` holds every slot `need` names, as many times as it names it.
+static func _has_slots(have: Array[String], need: Array[String]) -> bool:
+	var left := have.duplicate()
+	for slot in need:
+		if not left.has(slot):
+			return false
+		left.erase(slot)
+	return true

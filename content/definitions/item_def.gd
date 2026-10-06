@@ -8,7 +8,9 @@ extends Resource
 ## natural weapon (fists, a bite, a claw) is innate.
 
 @export var item_name: String = ""
-## The slots it takes (hand, hand for a two-handed spear); none for an innate item.
+## The slots it takes (hand, hand for a two-handed spear). An innate item takes none:
+## these are the body parts it is part of (fists the hands, a bite or spit the mouth), and
+## it can't be used while a carried item holds one of them.
 @export var slots: Array[String] = []
 ## Its weight, in load.
 @export var weight: float = 0.0
@@ -20,7 +22,7 @@ extends Resource
 ## does, e.g. {"siege": 1} for a weapon that damages structures.
 @export var traits: Dictionary = {}
 ## Part of the creature (fists, a bite, a claw, its spit): it can't be dropped or taken,
-## weighs nothing and takes no slot.
+## weighs nothing, and its slots are the body parts it belongs to.
 @export var innate: bool = false
 
 
@@ -32,6 +34,6 @@ func validate() -> PackedStringArray:
 		errors.append(
 			"%s: strength_requirement must be >= 0, got %d" % [item_name, strength_requirement]
 		)
-	if innate and (weight > 0.0 or not slots.is_empty()):
-		errors.append("%s: an innate item weighs nothing and takes no slot" % item_name)
+	if innate and weight > 0.0:
+		errors.append("%s: an innate item weighs nothing, got %f" % [item_name, weight])
 	return errors
