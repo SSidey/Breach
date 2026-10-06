@@ -38,7 +38,7 @@ func test_any_standing_squad_may_be_engaged_but_only_one_not_getting_away_seeks_
 func test_a_retreating_squad_in_reach_is_engaged_but_does_not_turn_to_fight() -> void:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 400
-	unit_def.dmg = 1
+	unit_def.items = [WeaponDef.innate_weapon(1)]
 	unit_def.speed = 1.0
 	var sim := FormationSimulation.new(9.0, 0.1)
 	var mine := sim.spawn_squad(1, [[unit_def, Vector2i(0, 0)]], "player", true)

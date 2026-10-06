@@ -12,7 +12,7 @@ const UnitDef = preload("res://content/definitions/unit_def.gd")
 func _row(columns: int) -> Array:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 400
-	unit_def.dmg = 1
+	unit_def.items = [WeaponDef.innate_weapon(1)]
 	unit_def.speed = 1.0
 	var placements := []
 	for column in range(columns):
