@@ -18,7 +18,7 @@ const TICK := 0.1
 func _def(hp: int, dmg: int, speed: float, attack_range: int = 0) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = dmg
+	unit_def.items = [WeaponDef.innate_weapon(dmg)]
 	unit_def.speed = speed
 	if attack_range > 0:
 		unit_def.preferred_position = UnitDef.Position.BACK

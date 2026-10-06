@@ -87,7 +87,7 @@ func test_both_waves_sent_together_are_the_same_with_their_lists_reversed() -> v
 func _def() -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 40
-	unit_def.dmg = 1
+	unit_def.items = [WeaponDef.innate_weapon(1)]
 	unit_def.speed = 1.0
 	return unit_def
 

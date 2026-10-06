@@ -16,7 +16,7 @@ const CELLS_PER_SECOND := 8.0
 func _def() -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 10
-	unit_def.dmg = 1
+	unit_def.items = [WeaponDef.innate_weapon(1)]
 	unit_def.speed = 1.0
 	return unit_def
 
