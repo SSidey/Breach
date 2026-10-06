@@ -36,6 +36,7 @@ const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd"
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.gd")
 const FormationWounds = preload("res://sim/skirmish/formation/formation_wounds.gd")
+const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
@@ -158,6 +159,7 @@ func step() -> Array:
 	_fight(events)
 	FormationDeaths.bury(_squads, _tick, events)
 	FormationWounds.tend(_squads, _tick, _attack_interval_ticks(), fight_seed, events)
+	FormationWounds.mend(_squads, tick_seconds, _tick, events)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
 	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, fight_seed))
 	UnitBodies.step(_squads, fight_seed)  # after every move: friends' bodies part (Decision 106)
@@ -223,6 +225,7 @@ func _move(events: Array) -> void:
 		FormationSweep.step(mover, cells_per_second, tick_seconds)  # round bends (Decision 105)
 		var open_step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		var step := FormationMarch.pace(mover, terrain, open_step, _tick, events)
+		step *= GroundBodies.drag(mover, _squads)  # bodies on the ground (Decision 121)
 		var walk := step / maxf(mover.speed(), EPSILON) * MapLayoutDef.CELLS_PER_TILE
 		var share := FormationWheel.share(mover, before, travel * step, walk)  # Decision 116
 		FormationWheel.cut_sweep(mover, before, share)

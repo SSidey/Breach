@@ -81,6 +81,13 @@ const AVERAGE := 10
 ## before what it wears adds (Decision 119, ArmourDef).
 @export var armour: int = 0
 @export var ward: int = 0
+## HP it regenerates a second (Decision 121), whether struck or not, up to its limit per
+## rest - that many times its max HP - and stopped for a while by a blow of a type listed
+## in regeneration_stops (a troll's by fire or acid). Downed, it stops unless it has the
+## "regenerates_downed" trait.
+@export var regeneration: float = 0.0
+@export var regeneration_limit: float = 1.0
+@export var regeneration_stops: Array[String] = []
 ## What it carries (Decisions 47 and 120): weapons, armour and tools (ItemDef), and its
 ## innate weapons (fists, a bite) - its every blow comes from a weapon.
 @export var items: Array[ItemDef] = []
@@ -114,6 +121,8 @@ func validate() -> PackedStringArray:
 	for skill in ["melee_skill", "ranged_skill", "defence", "armour", "ward"]:
 		if get(skill) < 0:
 			errors.append("%s must be >= 0, got %d" % [skill, get(skill)])
+	if regeneration < 0.0 or regeneration_limit < 0.0:
+		errors.append("regeneration and its limit must be >= 0")
 	if critical < 1.0:
 		errors.append("critical must be >= 1, got %f" % critical)
 	if attack_speed <= 0.0:

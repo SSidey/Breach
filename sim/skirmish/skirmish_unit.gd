@@ -94,6 +94,14 @@ var resistances: Array[String] = []
 var immunities: Array[String] = []
 var armour := 0
 var ward := 0
+## Formation sim: its regeneration (Decision 121): HP a second, HP it has left to regain
+## before it must rest, the damage types that stop it, seconds it stays stopped, and the
+## part of a point regained so far.
+var regeneration := 0.0
+var regeneration_left := 0.0
+var regeneration_stops: Array[String] = []
+var regeneration_halt := 0.0
+var regeneration_carry := 0.0
 ## Seconds between its melee blows and its ranged shots (Decision 120): its weapons'
 ## intervals, scaled by its attack speed.
 var melee_seconds := 1.0

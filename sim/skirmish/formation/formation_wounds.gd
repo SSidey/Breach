@@ -8,8 +8,9 @@ extends RefCounted
 ## exception: a foe whose formation's leader can send a messenger (its "messenger" trait,
 ## one a level) lets it go, to carry word home - a morale blow to every standing formation
 ## of its side. A routing unit struck may surrender in place, by a seeded chance from its
-## want of courage (none for one with "never_surrenders"). Decided from one snapshot,
-## then applied (Decision 97). Pure over the squads it is given.
+## want of courage (none for one with "never_surrenders"). Regeneration mends HP, up to a
+## limit per rest, and may raise the downed (mend). Decided from one snapshot, then applied
+## (Decision 97). Pure over the squads it is given.
 
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -140,6 +141,59 @@ static func _take(taking: Array, squads: Array, tick: int, interval: int, events
 	if body.hp <= -FormationDeaths.depth(body):
 		body.state = SkirmishUnit.State.DEAD
 		events.append(FormationEvents.unit_event("finished", tick, taking[1], body))
+
+
+## Regeneration (Decision 121) this tick of `seconds`: each unit regenerating - standing,
+## or downed with "regenerates_downed" - regains its rate in HP, no further than its max
+## nor its limit left before it must rest; a stopped one counts its halt down instead. A
+## downed one regaining wounds_rise_share of its max rises and rejoins its formation at
+## the back, if that still stands.
+static func mend(squads: Array, seconds: float, tick: int, events: Array) -> void:
+	for squad in squads:
+		for unit in squad.units:
+			var downed: bool = unit.state == SkirmishUnit.State.DOWNED
+			if unit.regeneration <= 0.0 or not (unit.is_alive() or downed):
+				continue
+			if downed and unit.traits.get("regenerates_downed", 0) <= 0:
+				continue
+			if unit.regeneration_halt > 0.0:
+				unit.regeneration_halt = maxf(0.0, unit.regeneration_halt - seconds)
+				continue
+			var gain := minf(unit.regeneration * seconds, unit.regeneration_left)
+			gain = minf(gain, float(unit.max_hp - unit.hp) - unit.regeneration_carry)
+			if gain <= 0.0:
+				continue
+			unit.regeneration_left -= gain
+			unit.regeneration_carry += gain
+			var whole := floori(unit.regeneration_carry + 0.000001)  # float sums fall short
+			unit.hp += whole
+			unit.regeneration_carry -= whole
+			if downed and unit.hp >= unit.max_hp * BattleTuning.current().wounds_rise_share:
+				_rise(unit, squad, tick, events)
+
+
+## A blow that landed of a type that stops the target's regeneration stops it a while.
+static func scorch(target: SkirmishUnit, parts: Array, dealt: int) -> void:
+	if dealt <= 0 or target.regeneration_stops.is_empty():
+		return
+	for part in parts:
+		if target.regeneration_stops.has(part[1]):
+			target.regeneration_halt = BattleTuning.current().wounds_regeneration_halt
+			return
+
+
+## A downed unit back on its feet rejoins its squad at the back, if its squad stands.
+static func _rise(unit: SkirmishUnit, squad: SkirmishSquad, tick: int, events: Array) -> void:
+	if squad.state in [SkirmishSquad.State.DESTROYED, SkirmishSquad.State.ROUTING]:
+		return
+	var back := 0
+	for other in squad.living():
+		back = maxi(back, other.rank + other.footprint_depth)
+	unit.state = SkirmishUnit.State.MOVING
+	unit.rank = back
+	unit.column = 0
+	squad.reforming = true
+	events.append(FormationEvents.unit_event("rose", tick, squad, unit))
 
 
 ## The squad's leader that can still send a messenger, or null.

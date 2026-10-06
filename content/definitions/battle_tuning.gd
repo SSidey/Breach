@@ -103,6 +103,10 @@ static var _current: BattleTuning = null
 @export var wounds_guard_reach := 0.0
 ## Morale lost by each standing formation of a side one of its own is sent home to.
 @export var wounds_messenger_shock := 0
+## Seconds a blow of a type that stops a unit's regeneration stops it for; and the share of
+## its max HP a downed unit that regenerates must regain to rise and rejoin its formation.
+@export var wounds_regeneration_halt := 0.0
+@export var wounds_rise_share := 0.0
 ## The chance a routing unit struck surrenders, times its want of courage (1 - courage
 ## / 100).
 @export var wounds_surrender := 0.0
@@ -159,6 +163,11 @@ static var _current: BattleTuning = null
 ## it it aims to pass.
 @export var bodies_steer_look := 0.0
 @export var bodies_steer_clear := 0.0
+## Bodies on the ground (Decision 121): a marching front stepping over one slows to 1 / (1
+## + its mass over the walker's times bodies_ground_drag); one at least bodies_ground_block
+## times the walker's mass blocks it.
+@export var bodies_ground_drag := 0.0
+@export var bodies_ground_block := 0.0
 
 @export_group("Scrum (Decisions 48, 75, 88, 92 and 110)")
 ## Cells a unit in a fight may go from its place to reach a foe.

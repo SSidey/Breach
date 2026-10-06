@@ -71,6 +71,9 @@ static func _arm(unit: SkirmishUnit, unit_def: UnitDef) -> void:
 	unit.weaknesses = unit_def.weaknesses.duplicate()
 	unit.resistances = unit_def.resistances.duplicate()
 	unit.immunities = unit_def.immunities.duplicate()
+	unit.regeneration = unit_def.regeneration
+	unit.regeneration_left = unit_def.regeneration_limit * unit_def.hp
+	unit.regeneration_stops = unit_def.regeneration_stops.duplicate()
 	var protection := UnitArms.protection(unit_def)
 	unit.armour = protection.x
 	unit.ward = protection.y
