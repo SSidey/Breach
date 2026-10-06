@@ -32,6 +32,10 @@ static func make(
 	unit.turn_rate = unit_def.turn_rate
 	unit.backward_pace = unit_def.backward_pace
 	unit.definition = unit_def
+	unit.tags = unit_def.tags.duplicate()
+	for attribute in UnitDef.ATTRIBUTES:
+		unit.attributes[attribute] = unit_def.get(attribute)
+	unit.traits = unit_def.traits.duplicate()
 	var ranged := unit_def.ranged_weapon()
 	if ranged != null:
 		unit.attack_range = ranged.attack_range

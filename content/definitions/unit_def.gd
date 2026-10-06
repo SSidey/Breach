@@ -1,14 +1,36 @@
 class_name UnitDef
 extends Resource
-## Player unit definition (e.g. Grem). See specs/07-data-resource-schemas.md.
+## A unit type's sheet (Decision 117, spec 28; specs/07-data-resource-schemas.md): its
+## archetype tags, attributes and rated traits; body; movement; mind; senses; band; what
+## it fights with; and its cost. Derived stats (load, death's door...) are worked out from
+## the attributes where they are used, never set here.
 
 ## Where in a formation the unit wants to stand (Decision 46).
 enum Position { FRONT, MID, BACK }
 
 const MAX_FOOTPRINT := 8
+## The five attributes (Decision 117), each defaulting to AVERAGE.
+const ATTRIBUTES := ["strength", "agility", "constitution", "willpower", "wits"]
+const AVERAGE := 10
 
+## Archetype tags tech can target as a group, beside the type itself (human, martial,
+## cavalry, archer...).
+@export var tags: Array[String] = []
+## Attributes (Decision 117): strength (load, wield and damage scaling, shoving), agility
+## (dodge, attack speed, turning, initiative), constitution (HP, stamina, physical maladies,
+## death's door), willpower (magical maladies, fear, courage, ward) and wits (casting,
+## mana, initiative, perception). AVERAGE is ordinary.
+@export var strength: int = AVERAGE
+@export var agility: int = AVERAGE
+@export var constitution: int = AVERAGE
+@export var willpower: int = AVERAGE
+@export var wits: int = AVERAGE
+## Rated traits (Decision 64), id -> level: climber 2, darksight 1, mob 16...
+@export var traits: Dictionary = {}
 @export var cost_food: int = 0
 @export var hp: int = 0
+## Its natural blow (fists, bite), struck when it has no melee weapon; every unit so far
+## carries its natural weapons as weapons. Retires when weapons become items (spec 28).
 @export var dmg: int = 0
 @export var speed: float = 0.0
 ## Formation slots the unit occupies, depth (ranks) x width (columns), per Decision 40:
@@ -70,7 +92,18 @@ func validate() -> PackedStringArray:
 			errors.append_array(weapon.validate())
 	if build_seconds <= 0.0:
 		errors.append("build_seconds must be > 0, got %f" % build_seconds)
+	for attribute in ATTRIBUTES:
+		if get(attribute) < 0:
+			errors.append("%s must be >= 0, got %d" % [attribute, get(attribute)])
+	for trait_id in traits:
+		if not trait_id is String or not traits[trait_id] is int or traits[trait_id] < 0:
+			errors.append("traits must map names to levels >= 0, got %s" % str(trait_id))
 	return errors
+
+
+## The level of a rated trait it has (0: not at all).
+func trait_level(trait_id: String) -> int:
+	return int(traits.get(trait_id, 0))
 
 
 ## The damage of one melee strike: every melee weapon together, or `dmg` without weapons.

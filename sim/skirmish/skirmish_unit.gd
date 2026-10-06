@@ -26,6 +26,12 @@ var courage := 60
 var leadership := 0
 var tactics: Array[String] = []
 var height := 1.0
+## Formation sim: its sheet as it stands now (Decision 117) - archetype tags, attributes
+## (UnitDef.ATTRIBUTES, name -> value) and rated traits (name -> level) - copied from its
+## definition, so tech, items and ranks can change one unit and not its type.
+var tags: Array[String] = []
+var attributes := {}
+var traits := {}
 ## Formation sim: how quickly it acts, and how drilled it is (Decisions 88 and 92).
 var initiative := 10
 var discipline := 30

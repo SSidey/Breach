@@ -8,6 +8,7 @@
 
 [resource]
 script = ExtResource("1_unit")
+tags = Array[String](["grem", "ranged"])
 hp = 12
 dmg = 2
 speed = 1.0

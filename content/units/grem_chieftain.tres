@@ -7,6 +7,7 @@
 
 [resource]
 script = ExtResource("1_chief")
+tags = Array[String](["grem", "leader"])
 cost_food = 20
 hp = 30
 dmg = 6

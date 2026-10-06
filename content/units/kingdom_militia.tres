@@ -6,6 +6,7 @@
 
 [resource]
 script = ExtResource("1_unit")
+tags = Array[String](["human", "martial"])
 hp = 26
 dmg = 5
 speed = 0.8
