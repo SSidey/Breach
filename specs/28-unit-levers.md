@@ -274,7 +274,9 @@ wounded"). Seeking a visible enemy off the route went to spec 30's movement pass
 whether crits and dodges read in play; the downed lying and being finished after a fight;
 pursuers tiring.
 
-**What waits** (round 2, or the passes named):
+**What waits** (round 2, or the passes named). Spec 33 reviews every base stat, what
+derives from it as built, and what is promised but not built - a future piece to work
+through:
 - Derived stats beyond those built (dodge from agility, stamina from constitution, carry
   from strength, death's door from constitution): initiative, perception, ward from
   willpower, casting from wits; senses (hearing, heartsense); speed per movement mode, and
