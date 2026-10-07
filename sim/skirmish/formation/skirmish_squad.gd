@@ -11,6 +11,7 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const FormationCommand = preload("res://sim/skirmish/formation/formation_command.gd")
 
 ## Tiles between one rank and the next: one cell (Decisions 48 and 68).
 const RANK_DEPTH := 1.0 / MapLayoutDef.CELLS_PER_TILE
@@ -60,7 +61,11 @@ var fight_since := -1
 ## Pursuit (ScrumPursuit, Decision 109): whether it may pursue a retreating enemy (false:
 ## ordered not to), and its units out chasing one on their own (unit id -> {"unit", "foe",
 ## "from", "leash"}).
-var pursues := true
+var pursues: bool:
+	get:
+		return command.pursues
+	set(value):
+		command.pursues = value
 var chasers := {}
 ## A pursuit under way (FormationPursuit): the enemy, the post it left, and how it held it.
 var pursuit := {}
@@ -77,11 +82,17 @@ var morale := -1
 ## Routing (FormationRout): each fleeing unit's place, and ticks with no enemy near.
 var fleeing := {}
 var rally_ticks := 0
-## Ordered to hurry (Decision 125): it runs while it moves, spending stamina.
-var hurry := false
-## What it does with its own downed it passes (Decision 126): "" leaves them, "recover"
-## carries each home, "carry" bears them along with it.
-var tends := ""
+## Its command's orders (FormationCommand): hurrying and tending its own downed.
+var hurry: bool:
+	get:
+		return command.hurry
+	set(value):
+		command.hurry = value
+var tends: String:
+	get:
+		return command.tends
+	set(value):
+		command.tends = value
 ## Halted by ground it can't cross (FormationMarch.pace); reported once.
 var blocked := false
 ## Narrowed through a gap (FormationNarrowing): its painted places (unit id -> [rank,
@@ -102,7 +113,13 @@ var combat_width := 0
 ## Units that joined as reinforcements: only they spread beyond the painted columns.
 var joined: Array[SkirmishUnit] = []
 ## Whether this wave merges into a friendly squad it catches up with on the march.
-var merges := false
+var merges: bool:
+	get:
+		return command.merges
+	set(value):
+		command.merges = value
+## The command this group of units follows (spec 30 round 3).
+var command: FormationCommand
 ## How far the squad's columns sit off the lane's centre, so widening on one side moves no
 ## one on screen.
 var centre_shift := 0.0
@@ -114,8 +131,10 @@ func _init(
 	travel_direction: int,
 	home: float,
 	formation_width: int,
-	members: Array[SkirmishUnit] = []
+	members: Array[SkirmishUnit] = [],
+	orders: FormationCommand = null
 ) -> void:
+	command = orders if orders != null else FormationCommand.new(home)
 	id = squad_id
 	faction_id = faction
 	direction = travel_direction
@@ -124,8 +143,7 @@ func _init(
 	front_distance = home
 	width = maxi(formation_width, 1)
 	for unit in members:
-		unit.squad_id = id
-		units.append(unit)
+		FormationCommand.enlist(self, unit)
 
 
 func living() -> Array[SkirmishUnit]:

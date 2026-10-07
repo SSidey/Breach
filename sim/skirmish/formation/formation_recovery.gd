@@ -16,6 +16,7 @@ extends RefCounted
 
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
+const FormationCommand = preload("res://sim/skirmish/formation/formation_command.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
@@ -188,8 +189,7 @@ static func _join(
 			back = maxi(back, other.rank + other.footprint_depth)
 	if best != own:
 		own.units.erase(unit)
-		best.units.append(unit)
-		unit.squad_id = best.id
+		FormationCommand.enlist(best, unit)
 	unit.rank = back
 	unit.column = 0
 	best.reforming = true

@@ -11,6 +11,7 @@ extends RefCounted
 ## - when a squad without front units holds to skirmish (Decision 47)
 ## Pure over the squads it is given; FormationSimulation calls it each tick.
 
+const FormationCommand = preload("res://sim/skirmish/formation/formation_command.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadGeometry = preload("res://sim/skirmish/formation/squad_geometry.gd")
@@ -140,9 +141,8 @@ static func reinforce(leader: SkirmishSquad, joining: SkirmishSquad) -> Array[Sk
 	for unit in joining.living():
 		unit.column += (width - joining.width) / 2
 		unit.rank += back
-		unit.squad_id = leader.id
 		unit.attack_cooldown = 1
-		leader.units.append(unit)
+		FormationCommand.enlist(leader, unit)
 		leader.joined.append(unit)
 	leader.centre_shift += (width - leader.width) / 2.0 - shift  # the leader stays put
 	leader.width = width

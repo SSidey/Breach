@@ -20,7 +20,7 @@ static func strand(unit: SkirmishUnit, squad: SkirmishSquad) -> SkirmishSquad:
 	squad.chasers.erase(unit.id)
 	var members: Array[SkirmishUnit] = [unit]
 	var stray := SkirmishSquad.new(
-		0, squad.faction_id, squad.direction, squad.home_distance, 1, members
+		0, squad.faction_id, squad.direction, squad.home_distance, 1, members, squad.command
 	)
 	stray.route = squad.route
 	var along: float = squad.route.distance_of(unit.position)

@@ -61,6 +61,10 @@ var wait_ticks: int = 0
 # Formation fields (specs/22-formation-feel-test.md); unused by the spec 21 SkirmishSimulation.
 ## The squad (wave) this unit marches in; 0 = none.
 var squad_id: int = 0
+## The command it follows, and the one it started under (FormationCommand, spec 30 round
+## 3); typed loosely to keep the unit free of formation code.
+var command: RefCounted = null
+var origin: RefCounted = null
 ## Row in its squad's formation, 0 = the front rank.
 var rank: int = 0
 ## Leftmost formation column it covers.

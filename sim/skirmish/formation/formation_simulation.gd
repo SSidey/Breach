@@ -25,6 +25,7 @@ extends RefCounted
 ##                106)
 ##   7. re-form - units swap toward their preferred places (FormationShuffle, Decision 46)
 
+const FormationCommand = preload("res://sim/skirmish/formation/formation_command.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -119,7 +120,10 @@ func spawn_squad(
 			FormationUnits.make(placement[0], placement[1], faction_id, direction, _next_unit_id)
 		)
 		_next_unit_id += 1
-	var squad := SkirmishSquad.new(_next_squad_id, faction_id, direction, home, width, members)
+	var orders := FormationCommand.new(home, path)
+	var squad := SkirmishSquad.new(
+		_next_squad_id, faction_id, direction, home, width, members, orders
+	)
 	_next_squad_id += 1
 	squad.route = path
 	FormationMarch.face(squad)
