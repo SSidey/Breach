@@ -12,7 +12,7 @@ traits: bonuses and new capabilities that plug into the same pairs.
 
 ## Status
 
-**Round 1 built (Decisions 117 to 126), in stacked PRs #130 to #160; ready for its feel
+**Round 1 built (Decisions 117 to 126), in stacked PRs #130 to #161; ready for its feel
 test.** See "Round 1 as built" under Rounds. Spec 30 is built
 and merged, so what a unit needs for the fights it now has is clear. Round 1 took stock of
 the unit as built and the placeholders it leans on, and the user answered with the unit

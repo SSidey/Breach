@@ -317,6 +317,9 @@ mirror trials within noise: head-on 135/119 and 122/127 swapped, flank 300/0 bot
   - **Wheeling and re-forming as units:** each unit finding its own way to its place
     (Decision 116's rejected first approach), which first needs every move of a frame to
     say whether it walks or is set (placing, joining and re-forming set it).
+  - **Units individual within their formation** (spec 28's feel test): "units should
+    still be individual even if attempting to maintain formation" - each walking to keep
+    its place, not set there by the frame; with wheeling and re-forming as units above.
   - **Looking ahead and finding a way** (spec 28's feel test): units don't path today. A
     formation measures the passable gap ahead and narrows to it (FormationNarrowing); a
     withdrawing unit checks the ground where its step lands and, if it can't go there,

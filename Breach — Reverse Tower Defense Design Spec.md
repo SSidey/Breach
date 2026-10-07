@@ -6067,16 +6067,20 @@ lane until someone happened by, finished units vanished without a mark, and a re
 pursued at a run had no chance. The user chose wounds through condition over bands of
 downed ("I think this is the one").
 - **Wounds.** Each time a unit is downed it takes a **wound** (the status `wounded N`),
-  which lowers its **condition** (Decision 125) by a step (0.4, the user: "0.4, 0.5 or
-  so"). A trait may let a unit shrug off its first N wounds ("hardened N"). Rest, medics
+  which lowers its **condition** (Decision 125) by a step (0.35: the user, "2 wounds is
+  survivable in otherwise good condition, 3 wounds shouldn't be unless they get pretty
+  swift aid"). A weapon's **wounding N** adds N wounds to a foe it downs. A trait may let a unit shrug off its first N wounds ("hardened N"). Rest, medics
   and structures will remove wounds one at a time (round 2).
 - **Condition drains.** Below a threshold (0.25) a unit loses HP over time, standing or
-  downed. So a unit downed when its condition is already poor is bleeding out, and one
+  downed - faster the further below the threshold, whatever brought it there (0.5 HP a
+  second at condition 0), so "it ought not be an immediate death". So a unit downed when its condition is already poor is bleeding out, and one
   left downed while its state worsens (hunger, cold, no rest - statuses as they come) may
   die before it recovers. Nothing lies in the lane forever.
-- **The downed come to.** A downed unit lies a seeded while, shorter the hardier it is,
-  then comes to at 1 HP: it rejoins its formation if it can see it, and otherwise makes
-  for home alone (a lone router: to be caught, taken, or reach the reserve). Finishing or
+- **The downed come to.** The fallen lie where they fell. A downed unit lies a seeded
+  while, shorter the hardier it is, then comes to at 1 HP where it lies - borne or not,
+  "no unique cases, no super powers" - and joins the nearest standing friendly formation
+  it can see (its own, or the one that bore it), walking to it; otherwise it makes for
+  home alone (walking straight, to be caught, taken, or reach the reserve). Finishing or
   capture by a foe beside it stays guaranteed; the timer only settles those nobody reaches.
 - **Gaits by trait.** A retreat runs, as a pursuit does (the user: "if we are having
   pursuers run then we ought to have retreat be at a running pace also"), unless its
