@@ -25,6 +25,7 @@ extends RefCounted
 ##                106)
 ##   7. re-form - units swap toward their preferred places (FormationShuffle, Decision 46)
 
+const FormationGroups = preload("res://sim/skirmish/formation/formation_groups.gd")
 const FormationWalk = preload("res://sim/skirmish/formation/formation_walk.gd")
 const FormationCommand = preload("res://sim/skirmish/formation/formation_command.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -173,6 +174,7 @@ func step() -> Array:
 	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, fight_seed))
 	strays = FormationCarry.step(_squads, _tick, fight_seed, events)  # the wounded borne
 	_next_squad_id = FormationStrays.adopt(strays, _squads, _next_squad_id)
+	_next_squad_id = FormationGroups.step(_squads, _tick, fight_seed, events, _next_squad_id)
 	FormationStamina.step(_squads, tick_seconds)  # runners tire, the rest recover
 	UnitBodies.step(_squads, fight_seed)  # after every move: friends' bodies part (Decision 106)
 	for entry in _squads:

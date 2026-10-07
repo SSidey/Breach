@@ -58,6 +58,9 @@ var flank_contacts := {}
 var loose := {}
 var stance := {}
 var fight_since := -1
+## Whether it has fought since it set out: groups of different commands form up only
+## after both have (FormationGroups).
+var fought := false
 ## Pursuit (ScrumPursuit, Decision 109): whether it may pursue a retreating enemy (false:
 ## ordered not to), and its units out chasing one on their own (unit id -> {"unit", "foe",
 ## "from", "leash"}).

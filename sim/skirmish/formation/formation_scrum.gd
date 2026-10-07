@@ -96,6 +96,7 @@ static func _prepare(squad: SkirmishSquad, tick: int) -> void:
 	var fighting := squad.state == SkirmishSquad.State.FIGHTING
 	if fighting and squad.fight_since < 0:
 		squad.fight_since = tick
+		squad.fought = true
 		squad.stall_ticks = 0
 	elif not fighting:
 		if squad.fight_since >= 0 and squad.painted.is_empty():

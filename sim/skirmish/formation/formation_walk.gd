@@ -58,7 +58,7 @@ static func place_of(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 ## can walk rather than halting; one fallen behind (walk_lost) is waited for only if no
 ## man is left behind.
 static func share(squad: SkirmishSquad) -> float:
-	var rule := _rule(squad)
+	var rule := rule_of(squad)
 	if rule == "fall_behind_left_behind":
 		return 1.0
 	var slack := slack_of(squad)
@@ -86,7 +86,7 @@ static func slack_of(squad: SkirmishSquad) -> float:
 
 ## "fall_behind_left_behind", "no_man_left_behind" or "": a leader's trait, or one every
 ## unit has (the never-wait wins if both are found).
-static func _rule(squad: SkirmishSquad) -> String:
+static func rule_of(squad: SkirmishSquad) -> String:
 	var living := squad.living()
 	for trait_id in ["fall_behind_left_behind", "no_man_left_behind"]:
 		var led := living.any(func(u): return u.leadership > 0 and u.traits.has(trait_id))

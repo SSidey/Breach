@@ -271,6 +271,9 @@ static var _current: BattleTuning = null
 ## A unit further than this (cells) from its place faces where it walks; nearer, it faces
 ## its formation's way, stepping sideways or back into place.
 @export var walk_face_travel := 0.0
+## Groups (cells): two friendly groups whose units come this close form up by the rule
+## (FormationGroups), and units fallen behind this close to one another split off together.
+@export var group_join := 0.0
 
 
 ## The tuning in play: content/tuning/battle_tuning.tres, loaded once.

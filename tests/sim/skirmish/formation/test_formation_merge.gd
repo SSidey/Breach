@@ -60,7 +60,9 @@ func test_auto_merge_joins_a_wave_on_the_march() -> void:
 	var log := _run(sim, 100)
 
 	assert_int(_players(sim).size()).is_equal(1)
-	assert_int(leader.living().size()).is_equal(4)
+	# the two lines are of a size, so a seeded draw says which takes the other in
+	# (FormationGroups, spec 30 round 3)
+	assert_int(_players(sim)[0].living().size()).is_equal(4)
 	assert_int(log.filter(func(e): return e["type"] == "merged").size()).is_equal(1)
 
 

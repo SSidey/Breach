@@ -191,7 +191,15 @@ func test_a_flank_timed_by_the_chieftain_breaks_the_line_into_its_reserve() -> v
 	var run_down := func(e):  # the waves go after its routers: they are fair game (Decision 111)
 		return e["type"] == "engaged" and e["with"] == line and e["tick"] > routs[0]["tick"]
 	assert_bool(log.any(run_down)).is_true()
-	assert_bool(log.any(func(e): return e["type"] == "engaged" and e["squad"] == reserve)).is_true()
+	# Its fight done, the chieftain's wave takes in the leaderless one (spec 30 round 3: a
+	# leader takes in a leaderless group it meets after a fight), and A's units follow B's
+	# orders from then on - so nothing marches on route A at the reserve.
+	var taken := log.filter(func(e): return e["type"] == "merged" and e["faction"] == "player")
+	assert_bool(taken.is_empty()).is_false()
+	(
+		assert_bool(log.any(func(e): return e["type"] == "engaged" and e["squad"] == reserve))
+		. is_false()
+	)
 
 
 func test_route_bs_wave_narrows_through_the_ford_and_widens_after() -> void:

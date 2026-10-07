@@ -116,3 +116,4 @@ walk_slack_drilled = 0.5
 walk_slack_loose = 2.0
 walk_lost = 8.0
 walk_face_travel = 2.0
+group_join = 2.0
