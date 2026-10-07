@@ -22,6 +22,7 @@ const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.g
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 
 
 ## This tick's takings of the downed. `interval` is ticks a second (a taker strikes on its
@@ -38,8 +39,13 @@ static func tend(squads: Array, tick: int, interval: int, fight_seed: int, event
 	if downed.is_empty():
 		return
 	var taken := {}  # body id -> [body, its squad, [taker, its squad], ...]
+	var near := {
+		"standing": BodyGrid.build(standing.map(func(entry): return entry[0].position)),
+		"downed": BodyGrid.build(downed.map(func(entry): return entry[0].position)),
+		"guarded": {},  # body -> whether a friend stands guard over it
+	}
 	for taker in standing:
-		var body := _within_reach(taker, standing, downed, fight_seed)
+		var body := _within_reach(taker, standing, downed, [fight_seed, near])
 		if not body.is_empty():
 			if not taken.has(body[0].id):
 				taken[body[0].id] = [body[0], body[1]]
@@ -75,21 +81,29 @@ static func surrender(
 
 
 ## The downed foe the taker would take, [body, its squad], or [] - none unguarded within
-## reach, or a foe still near it.
-static func _within_reach(taker: Array, standing: Array, downed: Array, fight_seed: int) -> Array:
+## reach, or a foe still near it. `drawn`: [the battle seed, BodyGrids of the standing and
+## the downed where they stand, and which bodies are guarded as they are found].
+static func _within_reach(taker: Array, standing: Array, downed: Array, drawn: Array) -> Array:
 	var tuning := BattleTuning.current()
 	var unit: SkirmishUnit = taker[0]
-	for other in standing:
+	var fight_seed: int = drawn[0]
+	var near: Dictionary = drawn[1]
+	var reach := tuning.wounds_guard_reach
+	for found in BodyGrid.near(near["standing"], unit.position, reach + BodyGrid.MARGIN):
+		var other: Array = standing[found]
 		if other[0].faction_id != unit.faction_id:
 			if other[0].position.distance_to(unit.position) <= tuning.wounds_guard_reach:
 				return []  # still fighting
 	var best := []
 	var best_key := []
-	for body in downed:
+	for found in BodyGrid.near(
+		near["downed"], unit.position, tuning.wounds_reach + BodyGrid.MARGIN
+	):
+		var body: Array = downed[found]
 		if body[0].faction_id == unit.faction_id:
 			continue
 		var gap: float = body[0].position.distance_to(unit.position)
-		if gap > tuning.wounds_reach or _guarded(body[0], standing):
+		if gap > tuning.wounds_reach or _guarded(body[0], standing, near):
 			continue
 		if body[0].playing_dead and _fooled(unit, body[0], fight_seed):
 			continue  # it takes the body for dead (Decision 127)
@@ -112,15 +126,20 @@ static func _fooled(taker: SkirmishUnit, body: SkirmishUnit, fight_seed: int) ->
 	return guile - sight + (roll - 0.5) * tuning.wounds_believe_die > 0.0
 
 
-static func _guarded(body: SkirmishUnit, standing: Array) -> bool:
-	for other in standing:
+## True if a friend of the body stands within wounds_guard_reach of it (once a body: `near`
+## keeps the answer).
+static func _guarded(body: SkirmishUnit, standing: Array, near: Dictionary) -> bool:
+	if near["guarded"].has(body):
+		return near["guarded"][body]
+	var reach := BattleTuning.current().wounds_guard_reach
+	near["guarded"][body] = false
+	for found in BodyGrid.near(near["standing"], body.position, reach + BodyGrid.MARGIN):
+		var other: Array = standing[found]
 		if other[0].faction_id == body.faction_id:
-			if (
-				other[0].position.distance_to(body.position)
-				<= BattleTuning.current().wounds_guard_reach
-			):
-				return true
-	return false
+			if other[0].position.distance_to(body.position) <= reach:
+				near["guarded"][body] = true
+				break
+	return near["guarded"][body]
 
 
 ## One body's takers act: a captor captures it; else a leader's messenger sends it home;

@@ -13,6 +13,7 @@ const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationContact = preload("res://sim/skirmish/formation/formation_contact.gd")
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 
 
 ## Blows on routers this tick: [[attacker, target, damage, flank], ...]. Updates each
@@ -26,11 +27,16 @@ static func blows(squads: Array, interval: int, fight_seed: int = 0) -> Array:
 	if routers.is_empty():
 		return []
 	var out := []
+	var near := BodyGrid.build(routers.map(func(router): return router[1]))
+	var reach := BattleTuning.current().rout_strike_reach + BodyGrid.MARGIN
 	for hunter in squads:
 		if not FormationContact.can_engage(hunter):
 			continue
 		for fighter in hunter.fighters():
-			var target := _nearest(fighter, hunter.faction_id, routers, fight_seed)
+			var close := BodyGrid.near(near, fighter.position, reach).map(
+				func(i): return routers[i]
+			)
+			var target := _nearest(fighter, hunter.faction_id, close, fight_seed)
 			if target == null:
 				continue
 			fighter.target_id = target.id
