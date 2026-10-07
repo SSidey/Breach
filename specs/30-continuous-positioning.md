@@ -468,3 +468,94 @@ today, a take, and the questions to settle. The suggested build order is 1, 2, 3
 
 **Not in this round:** crowds merging and splitting through gaps (they wait for spec 28
 round 2's size and crowds); objectives and orders mid-battle.
+
+## Round 3 answers
+
+1. **Units walk to their places.**
+   - **1a. No penalty for being out of place.** "By virtue of the frontline shape they
+     are already at a disadvantage." A formation's order (the share of units within the
+     slack of their places) is measured, but nothing reads it yet.
+   - **1b. Slack by discipline.**
+     - Lower discipline means a wider slack and looser spacing, which leaves gaps foes can
+       get into and separate units through.
+     - **fall behind, left behind:** the formation never waits for stragglers, or for
+       downed foes to be taken.
+     - **no man left behind:** it waits for everyone.
+2. **Pouring through gaps:** to be judged in the feel test.
+3. **Pathing.**
+   - **The leash** bounds how far a search looks for a viable way. Once a way is found,
+     the unit may follow it beyond the leash.
+   - **3a. Everyone swims;** `swimmer N` adds pace.
+     - A unit loaded past a share of its first encumbrance band (tunable, 0.5 to start)
+       sinks and can't swim.
+     - `sinks` forbids swimming at any load: "the opposing trait to the norm, e.g. a cart
+       would sink and couldn't swim".
+   - **3b. Climbing is simulated:** "if we have some elevation to climb, sim it". A
+     `climber N` scales cliffs by Decision 64's pair rule. Burrowing waits for material
+     damage.
+4. **Seeking.**
+   - **The formation stays formed** when it leaves its route for a visible enemy. Only
+     `eager` units break off.
+   - **4a. The leash varies by discipline.**
+   - **4b. Two distances:**
+     - **engage distance:** a new foe within it draws free units (not in contact, not
+       needed at the front) toward it, if it is coming round a flank or the rear, or
+       shooting into the fight.
+     - **seek distance:** how far a formation goes out for a foe it can see.
+5. **Taking the downed:** hold 10 s by default. The 1b traits decide whether a formation
+   presses on regardless or waits until every downed foe is taken.
+6. **Bodies slow everyone who walks:** agreed.
+7. **Cost.** The user's worst case is a 32×32 formation head-on against its mirror:
+   1,024 a side. Measured on the current stack (one core, a 100 ms tick budget):
+
+   | Field | Marching | Mid-fight |
+   |---|---|---|
+   | 40 a side | about 9 ms | 118 ms |
+   | 160 a side | 100 ms | 3,840 ms |
+
+   Nearly all of the fight's cost is in finding a slot beside a foe (`ScrumSeek`): every
+   seeker ranks every slot round every foe and checks each against every body. Starting
+   fights, touches, blows, steering and parting bodies have the same all-pairs shape. So
+   **part 0 is performance:**
+   - a shared spatial index for the scrum, with outcomes unchanged
+   - a standing benchmark up to the 32×32 mirror
+
+   Spec 28 round 2's crowds keep the number of bodies down. A planner cell is a stand of
+   four grems, so the planner counted in stands could field 4,096 a side.
+
+### Formations as commands (proposed after the user's question, to confirm)
+
+The user: "free units on their own would essentially be a formation without that command
+... Formation could be more like just a flag set on a unit instead of putting them into
+a formation entity?"
+
+- **A command** is the orders the player set up:
+  - the destination node, and the route as a guide (not a rail)
+  - the shape (the planner's layout)
+  - the stance, the merge setting, and the wave options (wounded, downed)
+  - its leader, if any
+- **A unit** carries its command, the command it started under, and its place in that
+  command's shape. Membership is that flag on the unit.
+- **A group** is what draws and moves as a formation: the units of one command that are
+  together, worked out from where they stand, within a join distance. It is not stored.
+  - Every group acts on its command's orders, with the shape laid out at its own frame.
+  - A command split by a fight is two groups with the same orders.
+  - Free units sent at a flanking foe are a group of the same command.
+- **Groups of different commands meeting** (out of a fight) form up by one rule:
+  - **A leader takes in leaderless groups.** "Commanders beat this check automatically."
+  - **Two leaderless groups** stay separate and resume their own orders, unless merge is
+    on. With merge on, the one with more cells' worth of units takes the other's units,
+    and a tie goes to a seeded draw.
+  - **Two leaders** each keep their own command. Units go back to the command they
+    started under, along with any lesser leaders it started with.
+- **The user's cases:**
+  - A splits to fight two enemy forces, then re-forms under its old orders.
+  - A and B split, then form back and path to their own orders. With merge on, the
+    larger takes the other's units and resumes its own orders.
+  - A has a leader and B helps. B is larger, but A's leader takes B in.
+  - A and B both have leaders, and B has a lesser leader too: each returns to its own
+    orders.
+
+**Rules over cases:** general. One forming-up rule covers every meeting.
+**Order:** groups are worked out from one snapshot. Ties in size or leadership go to a
+seeded draw, never to ids or list order (Decision 97).
