@@ -11,9 +11,11 @@ extends RefCounted
 ##   either both standing or marching the same way along the same route - form up by one
 ##   rule:
 ##   - of one command, they are one group again: the larger takes in the other;
-##   - a leader takes in a leaderless group ("commanders beat this check automatically");
-##   - two leaderless groups merge only if either is set to merge, the one with more cells'
-##     worth of units taking in the other;
+##   - otherwise each keeps its own orders, unless a leader's trait says otherwise: a
+##     leader that "gathers" takes in a leaderless group it meets; a leader that "joins"
+##     brings its group into the other's command;
+##   - two leaderless groups merge only if either is set to merge, the one with more
+##     cells' worth of units taking in the other;
 ##   - two led groups each keep their own, and units each started under the other's
 ##     command go back to it.
 ##   A group taken in is "merged" into the taker. Units taken in follow the taker's
@@ -75,22 +77,34 @@ static func _form_up(squads: Array, tick: int, fight_seed: int, events: Array) -
 static func _meet(
 	one: SkirmishSquad, other: SkirmishSquad, fight_seed: int, tick: int, events: Array
 ):
-	var one_led := _led(one)
-	var other_led := _led(other)
-	var taker: SkirmishSquad = null
-	if one.command == other.command or (not one_led and not other_led and _merging(one, other)):
-		taker = _larger(one, other, fight_seed)
-	elif one_led != other_led:
-		taker = one if one_led else other
-	elif one_led and other_led:
-		_return_origins(one, other, tick, events)
-		_return_origins(other, one, tick, events)
-		return null
+	var taker := _taker(one, other, fight_seed)
 	if taker == null:
+		if _led(one) and _led(other):
+			_return_origins(one, other, tick, events)
+			_return_origins(other, one, tick, events)
 		return null
 	var taken: SkirmishSquad = other if taker == one else one
 	_take_in(taker, taken, tick, events)
 	return taken
+
+
+## Which of two meeting groups takes in the other, or null if each keeps its own orders.
+static func _taker(one: SkirmishSquad, other: SkirmishSquad, fight_seed: int) -> SkirmishSquad:
+	if one.command == other.command:
+		return _larger(one, other, fight_seed)
+	var one_joins := _leader_has(one, "joins")
+	var other_joins := _leader_has(other, "joins")
+	if one_joins != other_joins:
+		return other if one_joins else one  # its leader brings it into the other's command
+	if one_joins:
+		return _larger(one, other, fight_seed)
+	var one_gathers := _leader_has(one, "gathers") and not _led(other)
+	var other_gathers := _leader_has(other, "gathers") and not _led(one)
+	if one_gathers != other_gathers:
+		return one if one_gathers else other
+	if not _led(one) and not _led(other) and _merging(one, other):
+		return _larger(one, other, fight_seed)
+	return null
 
 
 ## The taker takes in the other group's units behind its back rank; they follow its
@@ -151,6 +165,11 @@ static func _together(one: SkirmishSquad, other: SkirmishSquad) -> bool:
 		and one.order == other.order
 		and one.order != SkirmishUnit.Order.HOLD
 	)
+
+
+## True if a leader of the squad (leadership > 0) has the trait.
+static func _leader_has(squad: SkirmishSquad, trait_id: String) -> bool:
+	return squad.living().any(func(u): return u.leadership > 0 and u.traits.has(trait_id))
 
 
 static func _led(squad: SkirmishSquad) -> bool:

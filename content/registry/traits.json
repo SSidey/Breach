@@ -6,6 +6,8 @@
     {"id": "captor", "tags": ["behaviour"], "description": "Captures downed foes rather than finishing them (Decision 121)."},
     {"id": "never_surrenders", "tags": ["behaviour"], "description": "A routing unit with it never surrenders (Decision 121)."},
     {"id": "messenger", "tags": ["tactic"], "description": "A leader's: lets one downed foe go home per level, a morale blow to its side (Decision 121)."},
+    {"id": "gathers", "tags": ["tactic"], "description": "A leader's: takes a leaderless friendly group it meets after a fight into its own command (spec 30 round 3)."},
+    {"id": "joins", "tags": ["tactic"], "description": "A leader's: brings its group into the command of a friendly group it meets after a fight (spec 30 round 3)."},
     {"id": "retreats_at_march", "tags": ["drill"], "description": "Its formation retreats at a march rather than a run, if its leader or every unit has it (Decision 126)."},
     {"id": "pursues_at_march", "tags": ["drill"], "description": "Its formation pursues at a march rather than a run, if its leader or every unit has it (Decision 126)."},
     {"id": "fall_behind_left_behind", "tags": ["drill"], "description": "Its formation never waits for a unit lagging behind its place, if its leader or every unit has it (spec 30 round 3)."},
