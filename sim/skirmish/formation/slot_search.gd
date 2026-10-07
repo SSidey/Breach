@@ -23,8 +23,9 @@ const MARGIN := 0.01
 
 ## The slots round the foes ([[unit, squad], ...]) for a seeker of `radius`, indexed:
 ## {"slots": as ScrumSlots.round_foes, "grid": over all of them, "by_foe": foe id ->
-## [first slot, count], "free": the slots no body stands on, "free_grid" over those, and
-## "own": unit -> the slots only its own body stands on}. `crowd` is a BodyGrid.of_bodies
+## [first slot, count], "free": the slots no body stands on, "free_grid" over those,
+## "own": unit -> the slots only its own body stands on, and "dead": the slots found
+## claimed}. `crowd` is a BodyGrid.of_bodies
 ## over `bodies` (ScrumSlots.bodies), as they stand all through the seeking.
 static func ring(foes: Array, radius: float, bodies: Array, crowd: Dictionary) -> Dictionary:
 	var slots := ScrumSlots.round_foes(foes, radius)
@@ -51,6 +52,7 @@ static func ring(foes: Array, radius: float, bodies: Array, crowd: Dictionary) -
 		"free": free,
 		"free_grid": BodyGrid.build(free.map(func(index): return points[index])),
 		"own": own,
+		"dead": {},  # slots found claimed: claims only grow while seekers pick
 	}
 
 
@@ -76,6 +78,7 @@ static func pick(
 		"ground": ground,
 		"crowded": crowded,
 		"slots": slot_ring["slots"],
+		"dead": slot_ring["dead"],
 		"best": -1,
 		"key": [],
 	}
@@ -114,12 +117,18 @@ static func claim(claims: Dictionary, point: Vector2) -> void:
 ## sees them; it stops at two.
 static func _standing_on(point: Vector2, radius: float, bodies: Array, crowd: Dictionary) -> Array:
 	var on := []
-	for index in BodyGrid.near(crowd, point, crowd["widest"] + radius + MARGIN):
-		var body: Array = bodies[index]
-		if body[0].distance_to(point) < body[1] + radius - ScrumSlots.EPSILON:
-			on.append(body[2])
-			if on.size() == 2:
-				break
+	var cells: Dictionary = crowd["cells"]
+	var reach: float = crowd["widest"] + radius + MARGIN
+	var from := BodyGrid.cell_of(point - Vector2(reach, reach))
+	var to := BodyGrid.cell_of(point + Vector2(reach, reach))
+	for y in range(from.y, to.y + 1):
+		for x in range(from.x, to.x + 1):
+			for index in cells.get(Vector2i(x, y), []):
+				var body: Array = bodies[index]
+				if body[0].distance_to(point) < body[1] + radius - ScrumSlots.EPSILON:
+					on.append(body[2])
+					if on.size() == 2:
+						return on
 	return on
 
 
@@ -131,11 +140,13 @@ static func _outwards(search: Dictionary, grid: Dictionary, listed: Array) -> vo
 	var centre := BodyGrid.cell_of(at)
 	var ground: Array = search["ground"]
 	var leash: float = BattleTuning.current().scrum_leash + at.distance_to(ground[0])
-	for ring_number in range(BodyGrid.last_ring(grid, centre) + 1):
+	var span := BodyGrid.ring_span(grid, centre)
+	for ring_number in range(span.x, span.y + 1):
 		var nearest := BodyGrid.floor_of(ring_number) - MARGIN
 		if nearest > leash or (search["best"] >= 0 and nearest > search["key"][0]):
 			return
-		for found in BodyGrid.ring(grid, centre, ring_number):
+		var reach: float = search["key"][0] if search["best"] >= 0 else leash
+		for found in BodyGrid.ring(grid, centre, ring_number, at, reach):
 			_consider(search, found if listed.is_empty() else listed[found])
 
 
@@ -148,11 +159,14 @@ static func _consider(search: Dictionary, index: int) -> void:
 	var best: int = search["best"]
 	if best >= 0 and distance > search["key"][0]:
 		return
+	if not search["crowded"] and search["dead"].has(index):
+		return
 	var seeker: SkirmishUnit = search["seeker"]
 	var ground: Array = search["ground"]
 	if not ScrumSlots.within(seeker, slot[0], ground):
 		return
 	if not search["crowded"] and _claimed(seeker, slot[0], ground[6]):
+		search["dead"][index] = true
 		return
 	var key := [
 		distance,

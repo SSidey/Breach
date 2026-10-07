@@ -42,11 +42,13 @@ static func gap_to(near: Dictionary, at: Vector2, radius: float) -> float:
 	var grid: Dictionary = near["grid"]
 	var centre := BodyGrid.cell_of(at)
 	var least := INF
-	for ring_number in range(BodyGrid.last_ring(grid, centre) + 1):
+	var span := BodyGrid.ring_span(grid, centre)
+	for ring_number in range(span.x, span.y + 1):
 		var nearest_edge: float = BodyGrid.floor_of(ring_number) - near["widest"] - radius
 		if nearest_edge - MARGIN > least:
 			break
-		for found in BodyGrid.ring(grid, centre, ring_number):
+		var reach: float = least + near["widest"] + radius
+		for found in BodyGrid.ring(grid, centre, ring_number, at, reach):
 			var edge: float = points[found].distance_to(at)
 			least = minf(least, edge - ScrumReach.radius(foes[found][0]) - radius)
 	return maxf(least, 0.0)

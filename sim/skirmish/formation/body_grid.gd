@@ -10,6 +10,8 @@ extends RefCounted
 
 ## Cells a bucket spans: about the widest body, so a touch is a neighbouring bucket away.
 const CELL := 2.0
+## Cells added to a search's reach: far above float rounding, so no point is missed.
+const MARGIN := 0.01
 
 
 ## {"cells": {Vector2i: [index, ...]}, "low", "high": the occupied cells' corners}.
@@ -66,18 +68,30 @@ static func near(grid: Dictionary, point: Vector2, reach: float) -> Array:
 	return out
 
 
-## Indices of the points in the cells exactly `ring` cells (Chebyshev) from `centre`; no
-## point among them lies nearer a point in `centre` than floor_of(ring).
-static func ring(grid: Dictionary, centre: Vector2i, ring_number: int) -> Array:
+## Indices of the points in the cells exactly `ring_number` cells (Chebyshev) from
+## `centre`; no point among them lies nearer a point in `centre` than floor_of(ring). With
+## `point` and `within`, only the cells that come within `within` of `point`.
+static func ring(
+	grid: Dictionary, centre: Vector2i, ring_number: int, point := Vector2.ZERO, within := INF
+) -> Array:
 	var cells: Dictionary = grid["cells"]
+	var low: Vector2i = grid["low"]
+	var high: Vector2i = grid["high"]
+	var reach := within + MARGIN
 	var out := []
-	if ring_number == 0:
-		out.append_array(cells.get(centre, []))
-		return out
-	for y in range(centre.y - ring_number, centre.y + ring_number + 1):
-		var edge := absi(y - centre.y) == ring_number
-		var step := 1 if edge else 2 * ring_number
-		for x in range(centre.x - ring_number, centre.x + ring_number + 1, step):
+	for y in range(maxi(centre.y - ring_number, low.y), mini(centre.y + ring_number, high.y) + 1):
+		var across := maxf(maxf(y * CELL - point.y, point.y - (y + 1) * CELL), 0.0)
+		if across > reach:
+			continue
+		var columns := [centre.x - ring_number, centre.x + ring_number]
+		if absi(y - centre.y) == ring_number:
+			columns = range(centre.x - ring_number, centre.x + ring_number + 1)
+		for x in columns:
+			if x < low.x or x > high.x:
+				continue
+			var along := maxf(maxf(x * CELL - point.x, point.x - (x + 1) * CELL), 0.0)
+			if along * along + across * across > reach * reach:
+				continue
 			var bucket = cells.get(Vector2i(x, y))
 			if bucket != null:
 				out.append_array(bucket)
@@ -89,11 +103,45 @@ static func floor_of(ring_number: int) -> float:
 	return maxf(0.0, (ring_number - 1) * CELL)
 
 
-## The last ring round `centre` holding any cell that is occupied.
-static func last_ring(grid: Dictionary, centre: Vector2i) -> int:
+## Vector2i(first, last): no ring round `centre` before the first or after the last holds
+## an occupied cell (last < first if none is). The first comes from each cell's distance
+## in rings to the nearest occupied one, worked out once a grid, the first time it is asked.
+static func ring_span(grid: Dictionary, centre: Vector2i) -> Vector2i:
 	if grid["cells"].is_empty():
-		return -1
+		return Vector2i(0, -1)
 	var low: Vector2i = grid["low"]
 	var high: Vector2i = grid["high"]
 	var far := (low - centre).abs().max((high - centre).abs())
-	return maxi(far.x, far.y)
+	var inside := centre.clamp(low, high)
+	var outside := (centre - inside).abs()
+	if not grid.has("rings"):
+		grid["rings"] = _rings(grid)
+	var width := high.x - low.x + 1
+	var rings: PackedInt32Array = grid["rings"]
+	var past := maxi(outside.x, outside.y)
+	var first := rings[(inside.y - low.y) * width + inside.x - low.x] - past
+	return Vector2i(maxi(maxi(first, past), 0), maxi(far.x, far.y))
+
+
+## For each cell of the grid's box, row by row, its distance in rings (Chebyshev) to the
+## nearest occupied cell: two sweeps of the box.
+static func _rings(grid: Dictionary) -> PackedInt32Array:
+	var low: Vector2i = grid["low"]
+	var size: Vector2i = grid["high"] - low + Vector2i.ONE
+	var out := PackedInt32Array()
+	out.resize(size.x * size.y)
+	out.fill(size.x + size.y)
+	for cell in grid["cells"]:
+		out[(cell.y - low.y) * size.x + cell.x - low.x] = 0
+	for sweep in [1, -1]:
+		var rows := range(size.y) if sweep == 1 else range(size.y - 1, -1, -1)
+		var columns := range(size.x) if sweep == 1 else range(size.x - 1, -1, -1)
+		for y in rows:
+			for x in columns:
+				var least: int = out[y * size.x + x]
+				for step in [Vector2i(-1, 0), Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1)]:
+					var from: Vector2i = Vector2i(x, y) + step * sweep
+					if from.x >= 0 and from.x < size.x and from.y >= 0 and from.y < size.y:
+						least = mini(least, out[from.y * size.x + from.x] + 1)
+				out[y * size.x + x] = least
+	return out
