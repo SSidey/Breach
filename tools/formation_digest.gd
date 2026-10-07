@@ -7,10 +7,11 @@ extends SceneTree
 ##   godot --headless --path . --script res://tools/formation_digest.gd -- \
 ##       [set=standard|clash160|wide] [out=<file of every tick's hash>]
 ##
-## standard: the mirrors head-on and on a flank (BattleTrials), seeds 1-3; three feel-test
-## field logs (FormationFieldActions); a 40-a-side clash of grems and militia, seeds 1-2;
-## each with blows rolled and not. clash160: 160 a side, 120 ticks past first contact.
-## wide: 96 a side, 32 wide, to the end.
+## standard: the mirrors head-on and on a flank (BattleTrials), seeds 1-3; five feel-test
+## field logs (FormationFieldActions), two tending their downed; a 40-a-side clash of grems
+## and militia, seeds 1-2; each with blows rolled and not. clash160: 160 a side, 120 ticks
+## past first contact. wide: 96 a side, 32 wide. Every run plays on TAIL ticks after a side
+## breaks.
 
 const BattleTrials = preload("res://sim/skirmish/formation/battle_trials.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
@@ -19,15 +20,24 @@ const FormationField = preload("res://sim/skirmish/formation/formation_field.gd"
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationBench = preload("res://sim/skirmish/formation/formation_bench.gd")
-const UnitDef = preload("res://content/units/../definitions/unit_def.gd")
 
 const FIELD_LOGS := [
 	"seed 492625 captain off\n96 via_c on\n158 send A+B",
 	"seed 515557 captain off\n0 pursues off\n120 send B\n318 retreat B",
 	"seed 109563 captain off\n0 via_c on\n87 send A\n229 retreat A",
+	(
+		"record 1 seed 492625 captain off\n0 player tend A carry\n0 player tend B recover"
+		+ "\n96 player route A C\n158 player send A+B"
+	),
+	(
+		"record 1 seed 515557 captain off\n0 kingdom pursue all off\n0 player tend B recover"
+		+ "\n120 player send B\n318 player retreat B"
+	),
 ]
 const LIMIT := 1500
 const FIELD_EXTRA := 700
+## Ticks a run plays on once a side has broken: its rout, the pursuit, the downed taken.
+const TAIL := 150
 
 var _out: FileAccess = null
 
@@ -78,12 +88,13 @@ func _clash(label: String, per_side: int, width: int, battle_seed: int, rolls: b
 	_run("%s s%d r%s" % [label, battle_seed, rolls], sim, LIMIT, after)
 
 
-## Steps the sim until one side no longer stands, `limit` ticks, or `after` ticks past
-## the first engagement (-1: no such stop); prints the run's hash.
+## Steps the sim until TAIL ticks after one side no longer stands, `limit` ticks, or
+## `after` ticks past the first engagement (-1: no such stop); prints the run's hash.
 func _run(label: String, sim: FormationSimulation, limit: int, after: int) -> void:
 	var chain := HashingContext.new()
 	chain.start(HashingContext.HASH_SHA256)
 	var contact := -1
+	var broken := -1  # the tick a side stopped standing: the rout and pursuit play on
 	var ticks := 0
 	for tick in range(limit):
 		var events := sim.step()
@@ -93,7 +104,9 @@ func _run(label: String, sim: FormationSimulation, limit: int, after: int) -> vo
 			contact = ticks
 		if after >= 0 and contact >= 0 and ticks - contact >= after:
 			break
-		if not _both_stand(sim.squads()):
+		if broken < 0 and not _both_stand(sim.squads()):
+			broken = ticks
+		if broken >= 0 and ticks - broken >= TAIL:
 			break
 	print("%-32s ticks %4d  %s" % [label, ticks, chain.finish().hex_encode()])
 
