@@ -11,11 +11,9 @@ const TerrainPaths = preload("res://sim/skirmish/formation/terrain_paths.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 const ItemDef = preload("res://content/definitions/item_def.gd")
 
-const GREM_SWIM := 0.25
-
 
 func _grem() -> TerrainWalker:
-	return TerrainWalker.new(1.0, GREM_SWIM)
+	return TerrainWalker.new(1.0)
 
 
 func _touches(cells: Array, area: Rect2i) -> bool:
@@ -54,7 +52,7 @@ func test_a_ford_is_preferred_to_swimming_by_cost_alone() -> void:
 
 func test_with_no_ford_in_reach_a_unit_swims_and_a_non_swimmer_cannot_cross() -> void:
 	assert_bool(_touches(_across(_stream(false), _grem()), Rect2i(10, 0, 3, 12))).is_true()
-	assert_array(_across(_stream(false), TerrainWalker.new(1.0))).is_empty()
+	assert_array(_across(_stream(false), TerrainWalker.new(1.0, 0, 0, false))).is_empty()
 
 
 func test_a_loaded_or_sinking_unit_refuses_deep_water() -> void:
@@ -76,8 +74,8 @@ func test_a_cliff_blocks_a_non_climber_and_slows_one_a_level_short() -> void:
 	ground.paint(Rect2i(10, 0, 10, 8), {"height": 8, "climb": 2})
 	var start := Vector2(3.5, 3.5)
 	var goal := Vector2(15.5, 3.5)
-	var short := TerrainWalker.new(1.0, 0.0, 1)
-	var able := TerrainWalker.new(1.0, 0.0, 2)
+	var short := TerrainWalker.new(1.0, 0, 1)
+	var able := TerrainWalker.new(1.0, 0, 2)
 
 	assert_array(TerrainPaths.cells(ground, TerrainWalker.new(1.0), start, goal)).is_empty()
 	var slow := TerrainPaths.find(ground, short, start, goal)
@@ -90,7 +88,7 @@ func test_a_cliff_blocks_a_non_climber_and_slows_one_a_level_short() -> void:
 
 func test_the_leash_bounds_how_far_aside_the_search_looks() -> void:
 	var ground := FormationTerrain.new(Vector2i(30, 40))
-	ground.paint(Rect2i(14, 0, 2, 34), {"height": 8})
+	ground.paint(Rect2i(14, 0, 2, 34), {"height": 8, "climb": 3})
 	var start := Vector2(3.5, 4.5)
 	var goal := Vector2(26.5, 4.5)
 
@@ -105,8 +103,8 @@ func test_the_leash_bounds_how_far_aside_the_search_looks() -> void:
 
 func test_no_corner_is_cut_between_impassable_cells() -> void:
 	var ground := FormationTerrain.new(Vector2i(10, 10))
-	ground.paint(Rect2i(4, 4, 1, 1), {"height": 8})
-	ground.paint(Rect2i(5, 5, 1, 1), {"height": 8})
+	ground.paint(Rect2i(4, 4, 1, 1), {"height": 8, "climb": 3})
+	ground.paint(Rect2i(5, 5, 1, 1), {"height": 8, "climb": 3})
 	var cells := TerrainPaths.cells(ground, _grem(), Vector2(4.5, 5.5), Vector2(5.5, 4.5))
 
 	assert_int(cells.size()).is_greater(2)
@@ -129,7 +127,7 @@ func test_open_ground_gives_a_straight_line_hugged_by_its_cells() -> void:
 func _mirrorable(mirrored: bool) -> FormationTerrain:
 	var ground := FormationTerrain.new(Vector2i(24, 16))
 	var areas := [Rect2i(6, 2, 3, 8), Rect2i(12, 0, 2, 11), Rect2i(16, 10, 4, 4)]
-	var props := [{"cost": 0.5}, {"height": 8}, {"depth": 1.2}]
+	var props := [{"cost": 0.5}, {"height": 8, "climb": 3}, {"depth": 1.2}]
 	for index in areas.size():
 		var area: Rect2i = areas[index]
 		if mirrored:
@@ -160,9 +158,9 @@ func test_the_ground_mirrored_gives_the_path_mirrored() -> void:
 func test_the_same_ground_gives_the_same_path_whatever_was_painted_first() -> void:
 	var first := FormationTerrain.new(Vector2i(24, 16))
 	first.paint(Rect2i(6, 2, 3, 8), {"cost": 0.5})
-	first.paint(Rect2i(12, 0, 2, 11), {"height": 8})
+	first.paint(Rect2i(12, 0, 2, 11), {"height": 8, "climb": 3})
 	var second := FormationTerrain.new(Vector2i(24, 16))
-	second.paint(Rect2i(12, 0, 2, 11), {"height": 8})
+	second.paint(Rect2i(12, 0, 2, 11), {"height": 8, "climb": 3})
 	second.paint(Rect2i(6, 2, 3, 8), {"cost": 0.5})
 	var start := Vector2(2.5, 6.5)
 	var goal := Vector2(21.5, 12.5)

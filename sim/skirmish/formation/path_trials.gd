@@ -19,6 +19,7 @@ const ItemDef = preload("res://content/definitions/item_def.gd")
 const GREM := "res://content/units/grem.tres"
 const CRAG := Rect2i(70, 26, 4, 31)
 const CRAG_QUARTERS := 8
+const CRAG_CLIMB := 2
 ## Trip -> [from, to, leash (negative: the tuned one)].
 const TRIPS := {
 	"across": [Vector2(2.5, 40.5), Vector2(125.5, 40.5), -1.0],
@@ -58,7 +59,7 @@ static func run(repeats: int) -> Array:
 static func ground() -> FormationTerrain:
 	var grem: UnitDef = load(GREM)
 	var terrain: FormationTerrain = FormationField.new(0.1, grem, 0, grem).sim.terrain
-	terrain.paint(CRAG, {"height": CRAG_QUARTERS})
+	terrain.paint(CRAG, {"height": CRAG_QUARTERS, "climb": CRAG_CLIMB})
 	return terrain
 
 
@@ -165,9 +166,9 @@ static func _unit(name: String) -> UnitDef:
 		items.append(pack)
 		unit_def.items = items
 	elif name == "cart (sinks)":
-		unit_def.traits = {"sinks": 1}
+		unit_def.traits = {"sinks": 1, "cant_climb": 1}
 	elif name == "climber":
-		unit_def.traits = {"climber": 1}
+		unit_def.traits = {"climber": CRAG_CLIMB}
 	return unit_def
 
 

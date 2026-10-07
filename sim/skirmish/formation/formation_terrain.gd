@@ -1,15 +1,18 @@
 class_name FormationTerrain
 extends RefCounted
 ## The ground a formation fight is on (Decision 85, spec 27 round 4): a grid of cells, each
-## with a move cost, a height (in quarters of a cell), a liquid depth (in cells), the climb
-## difficulty of its faces and whether it blocks sight. Outside the grid is open, level
-## ground. A unit's pace into a cell (`crossing`, for a TerrainWalker) is the product of:
+## with a move cost, a height (in quarters of a cell), a liquid depth (in cells), how fast
+## its liquid flows, the climb difficulty of its faces and whether it blocks sight. Outside
+## the grid is open, level ground. A unit's pace into a cell (`crossing`, for a
+## TerrainWalker) is the product of:
 ## - **ground:** the cell's move cost (a wood 0.5)
 ## - **slope:** each quarter-cell risen costs a share of the pace; downhill is no faster; a
-##   rise past the cliff height is a cliff, climbed at the climb pace by a climber meeting
-##   the cell's climb difficulty, half that one level short (Decision 64, spec 30 round 3)
+##   rise past the cliff height is a cliff, climbed
 ## - **liquid,** in bands of the unit's own height: under a quarter free, to a half wading,
-##   to its height slow wading, deeper swimming at its swim share (0 if it sinks)
+##   to its height slow wading, deeper swum
+## Climbing and swimming are movement modes (TerrainWalker): the mode's base pace times
+## Decision 64's pair rule, the walker's climber or swimmer level against the cell's climb
+## difficulty or flow (spec 30).
 ## The shares and heights are BattleTuning's (`ground_*`). Pure; the field paints it, the
 ## simulation and TerrainPaths read it.
 
@@ -23,6 +26,7 @@ var _height := PackedInt32Array()
 var _depth := PackedFloat32Array()
 var _blocks := PackedByteArray()
 var _climb := PackedInt32Array()
+var _flows := PackedInt32Array()
 
 
 func _init(grid_size: Vector2i) -> void:
@@ -35,10 +39,12 @@ func _init(grid_size: Vector2i) -> void:
 	_blocks.resize(count)
 	_climb.resize(count)
 	_climb.fill(BattleTuning.current().ground_climb_demand)
+	_flows.resize(count)
 
 
-## Sets the cells of `area`: any of "cost", "height" (quarters), "depth" (cells), "climb"
-## (the climb difficulty of a cliff rising into them) and "blocks_sight".
+## Sets the cells of `area`: any of "cost", "height" (quarters), "depth" (cells), "flows"
+## (its liquid's flow), "climb" (the climb difficulty of a cliff rising into them) and
+## "blocks_sight".
 func paint(area: Rect2i, props: Dictionary) -> void:
 	var clipped := area.intersection(Rect2i(Vector2i.ZERO, size))
 	for y in range(clipped.position.y, clipped.end.y):
@@ -48,6 +54,7 @@ func paint(area: Rect2i, props: Dictionary) -> void:
 			_height[index] = props.get("height", _height[index])
 			_depth[index] = props.get("depth", _depth[index])
 			_climb[index] = props.get("climb", _climb[index])
+			_flows[index] = props.get("flows", _flows[index])
 			if props.has("blocks_sight"):
 				_blocks[index] = 1 if props["blocks_sight"] else 0
 
@@ -66,7 +73,7 @@ func blocks_sight(at: Vector2) -> bool:
 ## How fast a unit `unit_height` cells tall that neither swims nor climbs goes stepping
 ## from `from` into `to`, as a share of its speed on open level ground; 0 where it can't go.
 func factor(unit_height: float, from: Vector2, to: Vector2) -> float:
-	return crossing(TerrainWalker.new(unit_height), from, to)
+	return crossing(TerrainWalker.grounded(unit_height), from, to)
 
 
 ## How fast `walker` goes stepping from `from` into `to`, as a share of its speed on open
@@ -79,7 +86,10 @@ func crossing(walker: TerrainWalker, from: Vector2, to: Vector2) -> float:
 	var share: float = _cost[index] * _rise_share(walker, _height[index] - height_at(from), index)
 	var depth: float = _depth[index] / maxf(walker.height, 0.01)
 	if depth >= 1.0:
-		return share * walker.swim
+		return (
+			share
+			* _mode_share(walker.swims, tuning.ground_swim_pace, walker.swimmer, _flows[index])
+		)
 	if depth >= 0.5:
 		return share * tuning.ground_slow_wading
 	if depth >= 0.25:
@@ -98,8 +108,14 @@ func high_ground(from: Vector2, to: Vector2) -> bool:
 func _rise_share(walker: TerrainWalker, rise: int, index: int) -> float:
 	var tuning := BattleTuning.current()
 	if rise > tuning.ground_cliff_quarters:
-		return tuning.ground_climb_pace * TerrainWalker.meets(walker.climber, _climb[index])
+		return _mode_share(walker.climbs, tuning.ground_climb_pace, walker.climber, _climb[index])
 	return maxf(0.1, 1.0 - tuning.ground_slope_cost * maxi(rise, 0))
+
+
+## A movement mode's share of the pace: its base pace times the pair rule, `ability`
+## against `demand`; 0 for a walker that may not use it.
+static func _mode_share(allowed: bool, pace: float, ability: int, demand: int) -> float:
+	return pace * TerrainWalker.meets(ability, demand) if allowed else 0.0
 
 
 func _index(at: Vector2) -> int:
