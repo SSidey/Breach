@@ -53,6 +53,7 @@ static func ring(foes: Array, radius: float, bodies: Array, crowd: Dictionary) -
 		"free_grid": BodyGrid.build(free.map(func(index): return points[index])),
 		"own": own,
 		"dead": {},  # slots found claimed: claims only grow while seekers pick
+		"gone": 0,  # of them, how many have left the free grid
 	}
 
 
@@ -78,6 +79,7 @@ static func pick(
 		"ground": ground,
 		"crowded": crowded,
 		"slots": slot_ring["slots"],
+		"ring": slot_ring,
 		"dead": slot_ring["dead"],
 		"best": -1,
 		"key": [],
@@ -87,8 +89,23 @@ static func pick(
 	else:
 		for index in slot_ring["own"].get(seeker, []):
 			_consider(search, index)
-		_outwards(search, slot_ring["free_grid"], slot_ring["free"])
+		_refresh(slot_ring)
+		if not slot_ring["free"].is_empty():
+			_outwards(search, slot_ring["free_grid"], slot_ring["free"])
 	return [] if search["best"] < 0 else search["slots"][search["best"]]
+
+
+## Remakes the ring's free grid without the slots found claimed, once they are half of it.
+static func _refresh(slot_ring: Dictionary) -> void:
+	var free: Array = slot_ring["free"]
+	if slot_ring["gone"] * 2 <= free.size():
+		return
+	var slots: Array = slot_ring["slots"]
+	var dead: Dictionary = slot_ring["dead"]
+	free = free.filter(func(index): return not dead.has(index))
+	slot_ring["free"] = free
+	slot_ring["free_grid"] = BodyGrid.build(free.map(func(index): return slots[index][0]))
+	slot_ring["gone"] = 0
 
 
 ## As ScrumSlots.open, looking only at the bodies and claims near `point`.
@@ -140,6 +157,7 @@ static func _outwards(search: Dictionary, grid: Dictionary, listed: Array) -> vo
 	var centre := BodyGrid.cell_of(at)
 	var ground: Array = search["ground"]
 	var leash: float = BattleTuning.current().scrum_leash + at.distance_to(ground[0])
+	var slots: Array = search["slots"]
 	var span := BodyGrid.ring_span(grid, centre)
 	for ring_number in range(span.x, span.y + 1):
 		var nearest := BodyGrid.floor_of(ring_number) - MARGIN
@@ -148,9 +166,13 @@ static func _outwards(search: Dictionary, grid: Dictionary, listed: Array) -> vo
 		var reach: float = search["key"][0] if search["best"] >= 0 else leash
 		for found in BodyGrid.ring(grid, centre, ring_number, at, reach):
 			var index: int = found if listed.is_empty() else listed[found]
+			var point: Vector2 = slots[index][0]
+			if search["best"] >= 0 and snappedf(at.distance_to(point), 0.000001) > search["key"][0]:
+				continue  # farther than the best (as _consider weighs it)
 			_consider(search, index)
 			if not search["crowded"] and search["dead"].has(index):  # claimed: gone for all
-				grid["cells"][BodyGrid.cell_of(search["slots"][index][0])].erase(found)
+				grid["cells"][BodyGrid.cell_of(point)].erase(found)
+				search["ring"]["gone"] += 1
 
 
 ## Weighs one slot: it becomes the best if it qualifies and its key (ScrumSlots.pick) is
