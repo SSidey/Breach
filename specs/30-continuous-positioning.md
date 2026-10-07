@@ -317,6 +317,14 @@ mirror trials within noise: head-on 135/119 and 122/127 swapped, flank 300/0 bot
   - **Wheeling and re-forming as units:** each unit finding its own way to its place
     (Decision 116's rejected first approach), which first needs every move of a frame to
     say whether it walks or is set (placing, joining and re-forming set it).
+  - **Looking ahead and finding a way** (spec 28's feel test): units don't path today. A
+    formation measures the passable gap ahead and narrows to it (FormationNarrowing); a
+    withdrawing unit checks the ground where its step lands and, if it can't go there,
+    turns back toward its road (fixed in spec 28: at a run it overshot the ford's edge into
+    the stream); routers follow their route's line. Nothing looks further ahead or plans a
+    way round. Wanted: units and formations that see impassable or costly ground coming
+    and find a way through it - and **swimming**: deep water passable at a unit's swim
+    speed (Decision 117's speeds per movement mode), rather than impassable to all.
   - **Seeking a visible enemy** (spec 28's feel test, Decision 126): a formation leaving
     its route for an enemy formation it can see - by a stance the player sets before it
     leaves, or a leader's trait - preferring its flank or rear, within a leash of its
