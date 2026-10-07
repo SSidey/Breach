@@ -560,3 +560,23 @@ a formation entity?"
 **Rules over cases:** general. One forming-up rule covers every meeting.
 **Order:** groups are worked out from one snapshot. Ties in size or leadership go to a
 seeded draw, never to ids or list order (Decision 97).
+
+## Round 3 plan
+
+The work goes in stacked parts, built in parallel where they don't touch the same code:
+
+| Part | What | Who |
+|---|---|---|
+| 0 | **Performance.** A shared spatial index for the scrum (slots, touches, gaps, engagement, blows, steering, parting bodies), with outcomes unchanged; event logs are compared before and after over many seeds. A standing benchmark up to the 32×32 mirror. | subagent, `feature/movement-perf` |
+| 3a | **Paths.** A* over the terrain grid by the pace's own costs, bounded by the leash; swimming (`swimmer N`; sinking by load or `sinks`); climbing (`climber N` by Decision 64's pair rule). A standalone module with trials, not yet wired in. | subagent, `feature/movement-paths` |
+| 1 | **Commands.** The orders (route as a guide, destination, stance, merge, wave options, leader) move to a `FormationCommand`. A squad is now a group of one command's units, and a unit carries its command and the one it started under. | parent, after part 0 |
+| 2 | **Units walk to their places.** Every unit walks to its place: the frame only sets places when a unit is placed or joins. The frame keeps within a slack of its units, set by discipline, `fall behind, left behind` and `no man left behind`. `FormationWheel`'s cut and `FormationShuffle`'s slide retire into walking. Order is measured. | parent |
+| 4 | **Groups split and form up.** A command's units are regrouped from where they stand (within a join distance). Groups of different commands meeting follow the one rule: a leader takes in the leaderless; merge decides between leaderless groups by cells' worth; leaders keep their own. This supersedes `FormationStrays.adopt` and folds Decision 51's merging into the rule; reinforcing a fight stays. | parent |
+| 5 | **Pouring through gaps.** `FormationNarrowing`'s filing retires: units whose places are blocked walk to the nearest way through, and the frame follows within its slack. | parent or subagent |
+| 6 | **Paths wired in.** Walking units path when the straight way is blocked or costly; the frame looks ahead and detours within the leash; deep water is swum and cliffs are climbed by the pace. | subagent, on parts 2 and 3a |
+| 7 | **Bodies slow every walker,** loose or in place. | with part 2 |
+| 8 | **Taking the downed.** Free units walk out to visible downed foes within reach and finish or capture them; the group holds up to 10 s, or as its traits say. | subagent, on part 2 |
+| 9 | **Seeking.** Stances (keep to the route, engage in sight, hunt) with a leash by discipline; a leader's trait sets the stance where the player can't; flank or rear first; `eager N`; engage distance for free units against flankers and shooters. | on parts 4 and 6 |
+
+Each part is a stacked draft PR. Every part that can move outcomes reports the mirror
+trials both ways round (Decision 97), and the benchmark from part 0.
