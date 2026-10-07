@@ -617,3 +617,31 @@ trials both ways round (Decision 97), and the benchmark from part 0.
   - **Searches are rare:** when the view ahead changes, or every second or so off the
     route. They run within a pathing budget per tick, spread over ticks. Each cell's speed
     share is cached per kind of walker.
+
+### Paths, after the second paths round
+
+- **Memory and learned detours.** A pathfinder's memory of what it has seen is cleared
+  once its group is back on its route. A detour that worked is kept on the command as a
+  patch to its route ("between here and here, go this way"), and every group of the
+  command follows the patched route from then on. Sharing patches across a faction
+  (scouts, maps) comes later.
+- **Climbing on stamina.**
+  - There is no breather on a climb face: stamina recovers only where the unit can
+    stand, on a passable, flat-enough cell.
+  - Units plan only climbs whose stretches between ledges fit their stamina: "they should
+    only make it so far".
+  - Running out mid-climb: open question for the user (fall or cling).
+- **Sight by obscurance.**
+  - Each cell has an obscurance. A sight line sums it cell by cell, and sight ends where
+    the sum passes the unit's sight budget.
+  - Woods obscure heavily: a few cells in, then nothing.
+  - Fog obscures lightly everywhere, shortening sight rather than blocking it.
+  - What has been seen is remembered: "remembered after traversed".
+  - This replaces the "more than two wood cells" rule in FormationSight, so detection and
+    planning see alike.
+- **Rejoining the route** where the walk to the route plus the march along it to the goal
+  is quickest overall. It never doubles back when a point ahead is quicker, and doubles
+  back only when that is the only way.
+- **Implicit traits** show in the designer, labelled implicit ("useful to know what is
+  present on a unit"); any in-game view of a unit hides them.
+- **Stamina rates:** climbing 4 a second, swimming 3 and running 2. "Reasonable for now".
