@@ -78,6 +78,7 @@ static func _arm(unit: SkirmishUnit, unit_def: UnitDef) -> void:
 	unit.fresh_speed = unit.speed
 	unit.run_pace = unit_def.run_pace
 	unit.load_stage = stage
+	unit.gear_weight = UnitArms.carried_weight(unit_def)
 	unit.tiring = tuning.load_tiring[stage]
 	unit.dodging = tuning.load_dodge[stage]
 	unit.max_stamina = unit_def.constitution * tuning.stamina_per_constitution

@@ -79,6 +79,9 @@ var fleeing := {}
 var rally_ticks := 0
 ## Ordered to hurry (Decision 125): it runs while it moves, spending stamina.
 var hurry := false
+## What it does with its own downed it passes (Decision 126): "" leaves them, "recover"
+## carries each home, "carry" bears them along with it.
+var tends := ""
 ## Halted by ground it can't cross (FormationMarch.pace); reported once.
 var blocked := false
 ## Narrowed through a gap (FormationNarrowing): its painted places (unit id -> [rank,

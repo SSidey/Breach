@@ -7,8 +7,9 @@ extends RefCounted
 enum Order { ADVANCE, HOLD, RETREAT }
 ## What the unit is doing right now (derived by the simulation each tick). Out of the
 ## fight (Decision 121): DEAD; DOWNED, on the ground at 0 HP or below it at death's door;
-## TAKEN, captured or surrendered; RELEASED, let go to carry word home.
-enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DEAD, DOWNED, TAKEN, RELEASED }
+## TAKEN, captured or surrendered; RELEASED, let go to carry word home; CARRIED, downed and
+## borne by a friend (Decision 126).
+enum State { MOVING, HOLDING, FIGHTING, ARRIVED, DEAD, DOWNED, TAKEN, RELEASED, CARRIED }
 
 var id: int = 0
 var faction_id: String = ""
@@ -128,6 +129,11 @@ var regeneration_carry := 0.0
 var wounded := 0
 var wake_left := -1.0
 var drain_carry := 0.0
+## Formation sim: the friend it bears, or the friend bearing it (unit ids; 0: none), and the
+## weight of its own gear, for its load with a body on it (Decision 126).
+var carrying := 0
+var carried_by := 0
+var gear_weight := 0.0
 ## Seconds between its melee blows and its ranged shots (Decision 120): its weapons'
 ## intervals, scaled by its attack speed.
 var melee_seconds := 1.0

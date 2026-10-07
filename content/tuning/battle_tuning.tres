@@ -80,6 +80,7 @@ wounds_messenger_shock = 15
 wounds_surrender = 0.5
 wounds_regeneration_halt = 5.0
 wounds_condition = 0.4
+wounds_body_weight = 15.0
 wounds_wake_seconds = 30.0
 wounds_wake_spread = Array[float]([0.5, 1.5])
 condition_drain_below = 0.25

@@ -53,12 +53,22 @@ static func skill(unit_def: UnitDef, ranged: bool) -> int:
 ## it carries (innate parts weigh nothing) against its carry limit from strength, a hauler
 ## carrying more before it can't move.
 static func load_stage(unit_def: UnitDef) -> int:
-	var tuning := BattleTuning.current()
+	return stage_of(carried_weight(unit_def), unit_def.strength, unit_def.trait_level("hauler"))
+
+
+## The weight of what it carries (innate parts weigh nothing).
+static func carried_weight(unit_def: UnitDef) -> float:
 	var carried := 0.0
 	for item in unit_def.items:
 		carried += item.weight
-	var limit := unit_def.strength * tuning.load_per_strength
-	var most := tuning.load_most + unit_def.trait_level("hauler") * tuning.load_hauler
+	return carried
+
+
+## The stage of `carried` load for a unit of `strength` and hauler level `hauler`.
+static func stage_of(carried: float, strength: int, hauler: int) -> int:
+	var tuning := BattleTuning.current()
+	var limit := strength * tuning.load_per_strength
+	var most := tuning.load_most + hauler * tuning.load_hauler
 	if carried <= limit * tuning.load_easy:
 		return 0
 	if carried <= limit:

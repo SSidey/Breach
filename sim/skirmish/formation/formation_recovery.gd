@@ -26,7 +26,7 @@ static func step(squads: Array, seconds: float, tick: int, fight_seed: int, even
 	var strays := []
 	for squad in squads:
 		for unit in squad.units:
-			var downed: bool = unit.state == SkirmishUnit.State.DOWNED
+			var downed: bool = unit.state in [SkirmishUnit.State.DOWNED, SkirmishUnit.State.CARRIED]
 			if not (unit.is_alive() or downed):
 				continue
 			unit.condition = condition_of(unit)

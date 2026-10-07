@@ -147,6 +147,8 @@ static var _current: BattleTuning = null
 ## Each wound - a time downed (Decision 126) - takes this off a unit's condition; a unit
 ## "hardened N" shrugs off its first N.
 @export var wounds_condition := 0.0
+## The weight of a body borne by a friend, per cell of its footprint (Decision 126).
+@export var wounds_body_weight := 0.0
 ## Seconds a downed unit of average constitution lies before it comes to at 1 HP, times a
 ## seeded share between wounds_wake_spread's two ends; the hardier, the sooner.
 @export var wounds_wake_seconds := 0.0

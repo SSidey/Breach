@@ -32,3 +32,14 @@ static func strand(unit: SkirmishUnit, squad: SkirmishSquad) -> SkirmishSquad:
 	unit.rank = 0
 	unit.column = 0
 	return stray
+
+
+## Sets each of `strays` ([[unit, its squad], ...]) off home alone, as squads numbered from
+## `next_id` added to `squads`; returns the next free squad id.
+static func adopt(strays: Array, squads: Array, next_id: int) -> int:
+	for stray in strays:
+		var lone := strand(stray[0], stray[1])
+		lone.id = next_id
+		next_id += 1
+		squads.append(lone)
+	return next_id
