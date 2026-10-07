@@ -9,6 +9,10 @@ extends RefCounted
 ## FormationTerrain reads it for the pace of each step, so the march and paths can't
 ## disagree. Pure.
 
+## The movement mode of a step (FormationTerrain.mode): stamina is paid per second in
+## the climbing and swimming modes (ModeStamina).
+enum Mode { WALKING, CLIMBING, SWIMMING }
+
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 const UnitArms = preload("res://content/definitions/unit_arms.gd")

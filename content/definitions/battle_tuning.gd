@@ -115,6 +115,10 @@ static var _current: BattleTuning = null
 ## the delay shorter and the rate faster the hardier it is, the rate times its condition.
 @export var stamina_per_constitution := 0.0
 @export var stamina_run := 0.0
+## Stamina a second spent climbing and swimming (spec 30): at half the mode's pace a step
+## takes twice as long, so costs twice as much (ModeStamina).
+@export var stamina_climb := 0.0
+@export var stamina_swim := 0.0
 @export var stamina_blow := 0.0
 @export var stamina_delay := 0.0
 @export var stamina_recovery := 0.0
