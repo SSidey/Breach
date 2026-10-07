@@ -16,6 +16,7 @@ extends RefCounted
 ## wood slows and hides, B's wave narrows through the ford, and the reserve fights down
 ## from the hill. The player's domain builders fill both waves in turn. Pure.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -209,7 +210,8 @@ func set_wait(waiting: bool) -> void:
 ## The field's terrain (Decision 85).
 static func _ground() -> FormationTerrain:
 	var terrain := FormationTerrain.new(SIZE)
-	terrain.paint(Rect2i(WOOD), {"cost": 0.5, "blocks_sight": true})
+	var wood_obscurance := BattleTuning.current().sight_wood_obscurance
+	terrain.paint(Rect2i(WOOD), {"cost": 0.5, "blocks_sight": true, "obscurance": wood_obscurance})
 	terrain.paint(Rect2i(STREAM), {"depth": STREAM_DEPTH})
 	terrain.paint(Rect2i(FORD), {"depth": FORD_DEPTH})
 	for ring in range(HILL_QUARTERS):

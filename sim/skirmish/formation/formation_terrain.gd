@@ -2,7 +2,8 @@ class_name FormationTerrain
 extends RefCounted
 ## The ground a formation fight is on (Decision 85, spec 27 round 4): a grid of cells, each
 ## with a move cost, a height (in quarters of a cell), a liquid depth (in cells), how fast
-## its liquid flows, the climb difficulty of its faces and whether it blocks sight. Outside
+## its liquid flows, the climb difficulty of its faces, whether it blocks sight and its
+## obscurance (TerrainObscurance, with the field's fog: how far sight reaches). Outside
 ## the grid is open, level ground. A unit's pace into a cell (`crossing`, for a
 ## TerrainWalker) is the product of:
 ## - **ground:** the cell's move cost (a wood 0.5)
@@ -18,10 +19,13 @@ extends RefCounted
 
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const TerrainWalker = preload("res://sim/skirmish/formation/terrain_walker.gd")
+const TerrainObscurance = preload("res://sim/skirmish/formation/terrain_obscurance.gd")
 
 var size: Vector2i
 ## Each kind of walker's cached speed shares (WalkerShares), dropped when it is painted.
 var walker_shares := {}
+## How much each cell hides what lies beyond it, and the fog (spec 30).
+var obscurance: TerrainObscurance
 
 var _cost := PackedFloat32Array()
 var _height := PackedInt32Array()
@@ -42,11 +46,12 @@ func _init(grid_size: Vector2i) -> void:
 	_climb.resize(count)
 	_climb.fill(BattleTuning.current().ground_climb_demand)
 	_flows.resize(count)
+	obscurance = TerrainObscurance.new(size)
 
 
 ## Sets the cells of `area`: any of "cost", "height" (quarters), "depth" (cells), "flows"
-## (its liquid's flow), "climb" (the climb difficulty of a cliff rising into them) and
-## "blocks_sight".
+## (its liquid's flow), "climb" (the climb difficulty of a cliff rising into them),
+## "obscurance" (what a cell of sight through them costs) and "blocks_sight".
 func paint(area: Rect2i, props: Dictionary) -> void:
 	walker_shares.clear()
 	var clipped := area.intersection(Rect2i(Vector2i.ZERO, size))
@@ -58,6 +63,8 @@ func paint(area: Rect2i, props: Dictionary) -> void:
 			_depth[index] = props.get("depth", _depth[index])
 			_climb[index] = props.get("climb", _climb[index])
 			_flows[index] = props.get("flows", _flows[index])
+			if props.has("obscurance"):
+				obscurance.set_cell(index, props["obscurance"])
 			if props.has("blocks_sight"):
 				_blocks[index] = 1 if props["blocks_sight"] else 0
 

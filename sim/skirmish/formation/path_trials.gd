@@ -25,11 +25,13 @@ const CRAG := Rect2i(70, 26, 4, 31)
 const CRAG_QUARTERS := 8
 const CRAG_CLIMB := 2
 ## Trip -> {"from", and "to" (a point) or "route" (route A); "sight": planned on what a
-## grem facing east sees, else on the whole field}.
+## grem facing east sees - the wood hiding all but its first few cells - else on the whole
+## field}.
 const TRIPS := {
 	"across": {"from": Vector2(2.5, 40.5), "to": Vector2(125.5, 40.5), "sight": false},
 	"stream": {"from": Vector2(20.5, 6.5), "to": Vector2(40.5, 6.5), "sight": false},
 	"sight 40 ahead": {"from": Vector2(20.5, 40.5), "to": Vector2(125.5, 40.5), "sight": true},
+	"sight into wood": {"from": Vector2(8.5, 12.5), "to": Vector2(125.5, 12.5), "sight": true},
 	"rejoin route A": {"from": Vector2(50.5, 45.5), "route": true, "sight": true},
 }
 const WALKERS := ["grem", "loaded militiaman", "cart (sinks)", "climber"]
@@ -130,7 +132,9 @@ static func _timed(
 	var from: Vector2 = trip["from"]
 	var start := Vector2i(floori(from.x), floori(from.y))
 	var grem: UnitDef = load(GREM)
-	var sight: PathSight = PathSight.of(grem, from, Vector2.RIGHT) if trip["sight"] else null
+	var sight: PathSight = (
+		PathSight.of(grem, from, Vector2.RIGHT, terrain) if trip["sight"] else null
+	)
 	var route := FormationRoute.new(FormationField.route_points()["A"])
 	var search: PathSearch
 	var began := Time.get_ticks_usec()

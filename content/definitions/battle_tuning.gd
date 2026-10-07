@@ -227,6 +227,13 @@ static var _current: BattleTuning = null
 @export var ground_climb_pace := 0.0
 @export var ground_climb_demand := 0
 @export var ground_mode_load_share := 0.0
+## Sight by obscurance (spec 30): a sight line sums each cell's obscurance by the distance
+## it runs through it and sees no further once past sight_budget. The field's wood is
+## painted sight_wood_obscurance (a few cells in, then nothing); fog, painted or as the
+## field's weather, sight_fog_obscurance (sight shortened, not blocked).
+@export var sight_budget := 0.0
+@export var sight_wood_obscurance := 0.0
+@export var sight_fog_obscurance := 0.0
 
 @export_group("Bodies (Decisions 106 and 114)")
 ## How many times over a unit in its formation's frame weighs, against being pushed.
