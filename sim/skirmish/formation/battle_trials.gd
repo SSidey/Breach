@@ -103,8 +103,9 @@ static func _mirror(scenario: String, battle_seed: int, options: Dictionary) -> 
 	for spawn in spawns:
 		spawn.call()
 	var lost := {"player": 0, "the_kingdom": 0}
+	var seen := {}
 	for tick in range(LIMIT_TICKS):
-		_count(sim.step(), lost)
+		_count(sim.step(), lost, seen)
 		var standing := FACTIONS.filter(func(f): return _stands(sim.squads(), f))
 		if standing.size() < 2:
 			var winner: String = standing[0] if standing.size() == 1 else ""
@@ -148,9 +149,9 @@ static func _field(scenario: String, battle_seed: int, options: Dictionary) -> D
 		events.append_array(field.step())
 		var line := field.kingdom_line
 		if line.is_destroyed() or line.state == SkirmishSquad.State.ROUTING:
-			_count(events, lost)
+			_count(events, lost, {})
 			return {"lost": lost, "winner": "player", "ticks": tick + 1}
-	_count(events, lost)
+	_count(events, lost, {})
 	return {"lost": lost, "winner": "the_kingdom", "ticks": LIMIT_TICKS}
 
 
@@ -172,8 +173,10 @@ static func _send(field: FormationField, scenario: String) -> Array:
 	return events
 
 
-## A unit lost leaves the fight: killed outright, downed, or surrendered (Decision 121).
-static func _count(events: Array, lost: Dictionary) -> void:
+## A unit lost left the fight - killed outright, downed, or surrendered (Decision 121) -
+## counted once, though it may come to and fall again (Decision 126). `seen`: unit ids.
+static func _count(events: Array, lost: Dictionary, seen: Dictionary) -> void:
 	for event in events:
-		if event["type"] in ["died", "downed", "surrendered"]:
+		if event["type"] in ["died", "downed", "surrendered"] and not seen.has(event["unit"]):
+			seen[event["unit"]] = true
 			lost[event["faction"]] += 1
