@@ -20,6 +20,7 @@ REGISTRY = {
         {"id": "cunning", "tags": ["behaviour"], "targets": ["unit", "leader"], "description": "Plays dead"},
         {"id": "siege", "tags": ["combat"], "targets": ["weapon"], "description": "Against structures"},
         {"id": "captor", "tags": ["behaviour"], "targets": ["unit", "leader"], "description": "Captures"},
+        {"id": "climber", "tags": ["movement"], "targets": ["unit"], "description": "Climbs", "default": 0},
     ],
     "statuses": [],
 }
@@ -30,6 +31,7 @@ const lib = require(process.argv[1]);
 const input = JSON.parse(process.argv[2]);
 const out = input.filters.map(f => lib.select(input.registry, f.kind, f, input.usage).map(e => e.id));
 out.push(lib.tagChoices(input.registry, 'traits'), lib.tagChoices(input.registry, 'tags'));
+out.push(input.registry.traits.map(lib.implicitOf));
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -57,14 +59,19 @@ class LibraryFilterJsTest(unittest.TestCase):
                 {"kind": "tags", "tags": ["unit"]},
             ]
         )
-        self.assertEqual(got[0], ["captor", "cunning", "siege"])
+        self.assertEqual(got[0], ["captor", "climber", "cunning", "siege"])
         self.assertEqual(got[1], ["cunning"])
         self.assertEqual(got[2], ["captor", "cunning"])
         self.assertEqual(got[3], ["siege"])
         self.assertEqual(got[4], ["siege"])
         self.assertEqual(got[5], ["grem"])
-        self.assertEqual(got[6], ["behaviour", "combat"])
+        self.assertEqual(got[6], ["behaviour", "combat", "movement"])
         self.assertEqual(got[7], ["trait", "unit"])
+        self.assertEqual(got[8], ["", "", "", "implicit 0"])
+
+    def test_an_implicit_trait_is_labelled_with_its_default(self):
+        got = self.run_filters([])
+        self.assertEqual(got[-1][-1], "implicit 0")
 
 
 if __name__ == "__main__":
