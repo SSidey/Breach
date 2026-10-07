@@ -17,14 +17,16 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
 const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 
 const EPSILON := 0.000001
 
 
-## Walks `unit` of `squad` a tick of `seconds` towards `place`, at `pace` cells a second
-## for speed 1 on open ground, on `terrain` (null: open).
+## Walks `unit` of `squad` a tick towards `place`; `timing` is [seconds, cells a second
+## at speed 1 on open ground, and optionally the bodies lying on the field], on `terrain`
+## (null: open).
 static func walk(
 	squad: SkirmishSquad,
 	unit: SkirmishUnit,
@@ -38,6 +40,8 @@ static func walk(
 	if terrain != null and way.length() > EPSILON:
 		var ahead := unit.position + way.normalized()
 		full *= terrain.factor(unit.height, unit.position, ahead)
+	if timing.size() > 2 and way.length() > EPSILON:  # bodies on the ground (GroundBodies)
+		full *= GroundBodies.underfoot(unit, unit.position + way.normalized() * 0.5, timing[2])
 	var facing := UnitMotion.vector(squad.heading)
 	var look := place if way.length() > _tuning().walk_face_travel else place + facing
 	unit.position = UnitMotion.walk(unit, unit.position, place, full, seconds, look)
