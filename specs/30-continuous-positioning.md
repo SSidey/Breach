@@ -645,3 +645,20 @@ trials both ways round (Decision 97), and the benchmark from part 0.
 - **Implicit traits** show in the designer, labelled implicit ("useful to know what is
   present on a unit"); any in-game view of a unit hides them.
 - **Stamina rates:** climbing 4 a second, swimming 3 and running 2. "Reasonable for now".
+- **Rejoining, chosen.** The user, after the simulation: "quickest to the goal seems more
+  appropriate". Among ways within 3% of the quickest, the group takes the one back on
+  the route soonest.
+- **Climbing falls.** A unit that runs out of stamina on a climb face falls to the foot,
+  hurt by the drop.
+
+### Forming up, revised (part 4)
+
+The user, on the chieftain's wave taking in wave A after the flank fight: "Revert that and
+have them retain their original path, we could assign traits to leaders that either
+prefer to take units with them or join other units with their own".
+- **By default,** groups of different commands keep their own orders when they meet.
+- A leader that **gathers** takes a leaderless group it meets into its own command.
+- A leader that **joins** brings its group into the other's command.
+- The rest of the rule is unchanged: one command's groups become one; leaderless groups
+  merge only if set to; led groups send home units that started under the other's
+  command.
