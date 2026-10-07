@@ -15,6 +15,8 @@ const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
+const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 
 
 ## This tick's blows: [[attacker, target, damage, flank], ...]. Updates each striker's
@@ -25,12 +27,15 @@ static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 		var foes := _struck_by(squad, squads)
 		if foes.is_empty():
 			continue
+		var near := ScrumNear.index(foes)
+		var reach := BattleTuning.current().reach_contact
 		for unit in squad.living():
-			var pick := _pick(squad, unit, foes, fight_seed)
+			var where := ScrumReach.at(squad, unit)
+			var close := ScrumNear.around(near, where, ScrumReach.radius(unit) + reach)
+			var pick := _pick(squad, unit, close, fight_seed)
 			if pick.is_empty():
 				continue
 			var target: SkirmishUnit = pick[0]
-			var where := ScrumReach.at(squad, unit)
 			var target_at: Vector2 = pick[2]
 			unit.target_id = target.id
 			unit.attack_cooldown -= 1

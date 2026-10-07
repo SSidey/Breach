@@ -16,15 +16,17 @@ const FormationContact = preload("res://sim/skirmish/formation/formation_contact
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
+const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
 
 
 ## Locks free squads onto hostile squads their units have come within reach of. Returns
 ## "engaged" events.
 static func step(squads: Array, tick: int, fight_seed: int = 0) -> Array:
 	var picks := {}  # squad -> the foe it locks onto, every one chosen before any lands
+	var near := {}  # squad -> its units, found by where they stand (ScrumNear), made as needed
 	for squad in squads:
 		if _free(squad):
-			var foe := _nearest(squad, squads, fight_seed)
+			var foe := _nearest(squad, squads, fight_seed, near)
 			if foe != null:
 				picks[squad] = foe
 	var events := []
@@ -47,13 +49,17 @@ static func _free(squad: SkirmishSquad) -> bool:
 
 ## The hostile squad nearest `squad` within reach_engage (between their nearest units' cells),
 ## ties by the squads' draws; null if none is.
-static func _nearest(squad: SkirmishSquad, squads: Array, fight_seed: int) -> SkirmishSquad:
+static func _nearest(
+	squad: SkirmishSquad, squads: Array, fight_seed: int, near: Dictionary
+) -> SkirmishSquad:
 	var best: SkirmishSquad = null
 	var best_key := []
 	for other in squads:
 		if other.faction_id == squad.faction_id or not FormationContact.engageable(other):
 			continue
-		var gap := _gap(squad, other)
+		if not near.has(other):
+			near[other] = ScrumNear.index(other.living().map(func(foe): return [foe, other]))
+		var gap := _gap(squad, other, near[other])
 		var key := [snappedf(gap, 0.000001), ScrumContest.squad_draw(other, fight_seed)]
 		if (
 			gap <= BattleTuning.current().reach_engage + 0.000001
@@ -64,10 +70,14 @@ static func _nearest(squad: SkirmishSquad, squads: Array, fight_seed: int) -> Sk
 	return best
 
 
-## Cells between the two squads' nearest units' bodies (0 where they touch or overlap).
-static func _gap(squad: SkirmishSquad, other: SkirmishSquad) -> float:
+## Cells between the two squads' nearest units' bodies (0 where they touch or overlap),
+## if within reach_engage; past it, some gap past it, or INF. `theirs`: ScrumNear's index
+## of the other's units.
+static func _gap(squad: SkirmishSquad, other: SkirmishSquad, theirs: Dictionary) -> float:
+	var reach := BattleTuning.current().reach_engage + 0.000001
 	var least := INF
 	for unit in squad.living():
-		for foe in other.living():
-			least = minf(least, ScrumReach.gap(squad, unit, other, foe))
+		var at := ScrumReach.at(squad, unit)
+		for entry in ScrumNear.around(theirs, at, ScrumReach.radius(unit) + reach):
+			least = minf(least, ScrumReach.gap(squad, unit, other, entry[0]))
 	return least

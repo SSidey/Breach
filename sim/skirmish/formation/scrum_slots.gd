@@ -74,7 +74,7 @@ static func pick(
 	var best := []
 	var best_key := []
 	for slot in slots:
-		if not (_within(seeker, slot[0], ground) if crowded else open(seeker, slot[0], ground)):
+		if not (within(seeker, slot[0], ground) if crowded else open(seeker, slot[0], ground)):
 			continue
 		var key := [
 			snappedf(at.distance_to(slot[0]), 0.000001),
@@ -92,7 +92,7 @@ static func pick(
 ## True if the seeker may take the slot at `point`: within its leash, on ground it can
 ## cross, with no other body on it and no claim within a body's breadth of it.
 static func open(seeker: SkirmishUnit, point: Vector2, ground: Array) -> bool:
-	if not _within(seeker, point, ground):
+	if not within(seeker, point, ground):
 		return false
 	var radius := ScrumReach.radius(seeker)
 	for body in ground[1]:
@@ -105,7 +105,7 @@ static func open(seeker: SkirmishUnit, point: Vector2, ground: Array) -> bool:
 
 
 ## True if `point` is within the seeker's leash, on ground it can cross.
-static func _within(seeker: SkirmishUnit, point: Vector2, ground: Array) -> bool:
+static func within(seeker: SkirmishUnit, point: Vector2, ground: Array) -> bool:
 	if point.distance_to(ground[0]) > BattleTuning.current().scrum_leash:
 		return false
 	var terrain: FormationTerrain = ground[3]
