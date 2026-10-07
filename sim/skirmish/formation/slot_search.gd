@@ -134,7 +134,7 @@ static func _standing_on(point: Vector2, radius: float, bodies: Array, crowd: Di
 
 ## Considers the slots of `grid` ring by ring out from the seeker, until no ring further
 ## out could hold one nearer than the best, or one within its leash; `listed` maps the
-## grid's points to slots (empty: the same).
+## grid's points to slots (empty: the same). A free slot found claimed leaves the grid.
 static func _outwards(search: Dictionary, grid: Dictionary, listed: Array) -> void:
 	var at: Vector2 = search["at"]
 	var centre := BodyGrid.cell_of(at)
@@ -147,7 +147,10 @@ static func _outwards(search: Dictionary, grid: Dictionary, listed: Array) -> vo
 			return
 		var reach: float = search["key"][0] if search["best"] >= 0 else leash
 		for found in BodyGrid.ring(grid, centre, ring_number, at, reach):
-			_consider(search, found if listed.is_empty() else listed[found])
+			var index: int = found if listed.is_empty() else listed[found]
+			_consider(search, index)
+			if not search["crowded"] and search["dead"].has(index):  # claimed: gone for all
+				grid["cells"][BodyGrid.cell_of(search["slots"][index][0])].erase(found)
 
 
 ## Weighs one slot: it becomes the best if it qualifies and its key (ScrumSlots.pick) is

@@ -39,7 +39,7 @@ static func toward(
 	var own := ScrumReach.radius(unit)
 	var best := []
 	var look := BattleTuning.current().bodies_steer_look
-	for body in _near(bodies, crowd, at, look + own):
+	for body in _near(bodies, crowd, at, at + ahead * minf(length, look), own):
 		if body[2].squad_id == unit.squad_id:
 			continue  # itself, or its own squad's: they part for it
 		var clearance: float = own + body[1]
@@ -79,12 +79,12 @@ static func _round(at: Vector2, centre: Vector2, reach: float, side: Vector2) ->
 	return at + turned * sqrt(gap * gap - reach * reach)
 
 
-## The bodies that could stand within `reach` (plus a body's radius) of `at`, in the list's
-## order: all of them without a crowd.
-static func _near(bodies: Array, crowd: Dictionary, at: Vector2, reach: float) -> Array:
+## The bodies that could stand within a body's breadth (`own` and theirs) of the way from
+## `at` to `end`, in the list's order: all of them without a crowd.
+static func _near(bodies: Array, crowd: Dictionary, at: Vector2, end: Vector2, own: float) -> Array:
 	if crowd.is_empty():
 		return bodies
 	var out := []
-	for found in BodyGrid.near(crowd, at, reach + crowd["widest"] + 0.01):
+	for found in BodyGrid.near(crowd, at, own + crowd["widest"] + 0.01, end):
 		out.append(bodies[found])
 	return out

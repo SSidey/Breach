@@ -48,12 +48,12 @@ static func cell_of(point: Vector2) -> Vector2i:
 
 
 ## Indices of the points in every cell within `reach` of `point` (and some just beyond),
-## in ascending order.
-static func near(grid: Dictionary, point: Vector2, reach: float) -> Array:
+## in ascending order; with `end`, of the way from `point` to `end`.
+static func near(grid: Dictionary, point: Vector2, reach: float, end := point) -> Array:
 	var low: Vector2i = grid["low"]
 	var high: Vector2i = grid["high"]
-	var from := cell_of(point - Vector2(reach, reach)).max(low)
-	var to := cell_of(point + Vector2(reach, reach)).min(high)
+	var from := cell_of(point.min(end) - Vector2(reach, reach)).max(low)
+	var to := cell_of(point.max(end) + Vector2(reach, reach)).min(high)
 	var cells: Dictionary = grid["cells"]
 	var out := []
 	var buckets := 0
