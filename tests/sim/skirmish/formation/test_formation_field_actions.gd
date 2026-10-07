@@ -128,7 +128,7 @@ func test_waves_that_merge_after_a_fight_regroup_and_march_on() -> void:
 	# overlapping; they used to stand there regrouping forever, knocking each other loose.
 	var log := "seed 492625 captain off\n96 via_c on\n158 send A+B"
 
-	var field := FormationFieldActions.replay(log, 800)
+	var field := FormationFieldActions.replay(log, 1200)  # units walk to their places
 
 	for squad in field.sim.squads():
 		if squad.faction_id == "player" and squad.state != SkirmishSquad.State.DESTROYED:

@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## friends they run through; they rally at a led formation, or re-form round their own
 ## leader when no enemy is near; and those reaching home leave the field.
 
+const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -46,6 +47,7 @@ func _fight(their_speed: float = 1.0, mine_def: UnitDef = null) -> Array:
 	mine.front_distance = 30.0 / 64.0
 	var theirs := sim.spawn_squad(4, _line(_def(500, 2, their_speed), 4), "the_kingdom", false)
 	theirs.front_distance = 32.0 / 64.0
+	FormationMarch.sync_units(sim.squads())  # placed there
 	_run(sim, 5)
 	return [sim, mine, theirs]
 
@@ -82,6 +84,7 @@ func test_hostiles_strike_routers_running_past_them_from_behind() -> void:
 	var mine: SkirmishSquad = setup[1]
 	var across := sim.spawn_squad(4, _line(_def(500, 2), 4), "the_kingdom", false)
 	across.front_distance = 15.0 / 64.0  # a hostile line between the routers and home
+	FormationMarch.sync_units([across])  # placed there
 	sim.order(across.id, SkirmishUnit.Order.HOLD)
 	mine.morale = 0
 	var ids := mine.units.map(func(u): return u.id)  # before any reach home and leave

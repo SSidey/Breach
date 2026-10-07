@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 ## in is let go, so the formation re-forms and marches on; narrowing at a gap is a re-form
 ## at the formation's own pace; contact mid-re-form is combat.
 
+const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -50,6 +51,7 @@ func _faced_south(sim: FormationSimulation) -> SkirmishSquad:
 	var east := FormationRoute.new(PackedVector2Array([Vector2(0, 20), Vector2(128, 20)]))
 	var squad := sim.spawn_squad(4, _row(4), "player", true, 0, east)
 	squad.front_distance = 30.0 / 64.0
+	FormationMarch.sync_units([squad])  # placed there
 	sim.step()
 	squad.stance = {"anchor": squad.position, "heading": 180.0}
 	return squad

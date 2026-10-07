@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
+const FormationWalk = preload("res://sim/skirmish/formation/formation_walk.gd")
 const FormationRendezvous = preload("res://sim/skirmish/formation/formation_rendezvous.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -49,7 +50,10 @@ func test_the_prediction_matches_the_march_round_bends() -> void:
 	var sim := FormationSimulation.new(4.0, TICK)
 	var squad := sim.spawn_squad(8, _line(8), "player", true, 0, route)
 
-	var predicted := FormationRendezvous.ticks_to(route, 100.0, 8, CELLS_PER_SECOND, TICK)
+	var slack := FormationWalk.slack_of(squad)
+	var predicted := FormationRendezvous.ticks_to(
+		route, 100.0, 8, CELLS_PER_SECOND, TICK, 0.0, null, slack
+	)
 	var actual := _arrival(sim, {"x": squad}, {"x": 100.0})
 
 	assert_int(absi(actual["x"] - predicted)).is_less_equal(1)

@@ -112,3 +112,7 @@ reach_front_arc_degrees = 60.0
 reach_engage = 1.0
 reach_pursuit_lag = 2.0
 reach_narrow_seconds = 1.0
+walk_slack_drilled = 0.5
+walk_slack_loose = 2.0
+walk_lost = 8.0
+walk_face_travel = 2.0

@@ -259,6 +259,19 @@ static var _current: BattleTuning = null
 ## Seconds a squad holds while narrowing at a gap or widening past it.
 @export var reach_narrow_seconds := 0.0
 
+@export_group("Walking (spec 30 round 3)")
+## How far (cells) a unit may lag behind its place before its formation waits for it: the
+## slack of a formation of discipline 100, and of one of discipline 0 (between, by its
+## discipline); looser troops let their ranks spread further.
+@export var walk_slack_drilled := 0.0
+@export var walk_slack_loose := 0.0
+## A unit further than this (cells) from its place has fallen behind: a formation waits
+## for it only if no man is left behind.
+@export var walk_lost := 0.0
+## A unit further than this (cells) from its place faces where it walks; nearer, it faces
+## its formation's way, stepping sideways or back into place.
+@export var walk_face_travel := 0.0
+
 
 ## The tuning in play: content/tuning/battle_tuning.tres, loaded once.
 static func current() -> BattleTuning:

@@ -25,6 +25,7 @@ extends RefCounted
 ##                106)
 ##   7. re-form - units swap toward their preferred places (FormationShuffle, Decision 46)
 
+const FormationWalk = preload("res://sim/skirmish/formation/formation_walk.gd")
 const FormationCommand = preload("res://sim/skirmish/formation/formation_command.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -55,7 +56,6 @@ const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.g
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationNarrowing = preload("res://sim/skirmish/formation/formation_narrowing.gd")
-const FormationWheel = preload("res://sim/skirmish/formation/formation_wheel.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const FormationFronts = preload("res://sim/skirmish/formation/formation_fronts.gd")
 const FormationJoins = preload("res://sim/skirmish/formation/formation_joins.gd")
@@ -63,7 +63,6 @@ const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 const MELEE_REACH := FormationContact.MELEE_REACH
 const TRAVEL_SCALE := 0.125  # tiles per second at speed 1: 8 cells a second (Decision 68)
-const EPSILON := 0.000001
 ## States in which a squad doesn't march (a rout flees on its own: FormationRout).
 const STANDING := [
 	SkirmishSquad.State.DESTROYED,
@@ -131,7 +130,7 @@ func spawn_squad(
 	squad.morale = FormationMorale.ceiling(squad)
 	squad.combat_width = combat_width
 	_squads.append(squad)
-	FormationMarch.sync_units(_squads)
+	FormationMarch.sync_units([squad])  # placed: its units stand on their places
 	return squad
 
 
@@ -178,7 +177,8 @@ func step() -> Array:
 	UnitBodies.step(_squads, fight_seed)  # after every move: friends' bodies part (Decision 106)
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
-	FormationMarch.sync_units(_squads)
+	var walking := [tick_seconds, TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE]
+	FormationMarch.sync_units(_squads, walking, terrain)  # units walk to their places
 	return events
 
 
@@ -233,16 +233,14 @@ func _move(events: Array) -> void:
 			continue  # an about-face is a re-form: its units walk to their places (Decision 92)
 		if FormationNarrowing.holds(mover, terrain, _tick, tick_seconds, events):
 			continue
+		var keeping := FormationWalk.share(mover)  # within its slack of its units
+		if keeping <= 0.0:
+			continue  # it waits for them (spec 30 round 3)
 		var cells_per_second := mover.speed() * TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
-		var before := mover.heading
-		FormationSweep.step(mover, cells_per_second, tick_seconds)  # round bends (Decision 105)
+		FormationSweep.step(mover, cells_per_second, tick_seconds * keeping)  # Decision 105
 		var open_step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		var step := FormationMarch.pace(mover, terrain, open_step, _tick, events)
-		step *= GroundBodies.drag(mover, _squads)  # bodies on the ground (Decision 121)
-		var walk := step / maxf(mover.speed(), EPSILON) * MapLayoutDef.CELLS_PER_TILE
-		var share := FormationWheel.share(mover, before, travel * step, walk)  # Decision 116
-		FormationWheel.cut_sweep(mover, before, share)
-		step *= share
+		step *= GroundBodies.drag(mover, _squads) * keeping  # bodies on the ground (Decision 121)
 		marching[mover.id] = [mover, FormationMarch.toward(mover, travel * step, end), end]
 	_march(marching, events)
 	for mover in waiting:
