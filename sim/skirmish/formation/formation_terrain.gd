@@ -97,6 +97,19 @@ func crossing(walker: TerrainWalker, from: Vector2, to: Vector2) -> float:
 	return share
 
 
+## The movement mode of `walker` stepping from `from` into `to`: climbing a cliff, else
+## swimming water at least its height deep, else walking (spec 30).
+func mode(walker: TerrainWalker, from: Vector2, to: Vector2) -> TerrainWalker.Mode:
+	var index := _index(to)
+	if index < 0:
+		return TerrainWalker.Mode.WALKING
+	if _height[index] - height_at(from) > BattleTuning.current().ground_cliff_quarters:
+		return TerrainWalker.Mode.CLIMBING
+	if _depth[index] >= walker.height:
+		return TerrainWalker.Mode.SWIMMING
+	return TerrainWalker.Mode.WALKING
+
+
 ## True if `from` stands at least a quarter-cell higher than `to`: a striker there has
 ## the high ground (Decision 85).
 func high_ground(from: Vector2, to: Vector2) -> bool:
