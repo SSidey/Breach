@@ -6111,3 +6111,73 @@ movement pass).
 
 **Rules over cases:** general: every unit's wounds, condition, recovery and gait, one rule.
 **Order:** the waking time is seeded by the battle, the unit and its wounds (Decisions 93, 97).
+
+### Decision 127 — The downed may play dead while foes are near; a foe may take it for dead
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-07
+
+**Rationale:** In the user's replay of Decision 126 (log 5), units came to among standing
+foes, were downed again at once, and spiralled into death by wounds. The user: "Yes, build
+it, 8 cells is fine for now".
+- **Lying still.** A unit due to come to, with a standing foe within 8 cells, may stay
+  down instead. The chance is a seeded roll: 0.4 at average wits, scaled by its wits, plus
+  0.25 for each level of **cunning** (its own, or its formation leader's if higher). One
+  already playing dead keeps at it. Either way it looks again 3 seconds later, and gets up
+  once no foe is near.
+- **Taken for dead.** A foe that would finish or capture a body that is playing dead first
+  judges it, once for the pair. It is fooled when the body's wits beat its own, each side
+  getting +10 per level of **cunning** (body) or **thorough** (taker), give or take a die of
+  20. A fooled foe leaves the body alone.
+- **Tunable:** the reach, chances, check interval, trait weight and die are all in
+  BattleTuning's Wounds group.
+
+**Waiting:** perception beyond wits (spec 28 round 2); a body seen to move being
+believed no longer.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Units getting up regardless | The death spiral of log 5. |
+| No coming to while any foe is on the field | Too broad: a far-off foe would pin every downed unit. |
+
+**Rules over cases:** general: every downed unit and every taker, one rule each.
+**Order:** both rolls are seeded by the battle and the units' ids (Decisions 93, 97).
+
+### Decision 128 — A registry of tags, traits and statuses; tags carry where a trait may sit; items grant traits; the designer's Library browses it
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-07
+
+**Rationale:** The user asked for traits, statuses and other categories to be grouped and
+searchable, and for assignments to be checked ("a weapon cant be cunning, it might have an
+ability to grant that"). They agreed tags should "bring the valid assignments with
+[them]".
+- **The registry** is `content/registry/{tags,traits,statuses}.json`. Every tag, trait
+  and status has an id, a description and tags.
+- **Tags** say what they can be put on (trait, unit, item, status). A trait tag also names
+  its **targets**: the kinds of thing its traits may sit on (unit, leader, weapon,
+  material, structure). For example, behaviour → unit and leader; combat → unit and
+  weapon.
+- **A trait's targets** are the targets all its tags share, narrowed by an optional
+  **only**. Siege and wounding are weapon-only.
+- **Grants.** An item's own traits are checked against the item. What it **grants** its
+  carrier is checked against a unit, and merged into the carrier's traits.
+- **Checked.** Godot's ContentRegistry holds all content to the registry in a test. Every
+  trait the code reads must be registered.
+- **Browsed.** The designer's **Library** page (`GET /api/registry`) lists tags, traits
+  and statuses. You can search, filter by tag or target, and see the content files using
+  each.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Fixed categories on each trait | Tags spread across every entity type and carry the targets, so one mechanism serves both. |
+| Targets listed per trait only | Duplicated across like traits; "only" covers the exceptions. |
+| A browser in Godot | The user: "Designer app is fine". |
+
+**Rules over cases:** general: one rule for every trait's targets, and one check for all
+content.
+**Order:** not applicable (content data, no simulation order).
