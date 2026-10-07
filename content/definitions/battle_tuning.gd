@@ -205,14 +205,29 @@ static var _current: BattleTuning = null
 @export var pursuit_tempted_within := 0.0
 
 @export_group("Ground (Decision 85)")
-## A rise of more than this many quarter-cells is a cliff: impassable until climbers come.
+## A rise of more than this many quarter-cells is a cliff, climbed only by a climber.
 @export var ground_cliff_quarters := 0
 ## The pace each quarter-cell risen costs; downhill is no faster.
 @export var ground_slope_cost := 0.0
 ## The pace in water a quarter to a half of a unit's height deep (wading), and from a half
-## to its height (slow wading); deeper is impassable until swimmers come.
+## to its height (slow wading); deeper, it swims.
 @export var ground_wading := 0.0
 @export var ground_slow_wading := 0.0
+## Swimming (spec 30 round 3): water at least a unit's height deep is crossed at
+## ground_swim_pace, plus ground_swimmer_pace a level of "swimmer" (at most its full pace).
+## It sinks - can't swim - with "sinks", or carrying more than ground_sink_share of the way
+## through its first encumbrance band (from load_easy of its limit to its limit).
+@export var ground_swim_pace := 0.0
+@export var ground_swimmer_pace := 0.0
+@export var ground_sink_share := 0.0
+## Climbing (spec 30 round 3, Decision 64): a cliff's face demands the climb difficulty
+## painted on the cell climbed into (ground_climb_demand where none is); a climber meeting
+## it climbs at ground_climb_pace, one level short at half that, further short not at all.
+@export var ground_climb_pace := 0.0
+@export var ground_climb_demand := 0
+## How far (cells) either side of the straight way a path search looks for a way round
+## (spec 30 round 3); a way found may lead further.
+@export var paths_leash := 0.0
 
 @export_group("Bodies (Decisions 106 and 114)")
 ## How many times over a unit in its formation's frame weighs, against being pushed.
