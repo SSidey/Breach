@@ -34,6 +34,7 @@ var _width: int
 var _best := PackedFloat64Array()
 var _parent := PackedInt32Array()
 var _closed := PackedByteArray()
+var _asides := PackedFloat32Array()  # each cell's distance aside, worked out when first asked
 var _open := PathFrontier.new()
 
 
@@ -60,6 +61,8 @@ func run() -> Array[Vector2i]:
 	_parent.resize(count)
 	_parent.fill(-1)
 	_closed.resize(count)
+	_asides.resize(count)
+	_asides.fill(-1.0)
 	var start := _index(_start)
 	_best[start] = 0.0
 	_open.push(start, _estimate(_start), _aside(_start), _estimate(_start))
@@ -128,10 +131,14 @@ func _estimate(cell: Vector2i) -> float:
 
 ## How far the cell's centre lies from the straight way between start and goal.
 func _aside(cell: Vector2i) -> float:
-	var centre := _centre(cell)
-	return centre.distance_to(
-		Geometry2D.get_closest_point_to_segment(centre, _centre(_start), _centre(_goal))
-	)
+	var index := _index(cell)
+	if _asides[index] < 0.0:
+		var centre := _centre(cell)
+		var nearest := Geometry2D.get_closest_point_to_segment(
+			centre, _centre(_start), _centre(_goal)
+		)
+		_asides[index] = centre.distance_to(nearest)
+	return _asides[index]
 
 
 func _trace(goal: int) -> Array[Vector2i]:
