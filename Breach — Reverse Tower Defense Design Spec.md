@@ -6056,3 +6056,54 @@ unit (it recovered between its blows).
 
 **Rules over cases:** general: every unit's gait, costs and recovery, one rule.
 **Order:** no ordering: each unit's stamina is its own.
+
+### Decision 126 — Wounds work through condition; the downed come to on a timer; retreats and pursuits run by default; the wounded can be borne
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-07
+
+**Rationale:** From the user's feel test of spec 28 round 1 (seed 2656): downed units lay in the
+lane until someone happened by, finished units vanished without a mark, and a retreat
+pursued at a run had no chance. The user chose wounds through condition over bands of
+downed ("I think this is the one").
+- **Wounds.** Each time a unit is downed it takes a **wound** (the status `wounded N`),
+  which lowers its **condition** (Decision 125) by a step (0.4, the user: "0.4, 0.5 or
+  so"). A trait may let a unit shrug off its first N wounds ("hardened N"). Rest, medics
+  and structures will remove wounds one at a time (round 2).
+- **Condition drains.** Below a threshold (0.25) a unit loses HP over time, standing or
+  downed. So a unit downed when its condition is already poor is bleeding out, and one
+  left downed while its state worsens (hunger, cold, no rest - statuses as they come) may
+  die before it recovers. Nothing lies in the lane forever.
+- **The downed come to.** A downed unit lies a seeded while, shorter the hardier it is,
+  then comes to at 1 HP: it rejoins its formation if it can see it, and otherwise makes
+  for home alone (a lone router: to be caught, taken, or reach the reserve). Finishing or
+  capture by a foe beside it stays guaranteed; the timer only settles those nobody reaches.
+- **Gaits by trait.** A retreat runs, as a pursuit does (the user: "if we are having
+  pursuers run then we ought to have retreat be at a running pace also"), unless its
+  leader - or every one of its units - keeps to a march then (`retreats_at_march`,
+  `pursues_at_march`; a leader's or a unit type's trait). A run builds up over a moment,
+  and a pursuer first reacts (quicker with wits): a retreat's head start.
+- **Bearing the wounded.** A wave can be told to **leave**, **recover** or **carry** its own
+  downed: a free unit beside a body picks it up, its weight load on the bearer; recovered,
+  the bearer takes it home and both return to the reserve; carried, it goes on with the
+  wave. A bearer that falls drops it.
+- **Seen.** The scene draws the dead, the taken and the borne where they are.
+- **Leader** is the one word for commanders, heroes and lords (units with leadership).
+
+**Waiting (round 2 and the movement pass):** captives kept and marked (a captive status
+lost on attacking; manacles, chain points, cages); a leader's trait to read how badly a
+downed foe is hurt (worth capturing, or needing a medic first); medics stabilising and
+removing wounds; gathering bodies for meat; a stance or leader trait to seek a visible
+enemy off the route, and an "eager" unit trait to break ranks for the fray (spec 30's
+movement pass).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Bands of downed (out, dying, dead by depth) | The user preferred one mechanism: wounds lowering condition, condition draining HP. |
+| A retreat walking unless hurried | The user: pursuers and retreats alike run, traits making either march. |
+| Downed units lying until someone comes | They lay in the lane forever; the timer and the drain settle them. |
+
+**Rules over cases:** general: every unit's wounds, condition, recovery and gait, one rule.
+**Order:** the waking time is seeded by the battle, the unit and its wounds (Decisions 93, 97).

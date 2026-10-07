@@ -317,6 +317,12 @@ mirror trials within noise: head-on 135/119 and 122/127 swapped, flank 300/0 bot
   - **Wheeling and re-forming as units:** each unit finding its own way to its place
     (Decision 116's rejected first approach), which first needs every move of a frame to
     say whether it walks or is set (placing, joining and re-forming set it).
+  - **Seeking a visible enemy** (spec 28's feel test, Decision 126): a formation leaving
+    its route for an enemy formation it can see - by a stance the player sets before it
+    leaves, or a leader's trait - preferring its flank or rear, within a leash of its
+    route; and units with an "eager" trait more likely to break ranks for the fray. In the
+    feel test (seed 2656) B, hurried down its route, passed thirteen cells behind the
+    line's rear while the line chased A, and marched on.
   - **Taking the downed** (spec 28, Decisions 121 and 124): units walking out from their
     formation after a fight to finish or capture downed foes - "units must either kill or
     capture" - and bodies on the ground slowing units loose in a fight. Until this pass,

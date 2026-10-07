@@ -12,7 +12,7 @@ traits: bonuses and new capabilities that plug into the same pairs.
 
 ## Status
 
-**Round 1 built (Decisions 117 to 125), in stacked PRs #130 to #155; ready for its feel
+**Round 1 built (Decisions 117 to 126), in stacked PRs #130 to #160; ready for its feel
 test.** See "Round 1 as built" under Rounds. Spec 30 is built
 and merged, so what a unit needs for the fights it now has is clear. Round 1 took stock of
 the unit as built and the placeholders it leans on, and the user answered with the unit
@@ -261,6 +261,14 @@ that turns away at a run.
 | 30 s | 70% | 126.9 | 193 | 0 / 20 |
 | 60 s | 40% | 44.6 | 70 | 20 / 20 |
 | 90 s | 10% | 0 | 0 | 20 / 20 |
+
+**After the first feel test** (seed 2656; Decision 126, #156 to #160): wounds now lower
+condition (0.4 each) and a poor condition drains HP, so the downed come to after a seeded
+while - rejoining their formation in sight, or making for home alone - or die of their
+wounds, instead of lying in the lane; retreats run as pursuits do unless a trait keeps
+either to a march, and a run builds up while a pursuer reacts; the scene draws the dead
+and the taken; and a wave can leave, recover or carry its own wounded ("A wounded" / "B
+wounded"). Seeking a visible enemy off the route went to spec 30's movement pass.
 
 **For the feel test:** whether the kingdom's parrying line is too strong for the grems;
 whether crits and dodges read in play; the downed lying and being finished after a fight;
