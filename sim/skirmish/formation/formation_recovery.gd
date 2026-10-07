@@ -3,15 +3,16 @@ extends RefCounted
 ## What the wounded come to (Decisions 121, 125 and 126). A unit's **condition** is 1 less
 ## wounds_condition for each wound past those it is hardened to (a "hardened N" trait), and
 ## later its other statuses; below condition_drain_below it loses HP, standing or downed,
-## the faster the further below (condition_drain a second at condition 0) - so two
-## wounds in good condition are survivable, a third bleeds it out unless it is aided soon.
-## A **downed** unit lies a seeded while (wounds_wake_seconds, shorter the hardier it is)
-## and then comes to at 1 HP where it lies: it joins the nearest standing friendly
-## formation it can see - its own, or one that bore it - walking to a place at its back,
-## and otherwise makes for home on its own, as a lone router (FormationStrays), to be
-## caught, taken, or reach the reserve. **Regeneration** mends HP up to its limit per rest,
-## times its condition, through damage; a blow of a type it fears stops it a while; downed,
-## it runs only with "regenerates_downed". Pure over the squads it is given.
+## the faster the further below (condition_drain a second at condition 0) - so two wounds
+## in good condition are survivable, a third bleeds it out unless it is aided soon. A
+## **downed** unit lies a seeded while (wounds_wake_seconds, shorter the hardier it is) and
+## then comes to at 1 HP where it lies: it joins the nearest standing friendly formation it
+## can see - its own, or one that bore it - walking to a place at its back, and otherwise
+## makes for home on its own, as a lone router (FormationStrays), to be caught, taken, or
+## reach the reserve. With a foe within a few cells when it could get up, it may play dead
+## instead (Decision 127). **Regeneration** mends HP up to its limit per rest, times its
+## condition, through damage; a blow of a type it fears stops it a while; downed, it runs
+## only with "regenerates_downed". Pure over the squads it is given.
 
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -27,6 +28,9 @@ const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 ## their formation, to make for home (FormationStrays).
 static func step(squads: Array, seconds: float, tick: int, fight_seed: int, events: Array) -> Array:
 	var waking := []  # [unit, its squad]: decided first, so no squad's order moves another's
+	var standing := []
+	for squad in squads:
+		standing.append_array(squad.living())
 	for squad in squads:
 		for unit in squad.units:
 			var downed: bool = unit.state in [SkirmishUnit.State.DOWNED, SkirmishUnit.State.CARRIED]
@@ -39,12 +43,17 @@ static func step(squads: Array, seconds: float, tick: int, fight_seed: int, even
 				events.append(FormationEvents.unit_event("died_of_wounds", tick, squad, unit))
 				continue
 			if downed and _wakes(unit, seconds, fight_seed):
-				waking.append([unit, squad])
+				if not _lies_still(unit, squad, standing, fight_seed):
+					waking.append([unit, squad])
+				elif not unit.playing_dead:
+					unit.playing_dead = true
+					events.append(FormationEvents.unit_event("playing_dead", tick, squad, unit))
 	var strays := []
 	for entry in waking:
 		var unit: SkirmishUnit = entry[0]
 		unit.hp = maxi(unit.hp, 1)
 		unit.state = SkirmishUnit.State.MOVING
+		unit.playing_dead = false
 		var joined := _join(unit, entry[1], squads, fight_seed)
 		var extra := {"alone": joined == null}
 		if joined == null:
@@ -53,6 +62,36 @@ static func step(squads: Array, seconds: float, tick: int, fight_seed: int, even
 			extra["joined"] = joined.id
 		events.append(FormationEvents.unit_event("came_to", tick, entry[1], unit, extra))
 	return strays
+
+
+## Whether a unit due to come to lies still instead (Decision 127): with a standing foe
+## near, one already playing dead keeps at it, and one not yet decides by a seeded chance
+## from its wits and cunning; either looks again a few seconds on.
+static func _lies_still(
+	unit: SkirmishUnit, squad: SkirmishSquad, standing: Array, fight_seed: int
+) -> bool:
+	var tuning := BattleTuning.current()
+	var danger := standing.any(
+		func(foe):
+			return (
+				foe.faction_id != unit.faction_id
+				and foe.position.distance_to(unit.position) <= tuning.wounds_danger_reach
+			)
+	)
+	if not danger:
+		return false
+	if not unit.playing_dead:
+		var wits: float = unit.attributes.get("wits", UnitDef.AVERAGE)
+		var cunning := int(unit.traits.get("cunning", 0))
+		for other in squad.living():
+			if other.leadership > 0:
+				cunning = maxi(cunning, int(other.traits.get("cunning", 0)))
+		var chance := tuning.wounds_play_dead * wits / UnitDef.AVERAGE
+		chance += cunning * tuning.wounds_cunning
+		if BattleRolls.uniform(fight_seed, [unit.id, unit.wounded, "play dead"]) >= chance:
+			return false
+	unit.wake_left = tuning.wounds_play_dead_check
+	return true
 
 
 ## Its condition: 1, less a step for each wound past those it is hardened to; 0 to the cap.

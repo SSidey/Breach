@@ -15,6 +15,7 @@ extends RefCounted
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const UnitDef = preload("res://content/definitions/unit_def.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.gd")
@@ -90,11 +91,25 @@ static func _within_reach(taker: Array, standing: Array, downed: Array, fight_se
 		var gap: float = body[0].position.distance_to(unit.position)
 		if gap > tuning.wounds_reach or _guarded(body[0], standing):
 			continue
+		if body[0].playing_dead and _fooled(unit, body[0], fight_seed):
+			continue  # it takes the body for dead (Decision 127)
 		var key := [snappedf(gap, 0.000001), ScrumContest.draw(body[0], fight_seed)]
 		if best.is_empty() or key < best_key:
 			best = body
 			best_key = key
 	return best
+
+
+## True if the taker believes a body playing dead is dead: the body's wits and cunning beat
+## the taker's wits and thoroughness in a seeded roll, once for the pair.
+static func _fooled(taker: SkirmishUnit, body: SkirmishUnit, fight_seed: int) -> bool:
+	var tuning := BattleTuning.current()
+	var guile: float = body.attributes.get("wits", UnitDef.AVERAGE)
+	guile += int(body.traits.get("cunning", 0)) * tuning.wounds_trait_wits
+	var sight: float = taker.attributes.get("wits", UnitDef.AVERAGE)
+	sight += int(taker.traits.get("thorough", 0)) * tuning.wounds_trait_wits
+	var roll := BattleRolls.uniform(fight_seed, [taker.id, body.id, "believe"])
+	return guile - sight + (roll - 0.5) * tuning.wounds_believe_die > 0.0
 
 
 static func _guarded(body: SkirmishUnit, standing: Array) -> bool:

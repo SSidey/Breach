@@ -133,6 +133,8 @@ var drain_carry := 0.0
 ## its weapons'), and those the last blow that struck it would add.
 var wounding := 0
 var last_wounding := 0
+## Formation sim: lying still while foes are near, though it could get up (Decision 127).
+var playing_dead := false
 ## Formation sim: the friend it bears, or the friend bearing it (unit ids; 0: none), and the
 ## weight of its own gear, for its load with a body on it (Decision 126).
 var carrying := 0

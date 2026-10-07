@@ -34,6 +34,7 @@ const NOTABLE := [
 	"sent_home",
 	"came_to",
 	"borne",
+	"playing_dead",
 	"died_of_wounds",
 	"flanked",
 	"faced",

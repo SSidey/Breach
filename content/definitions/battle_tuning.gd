@@ -147,6 +147,18 @@ static var _current: BattleTuning = null
 ## Each wound - a time downed (Decision 126) - takes this off a unit's condition; a unit
 ## "hardened N" shrugs off its first N.
 @export var wounds_condition := 0.0
+## Playing dead (Decision 127): a downed unit due to come to with a standing foe within
+## wounds_danger_reach cells lies still instead by a seeded chance - wounds_play_dead at
+## average wits, more with wits, plus wounds_cunning a level of "cunning" (its own or its
+## leader's) - and looks again every wounds_play_dead_check seconds. A foe about to take
+## it is fooled when the body's wits beat its own, each with wounds_trait_wits a level of
+## "cunning" or "thorough", in a roll of wounds_believe_die.
+@export var wounds_danger_reach := 0.0
+@export var wounds_play_dead := 0.0
+@export var wounds_cunning := 0.0
+@export var wounds_play_dead_check := 0.0
+@export var wounds_trait_wits := 0.0
+@export var wounds_believe_die := 0.0
 ## The weight of a body borne by a friend, per cell of its footprint (Decision 126).
 @export var wounds_body_weight := 0.0
 ## Seconds a downed unit of average constitution lies before it comes to at 1 HP, times a

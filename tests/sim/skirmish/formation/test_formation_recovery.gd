@@ -200,3 +200,72 @@ func test_a_wounding_blow_that_downs_adds_its_wounds() -> void:
 	FormationDeaths.bury([_squad([unit])], 1, [])
 
 	assert_int(unit.wounded).is_equal(3)
+
+
+## `count` downed player units due to come to, a kingdom foe standing two cells off each.
+func _due_with_foes(count: int, cunning: int = 0) -> Array:
+	var downed := []
+	var foes := []
+	for index in range(count):
+		var unit := _downed(_unit(index + 1, Vector2(index * 20, 0)))
+		unit.wake_left = 0.05
+		unit.traits = {"cunning": cunning}
+		downed.append(unit)
+		var foe := _unit(100 + index, Vector2(index * 20 + 2, 0))
+		foe.faction_id = "the_kingdom"
+		foes.append(foe)
+	var theirs := _squad(foes)
+	theirs.faction_id = "the_kingdom"
+	theirs.id = 2
+	return [[_squad(downed), theirs], downed, foes]
+
+
+func test_with_a_foe_near_some_play_dead_and_the_cunning_more_often() -> void:
+	var plain := _due_with_foes(40)
+	var cunning := _due_with_foes(40, 2)
+	_run(plain[0], 0.1)
+	_run(cunning[0], 0.1)
+
+	var lying := func(units): return units.filter(func(u): return u.playing_dead).size()
+	assert_int(lying.call(plain[1])).is_between(4, 36)
+	assert_int(lying.call(cunning[1])).is_greater(lying.call(plain[1]))
+	for unit in plain[1]:  # the rest get up into the fight
+		assert_bool(unit.playing_dead or unit.is_alive()).is_true()
+
+
+func test_one_playing_dead_gets_up_once_its_foes_are_gone() -> void:
+	var scene := _due_with_foes(40, 5)
+	_run(scene[0], 0.1)
+	var faker: SkirmishUnit = scene[1].filter(func(u): return u.playing_dead)[0]
+	_run(scene[0], 10.0)
+	assert_bool(faker.is_alive()).is_false()  # its foe still stands by
+	for foe in scene[2]:
+		foe.position += Vector2(0, 50)
+	_run(scene[0], 5.0)
+
+	assert_bool(faker.is_alive()).is_true()
+	assert_bool(faker.playing_dead).is_false()
+
+
+func test_a_thorough_foe_is_fooled_less_often() -> void:
+	var FormationWounds = load("res://sim/skirmish/formation/formation_wounds.gd")
+	var fooled := [0, 0]
+	for index in range(60):
+		var body := _downed(_unit(index + 1, Vector2.ZERO))
+		body.playing_dead = true
+		for which in range(2):
+			var taker := _unit(1000 + index, Vector2(1, 0))
+			taker.faction_id = "the_kingdom"
+			taker.traits = {"thorough": 2 * which}
+			var events := []
+			var theirs := _squad([taker])
+			theirs.faction_id = "the_kingdom"
+			theirs.id = 2
+			body.hp = 0
+			body.state = SkirmishUnit.State.DOWNED
+			FormationWounds.tend([_squad([body]), theirs], 1, 10, 1, events)
+			if events.is_empty() and taker.target_id == 0:
+				fooled[which] += 1
+
+	assert_int(fooled[0]).is_greater(fooled[1])
+	assert_int(fooled[0]).is_between(5, 55)
