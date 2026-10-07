@@ -47,6 +47,12 @@ const AVERAGE := 10
 ## How far it detects others, in cells (Decision 87; placeholder). Line of sight and light
 ## come with terrain.
 @export var detection_range: float = 40.0
+## The shape of its sight when it plans a way (spec 30, PathSight): how far it sees ahead,
+## square to either side and behind, as shares of its detection range, eased between by
+## the angle off its facing. Placeholders.
+@export var sight_ahead: float = 1.0
+@export var sight_side: float = 0.5
+@export var sight_behind: float = 0.25
 ## Its will to fight (Decision 82): a formation's morale ceiling is its units' mean courage.
 @export var courage: int = 60
 ## How much it steadies a formation it leads (Decision 81); 0 for rank and file.
