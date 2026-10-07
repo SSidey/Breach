@@ -110,6 +110,10 @@ var run_pace := 1.5
 var load_stage := 0
 var breather := 0.0
 var condition := 1.0
+## Formation sim: seconds into its present run (below 0: still reacting), and whether it
+## ran last tick (Decision 126).
+var run_build := 0.0
+var was_running := false
 ## Formation sim: its regeneration (Decision 121): HP a second, HP it has left to regain
 ## before it must rest, the damage types that stop it, seconds it stays stopped, and the
 ## part of a point regained so far.

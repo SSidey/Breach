@@ -72,14 +72,32 @@ func test_running_tires_it_and_marching_light_costs_nothing() -> void:
 	var marcher := _unit()
 	var striker := _unit()
 
-	FormationStamina.step([fleeing, _squad([marcher])], 1.0)
+	for _i in range(10):
+		FormationStamina.step([fleeing, _squad([marcher])], 0.1)
 	FormationStamina.strike([[striker]])
 
 	assert_float(runner.stamina).is_equal_approx(100.0 - tuning.stamina_run, 0.0001)
-	assert_float(runner.speed).is_equal_approx(runner.run_pace, 0.0001)  # it runs
 	assert_float(marcher.stamina).is_equal(100.0)
 	assert_float(marcher.speed).is_equal(1.0)
 	assert_float(striker.stamina).is_equal_approx(100.0 - tuning.stamina_blow, 0.0001)
+
+
+func test_a_run_builds_up_and_a_pursuer_reacts_first() -> void:
+	var fleeing_unit := _unit()
+	var fleeing := _squad([fleeing_unit])
+	fleeing.state = SkirmishSquad.State.ROUTING
+	var chaser := _unit()
+	var pursuing := _squad([chaser])
+	pursuing.pursuit = {"returning": false}
+	FormationStamina.step([fleeing, pursuing], 0.1)
+
+	assert_float(fleeing_unit.speed).is_greater(1.0)  # building up
+	assert_float(fleeing_unit.speed).is_less(fleeing_unit.run_pace)
+	assert_float(chaser.speed).is_equal(1.0)  # still reacting
+	for _i in range(30):
+		FormationStamina.step([fleeing, pursuing], 0.1)
+	assert_float(fleeing_unit.speed).is_equal_approx(fleeing_unit.run_pace, 0.0001)
+	assert_float(chaser.speed).is_equal_approx(chaser.run_pace, 0.0001)
 
 
 func test_it_recovers_only_after_a_breather_from_its_last_cost() -> void:
@@ -124,18 +142,25 @@ func test_who_runs() -> void:
 	var fighting := _squad([_unit()])
 	fighting.hurry = true
 	fighting.state = SkirmishSquad.State.FIGHTING
+	var retreating := _squad([_unit()])
+	retreating.order = SkirmishUnit.Order.RETREAT
 	var leader := _unit()
 	leader.leadership = 2
-	leader.traits = {"hastens": 1}
-	var hastened := _squad([leader])
-	hastened.order = SkirmishUnit.Order.RETREAT
-	var withdrawing := _squad([_unit()])
+	leader.traits = {"retreats_at_march": 1}
+	var withdrawing := _squad([leader, _unit()])
 	withdrawing.order = SkirmishUnit.Order.RETREAT
+	var steady := _unit()
+	steady.traits = {"pursues_at_march": 1}
+	var following := _squad([steady])
+	following.pursuit = {"returning": false}
+	var marching := _squad([_unit()])
 
 	assert_bool(FormationStamina.runs(hurried)).is_true()
 	assert_bool(FormationStamina.runs(fighting)).is_false()
-	assert_bool(FormationStamina.runs(hastened)).is_true()
-	assert_bool(FormationStamina.runs(withdrawing)).is_false()  # a retreat walks unless told
+	assert_bool(FormationStamina.runs(retreating)).is_true()
+	assert_bool(FormationStamina.runs(withdrawing)).is_false()  # its leader keeps a march
+	assert_bool(FormationStamina.runs(following)).is_false()  # its units keep a march
+	assert_bool(FormationStamina.runs(marching)).is_false()
 
 
 func test_a_spent_unit_cant_run() -> void:

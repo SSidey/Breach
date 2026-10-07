@@ -118,6 +118,11 @@ static var _current: BattleTuning = null
 @export var stamina_blow := 0.0
 @export var stamina_delay := 0.0
 @export var stamina_recovery := 0.0
+## Seconds a unit takes to build up from a march to its full run, and the seconds a
+## pursuer of average wits takes to react before it starts to (Decision 126): a retreat's
+## head start.
+@export var run_build_seconds := 0.0
+@export var run_reaction := 0.0
 ## The most a unit's condition (Decision 125) may lift what it multiplies.
 @export var condition_cap := 0.0
 ## Below these shares of its stamina a unit is tired, then spent: its pace times

@@ -1,10 +1,11 @@
 class_name FormationStamina
 extends RefCounted
-## Gaits and stamina (spec 28 part 7, Decision 125). A unit marches at its speed or runs at
-## its speed times its run pace. A formation runs while it flees (routing), pursues, or
-## retreats or advances hurried - by the player's order, or on a retreat its leader
-## "hastens" - and a unit chasing on its own runs; a spent unit can't run, so a formation
-## of them walks. Marching costs nothing unless its load makes it (load_march_tiring);
+## Gaits and stamina (spec 28 part 7, Decisions 125 and 126). A unit marches at its speed
+## or runs at its speed times its run pace, building up to it over a moment; a pursuer
+## first reacts, giving a retreat its head start. A formation runs while it flees, pursues
+## or retreats - unless its leader, or all its units, keep to a march then - or when the
+## player hurries it; a unit chasing on its own runs; a spent unit can't run, so a
+## formation of them walks. Marching costs nothing unless its load makes it (load_march_tiring);
 ## running costs stamina_run a second and each blow stamina_blow, faster the heavier the
 ## load. Each cost restarts a breather: once stamina_delay seconds pass with none, stamina
 ## is regained at stamina_recovery a second - the delay shorter and the rate faster the
@@ -37,32 +38,32 @@ static func step(squads: Array, seconds: float) -> void:
 			var gait := 1.0
 			var runner: bool = (running or squad.chasers.has(unit.id)) and stage(unit) < 2
 			if runner:
-				gait = unit.run_pace
-				_spend(unit, tuning.stamina_run * unit.tiring * seconds)
+				var pursuing: bool = not squad.pursuit.is_empty() or squad.chasers.has(unit.id)
+				gait = _build(unit, pursuing, seconds)
+				if unit.run_build > 0.0:
+					_spend(unit, tuning.stamina_run * unit.tiring * seconds)
 			elif marching and _march_cost(unit) > 0.0:
 				_spend(unit, _march_cost(unit) * seconds)
+			unit.was_running = runner
 			if not unit.exerted:
 				_breathe(unit, seconds)
 			unit.exerted = false
 			unit.speed = unit.fresh_speed * gait * tuning.stamina_pace[stage(unit)]
 
 
-## True if the formation runs: fleeing, pursuing, or hurried - ordered to, or retreating
-## under a leader who hastens - while it isn't fighting.
+## True if the formation runs: fleeing; pursuing or retreating, unless its leader - or
+## every one of its units - keeps to a march then ("pursues_at_march", "retreats_at_march");
+## or hurried by the player - while it isn't fighting.
 static func runs(squad: SkirmishSquad) -> bool:
 	if squad.state == SkirmishSquad.State.ROUTING:
 		return true
 	if not squad.pursuit.is_empty() and not squad.pursuit["returning"]:
-		return true
+		return not _marches(squad, "pursues_at_march")
 	if squad.state == SkirmishSquad.State.FIGHTING:
 		return false
-	if squad.hurry:
+	if squad.order == SkirmishUnit.Order.RETREAT and not _marches(squad, "retreats_at_march"):
 		return true
-	if squad.order == SkirmishUnit.Order.RETREAT:
-		for unit in squad.living():
-			if unit.leadership > 0 and unit.traits.get("hastens", 0) > 0:
-				return true
-	return false
+	return squad.hurry
 
 
 ## 0 fresh, 1 tired, 2 spent.
@@ -89,6 +90,26 @@ static func squad_gives_up(squad: SkirmishSquad) -> bool:
 	var living := squad.living()
 	var tired := living.filter(func(u): return gives_up(u)).size()
 	return not living.is_empty() and tired * 2 > living.size()
+
+
+## Its gait this tick of a run: building from its march to its run pace over
+## run_build_seconds, a pursuer first reacting (the sooner, the quicker its wits).
+static func _build(unit: SkirmishUnit, pursuing: bool, seconds: float) -> float:
+	var tuning := BattleTuning.current()
+	if not unit.was_running:
+		var wits: float = maxf(1.0, unit.attributes.get("wits", UnitDef.AVERAGE))
+		unit.run_build = -tuning.run_reaction * UnitDef.AVERAGE / wits if pursuing else 0.0
+	unit.run_build += seconds
+	var built := clampf(unit.run_build / maxf(tuning.run_build_seconds, 0.000001), 0.0, 1.0)
+	return 1.0 + (unit.run_pace - 1.0) * built
+
+
+## True if the squad keeps to a march for `trait_id`: its leader has it, or all its units.
+static func _marches(squad: SkirmishSquad, trait_id: String) -> bool:
+	var living := squad.living()
+	if living.any(func(u): return u.leadership > 0 and u.traits.get(trait_id, 0) > 0):
+		return true
+	return not living.is_empty() and living.all(func(u): return u.traits.get(trait_id, 0) > 0)
 
 
 ## Spends stamina: it restarts the unit's breather.
