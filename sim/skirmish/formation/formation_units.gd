@@ -37,8 +37,8 @@ static func make(
 	for attribute in UnitDef.ATTRIBUTES:
 		unit.attributes[attribute] = unit_def.get(attribute)
 	unit.traits = unit_def.traits.duplicate()
-	for item in unit_def.items:  # a tool's traits are its carrier's (Decision 120)
-		for trait_id in item.traits:
+	for item in unit_def.items:  # what an item grants is its carrier's (Decision 128)
+		for trait_id in item.grants:
 			if unit_def.trait_level(trait_id) > 0:
 				unit.traits[trait_id] = unit_def.trait_level(trait_id)
 	unit.melee_seconds = unit_def.melee_seconds()

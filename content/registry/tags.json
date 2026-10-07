@@ -1,0 +1,25 @@
+{
+  "about": "Tags (Decision 128): keyword ids for filtering and searching content, and - on a trait - where it may sit. A tag's 'tags' says what it can be put on (trait, unit, item, status); a trait tag's 'targets' are the kinds of thing its traits may sit on, a trait's targets being where all its tags agree.",
+  "tags": [
+    {"id": "behaviour", "tags": "trait", "targets": ["unit", "leader"], "description": "How a creature acts on its own account: cunning, captor, never surrenders."},
+    {"id": "tactic", "tags": "trait", "targets": ["leader"], "description": "How a leader leads its formation (Decision 81): sending messengers, hastening, coordinating."},
+    {"id": "drill", "tags": "trait", "targets": ["unit", "leader"], "description": "How a formation is drilled to move - a leader's for the whole of it, or every unit's: keeping to a march in a retreat or pursuit."},
+    {"id": "physical", "tags": "trait", "targets": ["unit", "material", "structure"], "description": "What a body or a substance is like: hardened, a hauler, regeneration that runs while downed."},
+    {"id": "movement", "tags": "trait", "targets": ["unit"], "description": "Ways a creature gets through ground others can't: burrowing, climbing (Decision 64's abilities)."},
+    {"id": "ground", "tags": "trait", "targets": ["material"], "description": "What ground asks of those crossing it, or what it does: dig and climb difficulty (Decision 64's demands), flowing, loose, glowing."},
+    {"id": "sense", "tags": "trait", "targets": ["unit"], "description": "What a creature perceives beyond sight: darksight, heartsense."},
+    {"id": "tolerance", "tags": "trait", "targets": ["unit", "material"], "description": "What a creature or substance withstands: cold, heat, wet (Decision 82)."},
+    {"id": "craft", "tags": "trait", "targets": ["unit"], "description": "Skills a creature brings to work rather than war; tools may grant them."},
+    {"id": "combat", "tags": "trait", "targets": ["unit", "weapon"], "description": "How blows are dealt: siege against structures, wounding the downed."},
+    {"id": "grem", "tags": "unit", "targets": [], "description": "The overlord's grems and their kin (archetype)."},
+    {"id": "brute", "tags": "unit", "targets": [], "description": "Heavy grems (archetype)."},
+    {"id": "ranged", "tags": "unit", "targets": [], "description": "Units that fight at range (archetype)."},
+    {"id": "human", "tags": "unit", "targets": [], "description": "The kingdom's people (archetype)."},
+    {"id": "martial", "tags": "unit", "targets": [], "description": "Trained soldiers (archetype)."},
+    {"id": "leader", "tags": "unit", "targets": [], "description": "Commanders, heroes and lords: units with leadership (archetype)."},
+    {"id": "polearm", "tags": "item", "targets": [], "description": "Spears, pikes, halberds (proficiency)."},
+    {"id": "axe", "tags": "item", "targets": [], "description": "Axes (proficiency)."},
+    {"id": "shield", "tags": "item", "targets": [], "description": "Shields: a holder can parry (Decision 118)."},
+    {"id": "wound", "tags": "status", "targets": [], "description": "Hurts to the body that lower condition (Decision 126)."}
+  ]
+}

@@ -66,7 +66,7 @@ func test_a_tool_carried_grants_its_traits_to_the_battle_unit() -> void:
 	var shovel := ItemDef.new()
 	shovel.item_name = "shovel"
 	shovel.slots = ["hand"]
-	shovel.traits = {"burrower": 1}
+	shovel.grants = {"burrower": 1}
 	var unit_def := _def()
 	unit_def.slots = ["hand"]
 	unit_def.items = [shovel]

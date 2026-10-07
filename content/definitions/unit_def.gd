@@ -143,9 +143,9 @@ func validate() -> PackedStringArray:
 ## higher (0: not at all).
 func trait_level(trait_id: String) -> int:
 	var level := int(traits.get(trait_id, 0))
-	for item in items:
-		if not item is WeaponDef:  # a weapon's traits mark what it does, not its holder
-			level = maxi(level, int(item.traits.get(trait_id, 0)))
+	for item in items:  # what its items grant it; their own traits are theirs (Decision 128)
+		if item != null:
+			level = maxi(level, int(item.grants.get(trait_id, 0)))
 	return level
 
 

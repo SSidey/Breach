@@ -17,11 +17,11 @@ func _unit(slots: Array[String], items: Array[ItemDef]) -> UnitDef:
 	return unit
 
 
-func _item(item_name: String, slots: Array[String], traits := {}) -> ItemDef:
+func _item(item_name: String, slots: Array[String], grants := {}) -> ItemDef:
 	var item := ItemDef.new()
 	item.item_name = item_name
 	item.slots = slots
-	item.traits = traits
+	item.grants = grants
 	return item
 
 
@@ -82,7 +82,7 @@ func _spear() -> WeaponDef:
 	return spear
 
 
-func test_a_tool_grants_its_traits_but_a_weapons_traits_are_its_own() -> void:
+func test_an_item_grants_its_grants_but_its_own_traits_are_its_own() -> void:
 	var shovel := _item("shovel", ["hand"], {"burrower": 1})
 	var ram := WeaponDef.new()
 	ram.item_name = "ram"
