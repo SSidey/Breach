@@ -165,11 +165,11 @@ func step() -> Array:
 	FormationDeaths.bury(_squads, _tick, events)
 	FormationWounds.tend(_squads, _tick, _attack_interval_ticks(), fight_seed, events)
 	var strays := FormationRecovery.step(_squads, tick_seconds, _tick, fight_seed, events)
-	_next_squad_id = FormationStrays.adopt(strays, _squads, _next_squad_id)
+	_next_squad_id = FormationStrays.adopt(strays, _squads, _next_squad_id, fight_seed)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
 	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, fight_seed))
 	strays = FormationCarry.step(_squads, _tick, fight_seed, events)  # the wounded borne
-	_next_squad_id = FormationStrays.adopt(strays, _squads, _next_squad_id)
+	_next_squad_id = FormationStrays.adopt(strays, _squads, _next_squad_id, fight_seed)
 	FormationStamina.step(_squads, tick_seconds)  # runners tire, the rest recover
 	UnitBodies.step(_squads, fight_seed)  # after every move: friends' bodies part (Decision 106)
 	for entry in _squads:

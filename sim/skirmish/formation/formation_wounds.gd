@@ -37,6 +37,12 @@ static func tend(squads: Array, tick: int, interval: int, fight_seed: int, event
 				downed.append([unit, squad])
 	if downed.is_empty():
 		return
+	# taken and taking in the units' seeded draws' order, never the list's (Decision 97):
+	# a captor or a leader's last messenger goes to the first of them
+	var by_draw := func(a, b):
+		return ScrumContest.draw(a[0], fight_seed) < ScrumContest.draw(b[0], fight_seed)
+	standing.sort_custom(by_draw)
+	downed.sort_custom(by_draw)
 	var taken := {}  # body id -> [body, its squad, [taker, its squad], ...]
 	for taker in standing:
 		var body := _within_reach(taker, standing, downed, fight_seed)

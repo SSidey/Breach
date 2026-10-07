@@ -9,6 +9,7 @@ extends RefCounted
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
+const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 
 
 ## A new routing squad (id 0, for the simulation to number) of `unit` alone, taken out of
@@ -37,9 +38,15 @@ static func strand(unit: SkirmishUnit, squad: SkirmishSquad) -> SkirmishSquad:
 
 
 ## Sets each of `strays` ([[unit, its squad], ...]) off home alone, as squads numbered from
-## `next_id` added to `squads`; returns the next free squad id.
-static func adopt(strays: Array, squads: Array, next_id: int) -> int:
-	for stray in strays:
+## `next_id` added to `squads`; returns the next free squad id. Strays setting off together
+## are numbered in their units' seeded draws' order, never the list's (Decision 97): a
+## squad's id salts its own draws.
+static func adopt(strays: Array, squads: Array, next_id: int, fight_seed: int) -> int:
+	var ordered := strays.duplicate()
+	ordered.sort_custom(
+		func(a, b): return ScrumContest.draw(a[0], fight_seed) < ScrumContest.draw(b[0], fight_seed)
+	)
+	for stray in ordered:
 		var lone := strand(stray[0], stray[1])
 		lone.id = next_id
 		next_id += 1
