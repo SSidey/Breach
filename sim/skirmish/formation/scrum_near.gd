@@ -35,20 +35,30 @@ static func around(near: Dictionary, point: Vector2, reach: float) -> Array:
 
 ## As ScrumSlots.gap_to: cells from `at` to the nearest foe body's edge, less `radius` (0
 ## if it touches one); INF with no foes. Looks ring by ring outwards, stopping once no
-## nearer foe can lie further out.
+## nearer foe can lie further out. The last answer bounds the next (the nearest edge moves
+## no more than the point asked about): rings nearer than it could be are passed over, and
+## those beyond it never looked at.
 static func gap_to(near: Dictionary, at: Vector2, radius: float) -> float:
 	var foes: Array = near["foes"]
 	var points: Array = near["points"]
 	var grid: Dictionary = near["grid"]
 	var centre := BodyGrid.cell_of(at)
-	var least := INF
 	var span := BodyGrid.ring_span(grid, centre)
+	var least := INF
+	var limit := INF  # the least it can come to: the last answer and how far from it this is
+	var last: Array = near.get("last", [at, INF])
+	if last[1] < INF:
+		var shift: float = last[0].distance_to(at)
+		limit = last[1] + shift - radius + MARGIN
+		var nearest: float = last[1] - shift - MARGIN  # no foe's centre is nearer than this
+		span.x = maxi(span.x, ceili(nearest / (BodyGrid.CELL * sqrt(2.0))) - 1)
 	for ring_number in range(span.x, span.y + 1):
-		var nearest_edge: float = BodyGrid.floor_of(ring_number) - near["widest"] - radius
-		if nearest_edge - MARGIN > least:
+		var bound := minf(least, limit)
+		var widest: float = near["widest"]
+		if BodyGrid.floor_of(ring_number) - widest - radius - MARGIN > bound:
 			break
-		var reach: float = least + near["widest"] + radius
-		for found in BodyGrid.ring(grid, centre, ring_number, at, reach):
+		for found in BodyGrid.ring(grid, centre, ring_number, at, bound + widest + radius):
 			var edge: float = points[found].distance_to(at)
 			least = minf(least, edge - ScrumReach.radius(foes[found][0]) - radius)
+	near["last"] = [at, least + radius]
 	return maxf(least, 0.0)

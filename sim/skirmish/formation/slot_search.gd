@@ -156,15 +156,17 @@ static func _outwards(search: Dictionary, grid: Dictionary, listed: Array) -> vo
 	var at: Vector2 = search["at"]
 	var centre := BodyGrid.cell_of(at)
 	var ground: Array = search["ground"]
-	var leash: float = BattleTuning.current().scrum_leash + at.distance_to(ground[0])
+	var tether: float = BattleTuning.current().scrum_leash  # from its place (ScrumSlots.within)
+	var leash: float = tether + at.distance_to(ground[0])
 	var slots: Array = search["slots"]
-	var span := BodyGrid.ring_span(grid, centre)
+	var span := BodyGrid.ring_span(grid, centre, ground[0], tether)
 	for ring_number in range(span.x, span.y + 1):
 		var nearest := BodyGrid.floor_of(ring_number) - MARGIN
 		if nearest > leash or (search["best"] >= 0 and nearest > search["key"][0]):
 			return
-		var reach: float = search["key"][0] if search["best"] >= 0 else leash
-		for found in BodyGrid.ring(grid, centre, ring_number, at, reach):
+		var around: Vector2 = at if search["best"] >= 0 else ground[0]  # near enough to beat
+		var reach: float = search["key"][0] if search["best"] >= 0 else tether  # it, or leashed
+		for found in BodyGrid.ring(grid, centre, ring_number, around, reach):
 			var index: int = found if listed.is_empty() else listed[found]
 			var point: Vector2 = slots[index][0]
 			if search["best"] >= 0 and snappedf(at.distance_to(point), 0.000001) > search["key"][0]:

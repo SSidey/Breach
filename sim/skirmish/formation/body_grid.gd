@@ -75,17 +75,18 @@ static func ring(
 	grid: Dictionary, centre: Vector2i, ring_number: int, point := Vector2.ZERO, within := INF
 ) -> Array:
 	var cells: Dictionary = grid["cells"]
-	var low: Vector2i = grid["low"]
-	var high: Vector2i = grid["high"]
 	var reach := within + MARGIN
+	var low: Vector2i = grid["low"].max(centre - Vector2i.ONE * ring_number)
+	var high: Vector2i = grid["high"].min(centre + Vector2i.ONE * ring_number)
+	if reach < INF:
+		low = low.max(cell_of(point - Vector2(reach, reach)))
+		high = high.min(cell_of(point + Vector2(reach, reach)))
 	var out := []
-	for y in range(maxi(centre.y - ring_number, low.y), mini(centre.y + ring_number, high.y) + 1):
+	for y in range(low.y, high.y + 1):
 		var across := maxf(maxf(y * CELL - point.y, point.y - (y + 1) * CELL), 0.0)
-		if across > reach:
-			continue
-		var columns := [centre.x - ring_number, centre.x + ring_number]
+		var columns: Array = [centre.x - ring_number, centre.x + ring_number]
 		if absi(y - centre.y) == ring_number:
-			columns = range(centre.x - ring_number, centre.x + ring_number + 1)
+			columns = range(low.x, high.x + 1)
 		for x in columns:
 			if x < low.x or x > high.x:
 				continue
@@ -106,9 +107,22 @@ static func floor_of(ring_number: int) -> float:
 ## Vector2i(first, last): no ring round `centre` before the first or after the last holds
 ## an occupied cell (last < first if none is). The first comes from each cell's distance
 ## in rings to the nearest occupied one, worked out once a grid, the first time it is asked.
-static func ring_span(grid: Dictionary, centre: Vector2i) -> Vector2i:
+## With `point` and `within`, only the rings holding cells within `within` of `point`.
+static func ring_span(
+	grid: Dictionary, centre: Vector2i, point := Vector2.ZERO, within := INF
+) -> Vector2i:
 	if grid["cells"].is_empty():
 		return Vector2i(0, -1)
+	if within < INF:
+		var reach := Vector2.ONE * (within + MARGIN)
+		var box_low: Vector2i = cell_of(point - reach).max(grid["low"])
+		var box_high: Vector2i = cell_of(point + reach).min(grid["high"])
+		if box_low.x > box_high.x or box_low.y > box_high.y:
+			return Vector2i(0, -1)
+		var span := ring_span(grid, centre)
+		var short := (box_low - centre).max(centre - box_high).max(Vector2i.ZERO)
+		var long := (box_low - centre).abs().max((box_high - centre).abs())
+		return Vector2i(maxi(span.x, maxi(short.x, short.y)), mini(span.y, maxi(long.x, long.y)))
 	var low: Vector2i = grid["low"]
 	var high: Vector2i = grid["high"]
 	var far := (low - centre).abs().max((high - centre).abs())
