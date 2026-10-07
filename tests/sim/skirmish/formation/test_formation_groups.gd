@@ -88,10 +88,22 @@ func test_one_commands_groups_meeting_are_one_group_again() -> void:
 	assert_int(squad.living().size()).is_equal(6)
 
 
-func test_a_leader_takes_in_a_leaderless_group_even_without_merging() -> void:
+func test_a_leader_and_a_leaderless_group_keep_their_own_orders() -> void:
 	var sim := FormationSimulation.new(4.0, 0.1)
 	var led := _line(sim, 2, 40.0)
 	_lead(led)
+	_line(sim, 4, 38.5)
+
+	_form_up(sim)
+
+	assert_int(sim.squads().size()).is_equal(2)
+
+
+func test_a_leader_that_gathers_takes_in_a_leaderless_group() -> void:
+	var sim := FormationSimulation.new(4.0, 0.1)
+	var led := _line(sim, 2, 40.0)
+	_lead(led)
+	led.units[0].traits["gathers"] = 1
 	var larger := _line(sim, 4, 38.5)
 
 	var events := _form_up(sim)
@@ -103,6 +115,20 @@ func test_a_leader_takes_in_a_leaderless_group_even_without_merging() -> void:
 		assert_object(unit.command).is_same(led.command)
 	assert_bool(events.any(func(e): return e["type"] == "merged")).is_true()
 	assert_bool(larger.units.is_empty()).is_true()
+
+
+func test_a_leader_that_joins_brings_its_group_into_the_others_command() -> void:
+	var sim := FormationSimulation.new(4.0, 0.1)
+	var joiner := _line(sim, 3, 40.0)
+	_lead(joiner)
+	joiner.units[0].traits["joins"] = 1
+	var host := _line(sim, 2, 38.5)
+
+	_form_up(sim)
+
+	assert_int(sim.squads().size()).is_equal(1)
+	assert_object(sim.squads()[0]).is_same(host)
+	assert_int(host.living().size()).is_equal(5)
 
 
 func test_forces_posted_near_each_other_that_have_not_fought_stay_apart() -> void:
