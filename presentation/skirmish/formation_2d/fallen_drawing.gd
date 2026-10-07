@@ -24,9 +24,8 @@ static func draw(canvas: CanvasItem, unit, centre: Vector2, radius: float, colou
 		SkirmishUnit.State.DEAD:
 			_cross(canvas, centre, arm * 0.8, DEAD)
 		SkirmishUnit.State.CARRIED:
-			var borne := colour.darkened(0.4)
-			borne.a = 0.8
-			canvas.draw_circle(centre, radius * 0.5, borne)
+			canvas.draw_circle(centre, radius * 0.6, DEAD)  # a dark dot on its bearer
+			canvas.draw_arc(centre, radius * 0.6, 0.0, TAU, 12, WOUND, 1.0)
 		SkirmishUnit.State.TAKEN:
 			canvas.draw_arc(centre, radius, 0.0, TAU, 16, colour, 1.0)
 			canvas.draw_line(centre - Vector2(radius, 0), centre + Vector2(radius, 0), DEAD, 1.0)

@@ -25,6 +25,7 @@ const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const FallenDrawing = preload("res://presentation/skirmish/formation_2d/fallen_drawing.gd")
+const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationFieldHud = preload("res://presentation/skirmish/formation_2d/formation_field_hud.gd")
 
 const CELL_PX := 8.0
@@ -134,7 +135,7 @@ func _draw() -> void:
 	_draw_staging()
 	for squad in _field.sim.squads():
 		for unit in squad.units:
-			if not unit.is_alive():
+			if not unit.is_alive() and unit.state != SkirmishUnit.State.CARRIED:
 				var radius := minf(unit.footprint_width, unit.footprint_depth) / 2.0 * CELL_PX - 0.5
 				var centre: Vector2 = ORIGIN + unit.position * CELL_PX
 				FallenDrawing.draw(self, unit, centre, radius, COLOURS[squad.faction_id])
@@ -143,6 +144,11 @@ func _draw() -> void:
 			_draw_unit(squad, unit, fraction)
 		_draw_morale(squad)
 		_draw_pursuit(squad)
+	for squad in _field.sim.squads():
+		for unit in squad.units:
+			if unit.state == SkirmishUnit.State.CARRIED:  # on top of its bearer
+				var centre: Vector2 = ORIGIN + unit.position * CELL_PX
+				FallenDrawing.draw(self, unit, centre, CELL_PX * 0.5, COLOURS[squad.faction_id])
 
 
 func _draw_route(key: String) -> void:

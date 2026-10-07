@@ -129,6 +129,10 @@ var regeneration_carry := 0.0
 var wounded := 0
 var wake_left := -1.0
 var drain_carry := 0.0
+## Formation sim: the wounds its weapons add to a foe they down ("wounding N", the most of
+## its weapons'), and those the last blow that struck it would add.
+var wounding := 0
+var last_wounding := 0
 ## Formation sim: the friend it bears, or the friend bearing it (unit ids; 0: none), and the
 ## weight of its own gear, for its load with a body on it (Decision 126).
 var carrying := 0

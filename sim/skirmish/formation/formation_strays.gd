@@ -28,7 +28,9 @@ static func strand(unit: SkirmishUnit, squad: SkirmishSquad) -> SkirmishSquad:
 	stray.heading = squad.heading
 	stray.state = SkirmishSquad.State.ROUTING
 	stray.morale = 0
-	stray.fleeing[unit.id] = {"along": along, "offset": unit.position - squad.route.point_at(along)}
+	var offset: Vector2 = unit.position - squad.route.point_at(along)
+	# it walks home straight, not fanning out as a panicked rout does (RoutFlight)
+	stray.fleeing[unit.id] = {"along": along, "offset": offset, "fanned": INF}
 	unit.rank = 0
 	unit.column = 0
 	return stray

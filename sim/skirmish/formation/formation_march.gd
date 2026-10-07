@@ -99,6 +99,8 @@ static func check_ends(mover: SkirmishSquad, route_end: float, tick: int, events
 static func sync_units(squads: Array) -> void:
 	for entry in squads:
 		for unit in entry.units:
+			if not unit.is_alive():
+				continue  # the fallen lie where they fell (Decision 126)
 			var swapping := FormationShuffle.offset(entry, unit)
 			unit.distance = (
 				entry.unit_distance(unit) + entry.direction * swapping.x * SkirmishSquad.RANK_DEPTH

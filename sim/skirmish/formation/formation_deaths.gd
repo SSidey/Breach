@@ -28,7 +28,7 @@ static func bury(squads: Array, tick: int, events: Array) -> void:
 			else:
 				unit.hp = 0
 				unit.state = SkirmishUnit.State.DOWNED
-				unit.wounded += 1  # a wound, lowering its condition (Decision 126)
+				unit.wounded += 1 + unit.last_wounding  # lowering its condition (Decision 126)
 				unit.wake_left = -1.0
 				events.append(FormationEvents.unit_event("downed", tick, fallen_squad, unit))
 		if fallen.is_empty():

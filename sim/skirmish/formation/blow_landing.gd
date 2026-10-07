@@ -30,6 +30,7 @@ static func land(
 		for blow in melee:
 			blow[2] = BlowDamage.dealt(blow[0], blow[1], blow[2], BlowRoll.HIT, false, 1.0)
 			FormationRecovery.scorch(blow[1], blow[0].melee_parts, blow[2])
+			blow[1].last_wounding = blow[0].wounding if blow[2] > 0 else blow[1].last_wounding
 			blow.append(BlowRoll.HIT)
 		for shot in shots:
 			shot[2] = BlowDamage.dealt(shot[0], shot[1], shot[2], BlowRoll.HIT, true, 1.0)
@@ -77,6 +78,8 @@ static func _land(
 	FormationRecovery.scorch(
 		target, striker.ranged_parts if ranged else striker.melee_parts, blow[2]
 	)
+	if blow[2] > 0:
+		target.last_wounding = striker.wounding
 	blow.append(landed)
 
 

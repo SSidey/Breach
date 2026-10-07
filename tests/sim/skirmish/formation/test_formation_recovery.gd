@@ -57,13 +57,20 @@ func test_each_wound_lowers_its_condition_past_those_it_is_hardened_to() -> void
 	assert_float(FormationRecovery.condition_of(hardened)).is_equal(1.0)
 
 
-func test_a_poor_condition_drains_it_to_death() -> void:
-	var dying := _downed(_unit(1, Vector2.ZERO))
-	dying.wounded = 3  # condition 0 with the usual tuning
+func test_a_poor_condition_drains_it_to_death_the_faster_the_worse() -> void:
+	var three := _downed(_unit(1, Vector2.ZERO))
+	three.wounded = 3  # just below the threshold with the usual tuning
+	var four := _downed(_unit(2, Vector2(5, 0)))
+	four.wounded = 4
+	var two := _downed(_unit(3, Vector2(10, 0)))
+	two.wounded = 2  # survivable in otherwise good condition
 	var events := []
-	_run([_squad([dying])], 15.0, events)
+	_run([_squad([three, four, two])], 5.0, events)
 
-	assert_int(dying.state).is_equal(SkirmishUnit.State.DEAD)
+	assert_int(four.hp).is_less(three.hp)
+	assert_int(two.hp).is_equal(0)
+	_run([_squad([three, four, two])], 25.0, events)
+	assert_int(three.state).is_equal(SkirmishUnit.State.DEAD)
 	assert_bool(events.any(func(e): return e["type"] == "died_of_wounds")).is_true()
 
 
@@ -147,3 +154,49 @@ func test_a_downed_regenerator_mends_only_with_the_trait() -> void:
 
 	assert_int(plain.hp).is_equal(0)
 	assert_int(troll.hp).is_greater(0)
+
+
+func test_it_comes_to_where_it_lies_and_walks_to_the_nearest_friendly_formation() -> void:
+	var own_friend := _unit(2, Vector2(30, 0))
+	var downed := _downed(_unit(1, Vector2.ZERO))
+	var own := _squad([own_friend, downed])
+	var bearer := _unit(5, Vector2(2, 0))
+	var nearer := _squad([bearer])
+	nearer.id = 2
+	var events := []
+	_run([own, nearer], 60.0, events)
+
+	assert_bool(nearer.units.has(downed)).is_true()  # it joins the nearest, not its own
+	assert_bool(own.units.has(downed)).is_false()
+	assert_vector(nearer.loose[downed.id]["at"]).is_equal(Vector2.ZERO)  # from where it lay
+	assert_int(downed.squad_id).is_equal(2)
+
+
+func test_the_fallen_lie_where_they_fell() -> void:
+	var sim := FormationSimulation.new(1.0, 0.1)
+	var grem := UnitDef.new()
+	grem.hp = 10
+	grem.speed = 1.0
+	grem.items = [WeaponDef.innate_weapon(1)]
+	var squad := sim.spawn_squad(
+		2, [[grem, Vector2i(0, 0)], [grem, Vector2i(0, 1)]], "player", true
+	)
+	sim.step()
+	var fallen: SkirmishUnit = squad.units[0]
+	_downed(fallen)
+	var where := fallen.position
+	for _i in range(20):
+		sim.step()
+
+	assert_vector(fallen.position).is_equal(where)
+	assert_float(squad.units[1].position.x).is_greater(where.x + 1.0)  # its squad marched on
+
+
+func test_a_wounding_blow_that_downs_adds_its_wounds() -> void:
+	var FormationDeaths = load("res://sim/skirmish/formation/formation_deaths.gd")
+	var unit := _unit(1, Vector2.ZERO)
+	unit.hp = -2
+	unit.last_wounding = 2
+	FormationDeaths.bury([_squad([unit])], 1, [])
+
+	assert_int(unit.wounded).is_equal(3)

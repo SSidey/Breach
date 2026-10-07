@@ -153,8 +153,9 @@ static var _current: BattleTuning = null
 ## seeded share between wounds_wake_spread's two ends; the hardier, the sooner.
 @export var wounds_wake_seconds := 0.0
 @export var wounds_wake_spread: Array[float] = []
-## Below this condition a unit loses HP a second (condition_drain), standing or downed:
-## so one left in a bad enough state dies of it rather than lie there.
+## Below this condition a unit loses HP, standing or downed, the faster the further below:
+## condition_drain a second at condition 0, scaling with the distance below the threshold -
+## so one left in a bad enough state dies of it rather than lie there, the faster the worse.
 @export var condition_drain_below := 0.0
 @export var condition_drain := 0.0
 ## The chance a routing unit struck surrenders, times its want of courage (1 - courage
