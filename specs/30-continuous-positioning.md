@@ -523,7 +523,7 @@ round 2's size and crowds); objectives and orders mid-battle.
    Spec 28 round 2's crowds keep the number of bodies down. A planner cell is a stand of
    four grems, so the planner counted in stands could field 4,096 a side.
 
-### Formations as commands (proposed after the user's question, to confirm)
+### Formations as commands (the user's model, confirmed)
 
 The user: "free units on their own would essentially be a formation without that command
 ... Formation could be more like just a flag set on a unit instead of putting them into
@@ -542,10 +542,11 @@ a formation entity?"
   - A command split by a fight is two groups with the same orders.
   - Free units sent at a flanking foe are a group of the same command.
 - **Groups of different commands meeting** (out of a fight) form up by one rule:
-  - **A leader takes in leaderless groups.** "Commanders beat this check automatically."
+  - **A leader takes in leaderless groups,** merge on or off. "Commanders beat this
+    check automatically." The units stay in the leader's command from then on.
   - **Two leaderless groups** stay separate and resume their own orders, unless merge is
     on. With merge on, the one with more cells' worth of units takes the other's units,
-    and a tie goes to a seeded draw.
+    and they stay in it; a tie goes to a seeded draw.
   - **Two leaders** each keep their own command. Units go back to the command they
     started under, along with any lesser leaders it started with.
 - **The user's cases:**
