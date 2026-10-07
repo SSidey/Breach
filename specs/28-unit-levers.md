@@ -285,3 +285,17 @@ pursuers tiring.
   full each battle.
 - Abilities, pools and status effects (Decision 122): bleed, medic, riposte; experience and
   ranks; tech modifiers and subtypes; leaders as named characters.
+- **Size, stacking and crowds** (the user, after round 1):
+  - Planner cells and stands: a planner cell is a stand of 2×2 map cells (a stand of
+    grems is four grems, one to a map cell).
+  - **Small N** creatures fit 2^N to a map cell, and meet **Burrow M** by the pair rule
+    (Decision 64): N >= M passes at full speed, one short at half, more blocked.
+  - From Small 1 a cell's worth is one body - a **crowd** - holding its count: each
+    creature keeps its own HP and attacks, its blows staggered (each on its own seeded
+    beat); a single-target blow kills at most one, losses shrink the count.
+  - A crowd is **packed N**: an area blow (cleave, blast - spec 32's attack shapes)
+    strikes every creature in the cells it covers, area attacks its counter.
+  - Mass from size (a cell's worth over 2^N, footprints the other way), for bodies,
+    carrying and drag. Adjacent crowds of a type may merge into a bigger footprint up to
+    a cap, and split through gaps and under losses (spec 30's movement pass);
+    Decision 83's horde N and mob N fold in.
