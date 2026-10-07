@@ -137,10 +137,19 @@ static var _current: BattleTuning = null
 @export var wounds_guard_reach := 0.0
 ## Morale lost by each standing formation of a side one of its own is sent home to.
 @export var wounds_messenger_shock := 0
-## Seconds a blow of a type that stops a unit's regeneration stops it for; and the share of
-## its max HP a downed unit that regenerates must regain to rise and rejoin its formation.
+## Seconds a blow of a type that stops a unit's regeneration stops it for.
 @export var wounds_regeneration_halt := 0.0
-@export var wounds_rise_share := 0.0
+## Each wound - a time downed (Decision 126) - takes this off a unit's condition; a unit
+## "hardened N" shrugs off its first N.
+@export var wounds_condition := 0.0
+## Seconds a downed unit of average constitution lies before it comes to at 1 HP, times a
+## seeded share between wounds_wake_spread's two ends; the hardier, the sooner.
+@export var wounds_wake_seconds := 0.0
+@export var wounds_wake_spread: Array[float] = []
+## Below this condition a unit loses HP a second (condition_drain), standing or downed:
+## so one left in a bad enough state dies of it rather than lie there.
+@export var condition_drain_below := 0.0
+@export var condition_drain := 0.0
 ## The chance a routing unit struck surrenders, times its want of courage (1 - courage
 ## / 100).
 @export var wounds_surrender := 0.0

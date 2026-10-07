@@ -19,7 +19,8 @@ extends RefCounted
 ##   4. combat  - melee blows (FormationMelee) and ranged blows (Decision 46), each rolled
 ##                against its target (BlowLanding, Decision 118)
 ##   5. deaths  - the fallen are downed or die, the ranks behind step up, an empty squad is
-##                destroyed; the downed nobody guards are finished or taken (FormationWounds)
+##                destroyed; the downed nobody guards are finished or taken (FormationWounds),
+##                the rest come to or die of their wounds (FormationRecovery, Decision 126)
 ##   6. bodies  - friends' bodies that overlap are pushed apart by mass (UnitBodies, Decision
 ##                106)
 ##   7. re-form - units swap toward their preferred places (FormationShuffle, Decision 46)
@@ -36,6 +37,8 @@ const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd"
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.gd")
 const FormationWounds = preload("res://sim/skirmish/formation/formation_wounds.gd")
+const FormationRecovery = preload("res://sim/skirmish/formation/formation_recovery.gd")
+const FormationStrays = preload("res://sim/skirmish/formation/formation_strays.gd")
 const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
 const FormationStamina = preload("res://sim/skirmish/formation/formation_stamina.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
@@ -160,7 +163,11 @@ func step() -> Array:
 	_fight(events)
 	FormationDeaths.bury(_squads, _tick, events)
 	FormationWounds.tend(_squads, _tick, _attack_interval_ticks(), fight_seed, events)
-	FormationWounds.mend(_squads, tick_seconds, _tick, events)
+	for stray in FormationRecovery.step(_squads, tick_seconds, _tick, fight_seed, events):
+		var lone := FormationStrays.strand(stray[0], stray[1])  # makes for home (Decision 126)
+		lone.id = _next_squad_id
+		_next_squad_id += 1
+		_squads.append(lone)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
 	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, fight_seed))
 	FormationStamina.step(_squads, tick_seconds)  # runners tire, the rest recover

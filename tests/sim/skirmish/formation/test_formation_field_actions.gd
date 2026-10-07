@@ -116,6 +116,8 @@ func test_waves_that_merge_after_a_fight_regroup_and_march_on() -> void:
 
 	for squad in field.sim.squads():
 		if squad.faction_id == "player" and squad.state != SkirmishSquad.State.DESTROYED:
+			if squad.state == SkirmishSquad.State.ROUTING and squad.units.size() == 1:
+				continue  # one come to on its own, making for home (Decision 126)
 			assert_bool(squad.loose.is_empty()).is_true()
 			assert_int(squad.state).is_equal(SkirmishSquad.State.ARRIVED)
 

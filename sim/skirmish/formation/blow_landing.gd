@@ -12,7 +12,7 @@ const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const BlowRoll = preload("res://sim/skirmish/formation/blow_roll.gd")
 const BlowDamage = preload("res://sim/skirmish/formation/blow_damage.gd")
-const FormationWounds = preload("res://sim/skirmish/formation/formation_wounds.gd")
+const FormationRecovery = preload("res://sim/skirmish/formation/formation_recovery.gd")
 const FormationStamina = preload("res://sim/skirmish/formation/formation_stamina.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
@@ -29,11 +29,11 @@ static func land(
 	if rolls.is_empty():
 		for blow in melee:
 			blow[2] = BlowDamage.dealt(blow[0], blow[1], blow[2], BlowRoll.HIT, false, 1.0)
-			FormationWounds.scorch(blow[1], blow[0].melee_parts, blow[2])
+			FormationRecovery.scorch(blow[1], blow[0].melee_parts, blow[2])
 			blow.append(BlowRoll.HIT)
 		for shot in shots:
 			shot[2] = BlowDamage.dealt(shot[0], shot[1], shot[2], BlowRoll.HIT, true, 1.0)
-			FormationWounds.scorch(shot[1], shot[0].ranged_parts, shot[2])
+			FormationRecovery.scorch(shot[1], shot[0].ranged_parts, shot[2])
 			shot.append(BlowRoll.HIT)
 		return
 	var squad_of := {}  # unit id -> [unit, its squad]
@@ -74,7 +74,9 @@ static func _land(
 	)
 	var spread := BattleRolls.uniform(rolls[0], [rolls[1], striker.id, "damage", ranged])
 	blow[2] = BlowDamage.dealt(striker, target, blow[2], landed, ranged, spread)
-	FormationWounds.scorch(target, striker.ranged_parts if ranged else striker.melee_parts, blow[2])
+	FormationRecovery.scorch(
+		target, striker.ranged_parts if ranged else striker.melee_parts, blow[2]
+	)
 	blow.append(landed)
 
 

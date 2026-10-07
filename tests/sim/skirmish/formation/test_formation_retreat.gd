@@ -180,7 +180,8 @@ func _caught_at_home(captain: String) -> Array:
 	var field := FormationFieldActions.replay(
 		log, 480, func(_f, tick_events): events.append_array(tick_events)
 	)
-	return [field, field.sim.squads()[-1], events]
+	var wave: SkirmishSquad = field.sim.squads().filter(func(s): return s.faction_id == "player")[0]
+	return [field, wave, events]
 
 
 func test_a_wave_caught_at_home_by_units_breaking_ranks_fights_back() -> void:

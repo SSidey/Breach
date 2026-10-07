@@ -118,6 +118,12 @@ var regeneration_left := 0.0
 var regeneration_stops: Array[String] = []
 var regeneration_halt := 0.0
 var regeneration_carry := 0.0
+## Formation sim: its wounds (Decision 126) - a time downed each, lowering its condition -
+## seconds it has yet to lie downed before it comes to (-1: not yet reckoned), and the
+## part of a point its poor condition has drained so far.
+var wounded := 0
+var wake_left := -1.0
+var drain_carry := 0.0
 ## Seconds between its melee blows and its ranged shots (Decision 120): its weapons'
 ## intervals, scaled by its attack speed.
 var melee_seconds := 1.0
