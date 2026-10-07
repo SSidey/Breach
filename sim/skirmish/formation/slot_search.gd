@@ -6,7 +6,8 @@ extends RefCounted
 ## on each, and a seeker looks ring by ring outwards from where it stands, stopping once no
 ## ring further out could hold a nearer one. Claims on a slot are looked up the same way. A
 ## tie the key leaves goes to the slot listed first, as it would in the whole list
-## (Decision 97). Pure; cells.
+## (Decision 97). Whether a slot is in a seeker's leash and on ground it can cross is
+## ScrumSlots' own test (its _within), used as it is so the two never drift. Pure; cells.
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
@@ -110,7 +111,7 @@ static func _refresh(slot_ring: Dictionary) -> void:
 
 ## As ScrumSlots.open, looking only at the bodies and claims near `point`.
 static func open(seeker: SkirmishUnit, point: Vector2, ground: Array) -> bool:
-	if not ScrumSlots.within(seeker, point, ground):
+	if not ScrumSlots._within(seeker, point, ground):
 		return false
 	var radius := ScrumReach.radius(seeker)
 	var bodies: Array = ground[1]
@@ -190,7 +191,7 @@ static func _consider(search: Dictionary, index: int) -> void:
 		return
 	var seeker: SkirmishUnit = search["seeker"]
 	var ground: Array = search["ground"]
-	if not ScrumSlots.within(seeker, slot[0], ground):
+	if not ScrumSlots._within(seeker, slot[0], ground):
 		return
 	if not search["crowded"] and _claimed(seeker, slot[0], ground[6]):
 		search["dead"][index] = true
