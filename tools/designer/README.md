@@ -39,11 +39,22 @@ To bring libraries across from the old claude.ai designer:
 1. Press **Copy libraries JSON** there.
 2. In this app, open **Import libraries…** and paste.
 
+## Library
+
+**Library** in the view bar opens a page that browses the content registry
+(`content/registry/*.json`, Decision 128). It lists the tags, traits and statuses, each
+trait's targets (where its tags agree, narrowed by its "only"), and the content files
+using each id. You can search, filter by tag chips or by target, or show only the ids in
+use. The registry itself is edited in its JSON files; Godot's tests check content against
+it.
+
 ## Files
 
 - `index.html`, `designer.css`, `designer.js`: the designer itself.
 - `repo.js`: repo mode (Open/Save, import status, library sync). Opening `index.html`
   from disk skips this, and the designer then uses browser storage only.
+- `library.html`, `library.js`, `content_library.py`: the Library page and the registry
+  reader behind `GET /api/registry`.
 - `serve.py`, `designer_repo.py`: the local server.
 - `test_*.py`: the server's tests
   (`python -m unittest discover -s tools/designer -p "test_*.py"`).

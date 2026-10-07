@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Breach Library</title>
+  <link rel="stylesheet" href="/designer.css">
+</head>
+<body>
+  <div class="app">
+  <header class="top">
+    <div class="title-block">
+      <h1>Library</h1>
+      <span class="subtitle">the tags, traits and statuses in content/registry &mdash; what each is, where it may sit, and where it is used (Decision 128)</span>
+    </div>
+    <span class="status" id="libraryStatus">loading&hellip;</span>
+  </header>
+  <main class="library">
+    <nav class="view-bar" aria-label="Library kinds" id="kinds"></nav>
+    <div class="filters">
+      <input type="search" id="search" placeholder="Search ids and descriptions" aria-label="Search">
+      <label>May sit on
+        <select id="target"><option value="">anything</option></select>
+      </label>
+      <label><input type="checkbox" id="usedOnly"> in use only</label>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="chips" id="tagFilter" aria-label="Filter by tag"></div>
+    <table>
+      <thead id="head"></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </main>
+  </div>
+  <script src="/library.js"></script>
+</body>
+</html>
