@@ -1,7 +1,8 @@
 class_name FallenDrawing
 extends RefCounted
 ## How the field draws those out of the fight (Decisions 121 and 126), where they lie: the
-## downed as a faded body crossed in red, the dead as a small dark cross, the taken -
+## downed as a faded body crossed in red, one borne by a friend as a small dark dot on its
+## bearer, the dead as a small dark cross, the taken -
 ## captured or surrendered - as a ring in their side's colour with a bar across it.
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -22,6 +23,10 @@ static func draw(canvas: CanvasItem, unit, centre: Vector2, radius: float, colou
 			_cross(canvas, centre, arm, WOUND)
 		SkirmishUnit.State.DEAD:
 			_cross(canvas, centre, arm * 0.8, DEAD)
+		SkirmishUnit.State.CARRIED:
+			var borne := colour.darkened(0.4)
+			borne.a = 0.8
+			canvas.draw_circle(centre, radius * 0.5, borne)
 		SkirmishUnit.State.TAKEN:
 			canvas.draw_arc(centre, radius, 0.0, TAU, 16, colour, 1.0)
 			canvas.draw_line(centre - Vector2(radius, 0), centre + Vector2(radius, 0), DEAD, 1.0)

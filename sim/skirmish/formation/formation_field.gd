@@ -72,6 +72,9 @@ var kingdom_reserve: SkirmishSquad
 ## Routes whose waves the player has ordered to hurry (Decision 125): key -> true; each
 ## step its waves in the field run (sent before the order or after).
 var hurried := {}
+## What each route's waves do with their own downed (Decision 126): key -> "recover" or
+## "carry"; a route not here leaves them.
+var tending := {}
 
 var _tick := 0
 
@@ -134,6 +137,9 @@ func step() -> Array:
 	for squad in sim.squads():  # a hurried route's waves run, sent before or after the order
 		if squad.faction_id == "player":
 			squad.hurry = hurried.keys().any(func(key): return squad.route == waves[key].route)
+			for key in tending:
+				if squad.route == waves[key].route:
+					squad.tends = tending[key]
 	var events := player.step(waves, tick_seconds, _tick)
 	for key in waves:
 		events.append_array(waves[key].step(sim))

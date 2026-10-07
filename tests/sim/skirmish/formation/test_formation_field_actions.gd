@@ -53,6 +53,22 @@ func test_a_hurried_wave_runs_ahead_of_a_marching_one() -> void:
 	assert_bool(hurried.sim.squads()[-1].hurry).is_false()
 
 
+func test_a_waves_wounded_are_left_recovered_or_carried_as_ordered() -> void:
+	var field := FormationFieldActions.field(7, false)
+
+	assert_bool(FormationFieldActions.apply(field, _words("tend A carry"))).is_true()
+	assert_str(field.tending["A"]).is_equal("carry")
+	assert_bool(FormationFieldActions.apply(field, _words("tend A leave"))).is_true()
+	assert_str(field.tending["A"]).is_equal("")
+	assert_bool(FormationFieldActions.apply(field, _words("tend A eat"))).is_false()
+	for _i in range(300):
+		field.step()
+	FormationFieldActions.apply(field, _words("tend A recover"))
+	field.send("A")
+	field.step()
+	assert_str(field.sim.squads()[-1].tends).is_equal("recover")
+
+
 func test_an_order_is_taken_only_from_the_side_that_gives_it() -> void:
 	var field := FormationFieldActions.field(7, false)
 	var theirs := FormationRecord.command(0, FormationRecord.KINGDOM, "send", "A")
