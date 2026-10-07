@@ -45,6 +45,12 @@ static func grounded(unit_height: float) -> TerrainWalker:
 	return TerrainWalker.new(unit_height, 0, 0, false, false)
 
 
+## A key naming what decides its pace on every cell: walkers with the same key share
+## their speed shares (WalkerShares).
+func kind() -> String:
+	return "%s|%d|%d|%d|%d" % [height, swimmer, climber, int(swims), int(climbs)]
+
+
 ## Decision 64's pair rule, an ability against a demand: the share of the mode's pace it
 ## goes at - 1 meeting it, half one level short, 0 further short.
 static func meets(ability: int, demand: int) -> float:
