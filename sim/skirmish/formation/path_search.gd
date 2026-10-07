@@ -10,12 +10,8 @@ extends RefCounted
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const TerrainWalker = preload("res://sim/skirmish/formation/terrain_walker.gd")
 const PathFrontier = preload("res://sim/skirmish/formation/path_frontier.gd")
+const WalkerShares = preload("res://sim/skirmish/formation/walker_shares.gd")
 
-## Neighbours: the four sides, then the four diagonals.
-const SIDES: Array[Vector2i] = [Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1)]
-const DIAGONALS: Array[Vector2i] = [
-	Vector2i(1, 1), Vector2i(-1, 1), Vector2i(-1, -1), Vector2i(1, -1)
-]
 ## A diagonal step's length.
 const DIAGONAL_STEP := 1.4142135623730951
 ## A way must be quicker by more than this to replace one already found: float noise
@@ -26,7 +22,7 @@ const BETTER := 0.000001
 var expanded := 0
 
 var _terrain: FormationTerrain
-var _walker: TerrainWalker
+var _shares: WalkerShares
 var _start: Vector2i
 var _goal: Vector2i
 var _leash: float
@@ -42,7 +38,7 @@ func _init(
 	terrain: FormationTerrain, walker: TerrainWalker, start: Vector2i, goal: Vector2i, leash: float
 ) -> void:
 	_terrain = terrain
-	_walker = walker
+	_shares = WalkerShares.of(terrain, walker)
 	_start = start
 	_goal = goal
 	_leash = leash
@@ -82,31 +78,29 @@ func run() -> Array[Vector2i]:
 ## Offers each neighbour of the cell at `index` the way through it.
 func _expand(index: int) -> void:
 	var cell := _cell(index)
-	var here := _centre(cell)
-	var sides := PackedFloat32Array()
-	for side in SIDES:
-		var pace := _pace(here, cell + side)
-		sides.append(pace)
+	var sides := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
+	for step in WalkerShares.STEPS.size():
+		var next: Vector2i = cell + WalkerShares.STEPS[step]
+		var diagonal := step >= 4
+		if diagonal:
+			var across := 0 if WalkerShares.STEPS[step].x > 0 else 2
+			var along := 1 if WalkerShares.STEPS[step].y > 0 else 3
+			if sides[across] <= 0.0 or sides[along] <= 0.0:
+				continue  # it would cut the corner of a cell it can't enter
+		var pace := _pace(index, step, next)
+		if not diagonal:
+			sides[step] = pace
 		if pace > 0.0:
-			_relax(index, cell + side, 1.0 / pace)
-	for diagonal in DIAGONALS:
-		var across := 0 if diagonal.x > 0 else 2
-		var along := 1 if diagonal.y > 0 else 3
-		if sides[across] <= 0.0 or sides[along] <= 0.0:
-			continue  # it would cut the corner of a cell it can't enter
-		var pace := _pace(here, cell + diagonal)
-		if pace > 0.0:
-			_relax(index, cell + diagonal, DIAGONAL_STEP / pace)
+			_relax(index, next, (DIAGONAL_STEP if diagonal else 1.0) / pace)
 
 
-## The walker's pace from `here` into `cell`: 0 off the grid, beyond the leash or where it
-## can't go.
-func _pace(here: Vector2, cell: Vector2i) -> float:
-	if cell.x < 0 or cell.y < 0 or cell.x >= _terrain.size.x or cell.y >= _terrain.size.y:
+## The walker's pace stepping from the cell at `index` by STEPS[`step`] into `next`: 0 off
+## the grid, beyond the leash or where it can't go.
+func _pace(index: int, step: int, next: Vector2i) -> float:
+	var pace := _shares.into(index, step)
+	if pace > 0.0 and next != _goal and _aside(next) > _leash:
 		return 0.0
-	if cell != _goal and _aside(cell) > _leash:
-		return 0.0
-	return _terrain.crossing(_walker, here, _centre(cell))
+	return pace
 
 
 func _relax(from: int, cell: Vector2i, step: float) -> void:

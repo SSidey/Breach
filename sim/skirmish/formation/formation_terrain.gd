@@ -20,6 +20,8 @@ const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const TerrainWalker = preload("res://sim/skirmish/formation/terrain_walker.gd")
 
 var size: Vector2i
+## Each kind of walker's cached speed shares (WalkerShares), dropped when it is painted.
+var walker_shares := {}
 
 var _cost := PackedFloat32Array()
 var _height := PackedInt32Array()
@@ -46,6 +48,7 @@ func _init(grid_size: Vector2i) -> void:
 ## (its liquid's flow), "climb" (the climb difficulty of a cliff rising into them) and
 ## "blocks_sight".
 func paint(area: Rect2i, props: Dictionary) -> void:
+	walker_shares.clear()
 	var clipped := area.intersection(Rect2i(Vector2i.ZERO, size))
 	for y in range(clipped.position.y, clipped.end.y):
 		for x in range(clipped.position.x, clipped.end.x):
