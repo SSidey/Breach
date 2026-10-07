@@ -580,3 +580,40 @@ The work goes in stacked parts, built in parallel where they don't touch the sam
 
 Each part is a stacked draft PR. Every part that can move outcomes reports the mirror
 trials both ways round (Decision 97), and the benchmark from part 0.
+
+### Paths, after part 3a (#166)
+
+- **Movement modes: one rule for climbing and swimming.**
+  - Each mode has a demand from the ground (a cliff's climb difficulty; water's
+    `flows N`) and a matching ability (`climber N`, `swimmer N`).
+  - The pace is the mode's base pace times Decision 64's pair rule: full speed at or
+    above the demand, half one short, blocked beyond.
+  - **Stamina** is spent per second in the mode, not per cell. A unit at half pace takes
+    twice the moves and pays twice: "climb 1 speed 2 could move 2 up a difficulty 1
+    surface in 1 movement so 1×stam-cost, climb 0 speed 2 would take 2 movements so
+    2 stam-cost". An exhausted unit can't start.
+  - **Load:** a unit loaded past the threshold can neither swim nor climb.
+  - **Can never:** `sinks` (never swims) and `cant_climb` (never climbs), e.g. a cart.
+  - Burrowing joins the table once material damage exists.
+- **Implicit traits.** A registered trait may have a default level every unit has
+  without listing it: `climber 0` and `swimmer 0`. The Library shows them as implicit,
+  and the designer hides them unless raised.
+- **No leash; planning on what is seen.** "Detection range finds an available path if
+  otherwise blocked, do we really need a leash?"
+  - **One pathfinder per group:** the unit with the best wits, regardless of any leader;
+    ties go to a seeded draw. What the path is for still follows the leader's and units'
+    behavioural traits.
+  - **On the route,** the group follows it, searching only when the stretch it can see
+    ahead is blocked or much costlier.
+  - **Off the route or blocked,** the pathfinder searches what it can see for the nearest
+    place to rejoin the route. Cells within its detection are planned at their real cost;
+    unseen cells count as open. With no way back in sight, it heads for the visible edge
+    nearest the route or goal and plans again as more comes into view: a wall is felt
+    along. A U-shaped obstacle may be walked into and out of again, which is fair for
+    troops who can't see over it. That is for the feel test.
+  - **Sight has a shape** per unit type (for example long ahead, shorter to the sides,
+    short behind) rather than a circle: "I don't see why if a unit's vision is
+    constrained that it needs to scan the full map".
+  - **Searches are rare:** when the view ahead changes, or every second or so off the
+    route. They run within a pathing budget per tick, spread over ticks. Each cell's speed
+    share is cached per kind of walker.
