@@ -1,6 +1,6 @@
 // The Library page (Decision 128): browse, search and filter the registry's tags, traits
 // and statuses (content/registry/*.json) - what each is, its tags, where a trait may sit,
-// and the content using it - from GET /api/registry. Filtering is pure (LibraryFilter),
+// whether every unit has it implicitly (its "default" level), and the content using it - from GET /api/registry. Filtering is pure (LibraryFilter),
 // so it can be tested apart from the page.
 (function (root) {
   'use strict';
@@ -38,7 +38,13 @@
     return Object.keys(seen).sort();
   }
 
-  var LibraryFilter = { select: select, tagChoices: tagChoices, tagsOf: tagsOf };
+  // "implicit N" for a trait every unit has at level N without listing it (its registry
+  // "default"), else "".
+  function implicitOf(entry) {
+    return entry.default != null ? 'implicit ' + entry.default : '';
+  }
+
+  var LibraryFilter = { select: select, tagChoices: tagChoices, tagsOf: tagsOf, implicitOf: implicitOf };
   if (typeof module !== 'undefined' && module.exports) { module.exports = LibraryFilter; return; }
   root.LibraryFilter = LibraryFilter;
 
@@ -88,7 +94,9 @@
     rows.innerHTML = '';
     shown.forEach(function (entry) {
       var row = el('tr');
-      row.appendChild(el('td', entry.id, { class: 'id' }));
+      var idCell = el('td', entry.id, { class: 'id' });
+      if (implicitOf(entry)) idCell.appendChild(el('div', implicitOf(entry), { class: 'implicit' }));
+      row.appendChild(idCell);
       row.appendChild(el('td', entry.description || ''));
       var tagCell = el('td');
       var tagBox = el('div', null, { class: 'chips' });

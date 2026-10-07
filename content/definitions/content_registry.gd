@@ -4,12 +4,15 @@ extends RefCounted
 ## - the one place each is defined, described and tagged, which the designer's Library
 ## browses. A trait's tags say where it may sit (each tag's targets: unit, leader, weapon,
 ## armour, tool, material, structure); it may sit where all its tags agree, narrowed by
-## its "only". Content checks its traits and tags against it here. Pure, cached.
+## its "only". A trait may carry a "default" level every unit has without listing it (an
+## implicit trait: climber 0, swimmer 0; spec 30). Content checks its traits and tags
+## against it here. Pure, cached.
 
 const DIR := "res://content/registry/"
 const KINDS := ["tags", "traits", "statuses"]
 
 static var _cache := {}
+static var _implicit := {}
 
 
 ## {"tags": {id: entry}, "traits": {id: entry}, "statuses": {id: entry}}.
@@ -21,6 +24,16 @@ static func current() -> Dictionary:
 			for entry in read[kind] if read is Dictionary else []:
 				_cache[kind][entry["id"]] = entry
 	return _cache
+
+
+## The implicit traits, id -> the level every unit has without listing them.
+static func implicit() -> Dictionary:
+	if _implicit.is_empty():
+		for trait_id in current()["traits"]:
+			var entry: Dictionary = current()["traits"][trait_id]
+			if entry.has("default"):
+				_implicit[trait_id] = int(entry["default"])
+	return _implicit
 
 
 ## The kinds of thing the trait may sit on: where all its tags' targets agree, within its

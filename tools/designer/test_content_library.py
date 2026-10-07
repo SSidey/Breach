@@ -49,7 +49,11 @@ class ReadRegistryTest(unittest.TestCase):
             registry = root / "content" / "registry"
             registry.mkdir(parents=True)
             (registry / "tags.json").write_text(json.dumps({"tags": list(TAGS.values())}))
-            traits = [{"id": "cunning", "tags": ["behaviour"]}, {"id": "flows", "tags": []}]
+            traits = [
+                {"id": "cunning", "tags": ["behaviour"]},
+                {"id": "flows", "tags": []},
+                {"id": "climber", "tags": ["physical"], "default": 0},
+            ]
             (registry / "traits.json").write_text(json.dumps({"traits": traits}))
             (root / "content" / "units").mkdir()
             (root / "content" / "units" / "grem.tres").write_text(UNIT_TRES)
@@ -65,6 +69,7 @@ class ReadRegistryTest(unittest.TestCase):
         self.assertEqual(got["usage"]["hardened"], ["content/units/grem.tres"])
         self.assertEqual(got["usage"]["small"], ["content/units/grem.tres"])
         self.assertEqual(got["usage"]["flows"], ["content/designer/terrain.json"])
+        self.assertEqual(got["implicit"], {"climber": 0})
 
     def test_the_repo_registry_reads_with_known_targets_and_usage(self):
         got = read_registry(REPO)
@@ -72,6 +77,8 @@ class ReadRegistryTest(unittest.TestCase):
         self.assertEqual(by_id["cunning"]["targets"], ["unit", "leader"])
         self.assertEqual(by_id["siege"]["targets"], ["weapon"])
         self.assertIn("content/weapons/brute_fists.tres", got["usage"]["siege"])
+        self.assertEqual(got["implicit"]["climber"], 0)
+        self.assertEqual(got["implicit"]["swimmer"], 0)
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ extends Resource
 ## Where in a formation the unit wants to stand (Decision 46).
 enum Position { FRONT, MID, BACK }
 
+const ContentRegistry = preload("res://content/definitions/content_registry.gd")
 const MAX_FOOTPRINT := 8
 ## The five attributes (Decision 117), each defaulting to AVERAGE.
 const ATTRIBUTES := ["strength", "agility", "constitution", "willpower", "wits"]
@@ -140,9 +141,9 @@ func validate() -> PackedStringArray:
 
 
 ## The level of a rated trait it has, its own or one an item it carries grants, the
-## higher (0: not at all).
+## higher; one it doesn't list it has at the registry's default (0: not at all).
 func trait_level(trait_id: String) -> int:
-	var level := int(traits.get(trait_id, 0))
+	var level := int(traits.get(trait_id, ContentRegistry.implicit().get(trait_id, 0)))
 	for item in items:  # what its items grant it; their own traits are theirs (Decision 128)
 		if item != null:
 			level = maxi(level, int(item.grants.get(trait_id, 0)))

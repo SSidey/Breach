@@ -4,7 +4,8 @@ Reads the registry - content/registry/{tags,traits,statuses}.json - and finds wh
 tag and trait is used across the repo's content (.tres definitions under content/, and the
 designer's own libraries), so the page can show, search and filter them. A trait's
 targets - the kinds of thing it may sit on - follow the same rule as Godot's
-ContentRegistry: where all its tags' targets agree, narrowed by its "only".
+ContentRegistry: where all its tags' targets agree, narrowed by its "only". A trait with a
+"default" is implicit: every unit has it at that level without listing it.
 """
 
 from __future__ import annotations
@@ -21,8 +22,9 @@ _WORD = re.compile(r'"([a-z_]+)"')
 
 
 def read_registry(root: Path) -> dict:
-    """{"tags": [...], "traits": [...], "statuses": [...], "usage": {id: [paths]}}, each
-    trait with its "targets" worked out."""
+    """{"tags": [...], "traits": [...], "statuses": [...], "usage": {id: [paths]},
+    "implicit": {id: level}}, each trait with its "targets" worked out; "implicit" holds the
+    traits with a "default" level every unit has without listing them (climber 0)."""
     out = {}
     for kind in KINDS:
         path = root / "content" / "registry" / f"{kind}.json"
@@ -31,6 +33,7 @@ def read_registry(root: Path) -> dict:
     for entry in out["traits"]:
         entry["targets"] = targets(entry, tags)
     out["usage"] = usage(root)
+    out["implicit"] = {t["id"]: int(t["default"]) for t in out["traits"] if "default" in t}
     return out
 
 

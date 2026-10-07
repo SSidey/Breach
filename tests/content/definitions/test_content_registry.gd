@@ -27,6 +27,19 @@ func test_the_registry_holds_together() -> void:
 		assert_array(ContentRegistry.tag_errors(tags, "status", status_id)).is_empty()
 
 
+func test_an_implicit_trait_is_every_units_at_its_default_level() -> void:
+	var implicit := ContentRegistry.implicit()
+
+	assert_dict(implicit).contains_key_value("climber", 0).contains_key_value("swimmer", 0)
+	for trait_id in implicit:
+		assert_int(implicit[trait_id]).is_greater_equal(0)
+		assert_bool(ContentRegistry.targets(trait_id).has("unit")).is_true()
+	var plain := UnitDef.new()
+	assert_int(plain.trait_level("climber")).is_equal(implicit["climber"])
+	plain.traits = {"climber": 2}
+	assert_int(plain.trait_level("climber")).is_equal(2)
+
+
 func test_a_trait_sits_only_where_its_tags_agree() -> void:
 	assert_array(ContentRegistry.targets("cunning")).contains_exactly_in_any_order(
 		["unit", "leader"]
