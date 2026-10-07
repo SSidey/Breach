@@ -227,9 +227,6 @@ static var _current: BattleTuning = null
 @export var ground_climb_pace := 0.0
 @export var ground_climb_demand := 0
 @export var ground_mode_load_share := 0.0
-## How far (cells) either side of the straight way a path search looks for a way round
-## (spec 30 round 3); a way found may lead further.
-@export var paths_leash := 0.0
 
 @export_group("Bodies (Decisions 106 and 114)")
 ## How many times over a unit in its formation's frame weighs, against being pushed.

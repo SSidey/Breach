@@ -101,7 +101,6 @@ ground_swim_pace = 0.25
 ground_mode_load_share = 0.5
 ground_climb_pace = 0.25
 ground_climb_demand = 1
-paths_leash = 16.0
 bodies_resist = 4.0
 bodies_passes = 3
 bodies_brush = 0.05

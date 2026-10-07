@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## Paths over the terrain grid, per spec 30 round 3 (Decisions 64, 75, 85 and 97): a unit
 ## goes the way that takes it least time at its own pace on each cell - round a wood,
 ## through a ford rather than swimming, swimming where no ford is in reach, over a cliff
-## if it climbs; the leash bounds how far aside the search looks; the same ground mirrored
+## if it climbs; with nothing out of sight it plans over the whole grid; the same ground mirrored
 ## gives the same path mirrored, ties going to geometry.
 
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
@@ -14,6 +14,12 @@ const ItemDef = preload("res://content/definitions/item_def.gd")
 
 func _grem() -> TerrainWalker:
 	return TerrainWalker.new(1.0)
+
+
+func _way(
+	ground: FormationTerrain, walker: TerrainWalker, start: Vector2, goal: Vector2
+) -> PackedVector2Array:
+	return TerrainPaths.plan(ground, walker, start, goal)["waypoints"]
 
 
 func _touches(cells: Array, area: Rect2i) -> bool:
@@ -78,27 +84,12 @@ func test_a_cliff_blocks_a_non_climber_and_slows_one_a_level_short() -> void:
 	var able := TerrainWalker.new(1.0, 0, 2)
 
 	assert_array(TerrainPaths.cells(ground, TerrainWalker.new(1.0), start, goal)).is_empty()
-	var slow := TerrainPaths.find(ground, short, start, goal)
-	var quick := TerrainPaths.find(ground, able, start, goal)
+	var slow := _way(ground, short, start, goal)
+	var quick := _way(ground, able, start, goal)
 	assert_array(slow).is_not_empty()
 	assert_float(TerrainPaths.cost(ground, short, slow)).is_greater(
 		TerrainPaths.cost(ground, able, quick)
 	)
-
-
-func test_the_leash_bounds_how_far_aside_the_search_looks() -> void:
-	var ground := FormationTerrain.new(Vector2i(30, 40))
-	ground.paint(Rect2i(14, 0, 2, 34), {"height": 8, "climb": 3})
-	var start := Vector2(3.5, 4.5)
-	var goal := Vector2(26.5, 4.5)
-
-	assert_array(TerrainPaths.cells(ground, _grem(), start, goal, 8.0)).is_empty()
-	var way := TerrainPaths.find(ground, _grem(), start, goal, 32.0)
-	assert_array(way).is_not_empty()
-	var length := 0.0
-	for index in range(1, way.size()):
-		length += way[index - 1].distance_to(way[index])
-	assert_float(length).is_greater(32.0)  # once found, it is followed past the leash
 
 
 func test_no_corner_is_cut_between_impassable_cells() -> void:
@@ -119,9 +110,7 @@ func test_open_ground_gives_a_straight_line_hugged_by_its_cells() -> void:
 		var centre := Vector2(cell) + Vector2(0.5, 0.5)
 		var nearest := Geometry2D.get_closest_point_to_segment(centre, start, goal)
 		assert_float(centre.distance_to(nearest)).is_less(0.8)
-	assert_array(TerrainPaths.find(ground, _grem(), start, goal)).is_equal(
-		PackedVector2Array([start, goal])
-	)
+	assert_array(_way(ground, _grem(), start, goal)).is_equal(PackedVector2Array([start, goal]))
 
 
 func _mirrorable(mirrored: bool) -> FormationTerrain:
@@ -149,8 +138,8 @@ func test_the_ground_mirrored_gives_the_path_mirrored() -> void:
 	assert_int(mirrored.size()).is_equal(cells.size())
 	for index in cells.size():
 		assert_object(mirrored[index]).is_equal(Vector2i(23 - cells[index].x, cells[index].y))
-	var way := TerrainPaths.find(_mirrorable(false), _grem(), start, goal)
-	var back := TerrainPaths.find(_mirrorable(true), _grem(), flip.call(start), flip.call(goal))
+	var way := _way(_mirrorable(false), _grem(), start, goal)
+	var back := _way(_mirrorable(true), _grem(), flip.call(start), flip.call(goal))
 	for index in way.size():
 		assert_vector(back[index]).is_equal_approx(flip.call(way[index]), Vector2.ONE * 0.0001)
 

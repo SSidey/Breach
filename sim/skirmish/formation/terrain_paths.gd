@@ -1,22 +1,27 @@
 class_name TerrainPaths
 extends RefCounted
-## Paths over the terrain grid for a unit (spec 30 round 3; Decisions 75, 85 and 97): the
-## quickest way at the walker's own pace on each cell - the pace the march uses
-## (FormationTerrain.crossing): ground, slope, liquid bands by its height, swimming where
-## it swims, cliffs where it climbs. A ford beats swimming, or a wood a detour, by cost
-## alone. The leash (`paths_leash`, BattleTuning) bounds how far either side of the
-## straight way the search looks for a way round; a way it finds may be far longer.
-## Deterministic: ties go to geometry (PathFrontier), so the same ground gives the same
-## path and the ground mirrored gives it mirrored. Not yet wired into movement. Pure.
+## Paths over the terrain grid for a unit (spec 30; Decisions 75, 85 and 97): the quickest
+## way at the walker's own pace on each cell - the pace the march uses (WalkerShares, from
+## FormationTerrain.crossing): ground, slope, liquid bands by its height, swimming and
+## climbing by its abilities. A ford beats swimming, or a wood a detour, by cost alone.
+## There is no leash: a pathfinder plans on what it sees (PathSight) - seen cells at their
+## real cost, unseen ones as open ground - and where the best plan runs out of sight it
+## heads for that edge and plans again from there (PathSearch), remembering what it has
+## seen (PathMemory, optional) so a wall felt along stays known. Deterministic: ties go to
+## geometry (PathFrontier), so the same ground gives the same path and the ground mirrored
+## gives it mirrored. Not yet wired into movement. Pure.
 ##
-##   TerrainPaths.cells(terrain, walker, from, to)  -> the cells of the way, or []
-##   TerrainPaths.find(terrain, walker, from, to)   -> waypoints, straightened, or []
-##   TerrainPaths.cost(terrain, walker, waypoints)  -> the seconds it takes at speed 1
+##   TerrainPaths.plan(terrain, walker, from, goal, sight)    -> {waypoints, reaches, cells}
+##   TerrainPaths.rejoin(terrain, walker, from, route, sight) -> {..., along}
+##   TerrainPaths.cells(terrain, walker, from, goal, sight)   -> the cells of the way, or []
+##   TerrainPaths.cost(terrain, walker, waypoints)            -> seconds at speed 1
 
-const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const TerrainWalker = preload("res://sim/skirmish/formation/terrain_walker.gd")
 const PathSearch = preload("res://sim/skirmish/formation/path_search.gd")
+const PathSight = preload("res://sim/skirmish/formation/path_sight.gd")
+const PathMemory = preload("res://sim/skirmish/formation/path_memory.gd")
 
 ## How finely (cells) a straight leg is sampled for its cost.
 const SAMPLE := 0.2
@@ -26,32 +31,55 @@ const SLACK := 0.000001
 
 
 ## The cells of the quickest way for `walker` from the cell holding `from` to the cell
-## holding `to`, both included; empty where there is none within `leash` cells of the
-## straight way (negative: the tuned leash; INF: no bound) or either end is off the grid.
+## holding `goal`, both included, planned on what `sight` sees (null: everything) and
+## `memory` has seen - to the
+## edge of sight where the best plan runs out of it; empty where there is no way.
 static func cells(
-	terrain: FormationTerrain, walker: TerrainWalker, from: Vector2, to: Vector2, leash := -1.0
+	terrain: FormationTerrain,
+	walker: TerrainWalker,
+	from: Vector2,
+	goal: Vector2,
+	sight: PathSight = null,
+	memory: PathMemory = null
 ) -> Array[Vector2i]:
-	var bound := BattleTuning.current().paths_leash if leash < 0.0 else leash
-	var start := Vector2i(floori(from.x), floori(from.y))
-	var goal := Vector2i(floori(to.x), floori(to.y))
-	return PathSearch.new(terrain, walker, start, goal, bound).run()
+	return PathSearch.new(terrain, walker, _cell(from), sight, memory).to_cell(_cell(goal))
 
 
-## The way as waypoints from `from` to `to`, through the centres of the cells where it
-## turns: a stretch is cut straight wherever the straight leg crosses nothing it can't and
-## is no slower. Empty where `cells` finds no way.
-static func find(
-	terrain: FormationTerrain, walker: TerrainWalker, from: Vector2, to: Vector2, leash := -1.0
-) -> PackedVector2Array:
-	var way := cells(terrain, walker, from, to, leash)
-	if way.is_empty():
-		return PackedVector2Array()
-	var points := PackedVector2Array()
-	for cell in way:
-		points.append(Vector2(cell) + Vector2(0.5, 0.5))
-	points[0] = from
-	points[points.size() - 1] = to
-	return _straightened(terrain, walker, points)
+## The way planned from `from` towards `goal` on what `sight` sees: {"waypoints": from,
+## the centres of the cells where it turns, and `goal` - or the cell on the edge of sight
+## it heads for; "reaches": whether it reaches the goal; "cells": the way's cells}. The
+## waypoints are empty where there is no way.
+static func plan(
+	terrain: FormationTerrain,
+	walker: TerrainWalker,
+	from: Vector2,
+	goal: Vector2,
+	sight: PathSight = null,
+	memory: PathMemory = null
+) -> Dictionary:
+	var search := PathSearch.new(terrain, walker, _cell(from), sight, memory)
+	var way := search.to_cell(_cell(goal))
+	var end := goal if search.reaches else Vector2.INF
+	return _planned(terrain, walker, way, from, end, search.reaches)
+
+
+## The way back onto `route` from `from` on what `sight` sees: to the quickest-reached
+## cell on the route ("reaches"), whose distance along the route is "along" - from a cell
+## on the route, just that cell - or with none in sight, to the edge of sight nearest it.
+## As plan() otherwise.
+static func rejoin(
+	terrain: FormationTerrain,
+	walker: TerrainWalker,
+	from: Vector2,
+	route: FormationRoute,
+	sight: PathSight = null,
+	memory: PathMemory = null
+) -> Dictionary:
+	var search := PathSearch.new(terrain, walker, _cell(from), sight, memory)
+	var out := _planned(terrain, walker, search.to_route(route), from, Vector2.INF, search.reaches)
+	var waypoints: PackedVector2Array = out["waypoints"]
+	out["along"] = route.distance_of(waypoints[-1]) if search.reaches else -1.0
+	return out
 
 
 ## The time (seconds, at a speed of a cell a second) `walker` takes along `waypoints`,
@@ -63,6 +91,30 @@ static func cost(
 	for index in range(1, waypoints.size()):
 		total += _leg(terrain, walker, waypoints[index - 1], waypoints[index])
 	return total
+
+
+## The plan along `way`: from `from` to `end` (INF: the last cell's centre), straightened.
+static func _planned(
+	terrain: FormationTerrain,
+	walker: TerrainWalker,
+	way: Array[Vector2i],
+	from: Vector2,
+	end: Vector2,
+	reaches: bool
+) -> Dictionary:
+	var points := PackedVector2Array()
+	for cell in way:
+		points.append(Vector2(cell) + Vector2(0.5, 0.5))
+	if not points.is_empty():
+		points[0] = from
+		if end != Vector2.INF and points.size() > 1:
+			points[points.size() - 1] = end
+		points = _straightened(terrain, walker, points)
+	return {"waypoints": points, "reaches": reaches and not way.is_empty(), "cells": way}
+
+
+static func _cell(point: Vector2) -> Vector2i:
+	return Vector2i(floori(point.x), floori(point.y))
 
 
 ## Each waypoint kept reaches as far along the way as a straight leg can: galloping out
