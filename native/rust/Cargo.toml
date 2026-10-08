@@ -16,3 +16,11 @@ rayon = "1.10"
 opt-level = 3
 lto = "thin"
 codegen-units = 1
+
+# For iterating (native/build.sh dev): optimised, but no LTO, so a rebuild takes seconds.
+# Results are the same bit for bit: Rust never contracts to FMA nor reorders float maths.
+[profile.fast]
+inherits = "release"
+lto = false
+codegen-units = 16
+incremental = true
