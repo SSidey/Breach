@@ -1,4 +1,5 @@
-//! The body-parting pass of `sim/skirmish/formation/unit_bodies.gd`, over plain arrays.
+//! The body-parting pass of `sim/skirmish/formation/unit_bodies.gd`, over plain arrays
+//! (BodyField gathers them from its own state, in the bodies' draw order).
 //!
 //! Every operation mirrors the GDScript path's precision and order, so results are bit for
 //! bit the same: `Vector2` maths in f32 (Godot's `real_t`), GDScript `float`s in f64, a
@@ -10,63 +11,16 @@ use std::hash::{BuildHasherDefault, Hasher};
 
 use rayon::prelude::*;
 
+pub use crate::field::{FLEEING, LOOSE};
+use crate::maths::V2;
+
 /// Cells a bucket of the pair search spans (UnitBodies.BUCKET).
 const BUCKET: f32 = 2.0;
 /// Overlaps shallower than this are left (UnitBodies.EPSILON).
 const EPSILON: f64 = 0.001;
 
-/// The body is a loose unit (in its squad's `loose`).
-pub const LOOSE: u8 = 1;
-/// The body is fleeing (in its squad's `fleeing`): its point is an offset from its base.
-pub const FLEEING: u8 = 2;
 /// The body was pushed this step (set on the way out).
 pub const MOVED: u8 = 4;
-
-/// Godot's `Vector2` with `real_t` = f32, its operators spelled out as Godot's C++ has them.
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
-pub struct V2 {
-    pub x: f32,
-    pub y: f32,
-}
-
-impl V2 {
-    pub const ZERO: V2 = V2 { x: 0.0, y: 0.0 };
-
-    #[inline]
-    fn add(self, o: V2) -> V2 {
-        V2 { x: self.x + o.x, y: self.y + o.y }
-    }
-
-    #[inline]
-    fn sub(self, o: V2) -> V2 {
-        V2 { x: self.x - o.x, y: self.y - o.y }
-    }
-
-    /// `Vector2 * float`: the GDScript float (f64) is narrowed to real_t first.
-    #[inline]
-    fn scale(self, s: f64) -> V2 {
-        let s = s as f32;
-        V2 { x: self.x * s, y: self.y * s }
-    }
-
-    /// `Vector2::length`: `Math::sqrt(x * x + y * y)` in real_t.
-    #[inline]
-    fn length(self) -> f32 {
-        (self.x * self.x + self.y * self.y).sqrt()
-    }
-
-    /// `Vector2::normalized`.
-    #[inline]
-    fn normalized(self) -> V2 {
-        let l = self.x * self.x + self.y * self.y;
-        if l != 0.0 {
-            let l = l.sqrt();
-            V2 { x: self.x / l, y: self.y / l }
-        } else {
-            self
-        }
-    }
-}
 
 /// The bodies of one step: what moves (`points`, `nexts`, `flags`) and what doesn't.
 pub struct Bodies<'a> {

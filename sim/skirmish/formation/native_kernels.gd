@@ -1,25 +1,24 @@
 class_name NativeKernels
 extends RefCounted
-## The native spike's one switch (native/README.md): which implementation runs UnitBodies'
-## body-parting pass - "gdscript" (the default and the reference), "rust" (godot-rust) or
-## "cpp" (godot-cpp). Read from the BREACH_NATIVE environment variable, else the project
-## setting breach/native/engine; tests and the bench set it with use(). A native engine
-## whose library isn't built (native/build.sh) quietly falls back to GDScript, so a checkout
-## without the binaries plays exactly as before. BREACH_NATIVE_THREADS=1 lets the Rust
-## kernel find and weigh pairs on its thread pool (applied in a fixed order all the same).
-## Every engine gives bit-identical outcomes (tools/formation_digest.gd).
+## The switch for the simulation's native core (Decision 129, native/README.md): whether
+## the hot passes - body parting (UnitBodies) and the scrum's slot search (ScrumSeek) - run
+## in GDScript ("gdscript", the default and the reference) or in Rust ("rust": a BodyField,
+## the bodies' state owned natively). Read from the BREACH_NATIVE environment variable,
+## else the project setting breach/native/engine; tests and the bench set it with use(). A
+## checkout without the library built (native/build.sh) quietly runs on GDScript, so it
+## plays exactly as before. BREACH_NATIVE_THREADS=1 lets the Rust core part bodies on its
+## thread pool (applied in a fixed order all the same). Both engines give bit-identical
+## outcomes (tools/formation_digest.gd).
 
 const GDSCRIPT := "gdscript"
-## engine -> [its .gdextension, the class it registers, its library's base name]
-const LIBRARIES := {
-	"rust": ["res://native/breach_rust.gdextension", "BodyPartingRust", "breach_rust"],
-	"cpp": ["res://native/breach_cpp.gdextension", "BodyPartingCpp", "breach_cpp"],
-}
+const RUST := "rust"
+const EXTENSION := "res://native/breach_rust.gdextension"
+const FIELD_CLASS := "BodyField"
+const LIBRARY := "breach_rust"
 
-## Whether a native kernel may use threads (Rust's Rayon pool).
+## Whether the native core may use threads (Rayon's pool).
 static var threaded := false
 static var _engine := ""
-static var _kernels := {}
 
 
 ## The engine chosen: use()'s, else BREACH_NATIVE's, else the project setting's.
@@ -32,39 +31,36 @@ static func engine() -> String:
 	return _engine
 
 
-## Picks the engine from now on ("gdscript", "rust" or "cpp").
+## Picks the engine from now on ("gdscript" or "rust").
 static func use(engine_name: String) -> void:
 	_engine = engine_name
 
 
-## True if the engine runs here: GDScript always, a native one once its library is built.
+## True if the engine runs here: GDScript always, Rust once its library is built.
 static func available(engine_name: String) -> bool:
 	if engine_name == GDSCRIPT:
 		return true
-	if not LIBRARIES.has(engine_name):
+	if engine_name != RUST:
 		return false
-	var library: Array = LIBRARIES[engine_name]
-	if not ClassDB.class_exists(library[1]) and FileAccess.file_exists(_binary(library[2])):
-		GDExtensionManager.load_extension(library[0])
-	return ClassDB.class_exists(library[1])
+	if not ClassDB.class_exists(FIELD_CLASS) and FileAccess.file_exists(_binary()):
+		GDExtensionManager.load_extension(EXTENSION)
+	return ClassDB.class_exists(FIELD_CLASS)
 
 
-## The chosen engine's body-parting kernel, or null to run the GDScript passes.
-static func body_parting() -> Object:
+## A new field for a battle's bodies (BodyField) under the chosen engine, or null to run
+## the GDScript passes.
+static func body_field() -> Object:
 	var engine_name := engine()
-	if engine_name == GDSCRIPT:
+	if engine_name == GDSCRIPT or not available(engine_name):
 		return null
-	if not _kernels.has(engine_name):
-		var built := available(engine_name)
-		_kernels[engine_name] = ClassDB.instantiate(LIBRARIES[engine_name][1]) if built else null
-	return _kernels[engine_name]
+	return ClassDB.instantiate(FIELD_CLASS)
 
 
 ## Where native/build.sh puts the library for this platform.
-static func _binary(library_name: String) -> String:
+static func _binary() -> String:
 	match OS.get_name():
 		"Windows":
-			return "res://native/bin/%s.windows.x86_64.dll" % library_name
+			return "res://native/bin/%s.windows.x86_64.dll" % LIBRARY
 		"macOS":
-			return "res://native/bin/lib%s.macos.universal.dylib" % library_name
-	return "res://native/bin/lib%s.linux.x86_64.so" % library_name
+			return "res://native/bin/lib%s.macos.universal.dylib" % LIBRARY
+	return "res://native/bin/lib%s.linux.x86_64.so" % LIBRARY

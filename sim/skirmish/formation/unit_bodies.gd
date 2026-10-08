@@ -53,17 +53,18 @@ static func at(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 
 
 ## Pushes apart every pair of bodies that overlap: in GDScript (the reference) or, when the
-## switch picks one and it is built, a native kernel over the same bodies (NativeKernels).
-static func step(squads: Array, fight_seed: int) -> void:
+## switch picks Rust and it is built, on the battle's native `field` (a BodyField kept
+## across ticks; without one, a field made for this step alone).
+static func step(squads: Array, fight_seed: int, field: Object = null) -> void:
 	var began := Time.get_ticks_usec()
-	var drawn := _drawn(squads, fight_seed)
-	var kernel := NativeKernels.body_parting()
-	if kernel != null:
-		var way := func(i: int, j: int) -> Vector2:
-			return part_way(fight_seed, drawn[i][2], drawn[j][2])
-		BodyParting.step(kernel, drawn, way, NativeKernels.threaded)
+	if field == null:
+		field = NativeKernels.body_field()
+	if field != null:
+		var way := func(draw: int, other_draw: int) -> Vector2:
+			return part_way(fight_seed, draw, other_draw)
+		BodyParting.step(field, squads, fight_seed, way, NativeKernels.threaded)
 	else:
-		_passes(drawn, fight_seed)
+		_passes(_drawn(squads, fight_seed), fight_seed)
 	clock_usec += Time.get_ticks_usec() - began
 
 

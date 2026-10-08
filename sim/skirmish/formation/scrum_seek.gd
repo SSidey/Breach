@@ -19,17 +19,31 @@ const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
 const SlotSearch = preload("res://sim/skirmish/formation/slot_search.gd")
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 
+## Microseconds spent in plan() since it was last zeroed (the bench reads it; no outcome does).
+static var clock_usec := 0
+
 
 ## [[where, radius, unit], ...]: every body standing, for which slots are open.
 static func bodies(squads: Array) -> Array:
 	return ScrumSlots.bodies(squads)
 
 
+## Plans every fighting squad's units: in GDScript (the reference), or on the battle's
+## native bodies, ctx["field"] (ScrumSeekField, Decision 129) - the same choices.
+static func plan(ctx: Dictionary) -> void:
+	var began := Time.get_ticks_usec()
+	if ctx.get("field") != null:
+		ScrumSeekField.plan(ctx)
+	else:
+		_plan(ctx)
+	clock_usec += Time.get_ticks_usec() - began
+
+
 ## Plans and walks every fighting squad's units, seekers in contest order: first those
 ## keeping slots still open, then the rest picking the nearest open one. `ctx["crowd"]` is
 ## a BodyGrid over ctx["bodies"]; slots, foes and claims are found through grids too
 ## (SlotSearch, ScrumNear), the same choices as looking through every one.
-static func plan(ctx: Dictionary) -> void:
+static func _plan(ctx: Dictionary) -> void:
 	ctx["rings"] = {}  # squad -> {seeker radius -> the slots round its foes (SlotSearch)}
 	ctx["claims"] = {}  # cell -> points claimed (SlotSearch.claim)
 	var seekers := []

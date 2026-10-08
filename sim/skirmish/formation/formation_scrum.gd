@@ -47,7 +47,8 @@ const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 
 
-## One tick of the scrum. `cells_per_second` is the march pace at speed 1. Returns
+## One tick of the scrum. `cells_per_second` is the march pace at speed 1; given the
+## battle's native bodies (`field`, NativeKernels), the slot search runs on them. Returns
 ## "faced" and "disengaged" events.
 static func step(
 	squads: Array,
@@ -55,7 +56,8 @@ static func step(
 	cells_per_second: float,
 	tick_seconds: float,
 	fight_seed: int,
-	terrain: FormationTerrain = null
+	terrain: FormationTerrain = null,
+	field: Object = null
 ) -> Array:
 	var events := ScrumEngage.step(squads, tick, fight_seed)
 	for squad in squads:
@@ -73,6 +75,7 @@ static func step(
 		"bodies": ScrumSeek.bodies(squads),
 		"lying": GroundBodies.lying_in(squads),
 		"active": {},
+		"field": field,  # the bodies, native (Decision 129), or null
 	}
 	ctx["crowd"] = BodyGrid.of_bodies(ctx["bodies"])  # the bodies, found by where they stand
 	_seek(ctx)

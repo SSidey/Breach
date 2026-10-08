@@ -1,9 +1,10 @@
 extends GdUnitTestSuite
-## The native spike (NativeKernels, BodyParting): UnitBodies' body-parting pass run by the
-## Rust or C++ kernel leaves every body bit for bit where the GDScript path does - framed,
-## loose and fleeing bodies, friends and foes, bodies lying on each other, and a whole
-## battle - and nothing turns on list order. A kernel that isn't built (native/build.sh)
-## is skipped: the switch falls back to GDScript.
+## The native core (NativeKernels, BodyParting, Decision 129): UnitBodies' body-parting
+## pass run in Rust on a BodyField leaves every body bit for bit where the GDScript path
+## does - framed, loose and fleeing bodies, friends and foes, bodies lying on each other, a
+## field kept across ticks while units die and change squad, and a whole battle (the slot
+## search on the field too) - and nothing turns on list order. Where the library isn't
+## built (native/build.sh) the native cases are skipped: the switch falls back to GDScript.
 
 const NativeKernels = preload("res://sim/skirmish/formation/native_kernels.gd")
 const UnitBodies = preload("res://sim/skirmish/formation/unit_bodies.gd")
@@ -11,7 +12,7 @@ const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationBench = preload("res://sim/skirmish/formation/formation_bench.gd")
 
-const NATIVE := ["rust", "cpp"]
+const NATIVE := ["rust"]
 
 
 func after_test() -> void:
@@ -79,26 +80,51 @@ func _bytes(squads: Array) -> PackedByteArray:
 	return var_to_bytes(state)
 
 
-func _crowd_parted(engine: String, reversed: bool) -> PackedByteArray:
+## The crowd parted for three ticks, each on a field of its own, or (`kept`) four on one
+## field kept across them while a unit dies and another changes squad.
+func _crowd_parted(engine: String, reversed: bool, kept := false) -> PackedByteArray:
 	NativeKernels.use(engine)
 	var squads := _crowd(reversed)
-	for tick in range(3):
-		UnitBodies.step(squads, 9 + tick)
+	var field := NativeKernels.body_field() if kept else null
+	for tick in range(4 if kept else 3):
+		if kept and tick == 2:
+			_churn(squads)
+		UnitBodies.step(squads, 9 + tick, field)
 	return _bytes(squads)
+
+
+## Unit 3 dies; unit 5 leaves its squad for the line (squad 1).
+func _churn(squads: Array) -> void:
+	var by_id := {}
+	for squad in squads:
+		by_id[squad.id] = squad
+		for unit in squad.living():
+			if unit.id == 3:
+				unit.state = SkirmishUnit.State.DEAD
+	var mover: SkirmishUnit = by_id[2].units[0]
+	by_id[2].units.erase(mover)
+	by_id[1].units.append(mover)
+
+
+func test_a_field_kept_across_ticks_parts_as_gdscript_does_as_units_die_and_move() -> void:
+	var reference := _crowd_parted(NativeKernels.GDSCRIPT, false, true)
+	for engine in _built():
+		assert_array(Array(_crowd_parted(engine, false, true))).is_equal(Array(reference))
+		assert_array(Array(_crowd_parted(engine, true, true))).is_equal(Array(reference))
 
 
 func test_the_gdscript_path_is_the_default_and_an_unknown_engine_is_not_available() -> void:
 	assert_bool(NativeKernels.available(NativeKernels.GDSCRIPT)).is_true()
 	assert_bool(NativeKernels.available("fortran")).is_false()
 	NativeKernels.use(NativeKernels.GDSCRIPT)
-	assert_object(NativeKernels.body_parting()).is_null()
+	assert_object(NativeKernels.body_field()).is_null()
 
 
 func test_a_native_kernel_parts_a_crowd_bit_for_bit_as_gdscript_does() -> void:
 	var reference := _crowd_parted(NativeKernels.GDSCRIPT, false)
 	for engine in _built():
 		var parted := _crowd_parted(engine, false)
-		assert_object(NativeKernels.body_parting()).is_not_null()  # the kernel ran
+		assert_object(NativeKernels.body_field()).is_not_null()  # the core ran
 		assert_array(Array(parted)).is_equal(Array(reference))
 
 

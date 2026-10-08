@@ -93,6 +93,7 @@ var _next_squad_id := 1
 var _next_unit_id := 1
 var _pending_orders := {}  # squad id -> SkirmishUnit.Order
 var _tick := 0
+var _field: Object = NativeKernels.body_field()  # the bodies, native or null (Decision 129)
 
 
 func _init(length: float, seconds_per_tick: float) -> void:
@@ -163,7 +164,7 @@ func step() -> Array:
 	_move(events)
 	var pace := TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
 	events.append_array(
-		FormationScrum.step(_squads, _tick, pace, tick_seconds, fight_seed, terrain)
+		FormationScrum.step(_squads, _tick, pace, tick_seconds, fight_seed, terrain, _field)
 	)
 	_fight(events)
 	FormationDeaths.bury(_squads, _tick, events)
@@ -177,7 +178,7 @@ func step() -> Array:
 	_next_squad_id = FormationStrays.adopt(strays, _squads, _next_squad_id, fight_seed)
 	_next_squad_id = FormationGroups.step(_squads, _tick, fight_seed, events, _next_squad_id)
 	FormationStamina.step(_squads, tick_seconds)  # runners tire, the rest recover
-	UnitBodies.step(_squads, fight_seed)  # after every move: friends' bodies part (Decision 106)
+	UnitBodies.step(_squads, fight_seed, _field)  # after every move: bodies part (Decision 106)
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
 	var walking := [tick_seconds, TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE]
