@@ -26,17 +26,21 @@ static func length(squad: SkirmishSquad, fallback: float) -> float:
 
 
 ## How far the squad moves this tick on `terrain` (Decision 85): `step` at the pace of the
-## worst cell its front rank steps into. Where it can't go at all it halts, reported once
-## as "blocked".
+## worst cell its front rank steps into that it can cross - a unit whose way is barred
+## squeezes in and pours through (FormationWalk.target_of, spec 30 round 3). Where none of
+## its front can go it halts, reported once as "blocked".
 static func pace(
 	squad: SkirmishSquad, terrain: FormationTerrain, step: float, tick: int, events: Array
 ) -> float:
 	if terrain == null:
 		return step
 	var ahead := UnitMotion.vector(squad.heading)
-	var worst := 1.0
+	var worst := INF
 	for unit in squad.fighters():
-		worst = minf(worst, terrain.factor(unit.height, unit.position, unit.position + ahead))
+		var factor := terrain.factor(unit.height, unit.position, unit.position + ahead)
+		if factor > 0.0:  # one stepping onto ground it can't cross pours (FormationWalk)
+			worst = minf(worst, factor)
+	worst = 0.0 if worst == INF else worst
 	if worst <= 0.0 and not squad.blocked:
 		events.append(FormationEvents.squad_event("blocked", tick, squad))
 	squad.blocked = worst <= 0.0
@@ -122,5 +126,5 @@ static func sync_units(squads: Array, timing := [], terrain: FormationTerrain = 
 				unit.bearing = entry.heading
 			else:
 				FormationWalk.walk(
-					entry, unit, FormationWalk.place_of(entry, unit), timing, terrain
+					entry, unit, FormationWalk.target_of(entry, unit, terrain), timing, terrain
 				)

@@ -22,6 +22,8 @@ const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 
 const EPSILON := 0.000001
+## Cells a unit squeezes in at a time, looking for ground to stand on (target_of).
+const SQUEEZE_STEP := 0.5
 
 
 ## Walks `unit` of `squad` a tick towards `place`; `timing` is [seconds, cells a second
@@ -35,16 +37,40 @@ static func walk(
 	terrain: FormationTerrain = null
 ) -> void:
 	var seconds: float = timing[0]
-	var way := place - unit.position
-	var full: float = unit.speed * timing[1] * seconds
-	if terrain != null and way.length() > EPSILON:
-		var ahead := unit.position + way.normalized()
-		full *= terrain.factor(unit.height, unit.position, ahead)
+	var going := _way(unit, place, terrain)  # [where it steps towards, the ground's share]
+	var toward: Vector2 = going[0]
+	var way := toward - unit.position
+	var full: float = unit.speed * timing[1] * seconds * going[1]
 	if timing.size() > 2 and way.length() > EPSILON:  # bodies on the ground (GroundBodies)
 		full *= GroundBodies.underfoot(unit, unit.position + way.normalized() * 0.5, timing[2])
 	var facing := UnitMotion.vector(squad.heading)
-	var look := place if way.length() > _tuning().walk_face_travel else place + facing
-	unit.position = UnitMotion.walk(unit, unit.position, place, full, seconds, look)
+	var far := place.distance_to(unit.position) > _tuning().walk_face_travel
+	var look := toward if far else place + facing
+	unit.position = UnitMotion.walk(unit, unit.position, toward, full, seconds, look)
+
+
+## [the point the unit steps towards on its way to `place`, the share of its pace the
+## ground allows]: straight there; or, where that step is barred, sliding along the barrier
+## on whichever axis is open and brings it nearer (a wall's face, a stream's bank).
+static func _way(unit: SkirmishUnit, place: Vector2, terrain: FormationTerrain) -> Array:
+	var way := place - unit.position
+	if terrain == null or way.length() < EPSILON:
+		return [place, 1.0]
+	var straight := terrain.factor(unit.height, unit.position, unit.position + way.normalized())
+	if straight > 0.0:
+		return [place, straight]
+	var best := [unit.position, 0.0]
+	var nearest := way.length()
+	for along: Vector2 in [Vector2(way.x, 0.0), Vector2(0.0, way.y)]:
+		if along.length() < EPSILON:
+			continue
+		var step := unit.position + along.normalized()
+		var share := terrain.factor(unit.height, unit.position, step)
+		var left := (unit.position + along).distance_to(place)
+		if share > 0.0 and left < nearest - EPSILON:
+			best = [unit.position + along, share]
+			nearest = left
+	return best
 
 
 ## Where `unit` belongs in its squad's frame now, including any swap under way.
@@ -61,7 +87,7 @@ static func place_of(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 ## none as the furthest nears the slack itself, so a wheel slows to what its outer file
 ## can walk rather than halting; one fallen behind (walk_lost) is waited for only if no
 ## man is left behind.
-static func share(squad: SkirmishSquad) -> float:
+static func share(squad: SkirmishSquad, terrain: FormationTerrain = null) -> float:
 	var rule := rule_of(squad)
 	if rule == "fall_behind_left_behind":
 		return 1.0
@@ -70,15 +96,38 @@ static func share(squad: SkirmishSquad) -> float:
 	for unit in squad.living():
 		if squad.loose.has(unit.id) or squad.fleeing.has(unit.id):
 			continue
-		var lag := unit.position.distance_to(place_of(squad, unit))
+		var target := target_of(squad, unit, terrain)
+		if not target.is_equal_approx(place_of(squad, unit)):
+			continue  # its place is barred: it pours through the gap behind the frame
+		var lag := unit.position.distance_to(target)
 		if lag <= _tuning().walk_lost or rule == "no_man_left_behind":
 			furthest = maxf(furthest, lag)
 	return clampf((slack - furthest) / (slack / 2.0), 0.0, 1.0)
 
 
+## Where `unit` makes for: its place, or - where its place lies on ground it can't stand
+## on - the nearest it can, squeezing across the frame towards its centre line, so a
+## formation pours through a gap narrower than itself and fans out again past it (spec 30
+## round 3, part 5). On open ground (no terrain) its place.
+static func target_of(
+	squad: SkirmishSquad, unit: SkirmishUnit, terrain: FormationTerrain = null
+) -> Vector2:
+	var place := place_of(squad, unit)
+	if terrain == null or terrain.factor(unit.height, place, place) > 0.0:
+		return place
+	var across := UnitMotion.vector(squad.heading).orthogonal()
+	var offset := (place - squad.position).dot(across)
+	var steps := ceili(absf(offset) / SQUEEZE_STEP)
+	for step in range(1, steps + 1):
+		var point := place - across * signf(offset) * minf(step * SQUEEZE_STEP, absf(offset))
+		if terrain.factor(unit.height, point, point) > 0.0:
+			return point
+	return place
+
+
 ## True if the squad's frame waits this tick for a unit lagging behind its place.
-static func waits(squad: SkirmishSquad) -> bool:
-	return share(squad) <= EPSILON
+static func waits(squad: SkirmishSquad, terrain: FormationTerrain = null) -> bool:
+	return share(squad, terrain) <= EPSILON
 
 
 ## How far (cells) a unit of the squad may lag behind its place before the frame waits.

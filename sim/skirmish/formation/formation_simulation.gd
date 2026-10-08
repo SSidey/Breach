@@ -56,7 +56,6 @@ const BlowLanding = preload("res://sim/skirmish/formation/blow_landing.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
-const FormationNarrowing = preload("res://sim/skirmish/formation/formation_narrowing.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const FormationFronts = preload("res://sim/skirmish/formation/formation_fronts.gd")
 const FormationJoins = preload("res://sim/skirmish/formation/formation_joins.gd")
@@ -233,9 +232,7 @@ func _move(events: Array) -> void:
 		var travel := FormationMarch.travel_sign(mover, end)
 		if travel != mover.direction and ScrumTurn.begin(mover, travel, _tick, events):
 			continue  # an about-face is a re-form: its units walk to their places (Decision 92)
-		if FormationNarrowing.holds(mover, terrain, _tick, tick_seconds, events):
-			continue
-		var keeping := FormationWalk.share(mover)  # within its slack of its units
+		var keeping := FormationWalk.share(mover, terrain)  # within its slack of its units
 		if keeping <= 0.0:
 			continue  # it waits for them (spec 30 round 3)
 		var cells_per_second := mover.speed() * TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
