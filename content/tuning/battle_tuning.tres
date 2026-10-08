@@ -117,3 +117,5 @@ walk_slack_loose = 2.0
 walk_lost = 8.0
 walk_face_travel = 2.0
 group_join = 2.0
+take_reach = 6.0
+take_hold = 10.0

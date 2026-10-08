@@ -22,6 +22,9 @@ var tends := ""
 var merges := false
 ## Whether its groups may pursue a retreating enemy (Decision 109).
 var pursues := true
+## Whether its groups walk out to take downed foes after a fight (FormationTaking), or
+## leave them.
+var takes := true
 
 
 func _init(home: float = 0.0, guide: FormationRoute = null) -> void:

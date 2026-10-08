@@ -274,6 +274,10 @@ static var _current: BattleTuning = null
 ## Groups (cells): two friendly groups whose units come this close form up by the rule
 ## (FormationGroups), and units fallen behind this close to one another split off together.
 @export var group_join := 0.0
+## Taking the downed (FormationTaking): how far (cells) from a group's units a downed foe
+## may lie to be walked out to, and how long (seconds) a group holds for its takers.
+@export var take_reach := 0.0
+@export var take_hold := 0.0
 
 
 ## The tuning in play: content/tuning/battle_tuning.tres, loaded once.
