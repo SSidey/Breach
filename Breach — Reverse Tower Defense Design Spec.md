@@ -6181,3 +6181,55 @@ ability to grant that"). They agreed tags should "bring the valid assignments wi
 **Rules over cases:** general: one rule for every trait's targets, and one check for all
 content.
 **Order:** not applicable (content data, no simulation order).
+
+### Decision 129 — Rust for the simulation's hot core
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-08
+
+**Rationale:** The user wants battles as large as a 32×32 formation against its mirror
+(1,024 a side). After spec 30's part 0 (a shared spatial grid, outcomes unchanged), a
+tick at that size still takes about 650 ms against a 100 ms budget. A spike (#174) ported
+one hot loop, the body-parting pass, to Rust (godot-rust's gdext) and C++ (godot-cpp)
+behind one switch:
+- The ported code ran about 45× faster than GDScript, with Rust and C++ level.
+- Every test battle's tick-by-tick fingerprint was byte-identical across GDScript, Rust
+  and C++, with and without threads.
+- Most of the remaining cost of the pass was GDScript copying the data in and out.
+
+The user: "Given people are moving from C++ to Rust, I think it would be beneficial to use
+Rust as our benchmark", then "We should commit fully to Rust for the hot sections".
+- **Rust, through GDExtension.**
+  - Rust builds with cargo alone, with no binding generation.
+  - A panic is caught at the boundary and reported as a Godot error, where a C++ fault
+    takes down the engine.
+  - Deterministic threading is one crate away (Rayon).
+- **What moves.** The hot core moves into Rust and owns its state, so no arrays are
+  copied across each tick:
+  - bodies' positions and their parting
+  - the spatial grid
+  - the scrum's slot search
+  - pathfinding
+- **What stays in GDScript:** the rules - morale, orders, commands and groups, wounds -
+  where they are quick to change.
+- **Identity is the gate.** Every port must reproduce the GDScript reference bit for bit
+  on the fingerprint tool (tools/formation_digest.gd) before the reference retires:
+  - float32 and float64 kept as Godot keeps them
+  - no fused multiply-add
+  - the same summation order
+- **Builds.** Native libraries are built per platform (Linux, Windows, macOS) by
+  `native/build.sh` and CI, never committed. A checkout without them runs on the GDScript
+  reference until each port is proven.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| C++ (godot-cpp) | Level on speed; heavier toolchain, a crash takes down the engine; the user prefers Rust. |
+| Simulating on the GPU (as some games do physics and animation) | GPU floats aren't identical across cards, which breaks replays and trials; reading results back costs frames; the hot loops are branching rules, not uniform maths. Kept for drawing many units. |
+| A lower tick rate for big fights | Changes outcomes; held in reserve. |
+| C# | Needs the .NET build of Godot; slower than native for this work. |
+
+**Rules over cases:** not a rule change; the simulation's outcomes are unchanged by
+construction (identity gate).
+**Order:** the ports keep the reference's order exactly, and the fingerprint proves it.
