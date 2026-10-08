@@ -26,11 +26,16 @@ const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
+const NativeKernels = preload("res://sim/skirmish/formation/native_kernels.gd")
+const BodyParting = preload("res://sim/skirmish/formation/body_parting.gd")
 
 ## Cells a bucket of the pair search spans: at least the widest body.
 const BUCKET := 2.0
 ## Overlaps shallower than this (cells) are left: Vector2's float32 rounding, not a push.
 const EPSILON := 0.001
+
+## Microseconds spent in step() since it was last zeroed (the bench reads it; no outcome does).
+static var clock_usec := 0
 
 
 ## The body's radius in cells.
@@ -47,9 +52,28 @@ static func at(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 	return unit.position
 
 
-## Pushes apart every pair of bodies that overlap.
+## Pushes apart every pair of bodies that overlap: in GDScript (the reference) or, when the
+## switch picks one and it is built, a native kernel over the same bodies (NativeKernels).
 static func step(squads: Array, fight_seed: int) -> void:
+	var began := Time.get_ticks_usec()
 	var drawn := _drawn(squads, fight_seed)
+	var kernel := NativeKernels.body_parting()
+	if kernel != null:
+		var way := func(i: int, j: int) -> Vector2:
+			return part_way(fight_seed, drawn[i][2], drawn[j][2])
+		BodyParting.step(kernel, drawn, way, NativeKernels.threaded)
+	else:
+		_passes(drawn, fight_seed)
+	clock_usec += Time.get_ticks_usec() - began
+
+
+## The way two bodies lying exactly on each other part: seeded by the battle and their draws.
+static func part_way(fight_seed: int, draw: int, other_draw: int) -> Vector2:
+	return Vector2.RIGHT.rotated(TAU * BattleRolls.uniform(fight_seed, [draw, other_draw, "part"]))
+
+
+## The GDScript passes: pairs found and pushed from one snapshot, then applied together.
+static func _passes(drawn: Array, fight_seed: int) -> void:
 	for _pass in range(BattleTuning.current().bodies_passes):
 		var bodies := _bodies(drawn)
 		var moves := {}  # body index -> how far it is pushed
@@ -135,7 +159,7 @@ static func _push(bodies: Array, pair: Array, fight_seed: int, moves: Dictionary
 		return
 	var way := apart.normalized()
 	if apart.length() < EPSILON:
-		way = Vector2.RIGHT.rotated(TAU * BattleRolls.uniform(fight_seed, [a[3], b[3], "part"]))
+		way = part_way(fight_seed, a[3], b[3])
 	var share := 0.5
 	if a[0].faction_id == b[0].faction_id:
 		share = _mass(b) / (_mass(a) + _mass(b))
