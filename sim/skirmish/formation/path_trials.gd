@@ -141,7 +141,7 @@ static func _timed(
 	for _repeat in range(maxi(1, repeats)):
 		search = PathSearch.new(terrain, walker, start, sight)
 		if trip.has("route"):
-			search.to_route(route)
+			search.to_route(route, route.distance_of(from))
 		else:
 			search.to_cell(Vector2i(floori(trip["to"].x), floori(trip["to"].y)))
 	var searched := (Time.get_ticks_usec() - began) / maxi(1, repeats)
