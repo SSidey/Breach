@@ -48,6 +48,12 @@ func _init() -> void:
 		_step(timed)
 		plain.step()
 	var total: float = _spent.values().reduce(func(a, b): return a + b, 0)
+	print(
+		(
+			"machine: %s, %d threads, %s"
+			% [OS.get_processor_name(), OS.get_processor_count(), OS.get_name()]
+		)
+	)
 	var heading := "%s, %d a side, %d wide: %.1f ms a tick"
 	print(heading % [NativeKernels.engine(), side, width, total / fight / 1000.0])
 	var names := _spent.keys()
