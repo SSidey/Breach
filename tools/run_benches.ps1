@@ -62,11 +62,17 @@ function Write-Report([string]$text) {
 	Add-Content -Path $report -Value $text
 }
 
+# Godot writes warnings to stderr; Windows PowerShell 5.1 turns each such line into an
+# error record, which "Stop" would make fatal. Read them as plain text instead.
+function Invoke-Native([string[]]$arguments) {
+	$ErrorActionPreference = "Continue"
+	& $Godot @arguments 2>&1 | ForEach-Object { "$_" } |
+		Where-Object { $_ -notmatch "^\s+at:|ObjectDB instances|resources still in use|PagedAllocator" }
+}
+
 function Invoke-Godot([string]$script, [string[]]$arguments, [string]$engine) {
 	$env:BREACH_NATIVE = $engine
-	$all = @("--headless", "--path", $root, "--script", $script, "--") + $arguments
-	& $Godot @all 2>&1 | ForEach-Object { "$_" } |
-		Where-Object { $_ -notmatch "^\s+at:|ObjectDB instances|resources still in use|PagedAllocator" }
+	Invoke-Native (@("--headless", "--path", $root, "--script", $script, "--") + $arguments)
 }
 
 Write-Report "Breach benchmarks - $machine - $(Get-Date -Format s)"
@@ -94,7 +100,7 @@ if (-not $SkipGdscript) { $engines = @("gdscript") + $engines }
 Write-Report "Engines: $($engines -join ', ')"
 
 Write-Report "`n== Importing the project"
-& $Godot --headless --path $root --import 2>&1 | Out-Null
+Invoke-Native @("--headless", "--path", $root, "--import") | Out-Null
 
 if (-not $SkipDigests) {
 	Write-Report "`n== Identity: per-tick digests against the reference build"
