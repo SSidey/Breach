@@ -7,6 +7,9 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tools/tick_phases.gd -- \
 ##       [engine=gdscript|rust] [side=1024] [width=32] [settle=10] [fight=5] [seed=1]
+##       [stage=fight|march]
+## stage=march times `fight` ticks of the march before contact, `settle` ticks after the
+## start, instead of the fight.
 
 const FormationBench = preload("res://sim/skirmish/formation/formation_bench.gd")
 const NativeKernels = preload("res://sim/skirmish/formation/native_kernels.gd")
@@ -58,6 +61,10 @@ func _init() -> void:
 
 func _settled(side: int, width: int, args: Dictionary) -> Sim:
 	var sim := FormationBench.clash(side, width, int(args.get("seed", 1)))
+	if args.get("stage", "fight") == "march":
+		for _i in range(int(args.get("settle", 10))):
+			sim.step()
+		return sim
 	var contact := false
 	while not contact and sim.tick_number() < FormationBench.CONTACT_LIMIT:
 		contact = sim.step().any(func(e): return e["type"] == "engaged")
@@ -89,22 +96,30 @@ func _step(sim: Sim) -> void:
 	var squads := sim.squads()
 	var tick := sim.tick_number()
 	sim._apply_orders(events)
-	sim._engage(events)
+	_lap("orders")
+	Sim.FormationFronts.engage(squads, tick, sim.fight_seed, events)
+	_lap("engage: fronts")
+	Sim.FormationEdges.engage(squads, tick, events, sim.fight_seed)
+	_lap("engage: edges")
 	sim._move(events)
-	_lap("orders, engage, march")
+	_lap("march (squads move)")
 	_scrum(sim, events)
 	sim._fight(events)
 	_lap("fight (blows)")
 	var interval := sim._attack_interval_ticks()
 	Sim.FormationDeaths.bury(squads, tick, events)
+	_lap("deaths (bury)")
 	Sim.FormationTaking.step(squads, tick, sim.tick_seconds, sim.fight_seed, events)
+	_lap("taking the downed")
 	Sim.FormationWounds.tend(squads, tick, interval, sim.fight_seed, events)
+	_lap("wounds (tend)")
 	var strays := Sim.FormationRecovery.step(squads, sim.tick_seconds, tick, sim.fight_seed, events)
 	sim._next_squad_id = Sim.FormationStrays.adopt(
 		strays, squads, sim._next_squad_id, sim.fight_seed
 	)
+	_lap("recovery, strays")
 	Sim.FormationMorale.step(squads, tick, interval, events)
-	_lap("deaths, wounds, morale")
+	_lap("morale")
 	_after(sim, events)
 
 
@@ -115,23 +130,27 @@ func _after(sim: Sim, events: Array) -> void:
 	events.append_array(
 		Sim.FormationRout.step(squads, tick, pace, sim.tick_seconds, sim.terrain, sim.fight_seed)
 	)
+	_lap("rout")
 	var strays := Sim.FormationCarry.step(squads, tick, sim.fight_seed, events)
 	sim._next_squad_id = Sim.FormationStrays.adopt(
 		strays, squads, sim._next_squad_id, sim.fight_seed
 	)
+	_lap("carry")
 	sim._next_squad_id = Sim.FormationGroups.step(
 		squads, tick, sim.fight_seed, events, sim._next_squad_id
 	)
+	_lap("groups (form up, split)")
 	Sim.FormationStamina.step(squads, sim.tick_seconds)
-	_lap("rout, carry, groups, stamina")
+	_lap("stamina")
 	Sim.UnitBodies.step(squads, sim.fight_seed, sim._field)
 	_lap("bodies (UnitBodies)")
 	for entry in squads:
 		events.append_array(
 			Sim.FormationShuffle.step(entry, sim.tick_seconds, Sim.TRAVEL_SCALE, tick)
 		)
+	_lap("shuffle")
 	Sim.FormationMarch.sync_units(squads, [sim.tick_seconds, pace], sim.terrain)
-	_lap("shuffle, units to places")
+	_lap("units walk to places")
 
 
 ## FormationScrum.step, phase by phase.
