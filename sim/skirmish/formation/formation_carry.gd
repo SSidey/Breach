@@ -16,6 +16,7 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitArms = preload("res://content/definitions/unit_arms.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 
 
 ## One tick: bodies follow their bearers, are dropped or set down, come home with them,
@@ -40,8 +41,17 @@ static func body_weight(body: SkirmishUnit) -> float:
 ## Bodies whose bearers fled home this tick come home too.
 static func _bring_home(units: Dictionary, tick: int, events: Array) -> void:
 	var homes := events.filter(func(e): return e["type"] == "fled_home")
+	if homes.is_empty():
+		return
+	var borne := {}  # bearer id -> the ids of the bodies it bears, in the units' order
+	for unit_id in units:
+		var body: SkirmishUnit = units[unit_id][0]
+		if body.state == SkirmishUnit.State.CARRIED:
+			if not borne.has(body.carried_by):
+				borne[body.carried_by] = []
+			borne[body.carried_by].append(unit_id)
 	for event in homes:
-		for unit_id in units:
+		for unit_id in borne.get(event["unit"], []):
 			var body: SkirmishUnit = units[unit_id][0]
 			if body.state == SkirmishUnit.State.CARRIED and body.carried_by == event["unit"]:
 				units[unit_id][1].units.erase(body)
@@ -72,6 +82,7 @@ static func _pick_up(
 ) -> Array:
 	var reach := BattleTuning.current().wounds_reach
 	var strays := []
+	var near := {}  # the living found by where they stand (BodyGrid), made when first needed
 	for squad in squads:
 		if (
 			squad.tends == ""
@@ -82,9 +93,9 @@ static func _pick_up(
 			var body: SkirmishUnit = units[unit_id][0]
 			if body.state != SkirmishUnit.State.DOWNED or body.faction_id != squad.faction_id:
 				continue
-			if _foe_near(body, units):
+			if _foe_near(body, units, near):
 				continue
-			var bearer := _bearer(squad, body, reach, fight_seed)
+			var bearer := _bearer(squad, body, reach, [fight_seed, near])
 			if bearer == null:
 				continue
 			body.state = SkirmishUnit.State.CARRIED
@@ -100,12 +111,19 @@ static func _pick_up(
 
 
 ## The nearest free unit of the squad beside the body that can still move bearing it.
+## `drawn`: [the battle seed, the living found by where they stand (_near)].
 static func _bearer(
-	squad: SkirmishSquad, body: SkirmishUnit, reach: float, fight_seed: int
+	squad: SkirmishSquad, body: SkirmishUnit, reach: float, drawn: Array
 ) -> SkirmishUnit:
+	var fight_seed: int = drawn[0]
+	var near: Dictionary = drawn[1]
+	if not near.has(squad):
+		var living := squad.living()
+		near[squad] = [living, BodyGrid.build(living.map(func(u): return u.position))]
 	var best: SkirmishUnit = null
 	var best_key := []
-	for unit in squad.living():
+	for found in BodyGrid.near(near[squad][1], body.position, reach + BodyGrid.MARGIN):
+		var unit: SkirmishUnit = near[squad][0][found]
 		var gap := unit.position.distance_to(body.position)
 		if unit.carrying != 0 or gap > reach or _stage(unit, body) >= 3:
 			continue
@@ -116,11 +134,17 @@ static func _bearer(
 	return best
 
 
-static func _foe_near(body: SkirmishUnit, units: Dictionary) -> bool:
+## True if a living foe stands within wounds_guard_reach of the body. `near` keeps the
+## living found by where they stand, made the first time it is asked.
+static func _foe_near(body: SkirmishUnit, units: Dictionary, near: Dictionary) -> bool:
 	var guard := BattleTuning.current().wounds_guard_reach
-	for unit_id in units:
-		var other: SkirmishUnit = units[unit_id][0]
-		if other.is_alive() and other.faction_id != body.faction_id:
+	if not near.has("alive"):
+		var alive := units.values().map(func(entry): return entry[0])
+		alive = alive.filter(func(unit): return unit.is_alive())
+		near["alive"] = [alive, BodyGrid.build(alive.map(func(u): return u.position))]
+	for found in BodyGrid.near(near["alive"][1], body.position, guard + BodyGrid.MARGIN):
+		var other: SkirmishUnit = near["alive"][0][found]
+		if other.faction_id != body.faction_id:
 			if other.position.distance_to(body.position) <= guard:
 				return true
 	return false

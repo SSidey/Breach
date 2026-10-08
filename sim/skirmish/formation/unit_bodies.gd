@@ -26,11 +26,16 @@ const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
+const NativeKernels = preload("res://sim/skirmish/formation/native_kernels.gd")
+const BodyParting = preload("res://sim/skirmish/formation/body_parting.gd")
 
 ## Cells a bucket of the pair search spans: at least the widest body.
 const BUCKET := 2.0
 ## Overlaps shallower than this (cells) are left: Vector2's float32 rounding, not a push.
 const EPSILON := 0.001
+
+## Microseconds spent in step() since it was last zeroed (the bench reads it; no outcome does).
+static var clock_usec := 0
 
 
 ## The body's radius in cells.
@@ -47,10 +52,30 @@ static func at(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 	return unit.position
 
 
-## Pushes apart every pair of bodies that overlap.
+## Pushes apart every pair of bodies that overlap: in GDScript (the reference) or, when the
+## switch picks one and it is built, a native kernel over the same bodies (NativeKernels).
 static func step(squads: Array, fight_seed: int) -> void:
+	var began := Time.get_ticks_usec()
+	var drawn := _drawn(squads, fight_seed)
+	var kernel := NativeKernels.body_parting()
+	if kernel != null:
+		var way := func(i: int, j: int) -> Vector2:
+			return part_way(fight_seed, drawn[i][2], drawn[j][2])
+		BodyParting.step(kernel, drawn, way, NativeKernels.threaded)
+	else:
+		_passes(drawn, fight_seed)
+	clock_usec += Time.get_ticks_usec() - began
+
+
+## The way two bodies lying exactly on each other part: seeded by the battle and their draws.
+static func part_way(fight_seed: int, draw: int, other_draw: int) -> Vector2:
+	return Vector2.RIGHT.rotated(TAU * BattleRolls.uniform(fight_seed, [draw, other_draw, "part"]))
+
+
+## The GDScript passes: pairs found and pushed from one snapshot, then applied together.
+static func _passes(drawn: Array, fight_seed: int) -> void:
 	for _pass in range(BattleTuning.current().bodies_passes):
-		var bodies := _bodies(squads, fight_seed)
+		var bodies := _bodies(drawn)
 		var moves := {}  # body index -> how far it is pushed
 		for pair in _pairs(bodies):
 			_push(bodies, pair, fight_seed, moves)
@@ -60,36 +85,61 @@ static func step(squads: Array, fight_seed: int) -> void:
 			_move(bodies[index], moves[index])
 
 
-## [[squad, unit, where, its draw], ...] for every living unit of a standing squad, in the
-## order of their draws (not the list's).
-static func _bodies(squads: Array, fight_seed: int) -> Array:
+## [[squad, unit, its draw], ...] for every living unit of a standing squad, in the order
+## of their draws (not the list's): the same all through a step.
+static func _drawn(squads: Array, fight_seed: int) -> Array:
 	var out := []
 	for squad in squads:
 		if squad.state == SkirmishSquad.State.DESTROYED:
 			continue
 		for unit in squad.living():
-			out.append([squad, unit, at(squad, unit), ScrumContest.draw(unit, fight_seed)])
-	out.sort_custom(func(a, b): return a[3] < b[3])
+			out.append([squad, unit, ScrumContest.draw(unit, fight_seed)])
+	out.sort_custom(func(a, b): return a[2] < b[2])
 	return out
 
 
-## [[i, j], ...] for bodies near enough to overlap, i < j, found through buckets.
+## [[squad, unit, where, its draw], ...]: the drawn bodies (_drawn) where they stand now.
+static func _bodies(drawn: Array) -> Array:
+	var out := []
+	for entry in drawn:
+		out.append([entry[0], entry[1], at(entry[0], entry[1]), entry[2]])
+	return out
+
+
+## [[i, j], ...] in order, for bodies that overlap, i < j, not both in their frames,
+## found through buckets from the bodies out of their frames.
 static func _pairs(bodies: Array) -> Array:
+	var count := bodies.size()
 	var buckets := {}
-	for index in range(bodies.size()):
+	var homes := []
+	var framed := []
+	var radii := []
+	for index in range(count):
 		var key := Vector2i((bodies[index][2] / BUCKET).floor())
+		homes.append(key)
+		framed.append(_framed(bodies[index]))
+		radii.append(radius(bodies[index][1]))
 		if not buckets.has(key):
 			buckets[key] = []
 		buckets[key].append(index)
-	var out := []
-	for index in range(bodies.size()):
-		var home := Vector2i((bodies[index][2] / BUCKET).floor())
+	var found := PackedInt64Array()
+	for index in range(count):
+		if framed[index]:
+			continue  # a pair of two in their frames is kept apart by the frames
 		for dy in range(-1, 2):
 			for dx in range(-1, 2):
-				for other in buckets.get(home + Vector2i(dx, dy), []):
-					if other > index and not (_framed(bodies[index]) and _framed(bodies[other])):
-						out.append([index, other])
-	out.sort()
+				for other in buckets.get(homes[index] + Vector2i(dx, dy), []):
+					if not framed[other] and other <= index:
+						continue
+					var one := mini(index, other)
+					var two := maxi(index, other)
+					var apart: Vector2 = bodies[two][2] - bodies[one][2]
+					if radii[one] + radii[two] - apart.length() > EPSILON:  # as _push weighs it
+						found.append(one * count + two)
+	found.sort()
+	var out := []
+	for pair in found:
+		out.append([pair / count, pair % count])
 	return out
 
 
@@ -109,7 +159,7 @@ static func _push(bodies: Array, pair: Array, fight_seed: int, moves: Dictionary
 		return
 	var way := apart.normalized()
 	if apart.length() < EPSILON:
-		way = Vector2.RIGHT.rotated(TAU * BattleRolls.uniform(fight_seed, [a[3], b[3], "part"]))
+		way = part_way(fight_seed, a[3], b[3])
 	var share := 0.5
 	if a[0].faction_id == b[0].faction_id:
 		share = _mass(b) / (_mass(a) + _mass(b))

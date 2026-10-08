@@ -198,6 +198,7 @@ func fighters() -> Array[SkirmishUnit]:
 ## Returns the units that stepped up.
 func compact() -> Array[SkirmishUnit]:
 	var moved: Array[SkirmishUnit] = []
+	var cells := _cells()  # who stands where, kept as units step up
 	var any := true
 	while any:
 		any = false
@@ -209,8 +210,8 @@ func compact() -> Array[SkirmishUnit]:
 			if swaps.any(func(swap): return swap["to"].has(unit)):
 				continue  # mid-move: it takes the place its move is heading for
 			var into_front_ok := unit.rank > 1 or unit.preferred_position == 0
-			if unit.rank > 0 and into_front_ok and _clear_ahead(unit):
-				unit.rank -= 1
+			if unit.rank > 0 and into_front_ok and _clear_ahead(unit, cells):
+				_step_up(unit, cells)
 				any = true
 				if not moved.has(unit):
 					moved.append(unit)
@@ -223,18 +224,36 @@ func compact() -> Array[SkirmishUnit]:
 	return moved
 
 
-func _clear_ahead(unit: SkirmishUnit) -> bool:
+## {Vector2i(rank, column): [unit, ...]}: the places the living units' footprints cover.
+func _cells() -> Dictionary:
+	var cells := {}
+	for unit in living():
+		for rank in range(unit.rank, unit.rank + unit.footprint_depth):
+			for column in range(unit.column, unit.column + unit.footprint_width):
+				if not cells.has(Vector2i(rank, column)):
+					cells[Vector2i(rank, column)] = []
+				cells[Vector2i(rank, column)].append(unit)
+	return cells
+
+
+## The unit steps up a rank, and `cells` (_cells) with it.
+func _step_up(unit: SkirmishUnit, cells: Dictionary) -> void:
+	for column in range(unit.column, unit.column + unit.footprint_width):
+		cells[Vector2i(unit.rank + unit.footprint_depth - 1, column)].erase(unit)
+		if not cells.has(Vector2i(unit.rank - 1, column)):
+			cells[Vector2i(unit.rank - 1, column)] = []
+		cells[Vector2i(unit.rank - 1, column)].append(unit)
+	unit.rank -= 1
+
+
+## True if no other living unit (`cells`: _cells) stands in the row ahead of the unit across
+## its columns, nor is a move under way heading there.
+func _clear_ahead(unit: SkirmishUnit, cells: Dictionary) -> bool:
 	var row := unit.rank - 1
-	for other in living():
-		if other == unit:
-			continue
-		var rows_overlap := other.rank <= row and row < other.rank + other.footprint_depth
-		var columns_overlap := (
-			other.column < unit.column + unit.footprint_width
-			and unit.column < other.column + other.footprint_width
-		)
-		if rows_overlap and columns_overlap:
-			return false
+	for column in range(unit.column, unit.column + unit.footprint_width):
+		for other in cells.get(Vector2i(row, column), []):
+			if other != unit:
+				return false
 	for swap in swaps:  # nor a place a move under way is heading for
 		for mover in swap["to"]:
 			var to: Vector2i = swap["to"][mover]

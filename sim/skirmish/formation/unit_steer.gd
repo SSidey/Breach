@@ -14,14 +14,21 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 
 const EPSILON := 0.000001
 
 
 ## The point the unit at `at` heads for this step on its way to `goal`: the goal, or a
-## point beside the body in its way. `bodies` = [[point, radius, unit], ...] (ScrumSlots).
+## point beside the body in its way. `bodies` = [[point, radius, unit], ...] (ScrumSlots);
+## `crowd`, a BodyGrid.of_bodies over them if given, keeps the look to those near.
 static func toward(
-	unit: SkirmishUnit, at: Vector2, goal: Vector2, bodies: Array, fight_seed: int
+	unit: SkirmishUnit,
+	at: Vector2,
+	goal: Vector2,
+	bodies: Array,
+	fight_seed: int,
+	crowd: Dictionary = {}
 ) -> Vector2:
 	var way := goal - at
 	var length := way.length()
@@ -32,7 +39,7 @@ static func toward(
 	var own := ScrumReach.radius(unit)
 	var best := []
 	var look := BattleTuning.current().bodies_steer_look
-	for body in bodies:
+	for body in _near(bodies, crowd, at, at + ahead * minf(length, look), own):
 		if body[2].squad_id == unit.squad_id:
 			continue  # itself, or its own squad's: they part for it
 		var clearance: float = own + body[1]
@@ -70,3 +77,14 @@ static func _round(at: Vector2, centre: Vector2, reach: float, side: Vector2) ->
 	if other.dot(side) > turned.dot(side):
 		turned = other
 	return at + turned * sqrt(gap * gap - reach * reach)
+
+
+## The bodies that could stand within a body's breadth (`own` and theirs) of the way from
+## `at` to `end`, in the list's order: all of them without a crowd.
+static func _near(bodies: Array, crowd: Dictionary, at: Vector2, end: Vector2, own: float) -> Array:
+	if crowd.is_empty():
+		return bodies
+	var out := []
+	for found in BodyGrid.near(crowd, at, own + crowd["widest"] + 0.01, end):
+		out.append(bodies[found])
+	return out

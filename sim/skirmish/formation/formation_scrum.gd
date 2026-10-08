@@ -42,6 +42,9 @@ const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd"
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
+const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
+const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 
 
 ## One tick of the scrum. `cells_per_second` is the march pace at speed 1. Returns
@@ -71,6 +74,7 @@ static func step(
 		"lying": GroundBodies.lying_in(squads),
 		"active": {},
 	}
+	ctx["crowd"] = BodyGrid.of_bodies(ctx["bodies"])  # the bodies, found by where they stand
 	_seek(ctx)
 	ScrumRegroup.step(squads, ctx["pace"], tick_seconds, fight_seed)
 	ScrumPursuit.step(squads, tick, cells_per_second, tick_seconds, fight_seed)
@@ -147,7 +151,9 @@ static func _walk(squad: SkirmishSquad, pace: float, ctx: Dictionary) -> void:
 		entry["toward"] = null
 		if entry["goal"] != null:
 			entry["toward"] = entry["next"]
-			var to := UnitSteer.toward(unit, entry["at"], entry["next"], ctx["bodies"], ctx["seed"])
+			var to := UnitSteer.toward(
+				unit, entry["at"], entry["next"], ctx["bodies"], ctx["seed"], ctx["crowd"]
+			)
 			entry["at"] = UnitMotion.move(
 				unit, entry["at"], to, full * _footing(unit, entry["at"], to, ctx)
 			)
@@ -156,7 +162,9 @@ static func _walk(squad: SkirmishSquad, pace: float, ctx: Dictionary) -> void:
 			var heading: float = squad.stance.get("heading", squad.heading)
 			var speed := full / seconds
 			entry["toward"] = UnitShuffle.look(unit, entry["at"], place, heading, speed)
-			var to := UnitSteer.toward(unit, entry["at"], place, ctx["bodies"], ctx["seed"])
+			var to := UnitSteer.toward(
+				unit, entry["at"], place, ctx["bodies"], ctx["seed"], ctx["crowd"]
+			)
 			entry["at"] = UnitMotion.move(
 				unit, entry["at"], to, full * _footing(unit, entry["at"], to, ctx)
 			)
@@ -176,12 +184,14 @@ static func _footing(unit: SkirmishUnit, at: Vector2, to: Vector2, ctx: Dictiona
 ## nearest foe it touches, or else so as to arrive facing what it will do - its foe at the
 ## slot it seeks, or its squad's way at its place - the quicker way (UnitShuffle).
 static func _faces(squad: SkirmishSquad, ctx: Dictionary) -> Array:
-	var foes := ScrumSeek.foe_units(squad, ctx["squads"])
+	var near := ScrumNear.index(ScrumSeek.foe_units(squad, ctx["squads"]))  # where they now stand
+	var reach := BattleTuning.current().reach_contact
 	var out := []
 	for unit in squad.living():
 		if squad.chasers.has(unit.id):
 			continue
 		var entry: Dictionary = squad.loose[unit.id]
+		var foes := ScrumNear.around(near, entry["at"], ScrumReach.radius(unit) + reach)
 		var look = ScrumBlows.nearest_touching(squad, unit, foes, ctx["seed"])
 		if look == null and entry["goal"] != null:
 			look = _seeking_look(unit, entry, ctx)

@@ -80,6 +80,11 @@ static func where(squad: SkirmishSquad, unit_id: int) -> Vector2:
 	return _route_point(squad, entry["along"]) + entry["offset"]
 
 
+## A fleeing unit's point on its route, before its offset: where() is it plus the offset.
+static func route_point(squad: SkirmishSquad, unit_id: int) -> Vector2:
+	return _route_point(squad, squad.fleeing[unit_id]["along"])
+
+
 static func _breaks(squad: SkirmishSquad) -> bool:
 	return (
 		squad.state != SkirmishSquad.State.DESTROYED
