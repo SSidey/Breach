@@ -73,7 +73,7 @@ static func step(
 		"seed": fight_seed,
 		"terrain": terrain,
 		"bodies": ScrumSeek.bodies(squads),
-		"lying": GroundBodies.lying_in(squads),
+		"lying": GroundBodies.ground(squads),
 		"active": {},
 		"field": field,  # the bodies, native (Decision 129), or null
 	}

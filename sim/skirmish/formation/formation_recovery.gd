@@ -23,15 +23,14 @@ const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 
 
 ## One tick of `seconds`. Returns [[unit, its squad], ...] for those that came to apart from
 ## their formation, to make for home (FormationStrays).
 static func step(squads: Array, seconds: float, tick: int, fight_seed: int, events: Array) -> Array:
 	var waking := []  # [unit, its squad]: decided first, so no squad's order moves another's
-	var standing := []
-	for squad in squads:
-		standing.append_array(squad.living())
+	var standing := {"squads": squads, "cunning": {}}  # _lies_still
 	for squad in squads:
 		for unit in squad.units:
 			var downed: bool = unit.state in [SkirmishUnit.State.DOWNED, SkirmishUnit.State.CARRIED]
@@ -54,32 +53,70 @@ static func step(squads: Array, seconds: float, tick: int, fight_seed: int, even
 
 ## Whether a unit due to come to lies still instead (Decision 127): with a standing foe
 ## near, one already playing dead keeps at it, and one not yet decides by a seeded chance
-## from its wits and cunning; either looks again a few seconds on.
+## from its wits and cunning; either looks again a few seconds on. `standing` holds the
+## squads, and once found the standing units by faction (_index) and each squad's leaders'
+## cunning.
 static func _lies_still(
-	unit: SkirmishUnit, squad: SkirmishSquad, standing: Array, fight_seed: int
+	unit: SkirmishUnit, squad: SkirmishSquad, standing: Dictionary, fight_seed: int
 ) -> bool:
 	var tuning := BattleTuning.current()
-	var danger := standing.any(
-		func(foe):
-			return (
-				foe.faction_id != unit.faction_id
-				and foe.position.distance_to(unit.position) <= tuning.wounds_danger_reach
-			)
-	)
+	var reach := tuning.wounds_danger_reach
+	var danger := false
+	if not standing.has("factions"):  # the standing, found once a tick when first asked
+		standing["factions"] = _index(standing["squads"])
+	for faction in standing["factions"]:
+		if faction == unit.faction_id or danger:
+			continue
+		var index: Dictionary = standing["factions"][faction]
+		for found in BodyGrid.near(index, unit.position, reach + BodyGrid.MARGIN):
+			if index["units"][found][0].position.distance_to(unit.position) <= reach:
+				danger = true
+				break
 	if not danger:
 		return false
 	if not unit.playing_dead:
 		var wits: float = unit.attributes.get("wits", UnitDef.AVERAGE)
-		var cunning := int(unit.traits.get("cunning", 0))
-		for other in squad.living():
-			if other.leadership > 0:
-				cunning = maxi(cunning, int(other.traits.get("cunning", 0)))
+		var cunning := maxi(int(unit.traits.get("cunning", 0)), _led_cunning(squad, standing))
 		var chance := tuning.wounds_play_dead * wits / UnitDef.AVERAGE
 		chance += cunning * tuning.wounds_cunning
 		if BattleRolls.uniform(fight_seed, [unit.id, unit.wounded, "play dead"]) >= chance:
 			return false
 	unit.wake_left = tuning.wounds_play_dead_check
 	return true
+
+
+## The most cunning among the squad's leaders (leadership > 0); very low with none. Found
+## once a squad, kept in `standing`.
+static func _led_cunning(squad: SkirmishSquad, standing: Dictionary) -> int:
+	var known: Dictionary = standing["cunning"]
+	if not known.has(squad):
+		var most := -(1 << 62)
+		for other in squad.living():
+			if other.leadership > 0:
+				most = maxi(most, int(other.traits.get("cunning", 0)))
+		known[squad] = most
+	return known[squad]
+
+
+## {faction: a grid (BodyGrid) of where its standing units stand, with "units": [[unit,
+## its squad, the squad's seeded draw], ...] in the squads' order}; with `rising`, only
+## formations a unit coming to may join: not destroyed or routing.
+static func _index(squads: Array, rising := false, fight_seed := 0) -> Dictionary:
+	var entries := {}
+	for squad in squads:
+		if rising and squad.state in [SkirmishSquad.State.DESTROYED, SkirmishSquad.State.ROUTING]:
+			continue
+		var draw := ScrumContest.squad_draw(squad, fight_seed) if rising else 0
+		for unit in squad.living():
+			if not entries.has(unit.faction_id):
+				entries[unit.faction_id] = []
+			entries[unit.faction_id].append([unit, squad, draw])
+	var out := {}
+	for faction in entries:
+		var units: Array = entries[faction]
+		out[faction] = BodyGrid.build(units.map(func(entry): return entry[0].position))
+		out[faction]["units"] = units
+	return out
 
 
 ## Its condition: 1, less a step for each wound past those it is hardened to; 0 to the cap.
@@ -157,8 +194,9 @@ static func _wakes(unit: SkirmishUnit, seconds: float, fight_seed: int) -> bool:
 ## sight makes for home alone. Returns those [unit, its squad].
 static func _rise(waking: Array, squads: Array, tick: int, fight_seed: int, events: Array) -> Array:
 	var plans := []  # [key, [unit, its squad], the formation it joins or null]
+	var friends := _index(squads, true, fight_seed) if not waking.is_empty() else {}
 	for entry in waking:
-		var pick := _nearest(entry[0], squads, fight_seed)
+		var pick := _nearest(entry[0], friends)
 		plans.append([[pick[1], ScrumContest.draw(entry[0], fight_seed)], entry, pick[0]])
 	plans.sort_custom(func(a, b): return ScrumContest.before(a[0], b[0]))
 	var strays := []
@@ -178,20 +216,28 @@ static func _rise(waking: Array, squads: Array, tick: int, fight_seed: int, even
 
 
 ## [the nearest standing friendly formation the unit can see, how far its nearest member
-## is], or [null, INF] if there is none.
-static func _nearest(unit: SkirmishUnit, squads: Array, fight_seed: int) -> Array:
+## is], or [null, INF] if there is none; `friends` are the formations it may join
+## (_index). Looks ring by ring outwards from where it lies, stopping once no nearer member
+## can lie further out; nearest first, then the squads' draws, then the squads' order.
+static func _nearest(unit: SkirmishUnit, friends: Dictionary) -> Array:
+	if not friends.has(unit.faction_id):
+		return [null, INF]
+	var index: Dictionary = friends[unit.faction_id]
+	var units: Array = index["units"]
+	var at := unit.position
+	var centre := BodyGrid.cell_of(at)
+	var span := BodyGrid.ring_span(index, centre, at, unit.detection)
 	var best: SkirmishSquad = null
 	var best_key := [INF]
-	for squad in squads:
-		if squad.faction_id != unit.faction_id:
-			continue
-		if squad.state in [SkirmishSquad.State.DESTROYED, SkirmishSquad.State.ROUTING]:
-			continue
-		for other in squad.living():
-			var gap: float = other.position.distance_to(unit.position)
-			var key := [snappedf(gap, 0.000001), ScrumContest.squad_draw(squad, fight_seed)]
+	for ring_number in range(span.x, span.y + 1):
+		if BodyGrid.floor_of(ring_number) > best_key[0] + BodyGrid.MARGIN:
+			break
+		for found in BodyGrid.ring(index, centre, ring_number, at, unit.detection):
+			var other: SkirmishUnit = units[found][0]
+			var gap: float = other.position.distance_to(at)
+			var key := [snappedf(gap, 0.000001), units[found][2], found]
 			if other != unit and gap <= unit.detection and (best == null or key < best_key):
-				best = squad
+				best = units[found][1]
 				best_key = key
 	return [best, best_key[0]]
 

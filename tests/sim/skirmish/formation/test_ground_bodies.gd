@@ -24,7 +24,7 @@ func _march(body: SkirmishUnit) -> float:
 	squad.heading = 90.0
 	var fallen: Array[SkirmishUnit] = [body]
 	var theirs := SkirmishSquad.new(2, "the_kingdom", -1, 0.0, 1, fallen)
-	return GroundBodies.drag(squad, [squad, theirs])
+	return GroundBodies.drag(squad, GroundBodies.ground([squad, theirs]))
 
 
 func test_a_body_its_own_weight_halves_its_pace_and_a_great_one_blocks_it() -> void:

@@ -32,8 +32,11 @@ const FormationEvents = preload("res://sim/skirmish/formation/formation_events.g
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const GroupSplit = preload("res://sim/skirmish/formation/group_split.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 
 const EPSILON := 0.000001
+## Pairs of units two groups meeting may have and still be looked at pair by pair (_gap).
+const ALL_PAIRS := 256
 const AT_EASE := [
 	SkirmishSquad.State.MOVING, SkirmishSquad.State.HOLDING, SkirmishSquad.State.ARRIVED
 ]
@@ -50,13 +53,14 @@ static func step(squads: Array, tick: int, fight_seed: int, events: Array, next_
 static func _form_up(squads: Array, tick: int, fight_seed: int, events: Array) -> void:
 	var meetings := []  # [key, one, other]
 	var groups := squads.filter(func(s): return s.state in AT_EASE and not s.living().is_empty())
+	var grids := {}  # squad -> a grid of its units (_gap), each made once
 	for i in groups.size():
 		for j in range(i + 1, groups.size()):
 			var one: SkirmishSquad = groups[i]
 			var other: SkirmishSquad = groups[j]
 			if one.faction_id != other.faction_id or not _together(one, other):
 				continue
-			var gap := _gap(one, other)
+			var gap := _gap(one, other, grids)
 			if gap <= BattleTuning.current().group_join + EPSILON:
 				var draws := [ScrumContest.squad_draw(one, fight_seed)]
 				draws.append(ScrumContest.squad_draw(other, fight_seed))
@@ -187,14 +191,32 @@ static func _back_row(squad: SkirmishSquad) -> int:
 	return rows
 
 
-## Cells between the two groups' nearest bodies; INF if their frames are too far apart.
-static func _gap(one: SkirmishSquad, other: SkirmishSquad) -> float:
+## Cells between the two groups' nearest bodies, exact up to group_join; beyond it, more
+## than group_join (INF if their frames are too far apart). Small groups look at every
+## pair; otherwise only the other's units that could come within group_join of each unit
+## are looked at, through a grid of them (kept in `grids`).
+static func _gap(one: SkirmishSquad, other: SkirmishSquad, grids: Dictionary) -> float:
+	var join := BattleTuning.current().group_join
 	var reach := one.width + other.width + _back_row(one) + _back_row(other)
-	if one.position.distance_to(other.position) > reach + BattleTuning.current().group_join:
+	if one.position.distance_to(other.position) > reach + join:
 		return INF
+	var ours: Array = one.living()
+	var theirs: Array = other.living()
+	var grid := {}
+	if ours.size() * theirs.size() > ALL_PAIRS:
+		if not grids.has(other):
+			grids[other] = BodyGrid.of_bodies(
+				theirs.map(func(u): return [u.position, ScrumReach.radius(u)])
+			)
+		grid = grids[other]
 	var least := INF
-	for unit in one.living():
-		for friend in other.living():
-			var apart := unit.position.distance_to(friend.position)
+	for unit in ours:
+		var near := range(theirs.size())
+		if not grid.is_empty():
+			var within: float = join + ScrumReach.radius(unit) + grid["widest"] + BodyGrid.MARGIN
+			near = BodyGrid.near(grid, unit.position, within)
+		for found in near:
+			var friend: SkirmishUnit = theirs[found]
+			var apart: float = unit.position.distance_to(friend.position)
 			least = minf(least, apart - ScrumReach.radius(unit) - ScrumReach.radius(friend))
 	return maxf(least, 0.0)

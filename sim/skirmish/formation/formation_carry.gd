@@ -16,6 +16,7 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitArms = preload("res://content/definitions/unit_arms.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 
 
 ## One tick: bodies follow their bearers, are dropped or set down, come home with them,
@@ -93,23 +94,22 @@ static func _pick_up(
 
 
 ## [key, body, bearer, its squad] for each friendly body a free unit of a formation that
-## tends its downed could pick up, as all stand.
+## tends its downed could pick up, as all stand. The downed are found once, and whether a
+## foe guards each; each formation's bearers through a grid of where they stand.
 static func _pairs(squads: Array, units: Dictionary, fight_seed: int) -> Array:
 	var reach := BattleTuning.current().wounds_reach
 	var pairs := []
+	var free := {}  # faction -> [downed body no foe is near, ...]: found if any tends
+	if squads.any(func(squad): return _tending(squad)):
+		free = _unguarded(units)
 	for squad in squads:
-		if (
-			squad.tends == ""
-			or squad.state in [SkirmishSquad.State.FIGHTING, SkirmishSquad.State.ROUTING]
-		):
+		if not _tending(squad) or not free.has(squad.faction_id):
 			continue
-		for unit_id in units:
-			var body: SkirmishUnit = units[unit_id][0]
-			if body.state != SkirmishUnit.State.DOWNED or body.faction_id != squad.faction_id:
-				continue
-			if _foe_near(body, units):
-				continue
-			for unit in squad.living():
+		var living: Array = squad.living()
+		var grid := BodyGrid.build(living.map(func(unit): return unit.position))
+		for body in free[squad.faction_id]:
+			for found in BodyGrid.near(grid, body.position, reach + BodyGrid.MARGIN):
+				var unit: SkirmishUnit = living[found]
 				var gap: float = unit.position.distance_to(body.position)
 				if unit.carrying != 0 or gap > reach or _stage(unit, body) >= 3:
 					continue
@@ -119,14 +119,44 @@ static func _pairs(squads: Array, units: Dictionary, fight_seed: int) -> Array:
 	return pairs
 
 
-static func _foe_near(body: SkirmishUnit, units: Dictionary) -> bool:
+## True if the squad tends its downed now: told to, and not fighting or routing.
+static func _tending(squad: SkirmishSquad) -> bool:
+	if squad.tends == "":
+		return false
+	return (
+		squad.state != SkirmishSquad.State.FIGHTING and squad.state != SkirmishSquad.State.ROUTING
+	)
+
+
+## {faction: [each downed body of it with no foe standing within wounds_guard_reach, in
+## the order of `units`]}: the standing found through a grid of where they stand.
+static func _unguarded(units: Dictionary) -> Dictionary:
 	var guard := BattleTuning.current().wounds_guard_reach
+	var standing := []
+	var downed := []
 	for unit_id in units:
-		var other: SkirmishUnit = units[unit_id][0]
-		if other.is_alive() and other.faction_id != body.faction_id:
-			if other.position.distance_to(body.position) <= guard:
-				return true
-	return false
+		var unit: SkirmishUnit = units[unit_id][0]
+		if unit.is_alive():
+			standing.append(unit)
+		elif unit.state == SkirmishUnit.State.DOWNED:
+			downed.append(unit)
+	if downed.is_empty():
+		return {}
+	var grid := BodyGrid.build(standing.map(func(unit): return unit.position))
+	var free := {}
+	for body in downed:
+		var guarded := false
+		for found in BodyGrid.near(grid, body.position, guard + BodyGrid.MARGIN):
+			var other: SkirmishUnit = standing[found]
+			if other.faction_id != body.faction_id:
+				guarded = other.position.distance_to(body.position) <= guard
+				if guarded:
+					break
+		if not guarded:
+			if not free.has(body.faction_id):
+				free[body.faction_id] = []
+			free[body.faction_id].append(body)
+	return free
 
 
 ## Its load stage bearing `body` (null: none).

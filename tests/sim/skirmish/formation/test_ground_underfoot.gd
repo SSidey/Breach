@@ -31,8 +31,8 @@ func _walker(at: Vector2) -> SkirmishUnit:
 func test_a_body_underfoot_slows_by_its_weight_against_the_walkers() -> void:
 	var drag := BattleTuning.current().bodies_ground_drag
 	var walker := _walker(Vector2.ZERO)
-	var grem := [_body(Vector2(0.5, 0), 1)]
-	var brute := [_body(Vector2(1, 0), 2)]
+	var grem := GroundBodies.of_lying([_body(Vector2(0.5, 0), 1)])
+	var brute := GroundBodies.of_lying([_body(Vector2(1, 0), 2)])
 
 	var over_grem := GroundBodies.underfoot(walker, Vector2(0.5, 0), grem)
 	assert_float(over_grem).is_equal_approx(1.0 / (1.0 + drag), 0.0001)
@@ -43,7 +43,7 @@ func test_a_body_underfoot_slows_by_its_weight_against_the_walkers() -> void:
 
 func test_a_body_too_heavy_blocks_the_step() -> void:
 	var walker := _walker(Vector2.ZERO)
-	var huge := [_body(Vector2(0.5, 0), 3)]
+	var huge := GroundBodies.of_lying([_body(Vector2(0.5, 0), 3)])
 
 	assert_float(GroundBodies.underfoot(walker, Vector2(0.5, 0), huge)).is_equal(0.0)
 
@@ -59,6 +59,6 @@ func test_a_unit_walking_back_to_its_place_over_a_body_is_slowed() -> void:
 		var back := -UnitMotion.vector(squad.heading)
 		unit.position = place + back * 4.0
 		var lying := [_body(unit.position - back * 0.5, 1)] if with_body else []
-		FormationWalk.walk(squad, unit, place, [0.1, 8.0, lying])
+		FormationWalk.walk(squad, unit, place, [0.1, 8.0, GroundBodies.of_lying(lying)])
 		paces.append(4.0 - unit.position.distance_to(place))
 	assert_float(paces[1]).is_less(paces[0])

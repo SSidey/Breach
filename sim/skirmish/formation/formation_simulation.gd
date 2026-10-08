@@ -213,9 +213,9 @@ func _engage(events: Array) -> void:
 	FormationEdges.engage(_squads, _tick, events, fight_seed)
 
 
-## Every squad decides its move from where all stood as the tick began, then all moves
-## land together (Decision 97).
+## Each squad decides its move from the tick's start; all moves land together (Decision 97).
 func _move(events: Array) -> void:
+	var ground := {"squads": _squads}  # the bodies lying on the field, found once (drag)
 	var marching := {}  # squad id -> [mover, where it wants to get, its route's end]
 	var waiting := []
 	for mover in _squads:
@@ -242,7 +242,7 @@ func _move(events: Array) -> void:
 		FormationSweep.step(mover, cells_per_second, tick_seconds * keeping)  # Decision 105
 		var open_step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		var step := FormationMarch.pace(mover, terrain, open_step, _tick, events)
-		step *= GroundBodies.drag(mover, _squads) * keeping  # bodies on the ground (Decision 121)
+		step *= GroundBodies.drag(mover, ground) * keeping  # bodies on the ground (Decision 121)
 		marching[mover.id] = [mover, FormationMarch.toward(mover, travel * step, end), end]
 	_march(marching, events)
 	for mover in waiting:

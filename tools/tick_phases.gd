@@ -167,7 +167,7 @@ func _scrum(sim: Sim, events: Array) -> void:
 		"seed": sim.fight_seed,
 		"terrain": sim.terrain,
 		"bodies": ScrumSeek.bodies(squads),
-		"lying": GroundBodies.lying_in(squads),
+		"lying": GroundBodies.ground(squads),
 		"active": {},
 		"field": sim._field,
 	}
