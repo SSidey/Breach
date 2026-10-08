@@ -1,22 +1,38 @@
 extends SceneTree
-## The native spike's benchmark (native/README.md): a mid-fight tick of FormationBench's
-## clash under each engine of UnitBodies' body-parting pass (NativeKernels), and the pass
-## alone - for a native kernel split into gathering the packed arrays, the call (the
-## boundary both ways plus the kernel), the kernel's own work (what it would cost were the
-## data already native) and writing back. Each run times `fight` ticks after `settle`
-## ticks of contact; a line per run, then min / median over the runs. Engines not built
-## are skipped. ms a tick throughout.
+## The native core's benchmark (Decision 129, native/README.md): a mid-fight tick of
+## FormationBench's clash under each engine (NativeKernels), and the two passes the core
+## runs - body parting (UnitBodies) and the scrum's slot search (ScrumSeek.plan). For Rust,
+## each pass is split into syncing the field (BodyFieldSync), gathering what the rules say
+## (the slot search only), the call (the boundary both ways plus the core), the core's own
+## work and writing back. Each run times `fight` ticks after `settle` ticks of contact; a
+## line per run, then min / median over the runs. An engine not built is skipped. ms a
+## tick throughout. For where the rest of the tick goes, tools/tick_phases.gd.
 ##
 ##   godot --headless --path . --script res://tools/native_bench.gd -- \
-##       [engines=gdscript,rust,cpp,rust_threads] [sizes=160:10,512:32,1024:32] [runs=3]
+##       [engines=gdscript,rust,rust_threads] [sizes=160:10,512:32,1024:32] [runs=3]
 ##       [settle=10] [fight=10] [seed=1]
 
 const FormationBench = preload("res://sim/skirmish/formation/formation_bench.gd")
 const NativeKernels = preload("res://sim/skirmish/formation/native_kernels.gd")
 const UnitBodies = preload("res://sim/skirmish/formation/unit_bodies.gd")
 const BodyParting = preload("res://sim/skirmish/formation/body_parting.gd")
+const ScrumSeek = preload("res://sim/skirmish/formation/scrum_seek.gd")
+const ScrumSeekField = preload("res://sim/skirmish/formation/scrum_seek_field.gd")
 
-const COLUMNS := ["tick", "pass", "gather", "call", "kernel", "write"]
+const COLUMNS := [
+	"tick",
+	"bodies",
+	"b.sync",
+	"b.call",
+	"b.core",
+	"b.write",
+	"seek",
+	"s.sync",
+	"s.rules",
+	"s.call",
+	"s.core",
+	"s.write",
+]
 
 
 func _init() -> void:
@@ -24,7 +40,7 @@ func _init() -> void:
 	for arg in OS.get_cmdline_user_args():
 		var parts: PackedStringArray = arg.split("=", true, 1)
 		args[parts[0]] = parts[1] if parts.size() > 1 else "true"
-	var engines := str(args.get("engines", "gdscript,rust,cpp,rust_threads")).split(",")
+	var engines := str(args.get("engines", "gdscript,rust,rust_threads")).split(",")
 	var sizes := str(args.get("sizes", "160:10,512:32,1024:32")).split(",")
 	var runs := int(args.get("runs", 3))
 	var options := {
@@ -32,14 +48,14 @@ func _init() -> void:
 		"fight": int(args.get("fight", 10)),
 		"seed": int(args.get("seed", 1))
 	}
-	print("%-17s %5s %3s  %s" % ["engine", "side", "w", "  ".join(COLUMNS)])
+	print("%-17s %5s %3s  %s" % ["engine", "side", "w", " ".join(COLUMNS.map(_cell))])
 	for size in sizes:
 		var parts := size.split(":")
 		for engine in engines:
-			var kernel_engine := engine.trim_suffix("_threads")
-			if not NativeKernels.available(kernel_engine):
+			var core := engine.trim_suffix("_threads")
+			if not NativeKernels.available(core):
 				continue
-			NativeKernels.use(kernel_engine)
+			NativeKernels.use(core)
 			NativeKernels.threaded = engine.ends_with("_threads")
 			var results := []
 			for run in range(runs):
@@ -59,13 +75,18 @@ func _measure(per_side: int, width: int, options: Dictionary) -> Array:
 	for _i in range(options["settle"]):
 		sim.step()
 	UnitBodies.clock_usec = 0
+	ScrumSeek.clock_usec = 0
 	BodyParting.spent = PackedInt64Array([0, 0, 0, 0])
+	ScrumSeekField.spent = PackedInt64Array([0, 0, 0, 0, 0])
 	var began := Time.get_ticks_usec()
 	for _i in range(options["fight"]):
 		sim.step()
 	var ticks := float(options["fight"]) * 1000.0
 	var out := [(Time.get_ticks_usec() - began) / ticks, UnitBodies.clock_usec / ticks]
 	for spent in BodyParting.spent:
+		out.append(spent / ticks)
+	out.append(ScrumSeek.clock_usec / ticks)
+	for spent in ScrumSeekField.spent:
 		out.append(spent / ticks)
 	return out
 
@@ -80,6 +101,10 @@ func _pick(results: Array, at: float) -> Array:
 	return out
 
 
+func _cell(text: String) -> String:
+	return "%7s" % text
+
+
 func _line(label: String, size: PackedStringArray, values: Array) -> String:
-	var cells := values.map(func(v): return "%6.2f" % v)
-	return "%-17s %5s %3s  %s" % [label, size[0], size[1], "  ".join(cells)]
+	var cells := values.map(func(v): return "%7.2f" % v)
+	return "%-17s %5s %3s  %s" % [label, size[0], size[1], " ".join(cells)]
