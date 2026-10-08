@@ -16,7 +16,6 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitArms = preload("res://content/definitions/unit_arms.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
-const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 
 
 ## One tick: bodies follow their bearers, are dropped or set down, come home with them,
@@ -41,17 +40,8 @@ static func body_weight(body: SkirmishUnit) -> float:
 ## Bodies whose bearers fled home this tick come home too.
 static func _bring_home(units: Dictionary, tick: int, events: Array) -> void:
 	var homes := events.filter(func(e): return e["type"] == "fled_home")
-	if homes.is_empty():
-		return
-	var borne := {}  # bearer id -> the ids of the bodies it bears, in the units' order
-	for unit_id in units:
-		var body: SkirmishUnit = units[unit_id][0]
-		if body.state == SkirmishUnit.State.CARRIED:
-			if not borne.has(body.carried_by):
-				borne[body.carried_by] = []
-			borne[body.carried_by].append(unit_id)
 	for event in homes:
-		for unit_id in borne.get(event["unit"], []):
+		for unit_id in units:
 			var body: SkirmishUnit = units[unit_id][0]
 			if body.state == SkirmishUnit.State.CARRIED and body.carried_by == event["unit"]:
 				units[unit_id][1].units.erase(body)
@@ -77,12 +67,36 @@ static func _follow(unit: SkirmishUnit, units: Dictionary) -> void:
 			_bear(unit, null)
 
 
+## Every free unit of a formation that tends its downed, beside a friendly body it can
+## still move bearing, may pick it up: the nearest pairs first, ties by the body's then the
+## bearer's seeded draws - never the lists (Decision 97) - each body and bearer once.
 static func _pick_up(
 	squads: Array, units: Dictionary, tick: int, fight_seed: int, events: Array
 ) -> Array:
-	var reach := BattleTuning.current().wounds_reach
+	var pairs := _pairs(squads, units, fight_seed)
+	pairs.sort_custom(func(a, b): return ScrumContest.before(a[0], b[0]))
 	var strays := []
-	var near := {}  # the living found by where they stand (BodyGrid), made when first needed
+	for pair in pairs:
+		var body: SkirmishUnit = pair[1]
+		var bearer: SkirmishUnit = pair[2]
+		if body.state != SkirmishUnit.State.DOWNED or bearer.carrying != 0:
+			continue
+		body.state = SkirmishUnit.State.CARRIED
+		body.carried_by = bearer.id
+		bearer.carrying = body.id
+		_bear(bearer, body)
+		var extra := {"body": body.id}
+		events.append(FormationEvents.unit_event("borne", tick, pair[3], bearer, extra))
+		if pair[3].tends == "recover":
+			strays.append([bearer, pair[3]])
+	return strays
+
+
+## [key, body, bearer, its squad] for each friendly body a free unit of a formation that
+## tends its downed could pick up, as all stand.
+static func _pairs(squads: Array, units: Dictionary, fight_seed: int) -> Array:
+	var reach := BattleTuning.current().wounds_reach
+	var pairs := []
 	for squad in squads:
 		if (
 			squad.tends == ""
@@ -93,58 +107,23 @@ static func _pick_up(
 			var body: SkirmishUnit = units[unit_id][0]
 			if body.state != SkirmishUnit.State.DOWNED or body.faction_id != squad.faction_id:
 				continue
-			if _foe_near(body, units, near):
+			if _foe_near(body, units):
 				continue
-			var bearer := _bearer(squad, body, reach, [fight_seed, near])
-			if bearer == null:
-				continue
-			body.state = SkirmishUnit.State.CARRIED
-			body.carried_by = bearer.id
-			bearer.carrying = body.id
-			_bear(bearer, body)
-			events.append(
-				FormationEvents.unit_event("borne", tick, squad, bearer, {"body": body.id})
-			)
-			if squad.tends == "recover":
-				strays.append([bearer, squad])
-	return strays
+			for unit in squad.living():
+				var gap: float = unit.position.distance_to(body.position)
+				if unit.carrying != 0 or gap > reach or _stage(unit, body) >= 3:
+					continue
+				var key := [snappedf(gap, 0.000001), ScrumContest.draw(body, fight_seed)]
+				key.append(ScrumContest.draw(unit, fight_seed))
+				pairs.append([key, body, unit, squad])
+	return pairs
 
 
-## The nearest free unit of the squad beside the body that can still move bearing it.
-## `drawn`: [the battle seed, the living found by where they stand (_near)].
-static func _bearer(
-	squad: SkirmishSquad, body: SkirmishUnit, reach: float, drawn: Array
-) -> SkirmishUnit:
-	var fight_seed: int = drawn[0]
-	var near: Dictionary = drawn[1]
-	if not near.has(squad):
-		var living := squad.living()
-		near[squad] = [living, BodyGrid.build(living.map(func(u): return u.position))]
-	var best: SkirmishUnit = null
-	var best_key := []
-	for found in BodyGrid.near(near[squad][1], body.position, reach + BodyGrid.MARGIN):
-		var unit: SkirmishUnit = near[squad][0][found]
-		var gap := unit.position.distance_to(body.position)
-		if unit.carrying != 0 or gap > reach or _stage(unit, body) >= 3:
-			continue
-		var key := [snappedf(gap, 0.000001), ScrumContest.draw(unit, fight_seed)]
-		if best == null or key < best_key:
-			best = unit
-			best_key = key
-	return best
-
-
-## True if a living foe stands within wounds_guard_reach of the body. `near` keeps the
-## living found by where they stand, made the first time it is asked.
-static func _foe_near(body: SkirmishUnit, units: Dictionary, near: Dictionary) -> bool:
+static func _foe_near(body: SkirmishUnit, units: Dictionary) -> bool:
 	var guard := BattleTuning.current().wounds_guard_reach
-	if not near.has("alive"):
-		var alive := units.values().map(func(entry): return entry[0])
-		alive = alive.filter(func(unit): return unit.is_alive())
-		near["alive"] = [alive, BodyGrid.build(alive.map(func(u): return u.position))]
-	for found in BodyGrid.near(near["alive"][1], body.position, guard + BodyGrid.MARGIN):
-		var other: SkirmishUnit = near["alive"][0][found]
-		if other.faction_id != body.faction_id:
+	for unit_id in units:
+		var other: SkirmishUnit = units[unit_id][0]
+		if other.is_alive() and other.faction_id != body.faction_id:
 			if other.position.distance_to(body.position) <= guard:
 				return true
 	return false

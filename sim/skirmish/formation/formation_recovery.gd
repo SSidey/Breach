@@ -49,20 +49,7 @@ static func step(squads: Array, seconds: float, tick: int, fight_seed: int, even
 				elif not unit.playing_dead:
 					unit.playing_dead = true
 					events.append(FormationEvents.unit_event("playing_dead", tick, squad, unit))
-	var strays := []
-	for entry in waking:
-		var unit: SkirmishUnit = entry[0]
-		unit.hp = maxi(unit.hp, 1)
-		unit.state = SkirmishUnit.State.MOVING
-		unit.playing_dead = false
-		var joined := _join(unit, entry[1], squads, fight_seed)
-		var extra := {"alone": joined == null}
-		if joined == null:
-			strays.append(entry)
-		else:
-			extra["joined"] = joined.id
-		events.append(FormationEvents.unit_event("came_to", tick, entry[1], unit, extra))
-	return strays
+	return _rise(waking, squads, tick, fight_seed, events)
 
 
 ## Whether a unit due to come to lies still instead (Decision 127): with a standing foe
@@ -163,13 +150,38 @@ static func _wakes(unit: SkirmishUnit, seconds: float, fight_seed: int) -> bool:
 	return unit.wake_left <= 0.0
 
 
-## The nearest standing friendly formation it can see, which it joins - walking from where
-## it lay to a place at its back - or null, if there is none.
-static func _join(
-	unit: SkirmishUnit, own: SkirmishSquad, squads: Array, fight_seed: int
-) -> SkirmishSquad:
+## Those coming to this tick ([unit, its squad]) get up together (Decision 97): each finds
+## the nearest standing friendly formation it can see as all stood before any rose, then,
+## the nearest first and ties by their seeded draws - never the list - each joins its
+## formation, walking from where it lay to the next place at its back; one with none in
+## sight makes for home alone. Returns those [unit, its squad].
+static func _rise(waking: Array, squads: Array, tick: int, fight_seed: int, events: Array) -> Array:
+	var plans := []  # [key, [unit, its squad], the formation it joins or null]
+	for entry in waking:
+		var pick := _nearest(entry[0], squads, fight_seed)
+		plans.append([[pick[1], ScrumContest.draw(entry[0], fight_seed)], entry, pick[0]])
+	plans.sort_custom(func(a, b): return ScrumContest.before(a[0], b[0]))
+	var strays := []
+	for plan in plans:
+		var unit: SkirmishUnit = plan[1][0]
+		unit.hp = maxi(unit.hp, 1)
+		unit.state = SkirmishUnit.State.MOVING
+		unit.playing_dead = false
+		var extra := {"alone": plan[2] == null}
+		if plan[2] == null:
+			strays.append(plan[1])
+		else:
+			_join(unit, plan[1][1], plan[2])
+			extra["joined"] = plan[2].id
+		events.append(FormationEvents.unit_event("came_to", tick, plan[1][1], unit, extra))
+	return strays
+
+
+## [the nearest standing friendly formation the unit can see, how far its nearest member
+## is], or [null, INF] if there is none.
+static func _nearest(unit: SkirmishUnit, squads: Array, fight_seed: int) -> Array:
 	var best: SkirmishSquad = null
-	var best_key := []
+	var best_key := [INF]
 	for squad in squads:
 		if squad.faction_id != unit.faction_id:
 			continue
@@ -181,8 +193,11 @@ static func _join(
 			if other != unit and gap <= unit.detection and (best == null or key < best_key):
 				best = squad
 				best_key = key
-	if best == null:
-		return null
+	return [best, best_key[0]]
+
+
+## The unit joins `best`, walking from where it lay to a place at its back.
+static func _join(unit: SkirmishUnit, own: SkirmishSquad, best: SkirmishSquad) -> void:
 	var back := 0
 	for other in best.living():
 		if other != unit:
@@ -194,4 +209,3 @@ static func _join(
 	unit.column = 0
 	best.reforming = true
 	best.loose[unit.id] = {"unit": unit, "at": unit.position, "goal": null, "next": unit.position}
-	return best
