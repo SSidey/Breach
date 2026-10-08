@@ -120,11 +120,11 @@ static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, motion: Array, terra
 	):
 		heading = homeward  # fanned out as far as its disorder takes it (a rout's at most)
 	var reach := maxf(full, 1.0)  # where its step lands, a run's longer than a cell
-	if terrain != null and terrain.factor(unit.height, at, at + heading * reach) <= 0.0:
+	if terrain != null and terrain.factor(unit, at, at + heading * reach) <= 0.0:
 		var onto: Vector2 = squad.route.point_at(move_toward(along, home, LOOK_CELLS)) - at
 		heading = onto.normalized() if onto.length() > 0.000001 else homeward  # back to the road
 	if terrain != null:
-		full *= terrain.factor(unit.height, at, at + heading * reach)
+		full *= terrain.factor(unit, at, at + heading * reach)
 	var to := at + heading * maxf(full, 0.000001)
 	var efficacy := FormationDiscipline.reform_pace(squad)
 	var turning: float = motion[1] * efficacy  # a turn is a re-form

@@ -125,6 +125,8 @@ static func _breathe(unit: SkirmishUnit, seconds: float) -> void:
 	var hardiness := (
 		maxf(1.0, unit.attributes.get("constitution", UnitDef.AVERAGE)) / UnitDef.AVERAGE
 	)
+	if unit.on_face:
+		return  # no breather on a climb face or in deep water (WalkModes)
 	unit.breather += seconds
 	if unit.breather < tuning.stamina_delay / hardiness:
 		return

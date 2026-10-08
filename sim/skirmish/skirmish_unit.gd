@@ -65,6 +65,13 @@ var squad_id: int = 0
 ## 3); typed loosely to keep the unit free of formation code.
 var command: RefCounted = null
 var origin: RefCounted = null
+## How it crosses terrain (TerrainWalker: swimming, climbing), from its definition; the
+## last place it could stand, whether it is on a climb face or in deep water now (no
+## breather there), and the cells of a climb still above it (WalkModes).
+var walker: RefCounted = null
+var foothold := Vector2.ZERO
+var on_face := false
+var climb_left := 0.0
 ## Row in its squad's formation, 0 = the front rank.
 var rank: int = 0
 ## Leftmost formation column it covers.
