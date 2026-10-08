@@ -88,6 +88,8 @@ static func place_of(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 ## can walk rather than halting; one fallen behind (walk_lost) is waited for only if no
 ## man is left behind.
 static func share(squad: SkirmishSquad, terrain: FormationTerrain = null) -> float:
+	if not squad.taking.is_empty():
+		return 0.0  # it holds while its units are out taking the downed (FormationTaking)
 	var rule := rule_of(squad)
 	if rule == "fall_behind_left_behind":
 		return 1.0
@@ -112,6 +114,11 @@ static func share(squad: SkirmishSquad, terrain: FormationTerrain = null) -> flo
 static func target_of(
 	squad: SkirmishSquad, unit: SkirmishUnit, terrain: FormationTerrain = null
 ) -> Vector2:
+	if squad.taking.has(unit.id):  # out taking a downed foe (FormationTaking): beside it
+		var body: SkirmishUnit = squad.taking[unit.id]
+		var off := unit.position - body.position
+		var beside := minf(off.length(), _tuning().wounds_reach * 0.5)
+		return body.position + (off.normalized() * beside if off.length() > EPSILON else off)
 	var place := place_of(squad, unit)
 	if terrain == null or terrain.factor(unit.height, place, place) > 0.0:
 		return place

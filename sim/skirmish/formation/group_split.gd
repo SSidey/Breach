@@ -53,7 +53,12 @@ static func _behind(squad: SkirmishSquad) -> Array:
 		return []
 	var lost := BattleTuning.current().walk_lost
 	var placed := squad.living().filter(
-		func(u): return not squad.loose.has(u.id) and not squad.fleeing.has(u.id)
+		func(u):
+			return (
+				not squad.loose.has(u.id)
+				and not squad.fleeing.has(u.id)
+				and not squad.taking.has(u.id)
+			)
 	)
 	var out := []
 	var kept := false

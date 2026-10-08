@@ -61,6 +61,11 @@ var fight_since := -1
 ## Whether it has fought since it set out: groups of different commands form up only
 ## after both have (FormationGroups).
 var fought := false
+## Its units out taking the downed (FormationTaking): unit id -> the body; the tick they
+## set out (-1: none), and the tick it gave up on them (-1: none) - it then marches on.
+var taking := {}
+var taking_since := -1
+var took_until := -1
 ## Pursuit (ScrumPursuit, Decision 109): whether it may pursue a retreating enemy (false:
 ## ordered not to), and its units out chasing one on their own (unit id -> {"unit", "foe",
 ## "from", "leash"}).

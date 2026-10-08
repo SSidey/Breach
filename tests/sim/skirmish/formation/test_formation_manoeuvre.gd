@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## and marches only on the order. A re-formed line facing an enemy that has stopped closing
 ## in is let go, so the formation re-forms and marches on; contact mid-re-form is combat.
 
+const FormationTaking = preload("res://sim/skirmish/formation/formation_taking.gd")
 const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
@@ -137,8 +138,11 @@ func test_a_wave_re_forming_at_its_corner_as_a_fights_does_not_stick() -> void:
 	for _i in range(1200):
 		field.step()
 		var moving := wave.state in [SkirmishSquad.State.MOVING, SkirmishSquad.State.HOLDING]
+		moving = moving and not FormationTaking.holding(wave)  # a hold to take the downed
 		still = still + 1 if moving and wave.position == last else 0
 		longest = maxi(longest, still)
 		last = wave.position
 
-	assert_int(longest).is_less(60)
+	# Not stuck: its longest pause is a regroup for a unit come to and walking back to join
+	# it (Decision 126), now a little later after it holds to take its downed foes.
+	assert_int(longest).is_less(90)
