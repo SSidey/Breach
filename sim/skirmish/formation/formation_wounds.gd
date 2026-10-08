@@ -40,10 +40,8 @@ static func tend(squads: Array, tick: int, interval: int, fight_seed: int, event
 		return
 	# taken and taking in the units' seeded draws' order, never the list's (Decision 97):
 	# a captor or a leader's last messenger goes to the first of them
-	var by_draw := func(a, b):
-		return ScrumContest.draw(a[0], fight_seed) < ScrumContest.draw(b[0], fight_seed)
-	standing.sort_custom(by_draw)
-	downed.sort_custom(by_draw)
+	standing = _by_draw(standing, fight_seed)
+	downed = _by_draw(downed, fight_seed)
 	var taken := {}  # body id -> [body, its squad, [taker, its squad], ...]
 	var near := {
 		"standing": BodyGrid.build(standing.map(func(entry): return entry[0].position)),
@@ -58,6 +56,13 @@ static func tend(squads: Array, tick: int, interval: int, fight_seed: int, event
 			taken[body[0].id].append(taker)
 	for body_id in taken:
 		_take(taken[body_id], squads, tick, interval, events)
+
+
+## `entries` ([unit, squad]) in their units' seeded draws' order, each draw taken once.
+static func _by_draw(entries: Array, fight_seed: int) -> Array:
+	var keyed := entries.map(func(entry): return [ScrumContest.draw(entry[0], fight_seed), entry])
+	keyed.sort_custom(func(a, b): return a[0] < b[0])
+	return keyed.map(func(pair): return pair[1])
 
 
 ## Routing units struck by this tick's `blows` ([striker, target, damage, ...]) that
@@ -94,12 +99,6 @@ static func _within_reach(taker: Array, standing: Array, downed: Array, drawn: A
 	var unit: SkirmishUnit = taker[0]
 	var fight_seed: int = drawn[0]
 	var near: Dictionary = drawn[1]
-	var reach := tuning.wounds_guard_reach
-	for found in BodyGrid.near(near["standing"], unit.position, reach + BodyGrid.MARGIN):
-		var other: Array = standing[found]
-		if other[0].faction_id != unit.faction_id:
-			if other[0].position.distance_to(unit.position) <= tuning.wounds_guard_reach:
-				return []  # still fighting
 	var best := []
 	var best_key := []
 	for found in BodyGrid.near(
@@ -117,6 +116,14 @@ static func _within_reach(taker: Array, standing: Array, downed: Array, drawn: A
 		if best.is_empty() or key < best_key:
 			best = body
 			best_key = key
+	if best.is_empty():
+		return []
+	var reach := tuning.wounds_guard_reach
+	for found in BodyGrid.near(near["standing"], unit.position, reach + BodyGrid.MARGIN):
+		var other: Array = standing[found]
+		if other[0].faction_id != unit.faction_id:
+			if other[0].position.distance_to(unit.position) <= tuning.wounds_guard_reach:
+				return []  # still fighting
 	return best
 
 

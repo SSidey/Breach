@@ -10,6 +10,7 @@ extends RefCounted
 ## of their units' seeded draws, never by ids or lists (Decision 97). Pure.
 
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
@@ -60,12 +61,15 @@ static func _behind(squad: SkirmishSquad) -> Array:
 				and not squad.taking.has(u.id)
 			)
 	)
+	var far := {}  # unit id -> whether it stands further than walk_lost from its place
+	for unit in placed:
+		far[unit.id] = unit.position.distance_to(FormationWalk.place_of(squad, unit)) > lost
+	if not far.values().has(true):
+		return []  # nobody has fallen behind: nothing to cluster
 	var out := []
 	var kept := false
 	for cluster in _clusters(placed):
-		var behind: bool = cluster.all(
-			func(u): return u.position.distance_to(FormationWalk.place_of(squad, u)) > lost
-		)
+		var behind: bool = cluster.all(func(u): return far[u.id])
 		if behind:
 			out.append_array(cluster)
 		else:
@@ -73,19 +77,28 @@ static func _behind(squad: SkirmishSquad) -> Array:
 	return out if kept else []
 
 
-## The units in clusters: each unit within group_join of another of its cluster.
+## The units in clusters: each unit within group_join of another of its cluster. Each
+## unit looks only at its neighbours on a grid (BodyGrid), so it is linear in units.
 static func _clusters(units: Array) -> Array:
-	var join := BattleTuning.current().group_join
-	var left := units.duplicate()
+	if units.is_empty():
+		return []
+	var join := BattleTuning.current().group_join + 1.0
+	var grid := BodyGrid.build(units.map(func(u): return u.position))
+	var seen := PackedByteArray()
+	seen.resize(units.size())
 	var out := []
-	while not left.is_empty():
-		var cluster := [left.pop_back()]
+	for start in units.size():
+		if seen[start] == 1:
+			continue
+		seen[start] = 1
+		var cluster := [units[start]]
 		var i := 0
 		while i < cluster.size():
-			for other in left.duplicate():
-				if cluster[i].position.distance_to(other.position) <= join + 1.0:
-					cluster.append(other)
-					left.erase(other)
+			var at: Vector2 = cluster[i].position
+			for found in BodyGrid.near(grid, at, join + BodyGrid.MARGIN):
+				if seen[found] == 0 and units[found].position.distance_to(at) <= join:
+					seen[found] = 1
+					cluster.append(units[found])
 			i += 1
 		out.append(cluster)
 	return out
