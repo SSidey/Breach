@@ -63,6 +63,9 @@ jobs:
           BASE_REF: ${{ github.event.pull_request.base.ref && format('origin/{0}', github.event.pull_request.base.ref) || '' }}
         run: pre-commit run --all-files --show-diff-on-failure
 
+      - name: Scaling check (bounded-scaling, principles/bounded-work.md)
+        run: /opt/godot/godot --headless --path . --script res://tools/scaling_check.gd
+
       - name: Check commit messages (commit-message-conforms)
         if: github.event_name == 'pull_request'
         run: |

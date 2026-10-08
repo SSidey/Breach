@@ -36,6 +36,7 @@ principles/
   tdd-bdd-workflow.md        Behaviour-first workflow, spec-type taxonomy, coverage floor
   rules-over-cases.md        General rules over special cases; identity and order never
                               decide outcomes
+  bounded-work.md            Per-tick work is local and bounded; work follows change
 
 rubrics/
   spec-baseline.rubrics.md   Checked when a specification is authored
@@ -53,8 +54,9 @@ config/
 
 ## Reading order for a new project
 
-1. `principles/ai-first-organisation.md`, `principles/solid-mechanical.md` and
-   `principles/rules-over-cases.md` — the design rules everything else enforces.
+1. `principles/ai-first-organisation.md`, `principles/solid-mechanical.md`,
+   `principles/rules-over-cases.md` and `principles/bounded-work.md` — the design rules
+   everything else enforces.
 2. `principles/tdd-bdd-workflow.md` — how behaviour gets specified and implemented.
 3. `principles/agent-workflow.md` — how a change actually gets proposed and landed.
 4. `principles/decision-ledger.md` and `principles/progress-tracking.md` — how the
