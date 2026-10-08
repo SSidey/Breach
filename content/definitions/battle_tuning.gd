@@ -234,6 +234,10 @@ static var _current: BattleTuning = null
 @export var sight_budget := 0.0
 @export var sight_wood_obscurance := 0.0
 @export var sight_fog_obscurance := 0.0
+## A group off its route rejoins it where the walk there plus the march along it to its
+## end is quickest; of the ways within this share of the quickest, it takes the one back
+## on the route soonest (spec 30, RouteRejoin).
+@export var path_rejoin_slack := 0.0
 
 @export_group("Bodies (Decisions 106 and 114)")
 ## How many times over a unit in its formation's frame weighs, against being pushed.

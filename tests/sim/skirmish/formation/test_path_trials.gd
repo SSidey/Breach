@@ -32,9 +32,13 @@ func test_each_walker_goes_its_own_way_over_the_field_drawn_as_text() -> void:
 	assert_bool(_touches(_row(rows, "across", "climber")["cells"], PathTrials.CRAG)).is_true()
 	assert_bool(_touches(_row(rows, "across", "grem")["cells"], PathTrials.CRAG)).is_false()
 	assert_bool(_row(rows, "sight 40 ahead", "grem")["reaches"]).is_false()
-	var back := _row(rows, "rejoin route A", "grem")
+	# the crag crosses route A: a climber rejoins it short of the crag, a grem past it
+	var back := _row(rows, "rejoin route A", "climber")
 	assert_bool(back["reaches"]).is_true()
 	assert_int(absi(back["cells"].back().y * 2 + 1 - 64)).is_less_equal(1)  # on y = 32
+	var round := _row(rows, "rejoin route A", "grem")
+	assert_bool(round["reaches"]).is_false()  # the way round the crag runs out of sight
+	assert_int(round["cells"].back().y).is_less(26)  # north, round the crag's open end
 	var drawn := PathTrials.drawing(
 		_row(rows, "stream", "grem")["cells"], PathTrials.STREAM_VIEW, 1
 	)

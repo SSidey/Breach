@@ -63,10 +63,11 @@ static func plan(
 	return _planned(terrain, walker, way, from, end, search.reaches)
 
 
-## The way back onto `route` from `from` on what `sight` sees: to the quickest-reached
-## cell on the route ("reaches"), whose distance along the route is "along" - from a cell
-## on the route, just that cell - or with none in sight, to the edge of sight nearest it.
-## As plan() otherwise.
+## The way back onto `route` from `from` on what `sight` sees: to the cell on the route
+## where the walk there plus the march along the route to its end is quickest - of those
+## within path_rejoin_slack of it, the one back soonest (RouteRejoin) - its distance along
+## the route "along"; or where that way leaves sight, to the edge of sight ("reaches"
+## false, "along" -1). As plan() otherwise.
 static func rejoin(
 	terrain: FormationTerrain,
 	walker: TerrainWalker,
