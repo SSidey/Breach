@@ -5,6 +5,7 @@ extends RefCounted
 ## melee weapons together) and its best ranged weapon. Pure.
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const TerrainWalker = preload("res://sim/skirmish/formation/terrain_walker.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 const UnitArms = preload("res://content/definitions/unit_arms.gd")
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
@@ -16,6 +17,7 @@ static func make(
 	var unit := SkirmishUnit.new()
 	unit.id = unit_id
 	unit.faction_id = faction_id
+	unit.walker = TerrainWalker.of(unit_def)
 	unit.hp = unit_def.hp
 	unit.max_hp = unit_def.hp
 	unit.speed = unit_def.speed

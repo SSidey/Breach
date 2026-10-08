@@ -109,4 +109,4 @@ static func _within(seeker: SkirmishUnit, point: Vector2, ground: Array) -> bool
 	if point.distance_to(ground[0]) > BattleTuning.current().scrum_leash:
 		return false
 	var terrain: FormationTerrain = ground[3]
-	return terrain == null or terrain.factor(seeker.height, point, point) > 0.0
+	return terrain == null or terrain.factor(seeker, point, point) > 0.0

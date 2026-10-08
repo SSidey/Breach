@@ -17,6 +17,7 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const WalkModes = preload("res://sim/skirmish/formation/walk_modes.gd")
 const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
 const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
@@ -37,16 +38,22 @@ static func walk(
 	terrain: FormationTerrain = null
 ) -> void:
 	var seconds: float = timing[0]
+	if WalkModes.climb(unit, terrain, seconds, unit.speed * timing[1]):
+		return  # on a climb face: it climbs before it moves on
 	var going := _way(unit, place, terrain)  # [where it steps towards, the ground's share]
 	var toward: Vector2 = going[0]
 	var way := toward - unit.position
 	var full: float = unit.speed * timing[1] * seconds * going[1]
+	if not WalkModes.may_step(unit, unit.position, toward, terrain):
+		full = 0.0  # spent: it won't start a climb or a swim
 	if timing.size() > 2 and way.length() > EPSILON:  # bodies on the ground (GroundBodies)
 		full *= GroundBodies.underfoot(unit, unit.position + way.normalized() * 0.5, timing[2])
 	var facing := UnitMotion.vector(squad.heading)
 	var far := place.distance_to(unit.position) > _tuning().walk_face_travel
 	var look := toward if far else place + facing
+	var from := unit.position
 	unit.position = UnitMotion.walk(unit, unit.position, toward, full, seconds, look)
+	WalkModes.after_step(unit, from, terrain, seconds)
 
 
 ## [the point the unit steps towards on its way to `place`, the share of its pace the
@@ -56,7 +63,7 @@ static func _way(unit: SkirmishUnit, place: Vector2, terrain: FormationTerrain) 
 	var way := place - unit.position
 	if terrain == null or way.length() < EPSILON:
 		return [place, 1.0]
-	var straight := terrain.factor(unit.height, unit.position, unit.position + way.normalized())
+	var straight := terrain.factor(unit, unit.position, unit.position + way.normalized())
 	if straight > 0.0:
 		return [place, straight]
 	var best := [unit.position, 0.0]
@@ -65,7 +72,7 @@ static func _way(unit: SkirmishUnit, place: Vector2, terrain: FormationTerrain) 
 		if along.length() < EPSILON:
 			continue
 		var step := unit.position + along.normalized()
-		var share := terrain.factor(unit.height, unit.position, step)
+		var share := terrain.factor(unit, unit.position, step)
 		var left := (unit.position + along).distance_to(place)
 		if share > 0.0 and left < nearest - EPSILON:
 			best = [unit.position + along, share]
@@ -120,14 +127,14 @@ static func target_of(
 		var beside := minf(off.length(), _tuning().wounds_reach * 0.5)
 		return body.position + (off.normalized() * beside if off.length() > EPSILON else off)
 	var place := place_of(squad, unit)
-	if terrain == null or terrain.factor(unit.height, place, place) > 0.0:
+	if terrain == null or terrain.factor(unit, place, place) > 0.0:
 		return place
 	var across := UnitMotion.vector(squad.heading).orthogonal()
 	var offset := (place - squad.position).dot(across)
 	var steps := ceili(absf(offset) / SQUEEZE_STEP)
 	for step in range(1, steps + 1):
 		var point := place - across * signf(offset) * minf(step * SQUEEZE_STEP, absf(offset))
-		if terrain.factor(unit.height, point, point) > 0.0:
+		if terrain.factor(unit, point, point) > 0.0:
 			return point
 	return place
 

@@ -37,7 +37,7 @@ static func pace(
 	var ahead := UnitMotion.vector(squad.heading)
 	var worst := INF
 	for unit in squad.fighters():
-		var factor := terrain.factor(unit.height, unit.position, unit.position + ahead)
+		var factor := terrain.factor(unit, unit.position, unit.position + ahead)
 		if factor > 0.0:  # one stepping onto ground it can't cross pours (FormationWalk)
 			worst = minf(worst, factor)
 	worst = 0.0 if worst == INF else worst
@@ -123,6 +123,7 @@ static func sync_units(squads: Array, timing := [], terrain: FormationTerrain = 
 				unit.position = entry.loose[unit.id]["at"]
 			elif timing.is_empty():
 				unit.position = FormationWalk.place_of(entry, unit)
+				unit.foothold = unit.position
 				unit.bearing = entry.heading
 			else:
 				FormationWalk.walk(

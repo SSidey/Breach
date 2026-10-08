@@ -194,24 +194,18 @@ func test_a_flank_timed_by_the_chieftain_breaks_the_line_into_its_reserve() -> v
 	assert_bool(log.any(func(e): return e["type"] == "engaged" and e["squad"] == reserve)).is_true()
 
 
-func test_route_bs_wave_pours_through_the_ford_and_fans_out_after() -> void:
-	# Spec 30 round 3, part 5: no filing into the ford's width; its units squeeze through
-	# and walk back to their places beyond, never standing in the deep stream.
+func test_route_bs_wave_crosses_the_stream_at_its_full_width() -> void:
+	# Spec 30 round 3: no filing into the ford's width (part 5). Its units cross where their
+	# places lie - wading the ford, or swimming the stream either side of it (everyone
+	# swims, part 6) - and walk back to their places beyond.
 	var field := _field(400, 200)
 	_run(field, func(log): return field.waves["B"].built() == 8)
 	var wave := field.send("B")
-	var in_deep := {"cells": 0}
 	var past := func(_log):
-		for unit in wave.living():
-			# half a body may hang over the ford's edge as bodies jostle (UnitBodies)
-			var ford := FormationField.FORD.grow(0.5)
-			if FormationField.STREAM.has_point(unit.position) and not ford.has_point(unit.position):
-				in_deep["cells"] += 1
 		return wave.living().all(func(u): return u.position.x > FormationField.STREAM.end.x + 4.0)
 
 	_run(field, past, 900)
 
-	assert_int(in_deep["cells"]).is_equal(0)
 	(
 		assert_bool(wave.living().all(func(u): return u.position.x > FormationField.STREAM.end.x))
 		. is_true()

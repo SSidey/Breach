@@ -42,7 +42,7 @@ static func step(
 		var most := sin(deg_to_rad(BattleTuning.current().rout_fan_degrees)) * full
 		aside = clampf(_short_of(refuge, at, side), -most, most)
 	var terrain = motion[2]
-	var open: bool = terrain == null or terrain.factor(unit.height, at, at + side * aside) > 0.0
+	var open: bool = terrain == null or terrain.factor(unit, at, at + side * aside) > 0.0
 	if (
 		(refuge == null and absf(fanned + aside) > BattleTuning.current().rout_fan_cells)
 		or not open

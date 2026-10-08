@@ -80,10 +80,14 @@ func blocks_sight(at: Vector2) -> bool:
 	return index >= 0 and _blocks[index] == 1
 
 
-## How fast a unit `unit_height` cells tall that neither swims nor climbs goes stepping
-## from `from` into `to`, as a share of its speed on open level ground; 0 where it can't go.
-func factor(unit_height: float, from: Vector2, to: Vector2) -> float:
-	return crossing(TerrainWalker.grounded(unit_height), from, to)
+## How fast a unit goes stepping from `from` into `to`, as a share of its speed on open
+## level ground; 0 where it can't go. `who` is a unit - crossing as its own walker
+## (TerrainWalker.of_unit: swimming, climbing) - or a bare height (a grounded walker).
+func factor(who, from: Vector2, to: Vector2) -> float:
+	var walker: TerrainWalker = (
+		TerrainWalker.grounded(who) if who is float or who is int else TerrainWalker.of_unit(who)
+	)
+	return crossing(walker, from, to)
 
 
 ## How fast `walker` goes stepping from `from` into `to`, as a share of its speed on open

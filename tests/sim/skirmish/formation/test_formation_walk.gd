@@ -13,6 +13,7 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
+const TerrainWalker = preload("res://sim/skirmish/formation/terrain_walker.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
 const PACE := 8.0  # cells a second at speed 1 (FormationSimulation.TRAVEL_SCALE)
@@ -143,10 +144,12 @@ func test_a_unit_whose_place_is_barred_squeezes_in_towards_the_centre_line() -> 
 	var route := FormationRoute.new(PackedVector2Array([Vector2(0, 1), Vector2(64, 1)]))
 	var squad := _line(sim, 4)
 	squad.route = route
+	for unit in squad.units:  # ones that can't swim: the water is barred to them
+		unit.walker = TerrainWalker.grounded(unit.height)
 	squad.front_distance = 20.0 / 64.0
 	for unit in squad.units:
 		var target := FormationWalk.target_of(squad, unit, terrain)
-		assert_float(terrain.factor(unit.height, target, target)).is_greater(0.0)
+		assert_float(terrain.factor(unit, target, target)).is_greater(0.0)
 		var place := FormationWalk.place_of(squad, unit)
 		assert_float(target.x).is_equal_approx(place.x, 0.0001)  # only across the frame
 

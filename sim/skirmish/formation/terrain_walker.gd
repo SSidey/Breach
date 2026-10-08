@@ -45,6 +45,14 @@ static func of(unit_def: UnitDef) -> TerrainWalker:
 	)
 
 
+## The walker a unit crosses terrain as: its own (FormationUnits gives each one from its
+## definition), or - for a unit made without one - a grounded one of its height.
+static func of_unit(unit) -> TerrainWalker:
+	if unit.walker != null:
+		return unit.walker
+	return grounded(unit.height)
+
+
 ## A unit `unit_height` cells tall that neither swims nor climbs.
 static func grounded(unit_height: float) -> TerrainWalker:
 	return TerrainWalker.new(unit_height, 0, 0, false, false)
