@@ -662,3 +662,21 @@ prefer to take units with them or join other units with their own".
 - The rest of the rule is unchanged: one command's groups become one; leaderless groups
   merge only if set to; led groups send home units that started under the other's
   command.
+
+### Rejoin, simplified
+
+The user: "Rejoin should certainly be limited towards attempting to get back to the route
+as soon as possible". The route is a guide and no faster than open ground, so the
+quickest way to the goal is, within a few percent, the nearest point on the route ahead
+of where the group left it.
+- One outward search by walking time over the ground the group knows (unseen ground
+  counts as open). It stops at the first route point it reaches ahead of the group's
+  furthest progress along the route.
+- If no point ahead can be reached, the group takes the first point behind: doubling back
+  only when it is the only way.
+- This replaces timing the march to the goal and scanning near-ties (about 54 ms a
+  search), and gives the same answers on the user's simulation (the wall, open ground and
+  the river).
+- **Falls** stay as built, to tune later. Future: a `cat_fall` trait that lessens fall
+  damage, and a feather-fall ability that removes it.
+- **Implicit traits** show on the Library's Units view until a unit designer exists.
