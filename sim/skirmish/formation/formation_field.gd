@@ -13,7 +13,7 @@ extends RefCounted
 ## units seek contact (Decision 88), and a captained line turns to meet a flank. A broken
 ## line routs east into the kingdom's reserve on the hill (Decisions 82, 89); the player's
 ## routers who reach home go back to the reserve. The ground matters (Decision 85): the
-## wood slows and hides, B's wave narrows through the ford, and the reserve fights down
+## wood slows and hides, B's wave pours through the ford, and the reserve fights down
 ## from the hill. The player's domain builders fill both waves in turn. Pure.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")

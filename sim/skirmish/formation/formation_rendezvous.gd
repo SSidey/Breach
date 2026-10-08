@@ -5,14 +5,13 @@ extends RefCounted
 ## predicted as FormationSimulation runs it - a cell pace per tick, slowed by the ground
 ## along the route (Decision 85), sweeping round bends (Decision 105) as fast as its
 ## files, walking to their places, keep within their slack (FormationWalk, spec 30 round
-## 3), and at a gap narrower than the squad the pauses to narrow and widen - so it holds
-## until something interferes on the way (a fight, a queue). Pure.
+## 3) - so it holds until something interferes on the way (a fight, a queue, a gap it
+## pours through). Pure.
 
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
-const FormationNarrowing = preload("res://sim/skirmish/formation/formation_narrowing.gd")
 
 
 ## Ticks for a squad `width` wide moving `cells_per_second` to reach `cells` along `route`,
@@ -36,28 +35,21 @@ static func ticks_to(
 		"sweep": rad_to_deg(cells_per_second / maxf(width / 2.0, 0.5)) * tick_seconds,
 		"slack": slack if slack >= 0.0 else _middling_slack(),
 		"ticks": 0,
-		"narrowed": false,
 	}
 	march["files"] = _places(route, width, from, march["facing"])
 	while march["travelled"] < cells - 0.000001 and march["ticks"] < 1000000:
-		_tick(route, width, march, terrain, tick_seconds)
+		_tick(route, width, march, terrain)
 	return march["ticks"]
 
 
 ## One tick of the predicted march: the frame steps and sweeps by the share its lagging
 ## files allow (FormationWalk.share), and the front rank's files walk to their places.
-static func _tick(
-	route: FormationRoute, width: int, march: Dictionary, terrain, tick_seconds: float
-) -> void:
+static func _tick(route: FormationRoute, width: int, march: Dictionary, terrain) -> void:
 	var here := route.point_at(march["travelled"])
 	var ahead := route.heading_at(march["travelled"])
 	var ground := 1.0
 	if terrain != null:
 		ground = maxf(0.05, terrain.factor(1.0, here, here + ahead))
-		var heading := UnitMotion.bearing_to(Vector2.ZERO, ahead, 0.0)
-		if not march["narrowed"] and _narrows(terrain, here + ahead, heading, width):
-			march["narrowed"] = true
-			march["ticks"] += 2 * roundi(BattleTuning.current().reach_narrow_seconds / tick_seconds)
 	var places := _places(route, width, march["travelled"], march["facing"])
 	var furthest := 0.0
 	for i in places.size():
@@ -89,11 +81,6 @@ static func _places(route: FormationRoute, width: int, cells: float, heading: fl
 static func _middling_slack() -> float:
 	var tuning := BattleTuning.current()
 	return lerpf(tuning.walk_slack_loose, tuning.walk_slack_drilled, 0.5)
-
-
-static func _narrows(terrain: FormationTerrain, at: Vector2, heading: float, width: int) -> bool:
-	var run := FormationNarrowing.run_across(terrain, at, heading, 1.0)
-	return run.x >= 1.0 and run.x < width
 
 
 ## Ticks each wave should wait before setting out so all arrive together: {key: ticks}

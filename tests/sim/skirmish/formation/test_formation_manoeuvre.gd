@@ -2,8 +2,7 @@ extends GdUnitTestSuite
 ## Manoeuvres, per Decision 94 and spec 27 round 7: a formation always has one, the
 ## highest-priority that applies - combat, its route, re-forming, then the player's order -
 ## and marches only on the order. A re-formed line facing an enemy that has stopped closing
-## in is let go, so the formation re-forms and marches on; narrowing at a gap is a re-form
-## at the formation's own pace; contact mid-re-form is combat.
+## in is let go, so the formation re-forms and marches on; contact mid-re-form is combat.
 
 const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
@@ -109,31 +108,6 @@ func test_contact_mid_re_form_is_combat() -> void:
 
 	assert_int(squad.manoeuvre).is_equal(FormationManoeuvre.Kind.COMBAT)
 	assert_bool(foe.is_destroyed()).is_false()
-
-
-func _narrowing_ticks(discipline: int) -> int:
-	var sim := _sim()
-	sim.terrain = FormationTerrain.new(Vector2i(64, 32))
-	sim.terrain.paint(Rect2i(20, 0, 2, 32), {"depth": 3.0})
-	sim.terrain.paint(Rect2i(20, 8, 2, 4), {"depth": 0.0})
-	var route := FormationRoute.new(PackedVector2Array([Vector2(0, 10), Vector2(64, 10)]))
-	var squad := sim.spawn_squad(8, _row(8, discipline), "player", true, 0, route)
-	var began := -1
-	for tick in range(1, 300):
-		var log := sim.step()
-		if began < 0 and log.any(func(e): return e["type"] == "narrowed"):
-			began = tick
-		if began >= 0 and squad.manoeuvre == FormationManoeuvre.Kind.ORDER:
-			return tick - began
-	return 300
-
-
-func test_narrowing_is_a_re_form_at_the_formations_pace() -> void:
-	var drilled := _narrowing_ticks(60)
-	var ragged := _narrowing_ticks(20)
-
-	assert_int(drilled).is_greater(0)
-	assert_int(drilled).is_less(ragged)
 
 
 func test_a_wave_re_forming_at_its_corner_as_a_fights_does_not_stick() -> void:
