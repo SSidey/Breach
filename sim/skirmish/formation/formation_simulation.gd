@@ -160,6 +160,7 @@ func step() -> Array:
 	var events := []
 	_apply_orders(events)
 	_engage(events)
+	FormationPathing.step(_squads, terrain, _tick, fight_seed, events)
 	_move(events)
 	var pace := TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
 	events.append_array(

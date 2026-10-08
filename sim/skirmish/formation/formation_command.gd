@@ -25,6 +25,9 @@ var pursues := true
 ## Whether its groups walk out to take downed foes after a fight (FormationTaking), or
 ## leave them.
 var takes := true
+## Ways round its groups have found (RoutePatch, FormationPathing): every group follows the
+## route with them.
+var patches := []
 
 
 func _init(home: float = 0.0, guide: FormationRoute = null) -> void:

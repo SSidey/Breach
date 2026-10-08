@@ -66,6 +66,10 @@ var fought := false
 var taking := {}
 var taking_since := -1
 var took_until := -1
+## Group pathfinding (FormationPathing): how many of its command's route patches its route
+## carries, and where along it (cells) it last looked ahead.
+var patched_count := 0
+var looked_at := -INF
 ## Pursuit (ScrumPursuit, Decision 109): whether it may pursue a retreating enemy (false:
 ## ordered not to), and its units out chasing one on their own (unit id -> {"unit", "foe",
 ## "from", "leash"}).

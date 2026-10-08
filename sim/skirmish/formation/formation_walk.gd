@@ -17,6 +17,7 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const TerrainWalker = preload("res://sim/skirmish/formation/terrain_walker.gd")
 const WalkModes = preload("res://sim/skirmish/formation/walk_modes.gd")
 const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
 const FormationShuffle = preload("res://sim/skirmish/formation/formation_shuffle.gd")
@@ -114,10 +115,11 @@ static func share(squad: SkirmishSquad, terrain: FormationTerrain = null) -> flo
 	return clampf((slack - furthest) / (slack / 2.0), 0.0, 1.0)
 
 
-## Where `unit` makes for: its place, or - where its place lies on ground it can't stand
-## on - the nearest it can, squeezing across the frame towards its centre line, so a
-## formation pours through a gap narrower than itself and fans out again past it (spec 30
-## round 3, part 5). On open ground (no terrain) its place.
+## Where `unit` makes for: its place, or - where its place lies on ground it can't walk -
+## the nearest it can walk, squeezing across the frame towards its centre line (so a
+## formation pours through a gap narrower than itself and fans out again past it, and
+## wades a ford rather than swim beside it: spec 30 round 3, parts 5 and 6); with none
+## to walk, its place if it can swim or climb there, else the nearest it can stand on.
 static func target_of(
 	squad: SkirmishSquad, unit: SkirmishUnit, terrain: FormationTerrain = null
 ) -> Vector2:
@@ -127,16 +129,46 @@ static func target_of(
 		var beside := minf(off.length(), _tuning().wounds_reach * 0.5)
 		return body.position + (off.normalized() * beside if off.length() > EPSILON else off)
 	var place := place_of(squad, unit)
-	if terrain == null or terrain.factor(unit, place, place) > 0.0:
+	if terrain == null or _walkable(unit, place, terrain):
 		return place
+	var walk := _squeeze(squad, unit, place, terrain, true)  # ground it can walk, near by
+	if walk != Vector2.INF:
+		return walk
+	if terrain.factor(unit, place, place) > 0.0:
+		return place  # none to walk: it swims or climbs to its place
+	var any := _squeeze(squad, unit, place, terrain, false)
+	return place if any == Vector2.INF else any
+
+
+## The nearest point across the frame from `place` towards its centre line where `unit`
+## can stand - walking it, if `walking` - or INF.
+static func _squeeze(
+	squad: SkirmishSquad,
+	unit: SkirmishUnit,
+	place: Vector2,
+	terrain: FormationTerrain,
+	walking: bool
+) -> Vector2:
 	var across := UnitMotion.vector(squad.heading).orthogonal()
 	var offset := (place - squad.position).dot(across)
 	var steps := ceili(absf(offset) / SQUEEZE_STEP)
 	for step in range(1, steps + 1):
 		var point := place - across * signf(offset) * minf(step * SQUEEZE_STEP, absf(offset))
-		if terrain.factor(unit, point, point) > 0.0:
+		var ok := (
+			_walkable(unit, point, terrain) if walking else terrain.factor(unit, point, point) > 0.0
+		)
+		if ok:
 			return point
-	return place
+	return Vector2.INF
+
+
+## Whether `unit` can walk on the point - not swim or climb to it.
+static func _walkable(unit: SkirmishUnit, point: Vector2, terrain: FormationTerrain) -> bool:
+	var walker := TerrainWalker.of_unit(unit)
+	return (
+		terrain.factor(unit, point, point) > 0.0
+		and terrain.mode(walker, point, point) == TerrainWalker.Mode.WALKING
+	)
 
 
 ## True if the squad's frame waits this tick for a unit lagging behind its place.
