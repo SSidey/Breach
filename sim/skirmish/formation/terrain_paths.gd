@@ -63,21 +63,24 @@ static func plan(
 	return _planned(terrain, walker, way, from, end, search.reaches)
 
 
-## The way back onto `route` from `from` on what `sight` sees: to the cell on the route
-## where the walk there plus the march along the route to its end is quickest - of those
-## within path_rejoin_slack of it, the one back soonest (RouteRejoin) - its distance along
-## the route "along"; or where that way leaves sight, to the edge of sight ("reaches"
-## false, "along" -1). As plan() otherwise.
+## The way back onto `route` from `from` on what `sight` sees: to the first cell on the
+## route reached that lies at or ahead of `progress` cells along it, where the group left
+## it (negative: where `from` lies along it) - with none in reach, the first behind - its
+## distance along the route "along"; or where that way leaves sight, to the edge of sight
+## ("reaches" false, "along" -1). As plan() otherwise.
 static func rejoin(
 	terrain: FormationTerrain,
 	walker: TerrainWalker,
 	from: Vector2,
 	route: FormationRoute,
 	sight: PathSight = null,
-	memory: PathMemory = null
+	memory: PathMemory = null,
+	progress: float = -1.0
 ) -> Dictionary:
 	var search := PathSearch.new(terrain, walker, _cell(from), sight, memory)
-	var out := _planned(terrain, walker, search.to_route(route), from, Vector2.INF, search.reaches)
+	var left := route.distance_of(from) if progress < 0.0 else progress
+	var way := search.to_route(route, left)
+	var out := _planned(terrain, walker, way, from, Vector2.INF, search.reaches)
 	var waypoints: PackedVector2Array = out["waypoints"]
 	out["along"] = route.distance_of(waypoints[-1]) if search.reaches else -1.0
 	return out

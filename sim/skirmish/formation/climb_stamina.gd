@@ -11,7 +11,8 @@ extends RefCounted
 ## stamina on a face falls to the foot of its stretch, the last standable cell it left (the
 ## march knows it), hurt fall_damage_per_cell for each cell of the drop times its mass (its
 ## footprint, as bodies weigh it, Decision 121) to the power fall_mass_power. Recovery and
-## falls are for the march to apply (spec 30 part 6). Pure.
+## falls are for the march to apply (spec 30 part 6). Noted for later, not built: a
+## `cat_fall` trait taking less fall damage, and a feather-fall ability taking none. Pure.
 
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")

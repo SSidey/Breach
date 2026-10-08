@@ -13,8 +13,13 @@ extends RefCounted
 ## else up to the edge of sight where the way leaves it - the frontier cell with the least
 ## cost so far plus optimistic cost on. The walker heads there and plans again as more
 ## comes into view, so a wall is felt along. With no sight it sees the whole grid. The goal
-## is a cell, or a route: rejoining it where the way to the route's end, walked to it and
-## marched along it, is quickest (RouteRejoin, which settles ties within its slack). A
+## is a cell, or a route: rejoining it at the first route point reached - by walking
+## time - that lies ahead of where the group left it (its furthest progress along it);
+## with none ahead in reach, at the first point behind - it doubles back only when that is
+## the only way. The route is a guide, no faster than open ground, so the nearest point
+## ahead is near enough the quickest to the goal (the user's rule). The estimate, the
+## distance to the route's line, never overestimates the time to a point ahead, so the
+## first such point settled is the one Dijkstra's search would find. A
 ## walker with a stamina plans only climbs whose stretches between the cells it can stand
 ## on its stamina lasts (ClimbBudget). Pure.
 
@@ -25,7 +30,6 @@ const PathFrontier = preload("res://sim/skirmish/formation/path_frontier.gd")
 const PathSight = preload("res://sim/skirmish/formation/path_sight.gd")
 const PathMemory = preload("res://sim/skirmish/formation/path_memory.gd")
 const WalkerShares = preload("res://sim/skirmish/formation/walker_shares.gd")
-const RouteRejoin = preload("res://sim/skirmish/formation/route_rejoin.gd")
 const ClimbBudget = preload("res://sim/skirmish/formation/climb_budget.gd")
 
 ## A diagonal step's length.
@@ -54,7 +58,8 @@ var _count: int
 var _start: Vector2i
 var _goal := Vector2i(-1, -1)
 var _route: FormationRoute
-var _rejoin: RouteRejoin
+var _progress := 0.0  # how far along the route the group left it
+var _behind := -1  # the quickest-reached route cell behind that, if any
 var _climb: ClimbBudget  # null: a walker with no limit on its stamina
 var _toward: Vector2  # where the straight way runs, for ties
 var _width: int
@@ -77,13 +82,13 @@ func to_cell(goal: Vector2i) -> Array[Vector2i]:
 	return _run()
 
 
-## The cells of the way from start onto `route` (to a cell within ON_ROUTE of its line)
-## that RouteRejoin chooses, or to the edge of sight where that way leaves it; empty if
-## there is none.
-func to_route(route: FormationRoute) -> Array[Vector2i]:
+## The cells of the quickest way from start onto `route` (to a cell within ON_ROUTE of its
+## line) at or ahead of `progress` cells along it - with none in reach, behind it - or to
+## the edge of sight where that way leaves it; empty if there is none.
+func to_route(route: FormationRoute, progress: float) -> Array[Vector2i]:
 	_route = route
-	_rejoin = RouteRejoin.new(_terrain, _walker, route)
-	_toward = _rejoin.end
+	_progress = progress
+	_toward = route.point_at(maxf(progress, route.distance_of(_centre(_start))))
 	return _run()
 
 
@@ -108,19 +113,17 @@ func _run() -> Array[Vector2i]:
 		var index := _open.pop()
 		if _closed[index] == 1:
 			continue
-		if _rejoin != null and _rejoin.settled(_best[index] + _estimate(index)):
-			break
 		_closed[index] = 1
 		expanded += 1
 		if _is_goal(index):
-			if _rejoin == null:
+			if _route == null or _ahead(index):
 				return _in_sight(_trace(index))
-			_rejoin.offer(index, _centre(_cell(index)), _best[index])
+			if _behind < 0 or _best[index] < _best[_behind] - BETTER:
+				_behind = index
 		_expand(index)
-	var chosen := -1 if _rejoin == null else _rejoin.chosen()
-	if chosen < 0:
+	if _behind < 0:
 		return []
-	return _in_sight(_trace(chosen))
+	return _in_sight(_trace(_behind))
 
 
 ## Offers each neighbour of the cell at `index` the way through it.
@@ -184,8 +187,8 @@ func _sees(index: int) -> bool:
 
 
 ## The least time from the cell at `index` to the goal at full pace on open ground: the
-## octile distance to a goal cell; for a route, the straight distance to its end less
-## ON_ROUTE (RouteRejoin; a step's pace is never above 1).
+## octile distance to a goal cell; for a route, the straight distance to its line less
+## ON_ROUTE (a step's pace is never above 1).
 func _estimate(index: int) -> float:
 	if _remaining[index] < 0.0:
 		var cell := _cell(index)
@@ -195,7 +198,8 @@ func _estimate(index: int) -> float:
 				maxi(apart.x, apart.y) + (DIAGONAL_STEP - 1.0) * mini(apart.x, apart.y)
 			)
 		else:
-			_remaining[index] = _rejoin.estimate(_centre(cell), ON_ROUTE)
+			var centre := _centre(cell)
+			_remaining[index] = maxf(0.0, centre.distance_to(_on_route(centre)) - ON_ROUTE)
 	return _remaining[index]
 
 
@@ -206,6 +210,12 @@ func _aside(index: int) -> float:
 		var nearest := Geometry2D.get_closest_point_to_segment(centre, _centre(_start), _toward)
 		_asides[index] = centre.distance_to(nearest)
 	return _asides[index]
+
+
+## Whether the route cell at `index` lies at or ahead of where the group left the route
+## (the cell holding that point counts).
+func _ahead(index: int) -> bool:
+	return _route.distance_of(_centre(_cell(index))) + ON_ROUTE >= _progress
 
 
 func _on_route(point: Vector2) -> Vector2:
