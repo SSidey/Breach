@@ -3,7 +3,7 @@ extends GdUnitTestSuite
 ## ahead, nearer to the sides, near behind), seen cells cost what they cost, unseen ones
 ## count as open, and where the best plan runs out of sight it heads for that edge - so a
 ## wall is felt along until the gap comes into view, what it has seen remembered.
-## Rejoining a route plans to the nearest place on it in sight. Mirrored ground and sight
+## Rejoining a route plans by the time to its end (RouteRejoin). Mirrored ground and sight
 ## give the plan mirrored.
 
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
@@ -130,14 +130,14 @@ func _route() -> FormationRoute:
 	return FormationRoute.new(PackedVector2Array([Vector2(0, 20.5), Vector2(40, 20.5)]))
 
 
-func test_rejoining_a_route_plans_to_the_nearest_place_on_it_in_sight() -> void:
+func test_rejoining_a_route_plans_by_time_to_its_end_in_sight() -> void:
 	var open := FormationTerrain.new(Vector2i(40, 30))
 	var from := Vector2(10.5, 10.5)
 	var back := TerrainPaths.rejoin(open, _grem(), from, _route(), _eyes(from, Vector2.DOWN))
 
 	assert_bool(back["reaches"]).is_true()
-	assert_object(back["cells"].back()).is_equal(Vector2i(10, 20))
-	assert_float(back["along"]).is_equal_approx(10.5, 0.0001)
+	assert_object(back["cells"].back()).is_equal(Vector2i(19, 20))  # ahead, by RouteRejoin
+	assert_float(back["along"]).is_equal_approx(19.5, 0.0001)
 	var walled := FormationTerrain.new(Vector2i(40, 30))
 	walled.paint(Rect2i(0, 15, 15, 2), WALL)
 	var round := TerrainPaths.rejoin(walled, _grem(), from, _route(), _eyes(from, Vector2.DOWN))

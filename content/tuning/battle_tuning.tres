@@ -104,6 +104,7 @@ ground_climb_demand = 1
 sight_budget = 3.0
 sight_wood_obscurance = 1.0
 sight_fog_obscurance = 0.1
+path_rejoin_slack = 0.03
 bodies_resist = 4.0
 bodies_passes = 3
 bodies_brush = 0.05

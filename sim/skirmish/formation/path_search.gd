@@ -13,7 +13,8 @@ extends RefCounted
 ## else up to the edge of sight where the way leaves it - the frontier cell with the least
 ## cost so far plus optimistic cost on. The walker heads there and plans again as more
 ## comes into view, so a wall is felt along. With no sight it sees the whole grid. The goal
-## is a cell, or any cell on a route (rejoining it). Pure.
+## is a cell, or a route: rejoining it where the way to the route's end, walked to it and
+## marched along it, is quickest (RouteRejoin, which settles ties within its slack). Pure.
 
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -22,6 +23,7 @@ const PathFrontier = preload("res://sim/skirmish/formation/path_frontier.gd")
 const PathSight = preload("res://sim/skirmish/formation/path_sight.gd")
 const PathMemory = preload("res://sim/skirmish/formation/path_memory.gd")
 const WalkerShares = preload("res://sim/skirmish/formation/walker_shares.gd")
+const RouteRejoin = preload("res://sim/skirmish/formation/route_rejoin.gd")
 
 ## A diagonal step's length.
 const DIAGONAL_STEP := 1.4142135623730951
@@ -41,6 +43,7 @@ var expanded := 0
 var reaches := false
 
 var _terrain: FormationTerrain
+var _walker: TerrainWalker
 var _shares: WalkerShares
 var _sight: PathSight
 var _memory: PathMemory
@@ -48,6 +51,7 @@ var _count: int
 var _start: Vector2i
 var _goal := Vector2i(-1, -1)
 var _route: FormationRoute
+var _rejoin: RouteRejoin
 var _toward: Vector2  # where the straight way runs, for ties
 var _width: int
 var _best := PackedFloat64Array()
@@ -69,11 +73,13 @@ func to_cell(goal: Vector2i) -> Array[Vector2i]:
 	return _run()
 
 
-## The cells of the quickest way from start onto `route` (a cell within ON_ROUTE of its
-## line), or to the edge of sight nearest it; empty if there is none.
+## The cells of the way from start onto `route` (to a cell within ON_ROUTE of its line)
+## that RouteRejoin chooses, or to the edge of sight where that way leaves it; empty if
+## there is none.
 func to_route(route: FormationRoute) -> Array[Vector2i]:
 	_route = route
-	_toward = _on_route(_centre(_start))
+	_rejoin = RouteRejoin.new(_terrain, _walker, route)
+	_toward = _rejoin.end
 	return _run()
 
 
@@ -98,12 +104,17 @@ func _run() -> Array[Vector2i]:
 		var index := _open.pop()
 		if _closed[index] == 1:
 			continue
+		if _rejoin != null and _rejoin.settled(_best[index] + _estimate(index)):
+			break
 		_closed[index] = 1
 		expanded += 1
 		if _is_goal(index):
-			return _in_sight(_trace(index))
+			if _rejoin == null:
+				return _in_sight(_trace(index))
+			_rejoin.offer(index, _centre(_cell(index)), _best[index])
 		_expand(index)
-	return []
+	var chosen := -1 if _rejoin == null else _rejoin.chosen()
+	return [] if chosen < 0 else _in_sight(_trace(chosen))
 
 
 ## Offers each neighbour of the cell at `index` the way through it.
@@ -162,8 +173,8 @@ func _sees(index: int) -> bool:
 
 
 ## The least time from the cell at `index` to the goal at full pace on open ground: the
-## octile distance to a goal cell; for a route, the straight distance to its line less
-## ON_ROUTE (a step's pace is never above 1).
+## octile distance to a goal cell; for a route, the straight distance to its end less
+## ON_ROUTE (RouteRejoin; a step's pace is never above 1).
 func _estimate(index: int) -> float:
 	if _remaining[index] < 0.0:
 		var cell := _cell(index)
@@ -173,8 +184,7 @@ func _estimate(index: int) -> float:
 				maxi(apart.x, apart.y) + (DIAGONAL_STEP - 1.0) * mini(apart.x, apart.y)
 			)
 		else:
-			var centre := _centre(cell)
-			_remaining[index] = maxf(0.0, centre.distance_to(_on_route(centre)) - ON_ROUTE)
+			_remaining[index] = _rejoin.estimate(_centre(cell), ON_ROUTE)
 	return _remaining[index]
 
 
@@ -232,6 +242,7 @@ func _init(
 	memory: PathMemory = null
 ) -> void:
 	_terrain = terrain
+	_walker = walker
 	_shares = WalkerShares.of(terrain, walker)
 	_start = start
 	_sight = sight
