@@ -219,9 +219,13 @@ is `native/rust/target`. Results are the same bit for bit under either profile.
 is loaded at run time by NativeKernels only when Rust is chosen and built. An export
 would need the library and the `.gdextension` added.
 
-- **Windows:** `rustup` with `x86_64-pc-windows-msvc` and the Visual Studio Build Tools.
-  Run `bash native/build.sh` in Git Bash; it maps MINGW/MSYS to `windows.x86_64` and
-  `.dll`.
+- **Windows:** `powershell -ExecutionPolicy Bypass -File native\build.ps1` (or
+  `bash native/build.sh` in Git Bash). It needs Rust from rustup: either the default
+  MSVC toolchain with the Visual Studio Build Tools' C++ workload, or the GNU one
+  (`rustup default stable-gnu`), which needs no Visual Studio. The crate also
+  cross-builds from Linux (`--target x86_64-pc-windows-gnu`, linker
+  `x86_64-w64-mingw32-gcc`); that DLL has no fused multiply-adds and needs only system
+  DLLs.
 - **macOS:** the Xcode command-line tools. Build `aarch64-apple-darwin` and
   `x86_64-apple-darwin` and join them with `lipo` into the `.universal.dylib`. Sign it
   ad hoc (`codesign -s -`) so it loads on Apple silicon.
@@ -230,3 +234,30 @@ would need the library and the `.gdextension` added.
   runs the suite twice, plain and with `BREACH_NATIVE=rust`, plus
   `tools/formation_digest.gd` under each, and diffs the files. The identity check is
   what lets the core be trusted.
+
+## Running the benchmarks locally
+
+`tools/run_benches.ps1` runs everything above on the machine it is on and writes one
+report to `reports/bench/` (git-ignored), to compare machines:
+
+1. **Identity:** the per-tick digests of every set under each engine, against the
+   reference build's hashes. The same battles must replay bit for bit on every machine,
+   OS and engine. A `DIFFERS` line is a finding, not noise.
+2. **A tick, phase by phase** (`tools/tick_phases.gd`), mid-fight and marching, under
+   each engine.
+3. **The native core's passes** (`tools/native_bench.gd`).
+
+On Windows, with Godot 4.7.2's console build (`Godot_v4.7.2-stable_win64_console.exe`),
+which passes Godot's output through to the script:
+
+```
+powershell -ExecutionPolicy Bypass -File native\build.ps1
+powershell -ExecutionPolicy Bypass -File tools\run_benches.ps1 -Godot C:\path\to\Godot_v4.7.2-stable_win64_console.exe
+```
+
+Options: `-Side 1024` (the phase timings' size), `-SkipDigests`, `-SkipGdscript` (GDScript
+at 1,024 a side takes about a second a tick here). Elsewhere the same script runs under
+PowerShell 7 (`pwsh tools/run_benches.ps1 -Godot <godot>`), after `native/build.sh`.
+
+The reference box: an Intel Xeon at 2.1 GHz with 4 cores and no hyperthreading, often
+shared with other jobs. Its own report is the baseline to compare against.
