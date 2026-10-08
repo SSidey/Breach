@@ -21,6 +21,28 @@ param(
 )
 $ErrorActionPreference = "Stop"
 
+# -Godot may name the executable or a folder holding it (Windows' "Extract All" puts the
+# zip's contents in a folder named after the zip). Prefer the console build: it passes
+# Godot's output through to this script.
+function Resolve-Godot([string]$given) {
+	if (Test-Path -LiteralPath $given -PathType Leaf) { return (Resolve-Path -LiteralPath $given).Path }
+	$folder = if (Test-Path -LiteralPath $given -PathType Container) { $given } else { Split-Path -Parent $given }
+	if ($folder -and (Test-Path -LiteralPath $folder -PathType Container)) {
+		$found = Get-ChildItem -LiteralPath $folder -Recurse -Depth 2 -File -Filter "Godot*" |
+			Where-Object { $_.Name -match "console\.exe$" -or ($_.Name -match "^Godot_v[^/]*_linux|\.x86_64$") } |
+			Sort-Object { $_.Name -notmatch "console" } | Select-Object -First 1
+		if ($found) {
+			Write-Host "Using Godot at $($found.FullName)"
+			return $found.FullName
+		}
+	}
+	throw "run_benches.ps1: no Godot at '$given'. Point -Godot at Godot_v4.7.2-stable_win64_console.exe, or the folder it was unzipped to."
+}
+$Godot = Resolve-Godot $Godot
+if ($Godot -match "\.exe$" -and $Godot -notmatch "console") {
+	Write-Warning "That is not Godot's console build; its output may not reach the report. Use Godot_v4.7.2-stable_win64_console.exe from the same zip."
+}
+
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $out = Join-Path $root "reports\bench"
 New-Item -ItemType Directory -Force -Path $out | Out-Null
