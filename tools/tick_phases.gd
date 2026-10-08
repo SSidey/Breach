@@ -7,9 +7,10 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tools/tick_phases.gd -- \
 ##       [engine=gdscript|rust] [side=1024] [width=32] [settle=10] [fight=5] [seed=1]
-##       [stage=fight|march]
+##       [stage=fight|march] [retreat=<squad id>]
 ## stage=march times `fight` ticks of the march before contact, `settle` ticks after the
-## start, instead of the fight.
+## start, instead of the fight. retreat orders that squad to retreat once the fight has
+## settled in (its withdrawal, and its enemies' chasers, timed).
 
 const FormationBench = preload("res://sim/skirmish/formation/formation_bench.gd")
 const NativeKernels = preload("res://sim/skirmish/formation/native_kernels.gd")
@@ -70,6 +71,8 @@ func _settled(side: int, width: int, args: Dictionary) -> Sim:
 		contact = sim.step().any(func(e): return e["type"] == "engaged")
 	for _i in range(int(args.get("settle", 10))):
 		sim.step()
+	if args.has("retreat"):
+		sim.order(int(args["retreat"]), Sim.SkirmishUnit.Order.RETREAT)
 	return sim
 
 
@@ -178,14 +181,17 @@ func _scrum(sim: Sim, events: Array) -> void:
 	_walk_and_face(ctx)
 	var scrum_events := []
 	ScrumRegroup.step(squads, ctx["pace"], sim.tick_seconds, sim.fight_seed)
+	_lap("scrum: regroup")
 	ScrumPursuit.step(squads, tick, pace, sim.tick_seconds, sim.fight_seed)
+	_lap("scrum: chasers (ScrumPursuit)")
 	FormationWithdraw.step(
 		squads, tick, ctx["pace"], sim.tick_seconds, sim.fight_seed, sim.terrain, scrum_events
 	)
+	_lap("scrum: withdraw")
 	FormationPursuit.step(squads, tick, pace, sim.tick_seconds, scrum_events)
 	Scrum._stall(squads, ctx["active"], tick, sim.tick_seconds, scrum_events)
 	events.append_array(scrum_events)
-	_lap("scrum: regroup, pursuit, stall")
+	_lap("scrum: pursuit, stall")
 
 
 func _scrum_events(sim: Sim) -> Array:

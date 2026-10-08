@@ -21,6 +21,10 @@ const FormationDiscipline = preload("res://sim/skirmish/formation/formation_disc
 const ScrumTrade = preload("res://sim/skirmish/formation/scrum_trade.gd")
 const ScrumSlots = preload("res://sim/skirmish/formation/scrum_slots.gd")
 const UnitSteer = preload("res://sim/skirmish/formation/unit_steer.gd")
+const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
+const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 
 
 ## Units of squads out of the fight walk to their places (in the stance, if any) at the
@@ -36,7 +40,9 @@ static func step(squads: Array, pace: float, seconds: float, fight_seed: int) ->
 			squad.state = SkirmishSquad.State.HOLDING  # it stands while its units regroup
 		regrouping.append([squad, _foes_faced(squad, squads, fight_seed)])
 	var moving := {"pace": pace, "seconds": seconds, "seed": fight_seed}
-	moving["bodies"] = ScrumSlots.bodies(squads)
+	if regrouping.any(func(entry): return not entry[0].loose.is_empty()):  # anyone to walk
+		moving["bodies"] = ScrumSlots.bodies(squads)
+		moving["crowd"] = BodyGrid.of_bodies(moving["bodies"])
 	for entry in regrouping:
 		_walk_back(entry[0], entry[1], moving)
 		ScrumTrade.trade(entry[0], fight_seed)  # a unit its own ranks hold off trades places
@@ -48,23 +54,30 @@ static func _foes_faced(squad: SkirmishSquad, squads: Array, fight_seed: int) ->
 	var out := {}
 	if squad.order != SkirmishUnit.Order.RETREAT or not FormationDiscipline.meets_threats(squad):
 		return out
-	var hostiles := ScrumBlows.hostile_units(squad, squads)
+	var near := ScrumNear.index(ScrumBlows.hostile_units(squad, squads))
+	var reach := BattleTuning.current().reach_contact
 	for unit_id in squad.loose:
 		var unit: SkirmishUnit = squad.loose[unit_id]["unit"]
-		out[unit_id] = ScrumBlows.nearest_touching(squad, unit, hostiles, fight_seed)
+		var where := ScrumReach.at(squad, unit)
+		var close := ScrumNear.around(near, where, ScrumReach.radius(unit) + reach)
+		out[unit_id] = ScrumBlows.nearest_touching(squad, unit, close, fight_seed)
 	return out
 
 
-## `moving` = {pace, seconds, seed, bodies}: they step round bodies in their way (UnitSteer).
+## `moving` = {pace, seconds, seed, bodies, crowd}: they step round bodies in their way
+## (UnitSteer).
 static func _walk_back(squad: SkirmishSquad, foes: Dictionary, moving: Dictionary) -> void:
+	if squad.loose.is_empty():
+		return
 	var seconds: float = moving["seconds"]
+	var reform := FormationDiscipline.reform_pace(squad)  # the same for each of its units
 	for unit_id in squad.loose.keys():
 		if ScrumPursuit.away(squad, unit_id):
 			continue
 		var entry: Dictionary = squad.loose[unit_id]
 		var unit: SkirmishUnit = entry["unit"]
 		var place := ScrumStance.anchor(squad, unit)
-		var step: float = unit.speed * moving["pace"] * FormationDiscipline.reform_pace(squad)
+		var step: float = unit.speed * moving["pace"] * reform
 		var heading: float = squad.stance.get("heading", squad.heading)
 		var foe_at = foes.get(unit_id)
 		if foe_at == null:  # it takes its place the quicker way, arriving facing its squad's
@@ -73,7 +86,9 @@ static func _walk_back(squad: SkirmishSquad, foes: Dictionary, moving: Dictionar
 		ScrumTrade.track(entry, gap, seconds)
 		var arrived := gap < 0.000001
 		if gap >= 0.000001:  # a drilled retreat backs away facing the foe it touches
-			var to := UnitSteer.toward(unit, entry["at"], place, moving["bodies"], moving["seed"])
+			var to := UnitSteer.toward(
+				unit, entry["at"], place, moving["bodies"], moving["seed"], moving["crowd"]
+			)
 			entry["at"] = UnitMotion.walk(unit, entry["at"], to, step, seconds, foe_at)
 		entry["next"] = entry["at"]
 		entry["goal"] = null

@@ -27,12 +27,13 @@ const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd"
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationWithdraw = preload("res://sim/skirmish/formation/formation_withdraw.gd")
-const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
 const FormationStamina = preload("res://sim/skirmish/formation/formation_stamina.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const ScrumSlots = preload("res://sim/skirmish/formation/scrum_slots.gd")
 const UnitSteer = preload("res://sim/skirmish/formation/unit_steer.gd")
+const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 
 ## A unit breaks ranks to chase with a chance of (discipline_meets_threats - its
 ## discipline) / 100.
@@ -71,6 +72,7 @@ static func step(
 	for entry in squads:
 		by_id[entry.id] = entry
 	var walks := []  # [unit, its place in the scrum, where it heads]
+	var quarries := {}  # foe squad -> its units' index (ScrumNear), where they stand now
 	for squad in squads:
 		for unit_id in squad.chasers.keys():
 			var chase: Dictionary = squad.chasers[unit_id]
@@ -82,17 +84,19 @@ static func step(
 			var entry: Dictionary = squad.loose[unit_id]
 			var heads := ScrumStance.anchor(squad, unit)  # straggling back to its place
 			if not chase.get("returning", false):
-				if _done(chase, entry["at"], unit, foe, fight_seed):
+				var quarry = _quarry(entry["at"], unit, foe, quarries, fight_seed)
+				if _done(chase, entry["at"], unit, quarry):
 					chase["returning"] = true
 				else:
-					heads = _nearest(entry["at"], foe, fight_seed)
+					heads = quarry
 			walks.append([squad, unit, entry, heads, chase.get("returning", false)])
 	var bodies := ScrumSlots.bodies(squads) if not walks.is_empty() else []
+	var crowd := BodyGrid.of_bodies(bodies) if not walks.is_empty() else {}
 	for walk in walks:
 		var unit: SkirmishUnit = walk[1]
 		var entry: Dictionary = walk[2]
 		var full: float = unit.speed * cells_per_second * seconds
-		var to := UnitSteer.toward(unit, entry["at"], walk[3], bodies, fight_seed)
+		var to := UnitSteer.toward(unit, entry["at"], walk[3], bodies, fight_seed, crowd)
 		entry["at"] = UnitMotion.walk(unit, entry["at"], to, full, seconds)
 		entry["next"] = entry["at"]
 		if walk[4] and entry["at"].distance_to(walk[3]) < 0.000001:
@@ -100,14 +104,23 @@ static func step(
 			walk[0].loose.erase(unit.id)
 
 
-## True if a chase is over: the chaser at its leash or too tired, its quarry out of its
-## sight, or gone.
-static func _done(
-	chase: Dictionary, at: Vector2, unit: SkirmishUnit, foe: SkirmishSquad, fight_seed: int
-) -> bool:
+## Where the nearest unit of the chaser's foe stands (_nearest_in), or null if the chase
+## is over before it looks: its foe gone, or it too tired. `quarries` keeps each foe's index.
+static func _quarry(
+	at: Vector2, unit: SkirmishUnit, foe: SkirmishSquad, quarries: Dictionary, fight_seed: int
+):
 	if foe == null or foe.is_destroyed() or FormationStamina.gives_up(unit):
+		return null
+	if not quarries.has(foe):
+		quarries[foe] = _index(foe)
+	return _nearest_in(quarries[foe], at, fight_seed)
+
+
+## True if a chase is over: its quarry (null) gone, the chaser at its leash or too tired,
+## or the quarry out of its sight.
+static func _done(chase: Dictionary, at: Vector2, unit: SkirmishUnit, quarry) -> bool:
+	if quarry == null:
 		return true
-	var quarry := _nearest(at, foe, fight_seed)
 	return (
 		at.distance_to(chase["from"]) >= chase["leash"] or quarry.distance_to(at) > unit.detection
 	)
@@ -128,10 +141,11 @@ static func _fights(other: SkirmishSquad, squad: SkirmishSquad) -> bool:
 
 ## Each of the enemy's units near the retreating squad may break ranks to chase it.
 static func _tempt(enemy: SkirmishSquad, squad: SkirmishSquad, tick: int, battle_seed: int) -> void:
+	var near := _index(squad)
 	for unit in enemy.living():
 		var at := ScrumReach.at(enemy, unit)
 		if (
-			_nearest(at, squad, battle_seed).distance_to(at)
+			_nearest_in(near, at, battle_seed).distance_to(at)
 			> BattleTuning.current().pursuit_tempted_within
 		):
 			continue
@@ -146,13 +160,12 @@ static func _tempt(enemy: SkirmishSquad, squad: SkirmishSquad, tick: int, battle
 
 
 ## Where the squad's unit nearest `at` stands (ties by the units' draws); `at` if none.
-static func _nearest(at: Vector2, squad: SkirmishSquad, fight_seed: int) -> Vector2:
-	var best := at
-	var best_key := []
-	for unit in squad.living():
-		var there := ScrumReach.at(squad, unit)
-		var key := [snappedf(there.distance_to(at), 0.000001), ScrumContest.draw(unit, fight_seed)]
-		if best_key.is_empty() or key < best_key:
-			best_key = key
-			best = there
-	return best
+## `near` is the squad's index (_index).
+static func _nearest_in(near: Dictionary, at: Vector2, fight_seed: int) -> Vector2:
+	var found := ScrumNear.nearest(near, at, fight_seed)
+	return at if found < 0 else near["points"][found]
+
+
+## The squad's living units, indexed where they stand (ScrumNear).
+static func _index(squad: SkirmishSquad) -> Dictionary:
+	return ScrumNear.index(squad.living().map(func(unit): return [unit, squad]))
