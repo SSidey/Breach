@@ -14,7 +14,9 @@ extends RefCounted
 ## cost so far plus optimistic cost on. The walker heads there and plans again as more
 ## comes into view, so a wall is felt along. With no sight it sees the whole grid. The goal
 ## is a cell, or a route: rejoining it where the way to the route's end, walked to it and
-## marched along it, is quickest (RouteRejoin, which settles ties within its slack). Pure.
+## marched along it, is quickest (RouteRejoin, which settles ties within its slack). A
+## walker with a stamina plans only climbs whose stretches between the cells it can stand
+## on its stamina lasts (ClimbBudget). Pure.
 
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -24,6 +26,7 @@ const PathSight = preload("res://sim/skirmish/formation/path_sight.gd")
 const PathMemory = preload("res://sim/skirmish/formation/path_memory.gd")
 const WalkerShares = preload("res://sim/skirmish/formation/walker_shares.gd")
 const RouteRejoin = preload("res://sim/skirmish/formation/route_rejoin.gd")
+const ClimbBudget = preload("res://sim/skirmish/formation/climb_budget.gd")
 
 ## A diagonal step's length.
 const DIAGONAL_STEP := 1.4142135623730951
@@ -52,6 +55,7 @@ var _start: Vector2i
 var _goal := Vector2i(-1, -1)
 var _route: FormationRoute
 var _rejoin: RouteRejoin
+var _climb: ClimbBudget  # null: a walker with no limit on its stamina
 var _toward: Vector2  # where the straight way runs, for ties
 var _width: int
 var _best := PackedFloat64Array()
@@ -114,7 +118,9 @@ func _run() -> Array[Vector2i]:
 			_rejoin.offer(index, _centre(_cell(index)), _best[index])
 		_expand(index)
 	var chosen := -1 if _rejoin == null else _rejoin.chosen()
-	return [] if chosen < 0 else _in_sight(_trace(chosen))
+	if chosen < 0:
+		return []
+	return _in_sight(_trace(chosen))
 
 
 ## Offers each neighbour of the cell at `index` the way through it.
@@ -137,16 +143,21 @@ func _expand(index: int) -> void:
 		if not diagonal:
 			sides[step] = pace
 		if pace > 0.0:
-			_relax(index, next, (DIAGONAL_STEP if diagonal else 1.0) / pace)
+			_relax(index, next, (DIAGONAL_STEP if diagonal else 1.0) / pace, seen)
 
 
-func _relax(from: int, cell: Vector2i, step: float) -> void:
+func _relax(from: int, cell: Vector2i, step: float, seen: bool) -> void:
 	var index := _index(cell)
 	if _closed[index] == 1:
 		return
 	var through := _best[from] + step
 	if through >= _best[index] - BETTER:
 		return
+	if _climb != null:
+		var spent := _climb.after(from, index, seen)
+		if spent == INF:
+			return  # a climb it can't last
+		_climb.keep(index, spent)
 	_best[index] = through
 	_parent[index] = from
 	var remaining := _estimate(index)
@@ -249,3 +260,5 @@ func _init(
 	_memory = memory
 	_count = terrain.size.x * terrain.size.y
 	_width = terrain.size.x
+	if walker.stamina < INF:
+		_climb = ClimbBudget.new(terrain, walker)

@@ -82,3 +82,12 @@ func test_the_ground_and_route_mirrored_give_the_rejoin_mirrored() -> void:
 	for index in there["cells"].size():
 		var cell: Vector2i = there["cells"][index]
 		assert_object(back["cells"][index]).is_equal(Vector2i(59 - cell.x, cell.y))
+
+
+func test_with_no_way_to_the_route_there_is_no_rejoin() -> void:
+	var ground := FormationTerrain.new(Vector2i(60, 30))
+	ground.paint(Rect2i(0, 17, 60, 2), WALL)
+	var back := TerrainPaths.rejoin(ground, _grem(), FROM, _east())
+
+	assert_bool(back["reaches"]).is_false()
+	assert_array(back["cells"]).is_empty()

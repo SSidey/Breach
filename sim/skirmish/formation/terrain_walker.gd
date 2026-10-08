@@ -25,6 +25,11 @@ var climber: int
 ## Whether it may swim or climb at all.
 var swims: bool
 var climbs: bool
+## The stamina it has for a climb (INF: no limit) and its speed on open ground (cells a
+## second): a path plans only climbs whose stretches between ledges it lasts (ClimbStamina).
+## Not part of its kind: they don't change its pace.
+var stamina := INF
+var speed := 1.0
 
 
 ## How a unit of `unit_def` crosses terrain: its abilities (an unlisted one at its
