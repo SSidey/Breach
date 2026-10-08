@@ -8,10 +8,15 @@ extends SceneTree
 ##       [first_seed=1] [swap]
 ##
 ## Scenarios: mirror_headon, mirror_flank, field_a, field_b, field_b_waits, field_together;
-## and fatigue (FatigueTrials): how far a line pursues after 3, 30, 60 and 90 s of contact.
+## fatigue (FatigueTrials): how far a line pursues after 3, 30, 60 and 90 s of contact;
+## and paths (PathTrials and SightTrials, spec 30): ways over the field for four walkers,
+## drawn and timed, each search the mean of `repeats` (default 20), and a grem planning on
+## what it sees feeling along a wall to its gap.
 
 const BattleTrials = preload("res://sim/skirmish/formation/battle_trials.gd")
 const FatigueTrials = preload("res://sim/skirmish/formation/fatigue_trials.gd")
+const PathTrials = preload("res://sim/skirmish/formation/path_trials.gd")
+const SightTrials = preload("res://sim/skirmish/formation/sight_trials.gd")
 
 
 func _init() -> void:
@@ -26,6 +31,11 @@ func _init() -> void:
 		"rolls": args.get("rolls", "on") != "off",
 	}
 	var scenario: String = args.get("scenario", "all")
+	if scenario == "paths":
+		print("\n".join(PathTrials.report(int(args.get("repeats", 20)))))
+		print("\n".join(SightTrials.report()))
+		quit(0)
+		return
 	if scenario == "fatigue":
 		_fatigue(int(args.get("runs", 50)), int(args.get("first_seed", 1)))
 		quit(0)

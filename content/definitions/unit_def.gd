@@ -8,6 +8,7 @@ extends Resource
 ## Where in a formation the unit wants to stand (Decision 46).
 enum Position { FRONT, MID, BACK }
 
+const ContentRegistry = preload("res://content/definitions/content_registry.gd")
 const MAX_FOOTPRINT := 8
 ## The five attributes (Decision 117), each defaulting to AVERAGE.
 const ATTRIBUTES := ["strength", "agility", "constitution", "willpower", "wits"]
@@ -46,6 +47,12 @@ const AVERAGE := 10
 ## How far it detects others, in cells (Decision 87; placeholder). Line of sight and light
 ## come with terrain.
 @export var detection_range: float = 40.0
+## The shape of its sight when it plans a way (spec 30, PathSight): how far it sees ahead,
+## square to either side and behind, as shares of its detection range, eased between by
+## the angle off its facing. Placeholders.
+@export var sight_ahead: float = 1.0
+@export var sight_side: float = 0.5
+@export var sight_behind: float = 0.25
 ## Its will to fight (Decision 82): a formation's morale ceiling is its units' mean courage.
 @export var courage: int = 60
 ## How much it steadies a formation it leads (Decision 81); 0 for rank and file.
@@ -140,9 +147,9 @@ func validate() -> PackedStringArray:
 
 
 ## The level of a rated trait it has, its own or one an item it carries grants, the
-## higher (0: not at all).
+## higher; one it doesn't list it has at the registry's default (0: not at all).
 func trait_level(trait_id: String) -> int:
-	var level := int(traits.get(trait_id, 0))
+	var level := int(traits.get(trait_id, ContentRegistry.implicit().get(trait_id, 0)))
 	for item in items:  # what its items grant it; their own traits are theirs (Decision 128)
 		if item != null:
 			level = maxi(level, int(item.grants.get(trait_id, 0)))

@@ -4,7 +4,10 @@ Reads the registry - content/registry/{tags,traits,statuses}.json - and finds wh
 tag and trait is used across the repo's content (.tres definitions under content/, and the
 designer's own libraries), so the page can show, search and filter them. A trait's
 targets - the kinds of thing it may sit on - follow the same rule as Godot's
-ContentRegistry: where all its tags' targets agree, narrowed by its "only".
+ContentRegistry: where all its tags' targets agree, narrowed by its "only". A trait with a
+"default" is implicit: every unit has it at that level without listing it. Each unit
+(content/units/*.tres) is listed with its traits - its own, then the implicit ones it
+doesn't list, labelled implicit - so the page shows what is present on a unit (spec 30).
 """
 
 from __future__ import annotations
@@ -18,11 +21,15 @@ _DICT = re.compile(r"^(traits|grants) = \{(.*?)^\}", re.M | re.S)
 _KEY = re.compile(r'"([a-z_]+)"\s*:')
 _TAGS = re.compile(r"^tags = Array\[String\]\(\[(.*?)\]\)", re.M)
 _WORD = re.compile(r'"([a-z_]+)"')
+_LEVEL = re.compile(r'"([a-z_]+)"\s*:\s*(-?\d+)')
+_OWN_TRAITS = re.compile(r"^traits = \{(.*?)^\}", re.M | re.S)
 
 
 def read_registry(root: Path) -> dict:
-    """{"tags": [...], "traits": [...], "statuses": [...], "usage": {id: [paths]}}, each
-    trait with its "targets" worked out."""
+    """{"tags": [...], "traits": [...], "statuses": [...], "usage": {id: [paths]},
+    "implicit": {id: level}, "units": [...]}, each trait with its "targets" worked out;
+    "implicit" holds the traits with a "default" level every unit has without listing them
+    (climber 0); "units" is read_units'."""
     out = {}
     for kind in KINDS:
         path = root / "content" / "registry" / f"{kind}.json"
@@ -31,6 +38,25 @@ def read_registry(root: Path) -> dict:
     for entry in out["traits"]:
         entry["targets"] = targets(entry, tags)
     out["usage"] = usage(root)
+    out["implicit"] = {t["id"]: int(t["default"]) for t in out["traits"] if "default" in t}
+    out["units"] = read_units(root, out["implicit"])
+    return out
+
+
+def read_units(root: Path, implicit: dict) -> list:
+    """Each unit under content/units, by id: {"id", "path", "traits": [{"id", "level",
+    "implicit"}]} - the traits it lists, then each implicit one it doesn't (at its default
+    level, "implicit" true), each part by id."""
+    out = []
+    for path in sorted((root / "content" / "units").glob("*.tres")):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        own = {}
+        for block in _OWN_TRAITS.finditer(text):
+            own.update({key: int(level) for key, level in _LEVEL.findall(block.group(1))})
+        traits = [{"id": key, "level": own[key], "implicit": False} for key in sorted(own)]
+        unlisted = sorted(key for key in implicit if key not in own)
+        traits += [{"id": key, "level": implicit[key], "implicit": True} for key in unlisted]
+        out.append({"id": path.stem, "path": path.relative_to(root).as_posix(), "traits": traits})
     return out
 
 

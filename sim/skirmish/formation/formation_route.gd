@@ -21,6 +21,11 @@ func _init(points: PackedVector2Array, half_width: float = 0.0) -> void:
 	corridor_half_width = half_width
 
 
+## Its waypoints, in cells.
+func points() -> PackedVector2Array:
+	return _points
+
+
 func length_cells() -> float:
 	var total := 0.0
 	for i in range(1, _points.size()):

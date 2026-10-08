@@ -115,6 +115,10 @@ static var _current: BattleTuning = null
 ## the delay shorter and the rate faster the hardier it is, the rate times its condition.
 @export var stamina_per_constitution := 0.0
 @export var stamina_run := 0.0
+## Stamina a second spent climbing and swimming (spec 30): at half the mode's pace a step
+## takes twice as long, so costs twice as much (ModeStamina).
+@export var stamina_climb := 0.0
+@export var stamina_swim := 0.0
 @export var stamina_blow := 0.0
 @export var stamina_delay := 0.0
 @export var stamina_recovery := 0.0
@@ -205,14 +209,29 @@ static var _current: BattleTuning = null
 @export var pursuit_tempted_within := 0.0
 
 @export_group("Ground (Decision 85)")
-## A rise of more than this many quarter-cells is a cliff: impassable until climbers come.
+## A rise of more than this many quarter-cells is a cliff: climbed, a movement mode.
 @export var ground_cliff_quarters := 0
 ## The pace each quarter-cell risen costs; downhill is no faster.
 @export var ground_slope_cost := 0.0
 ## The pace in water a quarter to a half of a unit's height deep (wading), and from a half
-## to its height (slow wading); deeper is impassable until swimmers come.
+## to its height (slow wading); deeper, it swims.
 @export var ground_wading := 0.0
 @export var ground_slow_wading := 0.0
+## Movement modes (spec 30): deep water is swum and a cliff climbed at a base pace times
+## the pair rule (Decision 64: swimmer/climber against flows/climb difficulty, default
+## ground_climb_demand); past ground_mode_load_share of its first load band, neither.
+@export var ground_swim_pace := 0.0
+@export var ground_climb_pace := 0.0
+@export var ground_climb_demand := 0
+@export var ground_mode_load_share := 0.0
+## Sight by obscurance (spec 30): a sight line sums each cell's obscurance by the distance
+## run through it, seeing no further past sight_budget; woods and fog paint theirs.
+@export var sight_budget := 0.0
+@export var sight_wood_obscurance := 0.0
+@export var sight_fog_obscurance := 0.0
+## A unit spent on a climb face falls: this hurt a cell dropped, × its area^fall_mass_power.
+@export var fall_damage_per_cell := 0.0
+@export var fall_mass_power := 0.0
 
 @export_group("Bodies (Decisions 106 and 114)")
 ## How many times over a unit in its formation's frame weighs, against being pushed.
@@ -260,22 +279,16 @@ static var _current: BattleTuning = null
 @export var reach_narrow_seconds := 0.0
 
 @export_group("Walking (spec 30 round 3)")
-## How far (cells) a unit may lag behind its place before its formation waits for it: the
-## slack of a formation of discipline 100, and of one of discipline 0 (between, by its
-## discipline); looser troops let their ranks spread further.
+## Cells a unit may lag behind its place before its formation waits (at discipline 100,
+## and at 0; between by discipline); past walk_lost it has fallen behind (waited for only if
+## no man is left behind); past walk_face_travel it faces where it walks.
 @export var walk_slack_drilled := 0.0
 @export var walk_slack_loose := 0.0
-## A unit further than this (cells) from its place has fallen behind: a formation waits
-## for it only if no man is left behind.
 @export var walk_lost := 0.0
-## A unit further than this (cells) from its place faces where it walks; nearer, it faces
-## its formation's way, stepping sideways or back into place.
 @export var walk_face_travel := 0.0
-## Groups (cells): two friendly groups whose units come this close form up by the rule
-## (FormationGroups), and units fallen behind this close to one another split off together.
+## Cells within which friendly groups form up (FormationGroups) and fallen-behind units
+## split off together; the reach (cells) and hold (seconds) of taking the downed.
 @export var group_join := 0.0
-## Taking the downed (FormationTaking): how far (cells) from a group's units a downed foe
-## may lie to be walked out to, and how long (seconds) a group holds for its takers.
 @export var take_reach := 0.0
 @export var take_hold := 0.0
 

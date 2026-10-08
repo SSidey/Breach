@@ -1,14 +1,17 @@
 // The Library page (Decision 128): browse, search and filter the registry's tags, traits
 // and statuses (content/registry/*.json) - what each is, its tags, where a trait may sit,
-// and the content using it - from GET /api/registry. Filtering is pure (LibraryFilter),
-// so it can be tested apart from the page.
+// whether every unit has it implicitly (its "default" level), and the content using it -
+// and the units with every trait present on each, the implicit ones labelled (spec 30) -
+// from GET /api/registry. Filtering is pure (LibraryFilter), so it can be tested apart from
+// the page.
 (function (root) {
   'use strict';
 
   var KINDS = [
     { key: 'traits', label: 'Traits' },
     { key: 'tags', label: 'Tags' },
-    { key: 'statuses', label: 'Statuses' }
+    { key: 'statuses', label: 'Statuses' },
+    { key: 'units', label: 'Units' }
   ];
 
   // The entries of `kind` that pass `filter`: {search, tags: [ids all required], target,
@@ -38,7 +41,20 @@
     return Object.keys(seen).sort();
   }
 
-  var LibraryFilter = { select: select, tagChoices: tagChoices, tagsOf: tagsOf };
+  // "implicit N" for a trait every unit has at level N without listing it (its registry
+  // "default"), else "".
+  function implicitOf(entry) {
+    return entry.default != null ? 'implicit ' + entry.default : '';
+  }
+
+  // A unit's traits as a line: "climber 2, swimmer 0 (implicit)".
+  function traitLine(unit) {
+    return (unit.traits || []).map(function (t) {
+      return t.id + ' ' + t.level + (t.implicit ? ' (implicit)' : '');
+    }).join(', ');
+  }
+
+  var LibraryFilter = { select: select, tagChoices: tagChoices, tagsOf: tagsOf, implicitOf: implicitOf, traitLine: traitLine };
   if (typeof module !== 'undefined' && module.exports) { module.exports = LibraryFilter; return; }
   root.LibraryFilter = LibraryFilter;
 
@@ -63,6 +79,36 @@
     render();
   }
 
+  // The units, each with every trait present on it; the implicit ones dimmed and labelled.
+  function renderUnits(reg) {
+    var words = state.search.toLowerCase().split(/\s+/).filter(Boolean);
+    var shown = (reg.units || []).filter(function (u) {
+      var text = (u.id + ' ' + traitLine(u)).toLowerCase();
+      return words.every(function (w) { return text.indexOf(w) >= 0; });
+    });
+    document.getElementById('count').textContent = shown.length + ' shown';
+    var head = document.getElementById('head');
+    head.innerHTML = '';
+    var tr = el('tr');
+    ['Id', 'Traits', 'File'].forEach(function (c) { tr.appendChild(el('th', c)); });
+    head.appendChild(tr);
+    var rows = document.getElementById('rows');
+    rows.innerHTML = '';
+    shown.forEach(function (unit) {
+      var row = el('tr');
+      row.appendChild(el('td', unit.id, { class: 'id' }));
+      var cell = el('td');
+      unit.traits.forEach(function (t) {
+        var item = el('div', t.id + ' ' + t.level);
+        if (t.implicit) item.appendChild(el('span', ' implicit', { class: 'implicit' }));
+        cell.appendChild(item);
+      });
+      row.appendChild(cell);
+      row.appendChild(el('td', unit.path, { class: 'used' }));
+      rows.appendChild(row);
+    });
+  }
+
   function render() {
     var reg = state.registry;
     var kinds = document.getElementById('kinds');
@@ -76,6 +122,7 @@
     chips.innerHTML = '';
     tagChoices(reg, state.kind).forEach(function (t) { chips.appendChild(chip(t, state.tags.indexOf(t) >= 0, function () { toggleTag(t); })); });
     document.getElementById('target').disabled = state.kind !== 'traits';
+    if (state.kind === 'units') { renderUnits(reg); return; }
     var shown = select(reg, state.kind, state, reg.usage);
     document.getElementById('count').textContent = shown.length + ' shown';
     var head = document.getElementById('head');
@@ -88,7 +135,9 @@
     rows.innerHTML = '';
     shown.forEach(function (entry) {
       var row = el('tr');
-      row.appendChild(el('td', entry.id, { class: 'id' }));
+      var idCell = el('td', entry.id, { class: 'id' });
+      if (implicitOf(entry)) idCell.appendChild(el('div', implicitOf(entry), { class: 'implicit' }));
+      row.appendChild(idCell);
       row.appendChild(el('td', entry.description || ''));
       var tagCell = el('td');
       var tagBox = el('div', null, { class: 'chips' });
