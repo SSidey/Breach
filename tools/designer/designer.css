@@ -523,5 +523,5 @@ a.view-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .library td:nth-child(2) { min-width: 320px; }
 .library td.id { font: 500 13px 'IBM Plex Mono', monospace; white-space: nowrap; }
 .library td.used { font: 12px 'IBM Plex Mono', monospace; color: var(--ink-dim); }
-.library td.id .implicit { font: 11px 'IBM Plex Mono', monospace; color: var(--ink-dim); }
+.library .implicit { font: 11px 'IBM Plex Mono', monospace; color: var(--ink-dim); }
 .library .count { color: var(--ink-dim); font-size: 13px; }

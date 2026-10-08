@@ -25,6 +25,16 @@ REGISTRY = {
     "statuses": [],
 }
 USAGE = {"siege": ["content/weapons/brute_fists.tres"]}
+UNITS = [
+    {
+        "id": "goat",
+        "traits": [
+            {"id": "climber", "level": 2, "implicit": False},
+            {"id": "swimmer", "level": 0, "implicit": True},
+        ],
+    },
+    {"id": "stone", "traits": []},
+]
 
 RUNNER = """
 const lib = require(process.argv[1]);
@@ -32,6 +42,7 @@ const input = JSON.parse(process.argv[2]);
 const out = input.filters.map(f => lib.select(input.registry, f.kind, f, input.usage).map(e => e.id));
 out.push(lib.tagChoices(input.registry, 'traits'), lib.tagChoices(input.registry, 'tags'));
 out.push(input.registry.traits.map(lib.implicitOf));
+out.push(input.units.map(lib.traitLine));
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -39,7 +50,9 @@ process.stdout.write(JSON.stringify(out));
 @unittest.skipIf(shutil.which("node") is None, "Node is not installed")
 class LibraryFilterJsTest(unittest.TestCase):
     def run_filters(self, filters):
-        payload = json.dumps({"registry": REGISTRY, "usage": USAGE, "filters": filters})
+        payload = json.dumps(
+            {"registry": REGISTRY, "usage": USAGE, "filters": filters, "units": UNITS}
+        )
         result = subprocess.run(
             ["node", "-e", RUNNER, str(HERE / "library.js"), payload],
             capture_output=True,
@@ -71,7 +84,11 @@ class LibraryFilterJsTest(unittest.TestCase):
 
     def test_an_implicit_trait_is_labelled_with_its_default(self):
         got = self.run_filters([])
-        self.assertEqual(got[-1][-1], "implicit 0")
+        self.assertEqual(got[-2][-1], "implicit 0")
+
+    def test_a_units_traits_read_with_the_implicit_ones_labelled(self):
+        got = self.run_filters([])
+        self.assertEqual(got[-1], ["climber 2, swimmer 0 (implicit)", ""])
 
 
 if __name__ == "__main__":

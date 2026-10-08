@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from content_library import read_registry, targets  # noqa: E402
+from content_library import read_registry, read_units, targets  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 TAGS = {
@@ -79,6 +79,33 @@ class ReadRegistryTest(unittest.TestCase):
         self.assertIn("content/weapons/brute_fists.tres", got["usage"]["siege"])
         self.assertEqual(got["implicit"]["climber"], 0)
         self.assertEqual(got["implicit"]["swimmer"], 0)
+
+
+class ReadUnitsTest(unittest.TestCase):
+    def test_a_unit_shows_its_own_traits_and_the_implicit_ones_labelled(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "content" / "units").mkdir(parents=True)
+            (root / "content" / "units" / "grem.tres").write_text(UNIT_TRES)
+            climbing = UNIT_TRES.replace('"hardened": 2', '"climber": 2')
+            (root / "content" / "units" / "goat.tres").write_text(climbing)
+            got = read_units(root, {"climber": 0, "swimmer": 0})
+        self.assertEqual([unit["id"] for unit in got], ["goat", "grem"])
+        self.assertEqual(
+            got[0]["traits"],
+            [
+                {"id": "climber", "level": 2, "implicit": False},
+                {"id": "cunning", "level": 1, "implicit": False},
+                {"id": "swimmer", "level": 0, "implicit": True},
+            ],
+        )
+        self.assertEqual(got[1]["path"], "content/units/grem.tres")
+        self.assertIn({"id": "climber", "level": 0, "implicit": True}, got[1]["traits"])
+
+    def test_the_registry_lists_the_repo_units_with_implicit_traits(self):
+        got = read_registry(REPO)
+        grem = next(unit for unit in got["units"] if unit["id"] == "grem")
+        self.assertIn({"id": "swimmer", "level": 0, "implicit": True}, grem["traits"])
 
 
 if __name__ == "__main__":
