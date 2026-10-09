@@ -99,6 +99,11 @@ impl Field {
         self.by_unit.len()
     }
 
+    /// The body of the unit with this id, if the last sync named it.
+    pub fn body_of(&self, unit_id: i64) -> Option<u32> {
+        self.by_unit.get(&unit_id).copied()
+    }
+
     /// Brings the field to the squads as they stand. Returns the flat indices of units new
     /// to the field, to be enrolled (`enrol`) before any pass runs.
     pub fn sync(&mut self, seed: i64, input: &SyncIn) -> Vec<i32> {

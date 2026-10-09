@@ -206,6 +206,37 @@ GDScript reading each unit's loose entry (3.7 ms): it goes when the field owns p
 `tools/tick_phases.gd engine=rust side=1024 stage=fight fight=5`: the whole tick 204-220
 -> 148-162 ms, "scrum: face foes" 45-51 -> 5 ms (below the 181 ms of before DetMath).
 
+### The melee blows (`tools/blows_bench.gd`, 1,024 a side, 32 wide)
+
+The fight's melee part (FormationMelee.blows, BlowLanding.land) runs its search on the
+field: `ScrumBlowsField` syncs the scrum as the fight begins (clearing each unit's target
+as it goes) and `BodyField.blows` (`blows.rs`) gives each striking unit its foe -
+ScrumBlows._pick's least [front, distance, draw], the same `facing::touching` the facing
+uses - with whether its blow falls on the foe's flank and whether a retreating unit has
+turned away. Cooldowns, the morale's interval, the blows, rolls, damage, hit points,
+events, surrender and stamina stay GDScript's, taken in ScrumBlows' order. For rolled
+blows, `BodyField.pressed` counts the foes pressing each target (BlowLanding._pressed) on
+the same sync. RoutBlows and the ranged shots stay GDScript. A tick no squad can strike
+in (marching, or only a rout left) makes no sync. `test_blows_field.gd` checks the blows,
+their landing and every target and cooldown against GDScript at four moments, with
+bearings and cooldowns stirred, a squad retreating, wavering or striking only a retreat,
+and whatever the list order.
+
+Ten consecutive ticks from tick 101 (one attack interval), each timed 10 times from the
+same state; ms a tick, the mean of the ticks' medians:
+
+| blows | GDScript | Rust before | Rust after |
+|---|---:|---:|---:|
+| unrolled (as the bench's clash) | 22.5-24.8 | 21.7 | **2.7-2.8** (gather and sync 2.3, the core 0.14, write back 0.09) |
+| rolled | 25.8-26.1 | (as GDScript) | **3.6-3.8** |
+
+The GDScript split (unrolled): clearing targets 1.1, foe lists 1.3, foe grids 4.2, the
+grid search 9.2, the pick 9.9, cooldowns and blows 1.3; rolled, the landing adds 2.9
+(who's whose 1.5, pressed 1.3) and 0.25 for the blows themselves. `tick_phases.gd
+engine=rust side=1024`: "fight (blows)" 25-29 -> 6.0-6.1 ms mid-fight (the rest: the
+shots' search 2.8, the gather 2.3), 5.1 -> 3.1 marching, and 8.4-8.7 -> 8.5-8.8 at
+settle=40 (a rout: RoutBlows 3.5, of it 2 ms placing the routers on their routes).
+
 ### Where a tick's time goes (`tools/tick_phases.gd`, 1,024 a side, 32 wide, before facing)
 
 | phase | GDScript | Rust |

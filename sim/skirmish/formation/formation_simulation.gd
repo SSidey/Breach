@@ -272,13 +272,11 @@ func _march(marching: Dictionary, events: Array) -> void:
 
 
 func _fight(events: Array) -> void:
-	for entry in _squads:
-		for unit in entry.living():
-			unit.target_id = 0
 	var interval := _attack_interval_ticks()
-	var blows := FormationMelee.blows(_squads, interval, fight_seed)
+	var blows := FormationMelee.blows(_squads, interval, fight_seed, _field)  # targets cleared
 	var shots := FormationCombat.ranged_blows(_squads, interval, fight_seed)
-	BlowLanding.land(blows, shots, _squads, terrain, [fight_seed, _tick] if blow_rolls else [])
+	var rolls := [fight_seed, _tick] if blow_rolls else []
+	BlowLanding.land(blows, shots, _squads, terrain, rolls, _field)
 	for shot in shots:
 		shot[1].hp -= shot[2]
 		var spat := {

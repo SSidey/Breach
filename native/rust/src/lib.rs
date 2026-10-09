@@ -5,6 +5,7 @@
 //! (FormationScrum._faces, UnitShuffle, UnitMotion). GDScript keeps the rules and stays the
 //! reference; the switch is `BREACH_NATIVE` (NativeKernels).
 
+mod blows;
 mod det_math;
 mod facing;
 mod field;
@@ -234,6 +235,42 @@ impl BodyField {
         let out = facing::face(&mut self.field, &input, &params);
         self.usec = began.elapsed().as_micros() as i64;
         PackedFloat64Array::from(out.as_slice())
+    }
+
+    /// ScrumBlows.blows' search on the field, as of a sync of the scrum's snapshot:
+    /// `floats` = [reach_contact, the front's least dot (ScrumReach.in_front)], `rules` per
+    /// squad in the sync's order (1 fighting, 2 ordered to retreat). Returns per unit that
+    /// touches a foe it strikes, in the sync's order: [its flat index, the foe's, flags (1
+    /// it retreats and has turned away, 2 the blow falls on the foe's flank)].
+    #[func]
+    fn blows(&mut self, floats: PackedFloat64Array, rules: PackedByteArray) -> PackedInt32Array {
+        let began = Instant::now();
+        let f = floats.as_slice();
+        let params = blows::Params { reach: f[0], front: f[1] };
+        let picks = blows::picks(&self.field, rules.as_slice(), &params);
+        let mut out = Vec::with_capacity(picks.len() * 3);
+        for pick in &picks {
+            out.extend_from_slice(&[pick.flat, pick.foe, pick.flags as i32]);
+        }
+        self.usec = began.elapsed().as_micros() as i64;
+        PackedInt32Array::from(out.as_slice())
+    }
+
+    /// BlowLanding's counts on the field, as of the same sync as blows(): `targets` is
+    /// every unit's target id by flat index, `asked` [striker id, target id] per blow.
+    /// Returns per blow [the striker's squad (its place in the sync, -1: none), how many
+    /// units touching the target (within `reach`) have it as theirs].
+    #[func]
+    fn pressed(
+        &mut self,
+        reach: f64,
+        targets: PackedInt64Array,
+        asked: PackedInt64Array,
+    ) -> PackedInt32Array {
+        let began = Instant::now();
+        let out = blows::pressed(&self.field, targets.as_slice(), asked.as_slice(), reach);
+        self.usec = began.elapsed().as_micros() as i64;
+        PackedInt32Array::from(out.as_slice())
     }
 
     /// DetMath's `op` ("sin", "cos", "asin", "acos", or "atan2" of a and b) over the

@@ -18,14 +18,24 @@ const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const ScrumBlowsField = preload("res://sim/skirmish/formation/scrum_blows_field.gd")
 
 
 ## Lands the melee blows ([striker, target, damage, flank]) and ranged shots ([shooter,
 ## target, damage, its squad]): sets each one's damage to what landed and appends how it
-## landed (BlowRoll's outcomes). `rolls` = [battle seed, tick], or [] for no rolls.
+## landed (BlowRoll's outcomes). `rolls` = [battle seed, tick], or [] for no rolls. Given
+## the battle's native bodies (`field`) and synced by FormationMelee.blows this tick, the
+## foes pressing each target are counted on them (ScrumBlowsField).
 static func land(
-	melee: Array, shots: Array, squads: Array, terrain: FormationTerrain, rolls: Array
+	melee: Array,
+	shots: Array,
+	squads: Array,
+	terrain: FormationTerrain,
+	rolls: Array,
+	field: Object = null
 ) -> void:
+	if melee.is_empty() and shots.is_empty():
+		return
 	if rolls.is_empty():
 		for blow in melee:
 			blow[2] = BlowDamage.dealt(blow[0], blow[1], blow[2], BlowRoll.HIT, false, 1.0)
@@ -38,10 +48,16 @@ static func land(
 			shot.append(BlowRoll.HIT)
 		return
 	var squad_of := {}  # unit id -> [unit, its squad]
-	for squad in squads:
-		for unit in squad.living():
-			squad_of[unit.id] = [unit, squad]
-	var pressed := _pressed(squad_of)
+	var pressed := {}  # unit id -> foes pressing it
+	if field != null and ScrumBlowsField.synced(field):
+		var whose := ScrumBlowsField.pressed(field, squads, melee + shots)
+		squad_of = whose[0]
+		pressed = whose[1]
+	else:
+		for squad in squads:
+			for unit in squad.living():
+				squad_of[unit.id] = [unit, squad]
+		pressed = _pressed(squad_of)
 	for blow in melee:
 		_land(blow, false, blow[3], squad_of, pressed, terrain, rolls)
 	for shot in shots:

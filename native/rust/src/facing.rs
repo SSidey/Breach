@@ -79,7 +79,9 @@ fn bearing_after(field: &Field, foes: &Foes, input: &FaceIn, params: &Params, m:
         backward_pace: input.motion[3 * m + 2],
     };
     let flags = input.flags[m];
-    let mut look = touching(field, foes, at, field.radius[body], unit.bearing, params);
+    let radius = field.radius[body];
+    let foe = touching(field, foes, at, radius, unit.bearing, params.reach, params.front);
+    let mut look = foe.map(|f| field.at[f as usize]);
     if look.is_none() && flags & GOAL != 0 {
         let speed = input.speeds[m] * params.pace * params.crowding / params.seconds;
         let (next, foe_at) = (input.nexts[m], input.foe_ats[m]);
@@ -98,28 +100,29 @@ fn bearing_after(field: &Field, foes: &Foes, input: &FaceIn, params: &Params, m:
     }
 }
 
-/// ScrumBlows.nearest_touching: where the foe the unit strikes stands - the least by
-/// [in its front (0) or not (1), distance, the foe's draw] of those it touches.
-fn touching(
+/// ScrumBlows._pick: the foe (its body) the unit strikes - the least by [in its front (0)
+/// or not (1), distance, the foe's draw] of those it touches.
+pub fn touching(
     field: &Field,
     foes: &Foes,
     at: V2,
     radius: f64,
     bearing: f64,
-    p: &Params,
-) -> Option<V2> {
+    reach: f64,
+    front_dot: f64,
+) -> Option<u32> {
     let ahead = bearing_vector(bearing);
-    let mut best: Option<(u8, f64, i64, V2)> = None;
-    foes.grid.near(at, radius + p.reach + foes.widest + MARGIN, |i| {
+    let mut best: Option<(u8, f64, i64, u32)> = None;
+    foes.grid.near(at, radius + reach + foes.widest + MARGIN, |i| {
         let f = foes.bodies[i as usize] as usize;
         let there = field.at[f];
         let apart = at.distance_to(there) as f64;
         let gap = apart - radius - field.radius[f];
-        if (if gap > 0.0 { gap } else { 0.0 }) > p.reach {
+        if (if gap > 0.0 { gap } else { 0.0 }) > reach {
             return true; // not touching (distances are never NaN)
         }
-        let front = if in_front(ahead, at, there, p.front) { 0 } else { 1 };
-        let key = (front, apart, field.draw[f], there);
+        let front = if in_front(ahead, at, there, front_dot) { 0 } else { 1 };
+        let key = (front, apart, field.draw[f], f as u32);
         if best.as_ref().is_none_or(|b| before(&key, b)) {
             best = Some(key);
         }
@@ -130,7 +133,7 @@ fn touching(
 
 /// `a < b` as GDScript compares the Arrays [front, distance, draw]: item by item.
 #[inline]
-fn before(a: &(u8, f64, i64, V2), b: &(u8, f64, i64, V2)) -> bool {
+fn before(a: &(u8, f64, i64, u32), b: &(u8, f64, i64, u32)) -> bool {
     if a.0 != b.0 {
         return a.0 < b.0;
     }
@@ -145,7 +148,7 @@ fn before(a: &(u8, f64, i64, V2), b: &(u8, f64, i64, V2)) -> bool {
 
 /// ScrumReach.in_front: `point` lies in the front of a unit at `from` facing `ahead`.
 #[inline]
-fn in_front(ahead: V2, from: V2, point: V2, front: f64) -> bool {
+pub fn in_front(ahead: V2, from: V2, point: V2, front: f64) -> bool {
     let direction = point.sub(from);
     if (direction.length() as f64) < 0.000001 {
         return true;

@@ -41,7 +41,7 @@ static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 			unit.attack_cooldown -= 1
 			if unit.attack_cooldown > 0:
 				continue
-			unit.attack_cooldown = FormationMorale.interval(squad, _ticks(interval, unit))
+			unit.attack_cooldown = FormationMorale.interval(squad, ticks(interval, unit))
 			var target_squad: SkirmishSquad = pick[1]
 			if (
 				squad.order == SkirmishUnit.Order.RETREAT
@@ -121,5 +121,5 @@ static func nearest_touching(
 
 
 ## Ticks between the unit's melee blows, `second` ticks making a second (Decision 120).
-static func _ticks(second: int, unit: SkirmishUnit) -> int:
+static func ticks(second: int, unit: SkirmishUnit) -> int:
 	return maxi(1, roundi(second * unit.melee_seconds))
