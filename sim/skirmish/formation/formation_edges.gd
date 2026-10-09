@@ -17,6 +17,7 @@ const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd"
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
+const SquadMemo = preload("res://sim/skirmish/formation/squad_memo.gd")
 
 const EPSILON := 0.000001
 
@@ -25,9 +26,10 @@ const EPSILON := 0.000001
 ## any lands: nearest first, so the nearest attacker holds an edge two reach at once.
 static func engage(squads: Array, tick: int, events: Array, fight_seed: int = 0) -> void:
 	var picks := []  # [key, attacker, victim]
+	var memo := SquadMemo.new()  # every pick is made before any lock lands
 	for attacker in squads:
 		if _free(attacker):
-			var pick := _target(attacker, squads, fight_seed)
+			var pick := _target(attacker, squads, fight_seed, memo)
 			if not pick.is_empty():
 				picks.append(pick)
 	picks.sort_custom(func(a, b): return a[0] < b[0])
@@ -38,13 +40,15 @@ static func engage(squads: Array, tick: int, events: Array, fight_seed: int = 0)
 
 ## [key, attacker, victim] for the nearest side or rear face the attacker reaches (ties by
 ## the squads' draws), or [].
-static func _target(attacker: SkirmishSquad, squads: Array, fight_seed: int) -> Array:
+static func _target(
+	attacker: SkirmishSquad, squads: Array, fight_seed: int, memo: SquadMemo
+) -> Array:
 	var best := []
 	var mine := ScrumContest.squad_draw(attacker, fight_seed)
 	for victim in squads:
-		if victim.faction_id == attacker.faction_id or not _reaches(attacker, victim):
+		if victim.faction_id == attacker.faction_id or not _reaches(attacker, victim, memo):
 			continue
-		var gap := snappedf(SquadEdges.face_gap(attacker, victim), EPSILON)
+		var gap := snappedf(memo.face_gap(attacker, victim), EPSILON)
 		var key := [gap, mine, ScrumContest.squad_draw(victim, fight_seed)]
 		if best.is_empty() or key < best[0]:
 			best = [key, attacker, victim]
@@ -77,14 +81,14 @@ static func _free(attacker: SkirmishSquad) -> bool:
 
 
 ## True if the attacker's front reaches a hostile's side or rear face, overlapping it.
-static func _reaches(attacker: SkirmishSquad, victim: SkirmishSquad) -> bool:
-	if not FormationContact.engageable(victim) or not FormationContact.framed(victim):
+static func _reaches(attacker: SkirmishSquad, victim: SkirmishSquad, memo: SquadMemo) -> bool:
+	if not FormationContact.engageable(victim, memo) or not FormationContact.framed(victim):
 		return false
 	if SquadGeometry.facing_off(attacker, victim):
 		return false  # front to front: FormationContact's frontal lock
-	var gap := SquadEdges.face_gap(attacker, victim)
+	var gap := memo.face_gap(attacker, victim)
 	return (
 		gap > -EPSILON
 		and gap <= FormationContact.MELEE_REACH + EPSILON
-		and SquadEdges.overlap_across(attacker, victim)
+		and memo.overlap_across(attacker, victim)
 	)

@@ -62,8 +62,7 @@ static func step(
 	var events := ScrumEngage.step(squads, tick, fight_seed)
 	for squad in squads:
 		_prepare(squad, tick)
-	for squad in squads:
-		ScrumStance.anticipate(squad, squads, tick, events, terrain, fight_seed)
+	ScrumStance.anticipate_all(squads, tick, events, terrain, fight_seed)
 	FormationManoeuvre.step(squads)
 	var ctx := {
 		"squads": squads,
