@@ -5765,3 +5765,588 @@ before it is made (FormationRendezvous) is cut back the same way.
 units can walk.
 **Order:** each squad's share is worked out from where it stood as the tick began; no ties.
 
+### Decision 117 — A unit is archetype tags, five attributes and the stats derived from them
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1, from the user's list of what a unit needs. A unit type carries
+**archetype tags** (human, martial, cavalry, archer...) that tech can target as a group, as
+well as its own type. Its **attributes** are strength (carry and wield limits, damage
+scaling by weapon, shoving), agility (dodge, attack speed, turn rate, part of initiative),
+constitution (bonus HP, stamina, resisting physical maladies, the death's door band),
+willpower (resisting magical maladies and fear, part of courage, ward) and wits (casting
+speed, mana, part of initiative, perception). **Derived stats** (max load, initiative,
+dodge...) are shown but never set by hand; their formulas live in the tuning file
+(Decision 123). Courage, discipline and leadership stay mind stats beside the attributes;
+senses (sight, hearing, and special ones such as heartsense) are their own stats; speed is
+kept per movement mode (march, swim, climb, fly, burrow), a mode a unit lacks being 0.
+Rated traits (Decision 64) come onto units. `dmg` retires: a unit with no weapon fights
+with a natural one.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Stats set directly, no attributes | Tech and ranks would edit dozens of numbers; attributes give one lever that feeds many. |
+| More attributes (perception, charisma) | Perception folds into wits and senses, charisma into leadership. |
+
+**Rules over cases:** general: every unit, of either side, is one sheet.
+**Order:** no ordering: a sheet is data.
+
+### Decision 118 — A blow is one seeded opposed roll, its margin read as dodged, parried, grazed, hit or critical
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1. The user: skill opposed by parry, dodge and defence, "parry reduces
+first, then dodge, then defense for grazing hits, then a direct hit", with excess skill
+into criticals at a baseline ×1.5. Chosen: each blow is **one** seeded roll (Decision 93):
+the striker's skill (melee or ranged), weapon and conditions against the target's defence;
+the margin falls in a band - **parried** (melee only, needs a weapon or shield),
+**dodged**, **grazed** (part damage), **hit**, **critical** (×1.5, the crit multiplier a
+stat) - the higher the margin, the further along. **High ground** adds to the striker's
+margin (more crits) rather than multiplying damage; a blow from a **flank** denies the
+target its parry, from the **rear** its dodge too, and being **surrounded** lowers its
+defence: these replace the flank ×1.5 and high ground ×1.25 multipliers. A parry doesn't
+counter; **riposte** is an ability (Decision 122). Morale bands and conditions shift skill,
+replacing the blow shares by band.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A roll per layer (parry, then dodge, then defence) | Three rolls a blow for the same layering; one margin read in bands keeps the order the user gave. |
+| Percent chances per outcome | Not opposed: a master and a novice would dodge the same blow alike. |
+| Damage multipliers for flank and high ground | The user preferred them to shift the hit: high ground to crits, flanks to the target's defence. |
+
+**Rules over cases:** general: every blow, melee or ranged, unit or structure.
+**Order:** the roll is seeded by the battle and the two units, never by the list (Decision 97).
+
+### Decision 119 — Damage: weakness ×1.5, resistance ×0.5, immunity ×0, then armour and ward; variance narrows with skill into crits; strength scales by weapon
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1. A blow's damage is the weapon's, rolled within its range (variance
+belongs to the weapon); **skill raises the roll's floor** towards the weapon's maximum,
+and skill beyond that spills into crit chance rather than past the maximum. **Strength**
+scales a weapon by its own factor above its strength requirement (a maul much, a dagger
+little, a bow by draw weight, a spell from wits instead); below the requirement the
+wielder loses skill. Against the target, a damage type it is **weak** to deals ×1.5,
+**resistant** ×0.5, **immune** ×0; then **armour** (slashing, piercing, blunt) or **ward**
+(magical damage) takes a flat amount off. **Magic is a source, not a type:** a damage
+type says what the blow is (slashing, piercing, blunt, fire, acid - Decision 79's list,
+plus **arcane** for pure magic with no element); a **magical** flag on the weapon or
+ability says where it comes from, so fire and magic fire are both fire. Armour stands
+against mundane blows, ward against magical ones; weakness, resistance and immunity are by
+type either way.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Strength added flat to every weapon | A dagger would gain as much as a maul. |
+| Variance growing past the weapon's maximum with skill | Two routes to big damage; crits carry it instead. |
+| A ×1.25 damage step for everything | Superseded by the hit roll (Decision 118) and these multipliers. |
+
+**Rules over cases:** general: one damage rule for every blow.
+**Order:** seeded rolls only (Decision 93).
+
+### Decision 120 — Items: one group with equipment slots, load, proficiency tags and a strength requirement; the weapon sets the attack interval
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1. **Item** is the one group (weapons, armour, tools - Decision 54's
+tools granting trait levels). Each item names the **slots** it needs; each unit type has
+its own slots, so a creature that can't hold a weapon has no hand slot. Items carry
+**weight** (load), a **strength requirement**, and **tags** (axe, polearm, heavy armour)
+met by a unit's **proficiency** per tag: untrained wields at reduced skill, and tech or
+ranks grant proficiency (axe proficiency for a unit type). A weapon sets its **attack
+interval** in ticks; the unit's attack speed scales it (0.8 makes a 6-tick weapon strike
+every 5), so unwieldy items strike more slowly (Decision 79). **Load:** strength derives
+a carry limit and a wield limit; encumbrance has four stages - none to half the carry
+limit, a mild drain on speed, stamina and dodge to the limit, steep penalties beyond it to
+a maximum multiple, immobile past that - a hauler trait raising the multiple.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Attack speeds added (2 + 4 = 6) | Higher would be worse, and percentages from tech wouldn't compose. |
+| The higher of unit and weapon | The unit's speed would vanish behind a slow weapon. |
+
+**Rules over cases:** general: every item and every unit type.
+**Order:** no ordering.
+
+### Decision 121 — At 0 HP a unit is downed; struck again it enters death's door, constitution deep; units kill or capture; regeneration is HP only, limited per rest
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1, the user's model.
+- **Downed:** the blow that brings a unit to 0 HP stops there - its excess is lost - and
+  the unit is **downed**: it stops fighting and leaves its formation, and counts not as a
+  combatant for spacing, only as a body on the ground: an obstacle by its mass (crossable
+  slowly, a great one blocking) and something to haul (captives, food).
+- **Death's door:** a downed unit struck again goes below 0 into **death's door**,
+  constitution deep, and dies at minus that depth. A blow that would take a standing unit
+  past minus its constitution kills outright, bypassing downed.
+- **Kill or capture:** units don't leave the downed: once no standing foe is near, they
+  finish or capture them (by the creature: a merciless or predator kills, a captor
+  captures). The exception is **send a messenger**, a commander, hero or lord trait: a
+  survivor is let go to carry word home, a morale blow to its side.
+- **Surrender:** a routing unit caught with nowhere to run may surrender in place, by a
+  seeded chance from its courage and morale and its disposition (some never surrender).
+- **Regeneration** is HP only, keeps running when struck (a trait may stop it, a troll's by
+  fire or acid), stops while downed unless a trait keeps it running, and has a limit **per
+  rest**, a multiple of max HP: a unit that regenerates 60% of its limit in one fight and
+  40% in the next has none left for a third until it rests (Decision 123). So no unit is
+  unkillable by it; other pools fill by their own rules (Decision 122).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Excess damage carrying on below 0 | The user: downed hard-stops at 0, unless a blow kills outright. |
+| Leaving the downed where they lie | The user: units kill or capture, a messenger the one exception. |
+| Regeneration limited per fight | The user: per rest, so fights in a row drain it. |
+| Regeneration stopping on damage | The user: only by a trait, such as a troll's to fire or acid. |
+
+**Rules over cases:** general: every unit, of either side.
+**Order:** a blow is resolved from its roll; surrender is a seeded chance (Decision 93).
+
+### Decision 122 — Pools, abilities and status effects
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1. **Pools** beyond HP (stamina, mana, rage, hatred...) each have a
+maximum and their own means of gain - stamina recovers resting, hatred grows on hitting an
+enemy. **Abilities** are a trigger, a condition, an effect, a cost and a cooldown, either
+**passive** (every third attack ×1.25, a chance on hit of one more blow up to a limit, a
+riposte on a parry) or **activated** on command (a spell costing mana, a fury costing
+rage). **Status effects** (bleed, poison, burning, stun, slow, fear) have a duration,
+stacking rules and a resistance (constitution for the physical, willpower for the
+magical). Attack shapes - what a weapon or ability hits - belong to the weapon or ability
+(spec 32).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Hard-coded unit behaviours | Every new unit would need code; the same few parts compose them. |
+
+**Rules over cases:** general: one ability model for every unit and item.
+**Order:** triggers resolve from the tick's snapshot; chances are seeded (Decisions 93 and 97).
+
+### Decision 123 — Tech can change anything about a unit, in a fixed modifier order; everything persists for the map; one tuning file
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** Spec 28 round 1. **Tech** may change anything about a unit: its cost, its stats, its
+traits and abilities, or turn it into a **subtype** that inherits its parent's upgrades
+(a four-armed grem). Modifiers apply in a fixed order - unit type, archetype tags, tech,
+items, rank, status effects; flat amounts first, then percentages, then caps - so stacking
+is predictable. **Experience** fills ranks that tech unlocks, each rank granting stats,
+traits or abilities; a veteran may be promoted to a hero. **Everything persists for the
+whole map**; a **rest** (somewhere comfortable, N hours) resets fatigue, the regeneration
+limit and some cooldowns. Commanders, heroes and lords are named characters who persist
+across maps; whether rank and file carry over is still open. Every tuning number that
+isn't a unit's or an item's lives in **one tuning file**.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Tech as raw stat edits only | The user wants tech to change anything, including what a unit is. |
+| Tuning constants in code | The user: keep them to a single config file for easy view and tune. |
+
+**Rules over cases:** general: one modifier order for every source.
+**Order:** no ordering beyond the fixed modifier order.
+
+### Decision 124 — Spec 28 round 1 as built: innate weapons belong to body parts; rolls and wounds as the fight's rules, plain arithmetic for rule tests
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** The choices made building spec 28 round 1 (Decisions 117 to 121), the first from the
+user's direction while it was built:
+- **Innate weapons** (Decision 117's natural weapons): fists, a bite, a claw, a spitter's spit
+  are items that can't be dropped and weigh nothing. Their slots are the **body parts** they
+  belong to - fists the hands, a bite or spit the mouth - and a carried item holding one
+  puts the innate weapon out of use (the user: "if unarmed is tied to a body part with an
+  equipment slot, the unarmed should be disabled", spit included). `dmg` is gone.
+- **Who parries:** a unit holding a melee weapon that isn't innate, or a shield; claws
+  don't parry. The kingdom's spearmen parry, grems don't.
+- **Surrounded:** each foe beyond the first touching a unit and fighting it adds to blows'
+  margins against it.
+- **Rule tests and the fight:** the field and the trials roll every blow and its damage;
+  the simulation's rule tests keep plain arithmetic (rolls off: every blow a hit at its
+  weapons' full damage), so a rule is tested apart from chance.
+- **Damage variance** is the weapon's: the battle-wide ±25% band (Decision 93) is retired.
+- **Downed** is decided once a tick, from the hp the tick's blows leave: past minus the
+  unit's constitution kills outright, else it stops at 0.
+- **Taking the downed** is done by a foe already beside the body (wounds_reach); walking
+  out to a body waits for spec 30's movement pass. A taker strikes on its blows' interval.
+- **A great body blocks** a marching front only at eight times its mass; lesser ones slow
+  it. Loose units in a fight aren't slowed by bodies yet.
+- **A downed regenerator rises** at a quarter of its max HP and rejoins its formation at the
+  back, if the formation still stands.
+- **Running** is pursuing, chasing or fleeing until movement modes come (Decision 117's
+  speeds per mode); a formation gives up a chase when most of it is tired.
+- **The wield limit** is each weapon's strength requirement; the carry limit is strength
+  times load_per_strength.
+- **Rest** isn't modelled yet: the regeneration limit and stamina start full each battle,
+  until units persist across a map (Decision 123).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Innate weapons always usable | The user: a body part holding an item can't also strike with its innate weapon. |
+| Rolling in every test | A rule's tests would hang on chance; the trials judge the rolled fight. |
+| Units walking out to finish distant bodies now | Needs the movement pass (spec 30); bodies beside the fight are taken now. |
+
+**Rules over cases:** general: every unit and item.
+**Order:** rolls are seeded by the battle, the tick and the unit (Decisions 93 and 97).
+
+### Decision 125 — Gaits; stamina spent running and striking, regained after a breather; status and condition named apart
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-06
+
+**Rationale:** From the user, after spec 28 part 7 was built and found to let fighting never tire a
+unit (it recovered between its blows).
+- **Gaits.** A unit marches at its speed or **runs** at its speed times its own **run
+  pace** (1.5 by default; a creature's own, cavalry more, a brute less). Gaits are within a
+  movement mode (Decision 117's march, swim, climb...), not modes themselves. A formation
+  runs while it **flees** (routing), **pursues**, or moves **hurried** - the user: up to
+  "commander traits or if a player can command them directly i.e. can communicate the
+  order": the player's Hurry order, or a leader who **hastens** on a retreat. A plain
+  retreat walks. A spent unit can't run, so a tired formation slows to a walk.
+- **Costs.** Marching costs nothing unless something makes it hard - its load (steep or
+  worse), later a poor condition. Running costs stamina a second; each blow costs too;
+  both faster the heavier the load.
+- **Recovery after a breather.** Every cost restarts a **breather**; only once it has run
+  (2 s for a unit of average constitution) is stamina regained (3 a second). The delay is
+  shorter and the rate faster the hardier the unit (its constitution). So a unit striking
+  every second never recovers mid-fight, a rear rank that isn't striking catches its
+  breath, and a pursuer recovers only once it stops.
+- **Status and condition are two words for two things.** A **status** is a discrete thing
+  on a unit, with a duration, stacking and a resistance (Decision 122's status effects):
+  bleeding, poisoned, burning, stunned - and well-fed, rested, starving, cold, inspired.
+  A unit's **condition** is the one number its statuses, traits (tolerances) and
+  surroundings make of its state: 1 as things stand, each contribution adding or taking
+  away, clamped from 0 to a cap (1.25) - so a well-fed, rested, comfortable unit is better
+  than 1. Condition multiplies a named list - stamina recovery, regeneration and morale
+  recovery to start - and at 0 the unit doesn't recover. Decision 82's "conditions (fed,
+  rested, comfortable)" are statuses under this naming; they feed condition. Until stores,
+  rest and weather produce statuses, condition is 1.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| A reduced recovery rate in combat | A second rule for what the breather already does. |
+| Every retreat running | The user: a retreat runs only if hurried by an order the player can give, or a leader's trait. |
+| "Condition" for both the overall state and things like bleeding | The user asked to separate the lexicon: statuses are the things, condition the number. |
+
+**Rules over cases:** general: every unit's gait, costs and recovery, one rule.
+**Order:** no ordering: each unit's stamina is its own.
+
+### Decision 126 — Wounds work through condition; the downed come to on a timer; retreats and pursuits run by default; the wounded can be borne
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-07
+
+**Rationale:** From the user's feel test of spec 28 round 1 (seed 2656): downed units lay in the
+lane until someone happened by, finished units vanished without a mark, and a retreat
+pursued at a run had no chance. The user chose wounds through condition over bands of
+downed ("I think this is the one").
+- **Wounds.** Each time a unit is downed it takes a **wound** (the status `wounded N`),
+  which lowers its **condition** (Decision 125) by a step (0.35: the user, "2 wounds is
+  survivable in otherwise good condition, 3 wounds shouldn't be unless they get pretty
+  swift aid"). A weapon's **wounding N** adds N wounds to a foe it downs. A trait may let a unit shrug off its first N wounds ("hardened N"). Rest, medics
+  and structures will remove wounds one at a time (round 2).
+- **Condition drains.** Below a threshold (0.25) a unit loses HP over time, standing or
+  downed - faster the further below the threshold, whatever brought it there (0.5 HP a
+  second at condition 0), so "it ought not be an immediate death". So a unit downed when its condition is already poor is bleeding out, and one
+  left downed while its state worsens (hunger, cold, no rest - statuses as they come) may
+  die before it recovers. Nothing lies in the lane forever.
+- **The downed come to.** The fallen lie where they fell. A downed unit lies a seeded
+  while, shorter the hardier it is, then comes to at 1 HP where it lies - borne or not,
+  "no unique cases, no super powers" - and joins the nearest standing friendly formation
+  it can see (its own, or the one that bore it), walking to it; otherwise it makes for
+  home alone (walking straight, to be caught, taken, or reach the reserve). Finishing or
+  capture by a foe beside it stays guaranteed; the timer only settles those nobody reaches.
+- **Gaits by trait.** A retreat runs, as a pursuit does (the user: "if we are having
+  pursuers run then we ought to have retreat be at a running pace also"), unless its
+  leader - or every one of its units - keeps to a march then (`retreats_at_march`,
+  `pursues_at_march`; a leader's or a unit type's trait). A run builds up over a moment,
+  and a pursuer first reacts (quicker with wits): a retreat's head start.
+- **Bearing the wounded.** A wave can be told to **leave**, **recover** or **carry** its own
+  downed: a free unit beside a body picks it up, its weight load on the bearer; recovered,
+  the bearer takes it home and both return to the reserve; carried, it goes on with the
+  wave. A bearer that falls drops it.
+- **Seen.** The scene draws the dead, the taken and the borne where they are.
+- **Leader** is the one word for commanders, heroes and lords (units with leadership).
+
+**Waiting (round 2 and the movement pass):** captives kept and marked (a captive status
+lost on attacking; manacles, chain points, cages); a leader's trait to read how badly a
+downed foe is hurt (worth capturing, or needing a medic first); medics stabilising and
+removing wounds; gathering bodies for meat; a stance or leader trait to seek a visible
+enemy off the route, and an "eager" unit trait to break ranks for the fray (spec 30's
+movement pass).
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Bands of downed (out, dying, dead by depth) | The user preferred one mechanism: wounds lowering condition, condition draining HP. |
+| A retreat walking unless hurried | The user: pursuers and retreats alike run, traits making either march. |
+| Downed units lying until someone comes | They lay in the lane forever; the timer and the drain settle them. |
+
+**Rules over cases:** general: every unit's wounds, condition, recovery and gait, one rule.
+**Order:** the waking time is seeded by the battle, the unit and its wounds (Decisions 93, 97).
+
+### Decision 127 — The downed may play dead while foes are near; a foe may take it for dead
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-07
+
+**Rationale:** In the user's replay of Decision 126 (log 5), units came to among standing
+foes, were downed again at once, and spiralled into death by wounds. The user: "Yes, build
+it, 8 cells is fine for now".
+- **Lying still.** A unit due to come to, with a standing foe within 8 cells, may stay
+  down instead. The chance is a seeded roll: 0.4 at average wits, scaled by its wits, plus
+  0.25 for each level of **cunning** (its own, or its formation leader's if higher). One
+  already playing dead keeps at it. Either way it looks again 3 seconds later, and gets up
+  once no foe is near.
+- **Taken for dead.** A foe that would finish or capture a body that is playing dead first
+  judges it, once for the pair. It is fooled when the body's wits beat its own, each side
+  getting +10 per level of **cunning** (body) or **thorough** (taker), give or take a die of
+  20. A fooled foe leaves the body alone.
+- **Tunable:** the reach, chances, check interval, trait weight and die are all in
+  BattleTuning's Wounds group.
+
+**Waiting:** perception beyond wits (spec 28 round 2); a body seen to move being
+believed no longer.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Units getting up regardless | The death spiral of log 5. |
+| No coming to while any foe is on the field | Too broad: a far-off foe would pin every downed unit. |
+
+**Rules over cases:** general: every downed unit and every taker, one rule each.
+**Order:** both rolls are seeded by the battle and the units' ids (Decisions 93, 97).
+
+### Decision 128 — A registry of tags, traits and statuses; tags carry where a trait may sit; items grant traits; the designer's Library browses it
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-07
+
+**Rationale:** The user asked for traits, statuses and other categories to be grouped and
+searchable, and for assignments to be checked ("a weapon cant be cunning, it might have an
+ability to grant that"). They agreed tags should "bring the valid assignments with
+[them]".
+- **The registry** is `content/registry/{tags,traits,statuses}.json`. Every tag, trait
+  and status has an id, a description and tags.
+- **Tags** say what they can be put on (trait, unit, item, status). A trait tag also names
+  its **targets**: the kinds of thing its traits may sit on (unit, leader, weapon,
+  material, structure). For example, behaviour → unit and leader; combat → unit and
+  weapon.
+- **A trait's targets** are the targets all its tags share, narrowed by an optional
+  **only**. Siege and wounding are weapon-only.
+- **Grants.** An item's own traits are checked against the item. What it **grants** its
+  carrier is checked against a unit, and merged into the carrier's traits.
+- **Checked.** Godot's ContentRegistry holds all content to the registry in a test. Every
+  trait the code reads must be registered.
+- **Browsed.** The designer's **Library** page (`GET /api/registry`) lists tags, traits
+  and statuses. You can search, filter by tag or target, and see the content files using
+  each.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Fixed categories on each trait | Tags spread across every entity type and carry the targets, so one mechanism serves both. |
+| Targets listed per trait only | Duplicated across like traits; "only" covers the exceptions. |
+| A browser in Godot | The user: "Designer app is fine". |
+
+**Rules over cases:** general: one rule for every trait's targets, and one check for all
+content.
+**Order:** not applicable (content data, no simulation order).
+
+### Decision 129 — Rust for the simulation's hot core
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-08
+
+**Rationale:** The user wants battles as large as a 32×32 formation against its mirror
+(1,024 a side). After spec 30's part 0 (a shared spatial grid, outcomes unchanged), a
+tick at that size still takes about 650 ms against a 100 ms budget. A spike (#174) ported
+one hot loop, the body-parting pass, to Rust (godot-rust's gdext) and C++ (godot-cpp)
+behind one switch:
+- The ported code ran about 45× faster than GDScript, with Rust and C++ level.
+- Every test battle's tick-by-tick fingerprint was byte-identical across GDScript, Rust
+  and C++, with and without threads.
+- Most of the remaining cost of the pass was GDScript copying the data in and out.
+
+The user: "Given people are moving from C++ to Rust, I think it would be beneficial to use
+Rust as our benchmark", then "We should commit fully to Rust for the hot sections".
+- **Rust, through GDExtension.**
+  - Rust builds with cargo alone, with no binding generation.
+  - A panic is caught at the boundary and reported as a Godot error, where a C++ fault
+    takes down the engine.
+  - Deterministic threading is one crate away (Rayon).
+- **What moves.** The hot core moves into Rust and owns its state, so no arrays are
+  copied across each tick:
+  - bodies' positions and their parting
+  - the spatial grid
+  - the scrum's slot search
+  - pathfinding
+- **What stays in GDScript:** the rules - morale, orders, commands and groups, wounds -
+  where they are quick to change.
+- **Identity is the gate.** Every port must reproduce the GDScript reference bit for bit
+  on the fingerprint tool (tools/formation_digest.gd) before the reference retires:
+  - float32 and float64 kept as Godot keeps them
+  - no fused multiply-add
+  - the same summation order
+- **Builds.** Native libraries are built per platform (Linux, Windows, macOS) by
+  `native/build.sh` and CI, never committed. A checkout without them runs on the GDScript
+  reference until each port is proven.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| C++ (godot-cpp) | Level on speed; heavier toolchain, a crash takes down the engine; the user prefers Rust. |
+| Simulating on the GPU (as some games do physics and animation) | GPU floats aren't identical across cards, which breaks replays and trials; reading results back costs frames; the hot loops are branching rules, not uniform maths. Kept for drawing many units. |
+| A lower tick rate for big fights | Changes outcomes; held in reserve. |
+| C# | Needs the .NET build of Godot; slower than native for this work. |
+
+**Rules over cases:** not a rule change; the simulation's outcomes are unchanged by
+construction (identity gate).
+**Order:** the ports keep the reference's order exactly, and the fingerprint proves it.
+
+### Decision 130 — Battles replay bit for bit across machines: the simulation's maths is its own
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-09
+**Amends:** Decision 93 (a replay must match on every machine, not only the one that played it)
+
+**Rationale:** On the user's Windows machine, every test battle's fingerprint differed from
+the Linux reference, under both engines; GDScript and Rust agreed with each other on each
+machine. The likely cause is the platform maths library. IEEE 754 fixes +, −, ×, ÷ and √
+exactly, but sin, cos, acos, asin, atan2 and pow come from each OS's C library and may
+differ in the last bit; one bit, and a replay drifts. `tools/platform_probe.gd` hashes
+each primitive per machine to confirm which. The user: cross-platform multiplayer "would
+be cool", and replays should be shareable, "if we instituted a leaderboard or saving
+replays to share".
+- The simulation calls only its own maths (DetMath) for anything beyond +, −, ×, ÷, √,
+  floor and comparisons. The same functions, operation for operation, run in GDScript
+  and Rust.
+- A test pins DetMath's results by hash, so a platform that differs fails it.
+- The probe runs at the head of every benchmark report (`tools/run_benches.ps1`).
+- Still to watch: compilers fusing multiply-adds (e.g. on Apple silicon), and Godot
+  built-ins that hide transcendental maths.
+- Its change routes every call site at once, so it may change more pre-existing files
+  than a change normally may (17 against 11): the user, "This PR can be bigger given the
+  need" (#186).
+- DetMath costs about 0.6 µs a call in GDScript against 0.05 µs for the platform's, which
+  made the early fight about 20% slower. The answer is porting the passes that call it
+  most (facing first) to Rust, checked by timing that pass alone - not reworking the
+  rules to avoid the calls.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Same-machine replays only | Rules out shared replays, leaderboards and cross-platform play. |
+| Fixed-point arithmetic throughout | A rewrite of every rule; floats with exact operations suffice. |
+| Ship one platform's maths library | Not possible for Godot's own built-ins; DetMath covers what the simulation calls. |
+
+**Rules over cases:** a general rule (all transcendental maths goes through DetMath).
+**Order:** unaffected.
+
+### Decision 131 — Every unit is fully simulated, always; the per-unit work moves to Rust
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-09
+**Amends:** Decision 129 ("what stays in GDScript")
+
+**Rationale:** Waves are unlimited ("no limit for now, if we really hit a hard ceiling then
+we'll need to explore that"), so a battle may hold many waves of 1,024. Simplifying squads
+far from the fighting was proposed and declined: "what if lane A's units become engaged in
+a second conflict while lane B is still in play?"; "ideally I would want everything fully
+simmed". After the linear-time pass no per-tick pass grows faster than the battle
+(`principles/bounded-work.md`). What remains is GDScript's fixed cost per unit per pass:
+on 2,048 units, a grid neighbour query costs about 4.5 µs, a property read 0.12 µs against
+0.02 µs from a packed array, a Dictionary about 1 µs. At about 55 µs a unit a tick (the
+user's i7-12700K), 10,000 units in a 100 ms tick need about 10 µs a unit.
+- No level of detail: every unit is simulated in full wherever it is.
+- The per-unit passes move to Rust over data laid out as arrays (positions, HP, stamina;
+  a bitmask of flags per unit; indices, not references), in this order: positions owned
+  by the field (Decision 132), one persistent spatial grid updated as units cross cells,
+  then facing, steering and blows.
+- Work follows change where it is exact: a unit keeps its foe until something near it
+  changes; squad values are recomputed on a death, join, split or order.
+- Rules decided per squad (morale, orders, commands, groups) may stay in GDScript while
+  they stay cheap.
+- Inspirations noted: Total War (per-soldier simulation, decisions per formation, melee
+  as persistent pairs), Factorio (cross-platform lockstep, sleeping entities,
+  cache-friendly data), flow fields for many units sharing destinations.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Simplified simulation away from contact | Declined by the user; brittle when a second fight starts elsewhere. |
+| A cap on units on the field | Declined for now; revisit only at a hard ceiling. |
+| Lower tick rate | Changes outcomes. |
+
+**Rules over cases:** a general rule. **Order:** every port must reproduce the
+reference bit for bit (Decision 129's identity gate).
+
+### Decision 132 — The native field owns where units stand, routed in a series of changes
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-09
+
+**Rationale:** Positions live in GDScript and are copied to the Rust field at every native
+pass (about 8 ms a tick at 1,024 a side), and eighteen files write them, more than one
+change may touch (11). The user agreed to a series of changes rather than one broad one.
+Each change routes a few writers through the field; the fingerprints prove each step
+changes nothing. It starts after the linear-time fixes (#181–#184) merge, as they touch
+the same files.
+
+**Rules over cases:** not a rule change. **Order:** unchanged by construction.
+
+### Decision 133 — Units follow their most recent command, from the player or a leader; a selection given orders becomes a command
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-09
+**Amends:** spec 30 round 3's command model (formations are commands)
+
+**Rationale:** Asked whether a stance belongs to a command or to each of its groups, the
+user: "Even split units ought by our ruling return to each other, a player should be able
+to select groups of units (drag an area over) and give orders (of course depending on
+being able to issue the command e.g. at base/flags/messengers/messenger birds/magic etc.)
+They should follow their most recently given commands, whether from player or a leader."
+- The player may select any units and order them; the order becomes a new command for
+  those units, which remember their origin command.
+- A unit follows the most recent command it has received, whoever gave it.
+- A stance belongs to a command; all its groups share it, and split groups of a command
+  still return to each other.
+- How an order reaches units (at base, by flag, messenger, messenger bird or magic) is a
+  future spec; until then orders arrive at once.
+
+**Rules over cases:** a general rule (latest command wins). **Order:** commands given in
+the same tick act together (Decision 97); which is "latest" between a player's and a
+leader's order in one tick is decided by a seeded draw, never by who was processed
+first.
