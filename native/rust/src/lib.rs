@@ -16,6 +16,7 @@ mod maths;
 mod motion;
 mod parting;
 mod scrum;
+mod walking;
 
 use std::time::Instant;
 
@@ -273,6 +274,67 @@ impl BodyField {
         PackedInt32Array::from(out.as_slice())
     }
 
+    /// FormationScrum's walk on the field, before the facing, for the units the tick's
+    /// plan() was given (`squads` and `members` as plan's; where each stands as that
+    /// call's sync left it). `floats` = [tick seconds, bodies_steer_look,
+    /// bodies_steer_clear, bodies_ground_drag, bodies_ground_block]; per squad `squad_floats` = [pace (cells a tick at speed 1), heading, width, centre
+    /// shift] and its frame's anchor; per unit: plan()'s code and next point, its speed,
+    /// `motion` = [bearing, turn rate, backward pace], `frames` = [column, rank, footprint
+    /// width, depth]; the bodies lying on the ground and their [radius, footprint area].
+    /// Returns [where each unit stands after its step, where it looks: its next point
+    /// making for a slot, UnitShuffle's walking back to its place].
+    #[func]
+    #[allow(clippy::too_many_arguments)]
+    fn walk(
+        &mut self,
+        seed: i64,
+        floats: PackedFloat64Array,
+        squads: PackedInt64Array,
+        squad_floats: PackedFloat64Array,
+        squad_anchors: PackedVector2Array,
+        members: PackedInt32Array,
+        codes: PackedByteArray,
+        nexts: PackedVector2Array,
+        speeds: PackedFloat64Array,
+        motion: PackedFloat64Array,
+        frames: PackedFloat64Array,
+        lying_ats: PackedVector2Array,
+        lying_sizes: PackedFloat64Array,
+    ) -> VarArray {
+        let began = Instant::now();
+        let f = floats.as_slice();
+        let params = walking::Params {
+            seed,
+            seconds: f[0],
+            look: f[1],
+            clear: f[2],
+            drag: f[3],
+            block: f[4],
+        };
+        let member_counts: Vec<i32> = squads.as_slice().chunks(3).map(|c| c[2] as i32).collect();
+        let sizes = lying_sizes.as_slice();
+        let lying_radii: Vec<f64> = sizes.chunks(2).map(|c| c[0]).collect();
+        let lying_areas: Vec<f64> = sizes.chunks(2).map(|c| c[1]).collect();
+        let (anchors, nexts, lying) = (v2s(&squad_anchors), v2s(&nexts), v2s(&lying_ats));
+        let input = walking::WalkIn {
+            member_counts: &member_counts,
+            squad_floats: squad_floats.as_slice(),
+            squad_anchors: &anchors,
+            members: members.as_slice(),
+            codes: codes.as_slice(),
+            nexts: &nexts,
+            speeds: speeds.as_slice(),
+            motion: motion.as_slice(),
+            frames: frames.as_slice(),
+            lying_ats: &lying,
+            lying_radii: &lying_radii,
+            lying_areas: &lying_areas,
+        };
+        let out = walking::walk(&self.field, &input, &params);
+        self.usec = began.elapsed().as_micros() as i64;
+        varray![&packed(&out.ats), &packed(&out.towards)]
+    }
+
     /// DetMath's `op` ("sin", "cos", "asin", "acos", or "atan2" of a and b) over the
     /// inputs, as the core computes it (the suite proves it against the GDScript).
     #[func]
@@ -297,7 +359,7 @@ impl BodyField {
         self.field.count() as i64
     }
 
-    /// Microseconds of native work in the last sync, part, plan or face.
+    /// Microseconds of native work in the last sync, part, plan, walk or face.
     #[func]
     fn usec(&self) -> i64 {
         self.usec

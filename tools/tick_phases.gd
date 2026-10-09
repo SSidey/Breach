@@ -211,9 +211,7 @@ func _walk_and_face(ctx: Dictionary) -> void:
 	var fighting: Array = ctx["squads"].filter(
 		func(s): return s.state == SkirmishSquad.State.FIGHTING
 	)
-	for squad in fighting:
-		var crowding := BattleTuning.current().scrum_crowding if squad.pursuit.is_empty() else 1.0
-		Scrum._walk(squad, ctx["pace"] * crowding, ctx)
+	Scrum.walk(fighting, ctx)
 	_lap("scrum: walk (steering)")
 	Scrum.face(fighting, ctx)
 	_lap("scrum: face foes")

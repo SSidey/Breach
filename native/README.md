@@ -11,6 +11,9 @@ reference behind one switch. The first production piece is in place:
 - **The scrum's facing** (FormationScrum._faces and the turns: ScrumBlows.nearest_touching,
   UnitShuffle.look, UnitMotion's bearing_to, pace and turn) runs on the field, after the
   walk, for the units the slot search was given.
+- **The scrum's walk** (FormationScrum._walk: UnitSteer.toward and _round, SquadFrame.place,
+  UnitShuffle.look, UnitMotion.move, GroundBodies.underfoot) runs on the field, between
+  the slot search and the facing, for the same units.
 
 All three reproduce the GDScript reference bit for bit. The C++ kernel from the spike
 (#174) is retired.
@@ -19,10 +22,10 @@ All three reproduce the GDScript reference bit for bit. The C++ kernel from the 
 |---|---|
 | Switch | `sim/skirmish/formation/native_kernels.gd`: `BREACH_NATIVE=gdscript\|rust` (env), else project setting `breach/native/engine`, else `gdscript`. `BREACH_NATIVE_THREADS=1` lets body parting use Rayon. A checkout without the library runs on GDScript, silently. |
 | Rust | `native/rust/` - `godot` 0.5.5 (`api-4-7`), class `BodyField` |
-| GDScript side | `body_field_sync.gd` (the sync), `body_parting.gd` (parting on the field), `scrum_seek_field.gd` (the slot search on the field), `scrum_face_field.gd` (the facing on the field) |
+| GDScript side | `body_field_sync.gd` (the sync), `body_parting.gd` (parting on the field), `scrum_seek_field.gd` (the slot search on the field), `scrum_face_field.gd` (the facing on the field), `scrum_walk_field.gd` (the walk on the field) |
 | Owner | `FormationSimulation._field`: one field a battle, made when the battle is (null under GDScript) |
-| Benchmarks | `tools/native_bench.gd` (parting and the slot search, split), `tools/facing_bench.gd` (the facing pass alone, and DetMath), `tools/tick_phases.gd` (a whole tick, phase by phase), `tools/formation_bench.gd` (whole ticks) |
-| Identity | `tools/formation_digest.gd` (every set, both engines); `tests/sim/skirmish/formation/test_body_field.gd`, `test_body_parting.gd` and `test_face_field.gd`; the whole suite under `BREACH_NATIVE=rust` |
+| Benchmarks | `tools/native_bench.gd` (parting and the slot search, split), `tools/facing_bench.gd` (the facing pass alone, and DetMath), `tools/steering_bench.gd` (the walk alone), `tools/tick_phases.gd` (a whole tick, phase by phase), `tools/formation_bench.gd` (whole ticks) |
+| Identity | `tools/formation_digest.gd` (every set, both engines); `tests/sim/skirmish/formation/test_body_field.gd`, `test_body_parting.gd`, `test_face_field.gd` and `test_walk_field.gd`; the whole suite under `BREACH_NATIVE=rust` |
 
 ## The native state and its boundary
 
@@ -49,6 +52,12 @@ ScrumFaceField.face ------ face(after the walk) -> facing: the touching foe (fro
   bearing, turn rate, backward pace, and what      the turn at its rate (motion.rs,
   its entry makes for (next, foe_at, toward)       DetMath's atan2 and acos)
   <- every unit's bearing after its turn
+ScrumWalkField.walk ------ walk(after plan) ----> walk: SquadFrame.place, UnitShuffle.look,
+  the plan's units and answer (codes, nexts),      UnitSteer (the body in the way, least by
+  bearing, turn rate, backward pace, a frame       [along, draw]; _round), UnitMotion.move,
+  per squad, column/rank/footprint, the lying      GroundBodies.underfoot over a grid of
+  <- where each stands after its step, its look    the lying (walking.rs)
+  (its batch also feeds face(): no entry is read twice)
 ```
 
 **What the field owns.** Everything about a body that doesn't change tick to tick:
@@ -149,6 +158,10 @@ The suite proves the same:
 - `test_face_field.gd`: DetMath's bits in Rust, and a mid-fight scrum planned, walked and
   turned to the same bearings as GDScript at four moments, with every unit given a
   bearing of its own and its looks moved, and whatever the list order.
+- `test_walk_field.gd`: a mid-fight scrum planned and walked to the same points, looks and
+  next points as GDScript at four moments; with ways pushed through the crowd, bodies laid
+  underfoot (some heavy enough to stop a grem) and units held back to walk to their
+  places; and whatever the list order.
 - The whole suite under `BREACH_NATIVE=rust`, including its reversed-list tests:
   955 of 955 pass, as they do on GDScript.
 
@@ -205,6 +218,34 @@ GDScript reading each unit's loose entry (3.7 ms): it goes when the field owns p
 
 `tools/tick_phases.gd engine=rust side=1024 stage=fight fight=5`: the whole tick 204-220
 -> 148-162 ms, "scrum: face foes" 45-51 -> 5 ms (below the 181 ms of before DetMath).
+
+### The walk (`tools/steering_bench.gd`, 1,024 a side, 32 wide)
+
+FormationScrum._walk alone, on one snapshot after the tick's slot search, the entries'
+at, next and toward restored between repetitions; ms a walk, median. Tick 100 (10 ticks
+into the fight: 1,982 walkers, 958 to slots, nothing lying) and tick 130 (40 ticks in:
+1,017 walking back to their places, 36 bodies lying):
+
+| moment | engine | before | after |
+|---|---|---:|---:|
+| tick 100 | GDScript | 31.5-37.0 | 30.8 (the same code) |
+| | Rust | 31.4 (GDScript walk) | **4.0** (gather 2.0, call 0.3 of which the core 0.27, write back 1.7) |
+| tick 130 | GDScript | 36.4 | 35.7 |
+| | Rust | 35.5 | **2.3** (gather 1.2, core 0.24, write back 0.75) |
+
+The GDScript walk split, tick 100 / tick 130: places 2.3 / 1.6, looks 2.3 / 7.0, steering
+(UnitSteer.toward) 23 / 8.3, footing (GroundBodies.underfoot, a loop over every lying
+body) 3.2 / 13.7, steps 6.0 / 1.3. In Rust the lying bodies are found through a grid
+(a least over them, so the order can't matter). The walk's batch also hands the facing
+where each unit now stands, its bearing and turning and what it looks at, so the facing
+no longer reads the entries again (its gather, 3.5 ms, goes).
+
+`tools/tick_phases.gd engine=rust side=1024 stage=fight fight=5`: the whole tick 152-160
+-> 119-128 ms; "scrum: walk" 32-32.3 -> 4.4-5.2 ms; "scrum: face foes" 5.2-5.6 -> 0.8-1.0
+ms. Later in the fight (`settle=40 fight=3`): the whole tick 126 -> 112 ms, "scrum: walk"
+33.0 -> 2.6 ms, "scrum: face foes" 1.9 -> 0.2 ms. What remains is GDScript reading each
+unit's turning and frame and writing its entry back: it goes when the field owns
+positions.
 
 ### The melee blows (`tools/blows_bench.gd`, 1,024 a side, 32 wide)
 

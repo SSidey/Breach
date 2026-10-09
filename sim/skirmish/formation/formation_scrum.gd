@@ -46,6 +46,7 @@ const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumFaceField = preload("res://sim/skirmish/formation/scrum_face_field.gd")
+const ScrumWalkField = preload("res://sim/skirmish/formation/scrum_walk_field.gd")
 
 
 ## One tick of the scrum. `cells_per_second` is the march pace at speed 1; given the
@@ -126,6 +127,17 @@ static func _seek(ctx: Dictionary) -> void:
 	var fighting: Array = ctx["squads"].filter(
 		func(s): return s.state == SkirmishSquad.State.FIGHTING
 	)
+	walk(fighting, ctx)
+	face(fighting, ctx)  # after all have moved (a unit stepped up to is seen)
+
+
+## Walks the fighting squads' units a step each (_walk), each from the bodies as they
+## stood before any stepped: in GDScript (the reference), or on the battle's native
+## bodies, ctx["field"] (ScrumWalkField, Decision 129) - the same steps.
+static func walk(fighting: Array, ctx: Dictionary) -> void:
+	if ctx.get("field") != null:
+		ScrumWalkField.walk(ctx)
+		return
 	for squad in fighting:  # in the crush, but at the march pace in a pursuit
 		_walk(
 			squad,
@@ -135,7 +147,6 @@ static func _seek(ctx: Dictionary) -> void:
 			),
 			ctx
 		)
-	face(fighting, ctx)  # after all have moved (a unit stepped up to is seen)
 
 
 ## Turns the fighting squads' units once each (_faces), all decided before any turns: in
