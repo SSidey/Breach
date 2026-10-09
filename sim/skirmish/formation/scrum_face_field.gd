@@ -37,7 +37,9 @@ static func face(ctx: Dictionary) -> void:
 	var field: Object = ctx["field"]
 	var seek = ctx["seek_batch"]  # ScrumSeekField.Batch
 	var began := Time.get_ticks_usec()
-	var batch := _gather(seek.units, seek.owners)
+	var batch: Batch = ctx.get("face_batch")  # the walk's, on the field (ScrumWalkField)
+	if batch == null:
+		batch = _gather(seek.units, seek.owners)
 	var tuning := BattleTuning.current()
 	var front := DetMath.cos(deg_to_rad(tuning.reach_front_arc_degrees)) - 0.000001
 	var floats := PackedFloat64Array(

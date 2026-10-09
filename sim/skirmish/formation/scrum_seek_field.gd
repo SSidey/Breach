@@ -35,6 +35,8 @@ class Batch:
 	var anchors := PackedVector2Array()
 	var goal_foes := PackedInt64Array()
 	var goal_slots := PackedInt32Array()
+	## The core's answer: [codes, goal foes, goal slots, nexts, foe_ats] (the walk's input).
+	var plan: Array = []
 
 
 ## Plans every fighting squad's units on ctx["field"] (see ScrumSeek.plan).
@@ -69,6 +71,7 @@ static func plan(ctx: Dictionary) -> void:
 		within
 	)
 	var returned := Time.get_ticks_usec()
+	batch.plan = out  # what the walk steps by (ScrumWalkField)
 	_write_back(batch, out, ctx["active"])
 	spent[1] += called - synced_at
 	spent[2] += returned - called
