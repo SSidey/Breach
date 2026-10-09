@@ -19,6 +19,7 @@ const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain
 const TerrainWalker = preload("res://sim/skirmish/formation/terrain_walker.gd")
 const ModeStamina = preload("res://sim/skirmish/formation/mode_stamina.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
 ## Quarter-cells in a cell of height.
 const QUARTERS := 4.0
@@ -53,7 +54,7 @@ static func drop(terrain: FormationTerrain, foot: Vector2, at: Vector2) -> float
 static func fall_damage(cells: float, unit_def: UnitDef) -> float:
 	var tuning := BattleTuning.current()
 	var mass := float(unit_def.footprint_width * unit_def.footprint_depth)
-	return tuning.fall_damage_per_cell * cells * pow(mass, tuning.fall_mass_power)
+	return tuning.fall_damage_per_cell * cells * DetMath.pow(mass, tuning.fall_mass_power)
 
 
 ## The most stamina any stretch between standable cells of the way `cells` costs `walker`.

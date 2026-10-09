@@ -7,6 +7,8 @@ extends RefCounted
 ## spec's own prose ("e.g. -10% every N rounds") - not exposed as per-node/per-map
 ## config since nothing in this slice needs it tunable.
 
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
+
 const DECAY_RATE_PER_INTERVAL := 0.9
 
 var _pools: Dictionary = {"food": 0, "wood": 0, "stone": 0, "metal": 0, "crystal": 0}
@@ -31,5 +33,5 @@ func decayed_yield(
 	base_yield: int, ticks_elapsed: int, decay_interval_ticks: int, floor: int
 ) -> int:
 	var intervals := ticks_elapsed / decay_interval_ticks
-	var decayed := base_yield * pow(DECAY_RATE_PER_INTERVAL, intervals)
+	var decayed := base_yield * DetMath.pow(DECAY_RATE_PER_INTERVAL, intervals)
 	return max(floor, int(round(decayed)))

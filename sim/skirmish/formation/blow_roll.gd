@@ -17,6 +17,7 @@ const UnitDef = preload("res://content/definitions/unit_def.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
 const PARRIED := "parried"
 const DODGED := "dodged"
@@ -64,7 +65,7 @@ static func side(target: SkirmishUnit, from: Vector2, flank: bool) -> int:
 	var away := from - target.position
 	if away.length() < 0.000001:
 		return Side.FLANK
-	var behind := cos(deg_to_rad(BattleTuning.current().blow_rear_arc_degrees))
+	var behind := DetMath.cos(deg_to_rad(BattleTuning.current().blow_rear_arc_degrees))
 	var facing := away.normalized().dot(UnitMotion.vector(target.bearing))
 	return Side.REAR if facing <= -behind + 0.000001 else Side.FLANK
 

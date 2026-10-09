@@ -9,6 +9,7 @@ const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
 
 ## Where the unit stands: its place in the scrum, or where its squad puts it.
@@ -52,5 +53,5 @@ static func in_front(bearing: float, from: Vector2, point: Vector2) -> bool:
 		return true
 	return (
 		direction.normalized().dot(UnitMotion.vector(bearing))
-		>= cos(deg_to_rad(BattleTuning.current().reach_front_arc_degrees)) - 0.000001
+		>= DetMath.cos(deg_to_rad(BattleTuning.current().reach_front_arc_degrees)) - 0.000001
 	)

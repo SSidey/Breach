@@ -51,11 +51,12 @@ $stamp = Get-Date -Format "yyyyMMdd-HHmm"
 $machine = [Environment]::MachineName
 $report = Join-Path $out "bench_${machine}_$stamp.txt"
 
-# The per-tick digest files' sha256 on the reference (Linux) build.
+# The per-tick digest files' sha256 on the reference (Linux) build, with DetMath: every
+# platform should give these.
 $reference = @{
-	"standard" = "bf2111e4aef6d3c4b2aa51350e65d6e6fd087ab82641762a74d3af6b9304c908"
-	"clash160" = "a0b69851c6636a6eb8ed39234c7cb23c1fe06be70d1b88dac13d3c690d9cbd79"
-	"wide"     = "6236171952e39ccd6ca2368ec01f190814df13dc6bab9dcf0f490248442f55b0"
+	"standard" = "4caaed38d06694cc63081f0cc93384ae44353e67ce1a10a41296ad2d5df4bcca"
+	"clash160" = "846075a85ef4f9b1ebd6eb8f75205daab8f6dc03cf29382131e4b283d65b58d0"
+	"wide"     = "e2752a95a9013632502e1c0a6bd33b4aed7f3523422ba76d77d7cd71478bdb77"
 }
 
 function Write-Report([string]$text) {

@@ -19,6 +19,7 @@ const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain
 const TerrainWalker = preload("res://sim/skirmish/formation/terrain_walker.gd")
 const ModeStamina = preload("res://sim/skirmish/formation/mode_stamina.gd")
 const ClimbStamina = preload("res://sim/skirmish/formation/climb_stamina.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
 const EPSILON := 0.000001
 
@@ -77,7 +78,9 @@ static func _fall(unit, terrain: FormationTerrain) -> void:
 		0.0, ClimbStamina.drop(terrain, unit.foothold, unit.position) - unit.climb_left
 	)
 	var area := float(unit.footprint_width * unit.footprint_depth)
-	unit.hp -= roundi(tuning.fall_damage_per_cell * climbed * pow(area, tuning.fall_mass_power))
+	unit.hp -= roundi(
+		tuning.fall_damage_per_cell * climbed * DetMath.pow(area, tuning.fall_mass_power)
+	)
 	unit.position = unit.foothold
 	unit.climb_left = 0.0
 	unit.on_face = false

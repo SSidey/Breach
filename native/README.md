@@ -93,8 +93,12 @@ The rules for matching Godot bit for bit (`native/rust/src/maths.rs`):
   in its own precision. `distance_to`, `length` and `dot` are f32 and widened when they
   meet an f64; `Vector2 * float` narrows the float first.
 - `snappedf` is `floor(v / step + 0.5) * step`.
-- `UnitMotion.vector` is `bearing * (PI / 180)` through the C library's `sin` and `cos`,
-  which are the engine's own on the same platform.
+- `UnitMotion.vector` is `bearing * (PI / 180)` through `DetMath.sin` and `DetMath.cos`
+  (`det_math.rs` is the same operations in the same order, and `cargo test` checks it
+  against bits printed by Godot). sim/ calls no platform transcendental function: the C
+  library's differ between glibc, the Windows CRT and Apple's libm, so a battle wouldn't
+  replay across machines. DetMath and DetPow use only IEEE 754's exact operations;
+  `test_det_math.gd` pins their bits and `tools/platform_probe.gd` prints them.
 - No fused multiply-add. Rust never contracts, and the library targets baseline x86-64.
 - The same order everywhere: pairs, pushes, contest order, slot keys compared item by
   item, a full tie going to the slot listed first, foes in list order.
@@ -110,13 +114,18 @@ The rules for matching Godot bit for bit (`native/rust/src/maths.rs`):
 The per-tick files are byte-identical between `BREACH_NATIVE=gdscript` and `rust`
 (sha256 of each per-tick file):
 
-| set | runs | ticks hashed | per-tick file (base = GDScript = Rust = Rust + Rayon) |
+| set | runs | ticks hashed | per-tick file (GDScript = Rust) |
 |---|---:|---:|---|
-| standard | 26 | 14,099 | `bf2111e4aef6d3c4b2aa51350e65d6e6fd087ab82641762a74d3af6b9304c908` |
-| clash160 | 1 | 210 | `a0b69851c6636a6eb8ed39234c7cb23c1fe06be70d1b88dac13d3c690d9cbd79` (run `65c64e72...`) |
-| wide | 2 | 556 | `6236171952e39ccd6ca2368ec01f190814df13dc6bab9dcf0f490248442f55b0` (runs `c63e9548...`, `84724206...`) |
+| standard | 26 | 14,099 | `4caaed38d06694cc63081f0cc93384ae44353e67ce1a10a41296ad2d5df4bcca` |
+| clash160 | 1 | 210 | `846075a85ef4f9b1ebd6eb8f75205daab8f6dc03cf29382131e4b283d65b58d0` (run `85b79694...`) |
+| wide | 2 | 553 | `e2752a95a9013632502e1c0a6bd33b4aed7f3523422ba76d77d7cd71478bdb77` (runs `bc12ed86...`, `205db987...`) |
 
-"base" is `origin/feature/movement-integrate` (f4a6490) before this change, on GDScript.
+These are with DetMath (sim/ calls no platform transcendental function), so every
+platform should give them. Before DetMath they were `bf2111e4...` (standard),
+`a0b69851...` (clash160) and `62361719...` (wide), the same as GDScript at
+`origin/feature/movement-integrate` (f4a6490) before the Rust core, and they differed on
+Windows.
+
 Each set gives the same file under the release and the dev build, with and without
 `BREACH_NATIVE_THREADS=1`.
 
@@ -127,7 +136,7 @@ The suite proves the same:
 - `test_body_field.gd`: the hash, the roster, and the slot search planning a mid-fight
   scrum the same as GDScript at four moments and whatever the list order.
 - The whole suite under `BREACH_NATIVE=rust`, including its reversed-list tests:
-  948 of 948 pass, as they do on GDScript.
+  955 of 955 pass, as they do on GDScript.
 
 ## Results
 
