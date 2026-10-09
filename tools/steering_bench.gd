@@ -50,7 +50,12 @@ func _init() -> void:
 	print("machine: %s, %d threads" % [OS.get_processor_name(), OS.get_processor_count()])
 	var walkers := _walkers(fighting)
 	var line := "%d a side, %d wide, tick %d: %d units walk (%d to slots), %d bodies lie"
-	print(line % [side, width, sim.tick_number(), walkers[0], walkers[1], ctx["lying"].size()])
+	print(
+		(
+			line
+			% [side, width, sim.tick_number(), walkers[0], walkers[1], ctx["lying"]["lying"].size()]
+		)
+	)
 	var after := {}
 	for engine in str(_args.get("engines", "gdscript,rust")).split(","):
 		if engine == NativeKernels.GDSCRIPT or rust:
@@ -141,7 +146,7 @@ func _ctx(sim: Sim) -> Dictionary:
 		"seed": sim.fight_seed,
 		"terrain": sim.terrain,
 		"bodies": ScrumSeek.bodies(squads),
-		"lying": GroundBodies.lying_in(squads),
+		"lying": GroundBodies.ground(squads),
 		"active": {},
 		"field": null,
 	}

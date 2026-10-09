@@ -98,7 +98,7 @@ func _ctx(squads: Array, field: Object) -> Dictionary:
 	ctx["pace"] = 0.8
 	ctx["bodies"] = ScrumSeek.bodies(squads)
 	ctx["crowd"] = BodyGrid.of_bodies(ctx["bodies"])
-	ctx["lying"] = GroundBodies.lying_in(squads)
+	ctx["lying"] = GroundBodies.ground(squads)
 	return ctx
 
 
