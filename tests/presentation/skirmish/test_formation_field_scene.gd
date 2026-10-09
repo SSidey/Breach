@@ -97,11 +97,15 @@ func test_actions_are_logged_with_their_ticks_after_the_seed() -> void:
 
 	scene.act("send A")
 
-	assert_str(scene.action_log()).is_equal("record 1 seed 42 captain off\n5 player send A")
+	var head := "record 2 seed 42 captain off build %s" % SimBuild.id()
+	assert_str(scene.action_log()).is_equal(head + "\n5 player send A")
 
 
 func test_a_pasted_log_replays_live_as_the_headless_replay_does() -> void:
-	var log := "record 1 seed 446157 captain off\n0 player wait waves on\n40 player send A+B"
+	var log := (
+		"record 2 seed 446157 captain off build %s\n0 player wait waves on\n40 player send A+B"
+		% SimBuild.id()
+	)
 	var scene := _scene()
 	var read := FormationFieldActions.parse(log)
 	scene.restart(read["captained"], read["seed"], read["commands"])
@@ -132,7 +136,8 @@ func test_replay_plays_the_pasted_log_not_this_runs() -> void:
 	hud.replay()
 	scene.run_ticks(130)
 
-	var recorded := "record 1 seed 492625 captain off\n22 player route A C\n129 player send A+B"
+	var recorded := "record 2 seed 492625 captain off build %s" % SimBuild.id()
+	recorded += "\n22 player route A C\n129 player send A+B"
 	assert_str(scene.action_log()).is_equal(recorded)  # an old log, recorded afresh
 
 
