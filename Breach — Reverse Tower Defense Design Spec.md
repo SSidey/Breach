@@ -6233,3 +6233,113 @@ Rust as our benchmark", then "We should commit fully to Rust for the hot section
 **Rules over cases:** not a rule change; the simulation's outcomes are unchanged by
 construction (identity gate).
 **Order:** the ports keep the reference's order exactly, and the fingerprint proves it.
+
+### Decision 130 — Battles replay bit for bit across machines: the simulation's maths is its own
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-09
+**Amends:** Decision 93 (a replay must match on every machine, not only the one that played it)
+
+**Rationale:** On the user's Windows machine, every test battle's fingerprint differed from
+the Linux reference, under both engines; GDScript and Rust agreed with each other on each
+machine. The likely cause is the platform maths library. IEEE 754 fixes +, −, ×, ÷ and √
+exactly, but sin, cos, acos, asin, atan2 and pow come from each OS's C library and may
+differ in the last bit; one bit, and a replay drifts. `tools/platform_probe.gd` hashes
+each primitive per machine to confirm which. The user: cross-platform multiplayer "would
+be cool", and replays should be shareable, "if we instituted a leaderboard or saving
+replays to share".
+- The simulation calls only its own maths (DetMath) for anything beyond +, −, ×, ÷, √,
+  floor and comparisons. The same functions, operation for operation, run in GDScript
+  and Rust.
+- A test pins DetMath's results by hash, so a platform that differs fails it.
+- The probe runs at the head of every benchmark report (`tools/run_benches.ps1`).
+- Still to watch: compilers fusing multiply-adds (e.g. on Apple silicon), and Godot
+  built-ins that hide transcendental maths.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Same-machine replays only | Rules out shared replays, leaderboards and cross-platform play. |
+| Fixed-point arithmetic throughout | A rewrite of every rule; floats with exact operations suffice. |
+| Ship one platform's maths library | Not possible for Godot's own built-ins; DetMath covers what the simulation calls. |
+
+**Rules over cases:** a general rule (all transcendental maths goes through DetMath).
+**Order:** unaffected.
+
+### Decision 131 — Every unit is fully simulated, always; the per-unit work moves to Rust
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-09
+**Amends:** Decision 129 ("what stays in GDScript")
+
+**Rationale:** Waves are unlimited ("no limit for now, if we really hit a hard ceiling then
+we'll need to explore that"), so a battle may hold many waves of 1,024. Simplifying squads
+far from the fighting was proposed and declined: "what if lane A's units become engaged in
+a second conflict while lane B is still in play?"; "ideally I would want everything fully
+simmed". After the linear-time pass no per-tick pass grows faster than the battle
+(`principles/bounded-work.md`). What remains is GDScript's fixed cost per unit per pass:
+on 2,048 units, a grid neighbour query costs about 4.5 µs, a property read 0.12 µs against
+0.02 µs from a packed array, a Dictionary about 1 µs. At about 55 µs a unit a tick (the
+user's i7-12700K), 10,000 units in a 100 ms tick need about 10 µs a unit.
+- No level of detail: every unit is simulated in full wherever it is.
+- The per-unit passes move to Rust over data laid out as arrays (positions, HP, stamina;
+  a bitmask of flags per unit; indices, not references), in this order: positions owned
+  by the field (Decision 132), one persistent spatial grid updated as units cross cells,
+  then facing, steering and blows.
+- Work follows change where it is exact: a unit keeps its foe until something near it
+  changes; squad values are recomputed on a death, join, split or order.
+- Rules decided per squad (morale, orders, commands, groups) may stay in GDScript while
+  they stay cheap.
+- Inspirations noted: Total War (per-soldier simulation, decisions per formation, melee
+  as persistent pairs), Factorio (cross-platform lockstep, sleeping entities,
+  cache-friendly data), flow fields for many units sharing destinations.
+
+**Alternatives:**
+
+| Option | Reason Rejected |
+|--------|-----------------|
+| Simplified simulation away from contact | Declined by the user; brittle when a second fight starts elsewhere. |
+| A cap on units on the field | Declined for now; revisit only at a hard ceiling. |
+| Lower tick rate | Changes outcomes. |
+
+**Rules over cases:** a general rule. **Order:** every port must reproduce the
+reference bit for bit (Decision 129's identity gate).
+
+### Decision 132 — The native field owns where units stand, routed in a series of changes
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-09
+
+**Rationale:** Positions live in GDScript and are copied to the Rust field at every native
+pass (about 8 ms a tick at 1,024 a side), and eighteen files write them, more than one
+change may touch (11). The user agreed to a series of changes rather than one broad one.
+Each change routes a few writers through the field; the fingerprints prove each step
+changes nothing. It starts after the linear-time fixes (#181–#184) merge, as they touch
+the same files.
+
+**Rules over cases:** not a rule change. **Order:** unchanged by construction.
+
+### Decision 133 — Units follow their most recent command, from the player or a leader; a selection given orders becomes a command
+
+**Authorised by:** Simeon Sidey
+**Date:** 2026-10-09
+**Amends:** spec 30 round 3's command model (formations are commands)
+
+**Rationale:** Asked whether a stance belongs to a command or to each of its groups, the
+user: "Even split units ought by our ruling return to each other, a player should be able
+to select groups of units (drag an area over) and give orders (of course depending on
+being able to issue the command e.g. at base/flags/messengers/messenger birds/magic etc.)
+They should follow their most recently given commands, whether from player or a leader."
+- The player may select any units and order them; the order becomes a new command for
+  those units, which remember their origin command.
+- A unit follows the most recent command it has received, whoever gave it.
+- A stance belongs to a command; all its groups share it, and split groups of a command
+  still return to each other.
+- How an order reaches units (at base, by flag, messenger, messenger bird or magic) is a
+  future spec; until then orders arrive at once.
+
+**Rules over cases:** a general rule (latest command wins). **Order:** commands given in
+the same tick act together (Decision 97); which is "latest" between a player's and a
+leader's order in one tick is decided by a seeded draw, never by who was processed
+first.
