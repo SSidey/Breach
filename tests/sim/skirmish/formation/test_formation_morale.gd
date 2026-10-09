@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## where a friend covers a side; recovery out of contact; bands, the slower strikes of a
 ## wavering squad, and the shock of a fallen leader.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
@@ -34,7 +35,7 @@ func _squad(squad_id: int, units: Array, faction: String = "player") -> Skirmish
 func _def(hp: int, dmg: int) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = dmg
+	unit_def.items = [WeaponDef.innate_weapon(dmg)]
 	unit_def.speed = 1.0
 	return unit_def
 
@@ -86,7 +87,7 @@ func test_a_side_hit_is_a_shock() -> void:
 
 	_until(setup[0], "flanked")
 
-	assert_int(line.morale).is_equal(60 - FormationMorale.SIDE_IMPACT)
+	assert_int(line.morale).is_equal(60 - BattleTuning.current().morale_side_impact)
 
 
 func test_a_rear_hit_is_a_bigger_shock() -> void:
@@ -95,7 +96,7 @@ func test_a_rear_hit_is_a_bigger_shock() -> void:
 
 	_until(setup[0], "flanked")
 
-	assert_int(line.morale).is_equal(60 - FormationMorale.REAR_IMPACT)
+	assert_int(line.morale).is_equal(60 - BattleTuning.current().morale_rear_impact)
 
 
 func test_pressure_grows_with_the_sides_fought_on() -> void:

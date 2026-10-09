@@ -24,7 +24,7 @@ func before_test() -> void:
 func _def(hp: int, depth: int = 1, width: int = 1) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = 5
+	unit_def.items = [WeaponDef.innate_weapon(5)]
 	unit_def.speed = 1.0
 	unit_def.footprint_depth = depth
 	unit_def.footprint_width = width

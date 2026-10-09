@@ -23,7 +23,8 @@ feel-tested (Decisions 114 to 116), stacked PRs #120 to #127 (below).** The user
 after it: spec 28 (unit levers), spec 32 (impact and attack shapes), spec 31 (posts and
 garrisons), then the structure work still to come (damage and collapse in play, spec 24;
 fighting at structures). A dedicated pass on unit movement is wanted later (see Round 2's
-feel test).
+feel test). **Round 3, the movement pass, follows spec 28 round 1: its agenda is below,
+awaiting the user's answers.**
 
 ## Agreed
 
@@ -317,6 +318,28 @@ mirror trials within noise: head-on 135/119 and 122/127 swapped, flank 300/0 bot
   - **Wheeling and re-forming as units:** each unit finding its own way to its place
     (Decision 116's rejected first approach), which first needs every move of a frame to
     say whether it walks or is set (placing, joining and re-forming set it).
+  - **Units individual within their formation** (spec 28's feel test): "units should
+    still be individual even if attempting to maintain formation" - each walking to keep
+    its place, not set there by the frame; with wheeling and re-forming as units above.
+  - **Looking ahead and finding a way** (spec 28's feel test): units don't path today. A
+    formation measures the passable gap ahead and narrows to it (FormationNarrowing); a
+    withdrawing unit checks the ground where its step lands and, if it can't go there,
+    turns back toward its road (fixed in spec 28: at a run it overshot the ford's edge into
+    the stream); routers follow their route's line. Nothing looks further ahead or plans a
+    way round. Wanted: units and formations that see impassable or costly ground coming
+    and find a way through it - and **swimming**: deep water passable at a unit's swim
+    speed (Decision 117's speeds per movement mode), rather than impassable to all.
+  - **Seeking a visible enemy** (spec 28's feel test, Decision 126): a formation leaving
+    its route for an enemy formation it can see - by a stance the player sets before it
+    leaves, or a leader's trait - preferring its flank or rear, within a leash of its
+    route; and units with an "eager" trait more likely to break ranks for the fray. In the
+    feel test (seed 2656) B, hurried down its route, passed thirteen cells behind the
+    line's rear while the line chased A, and marched on.
+  - **Taking the downed** (spec 28, Decisions 121 and 124): units walking out from their
+    formation after a fight to finish or capture downed foes - "units must either kill or
+    capture" - and bodies on the ground slowing units loose in a fight. Until this pass,
+    only a foe already beside a body takes it, so a wave that marches on leaves its
+    downed foes lying.
 
 ## Round 2: the cost of bodies
 
@@ -335,3 +358,325 @@ Not optimised: it isn't needed at the feel test's scale. Where to start if the g
 more: steering looks at every body (bucket it as `UnitBodies` does), a dense scrum gives
 the bodies' 2-cell buckets many pairs, and the pair search runs three times a tick.
 
+
+## Agenda for round 3: the movement pass
+
+This round gathers the items under "Wanted later" above. Each item gives what happens
+today, a take, and the questions to settle. The suggested build order is 1, 2, 3, 6, 5,
+4, because each item leans on the one before.
+
+1. **Units walk to their places.**
+   - **Today:** every tick, the frame *sets* each unit on its place
+     (`FormationMarch.sync_units`). Only loose units walk: seekers, withdrawers, strays.
+     `FormationWheel` cuts the frame back so no place moves faster than its unit could
+     walk. `FormationShuffle` slides swapping units.
+   - **Take:** the frame becomes a set of goals. Every unit walks to its place at its own
+     pace, turning at its turn rate and steering round bodies (`UnitSteer`), as loose units
+     already do.
+     - The frame only *sets* places when a squad is placed or a unit joins. Everything else
+       is walked.
+     - The frame keeps at most a **slack** ahead of its units: if any unit is more than
+       about 1 cell behind its place, the frame waits.
+     - So a wheel is walked by its outer file (`FormationWheel` retires into the slack),
+       and swaps and re-forms are walked (`FormationShuffle`'s slide retires).
+   - **Question 1a:** should a formation whose units are out of place (its **order**: the
+     share within the slack of their places) fight or hold worse? The take: only measure it
+     now, and leave the effects to spec 28 round 2.
+   - **Question 1b:** is a slack of about 1 cell right? Or should drill traits tighten it
+     and loose troops widen it?
+
+2. **Pouring through a gap.**
+   - **Today:** `FormationNarrowing` files the formation into the gap's width before it
+     enters, and widens it again beyond.
+   - **Take:** retire the filing. A unit whose place lies on ground it can't stand on walks
+     to the nearest way through toward it. The units queue at the gap (bodies part and
+     push, `UnitBodies`), pour through, and walk back to their places beyond. Because of
+     the slack, the frame creeps through as its rearmost units do, then gathers.
+     - A unit too wide for every way through still halts the squad with "blocked", unless
+       item 3 finds it another way.
+   - **Question 2:** should the frame instead stop short of the gap and wait on the far
+     side once its front is through, so it gathers at a known point? The take: the slack
+     already does this without a special case.
+
+3. **Looking ahead and finding a way, and swimming.**
+   - **Today:** nothing looks further ahead than a step.
+     - A withdrawing unit turns back if its step lands on ground it can't cross (spec 28's
+       ford fix).
+     - Routers follow their route's line.
+     - A formation's route is drawn, and the frame halts with "blocked" where its units
+       can't go.
+   - **Take:**
+     - **Units path on the terrain grid.** A* costs each cell by the factors the pace
+       already uses for that unit: ground, slope, liquid bands by height, and cliffs. A unit
+       paths whenever the straight way to its goal crosses impassable or much costlier
+       ground. It paths again when its goal moves more than a cell, or about once a second.
+       The search is bounded by the leash (Decision 75).
+     - **The frame looks ahead** along its route a formation's depth plus a few cells. If no
+       unit of it can pass, it plans a **detour**: a way on the grid that leaves the route
+       and rejoins it within the leash, which the frame follows like a route. If there is no
+       detour, it is "blocked" as now.
+     - **Swimming:** water as deep as a unit is tall becomes passable at a **swim pace**
+       rather than impassable.
+       - The proposed swim pace is a quarter of the unit's speed, costing stamina as running
+         does.
+       - A unit at the "heavy" load stage or worse can't swim.
+       - A `swimmer N` trait raises the pace. Spec 28 round 2's movement modes take it over
+         later.
+     - Pathing then prefers a ford by its cost, without special cases.
+   - **Question 3a:** does everyone swim slowly by default, or only units with the trait?
+   - **Question 3b:** should climbers and burrowers path through cliffs and dig ground by
+     Decision 64's pair rule in this round, or wait?
+
+4. **Seeking a visible enemy.**
+   - **Today:** a formation keeps to its route and seeks contact only with what comes
+     within reach (Decision 88). In the seed 2656 feel test, B marched past thirteen cells
+     behind the line's rear.
+   - **Take:** a **stance** per wave, set before it leaves:
+     - **keep to the route:** as today
+     - **engage in sight:** leave the route for an enemy formation it can see, within a
+       leash of its route, then rejoin the route at the nearest point after the fight
+     - **hunt:** no leash, until the field is clear
+   - Where the player can't send the order, a leader's trait picks the stance.
+   - It approaches the enemy's flank or rear when it can reach one before contact, and
+     otherwise its front.
+   - An `eager N` unit trait gives a seeded chance, by level, to break ranks into a loose
+     seek when a foe is within a few cells, even under keep to the route.
+   - **Question 4a:** are those three stances right? What should the leash be: 20 cells?
+   - **Question 4b:** should a formation already fighting ever be drawn off by another one
+     in sight? The take: no; it only seeks when not in contact.
+
+5. **Taking the downed.**
+   - **Today:** only a foe already beside a body takes it (Decisions 121 and 124), so a
+     wave that marches on leaves downed foes lying.
+   - **Take:** when a formation's fight ends (no foe in contact or in sight), its free units
+     walk out to downed foes it can see, within a few cells of the formation (6?). They
+     finish or capture them by the existing rules (captor, messenger, playing dead), then
+     walk back. The formation holds while they do, up to a time cap.
+   - A wave option, like the wounded one: **take the downed** or **leave them**. Where the
+     player can't send it, the leader decides.
+   - **Question 5:** does the formation hold until done, or march on and let the takers
+     catch up? The take: hold, up to a cap (about 10 s).
+
+6. **Bodies slow everyone who walks.**
+   - **Today:** `GroundBodies` slows a marching formation's front rank only.
+   - **Take:** once every unit walks (item 1), each unit's step over a body is slowed by
+     the same rule, loose or not.
+
+7. **Cost.** Every unit walking and some pathing adds work each tick. Round 2's table is
+   the baseline (the feel test: 2.3 ms a step). The aim is to stay under 5 ms there, and
+   to measure 40, 80 and 160 a side again.
+
+**Not in this round:** crowds merging and splitting through gaps (they wait for spec 28
+round 2's size and crowds); objectives and orders mid-battle.
+
+## Round 3 answers
+
+1. **Units walk to their places.**
+   - **1a. No penalty for being out of place.** "By virtue of the frontline shape they
+     are already at a disadvantage." A formation's order (the share of units within the
+     slack of their places) is measured, but nothing reads it yet.
+   - **1b. Slack by discipline.**
+     - Lower discipline means a wider slack and looser spacing, which leaves gaps foes can
+       get into and separate units through.
+     - **fall behind, left behind:** the formation never waits for stragglers, or for
+       downed foes to be taken.
+     - **no man left behind:** it waits for everyone.
+2. **Pouring through gaps:** to be judged in the feel test.
+3. **Pathing.**
+   - **The leash** bounds how far a search looks for a viable way. Once a way is found,
+     the unit may follow it beyond the leash.
+   - **3a. Everyone swims;** `swimmer N` adds pace.
+     - A unit loaded past a share of its first encumbrance band (tunable, 0.5 to start)
+       sinks and can't swim.
+     - `sinks` forbids swimming at any load: "the opposing trait to the norm, e.g. a cart
+       would sink and couldn't swim".
+   - **3b. Climbing is simulated:** "if we have some elevation to climb, sim it". A
+     `climber N` scales cliffs by Decision 64's pair rule. Burrowing waits for material
+     damage.
+4. **Seeking.**
+   - **The formation stays formed** when it leaves its route for a visible enemy. Only
+     `eager` units break off.
+   - **4a. The leash varies by discipline.**
+   - **4b. Two distances:**
+     - **engage distance:** a new foe within it draws free units (not in contact, not
+       needed at the front) toward it, if it is coming round a flank or the rear, or
+       shooting into the fight.
+     - **seek distance:** how far a formation goes out for a foe it can see.
+5. **Taking the downed:** hold 10 s by default. The 1b traits decide whether a formation
+   presses on regardless or waits until every downed foe is taken.
+6. **Bodies slow everyone who walks:** agreed.
+7. **Cost.** The user's worst case is a 32×32 formation head-on against its mirror:
+   1,024 a side. Measured on the current stack (one core, a 100 ms tick budget):
+
+   | Field | Marching | Mid-fight |
+   |---|---|---|
+   | 40 a side | about 9 ms | 118 ms |
+   | 160 a side | 100 ms | 3,840 ms |
+
+   Nearly all of the fight's cost is in finding a slot beside a foe (`ScrumSeek`): every
+   seeker ranks every slot round every foe and checks each against every body. Starting
+   fights, touches, blows, steering and parting bodies have the same all-pairs shape. So
+   **part 0 is performance:**
+   - a shared spatial index for the scrum, with outcomes unchanged
+   - a standing benchmark up to the 32×32 mirror
+
+   Spec 28 round 2's crowds keep the number of bodies down. A planner cell is a stand of
+   four grems, so the planner counted in stands could field 4,096 a side.
+
+### Formations as commands (the user's model, confirmed)
+
+The user: "free units on their own would essentially be a formation without that command
+... Formation could be more like just a flag set on a unit instead of putting them into
+a formation entity?"
+
+- **A command** is the orders the player set up:
+  - the destination node, and the route as a guide (not a rail)
+  - the shape (the planner's layout)
+  - the stance, the merge setting, and the wave options (wounded, downed)
+  - its leader, if any
+- **A unit** carries its command, the command it started under, and its place in that
+  command's shape. Membership is that flag on the unit.
+- **A group** is what draws and moves as a formation: the units of one command that are
+  together, worked out from where they stand, within a join distance. It is not stored.
+  - Every group acts on its command's orders, with the shape laid out at its own frame.
+  - A command split by a fight is two groups with the same orders.
+  - Free units sent at a flanking foe are a group of the same command.
+- **Groups of different commands meeting** (out of a fight) form up by one rule:
+  - **A leader takes in leaderless groups,** merge on or off. "Commanders beat this
+    check automatically." The units stay in the leader's command from then on.
+  - **Two leaderless groups** stay separate and resume their own orders, unless merge is
+    on. With merge on, the one with more cells' worth of units takes the other's units,
+    and they stay in it; a tie goes to a seeded draw.
+  - **Two leaders** each keep their own command. Units go back to the command they
+    started under, along with any lesser leaders it started with.
+- **The user's cases:**
+  - A splits to fight two enemy forces, then re-forms under its old orders.
+  - A and B split, then form back and path to their own orders. With merge on, the
+    larger takes the other's units and resumes its own orders.
+  - A has a leader and B helps. B is larger, but A's leader takes B in.
+  - A and B both have leaders, and B has a lesser leader too: each returns to its own
+    orders.
+
+**Rules over cases:** general. One forming-up rule covers every meeting.
+**Order:** groups are worked out from one snapshot. Ties in size or leadership go to a
+seeded draw, never to ids or list order (Decision 97).
+
+## Round 3 plan
+
+The work goes in stacked parts, built in parallel where they don't touch the same code:
+
+| Part | What | Who |
+|---|---|---|
+| 0 | **Performance.** A shared spatial index for the scrum (slots, touches, gaps, engagement, blows, steering, parting bodies), with outcomes unchanged; event logs are compared before and after over many seeds. A standing benchmark up to the 32×32 mirror. | subagent, `feature/movement-perf` |
+| 3a | **Paths.** A* over the terrain grid by the pace's own costs, bounded by the leash; swimming (`swimmer N`; sinking by load or `sinks`); climbing (`climber N` by Decision 64's pair rule). A standalone module with trials, not yet wired in. | subagent, `feature/movement-paths` |
+| 1 | **Commands.** The orders (route as a guide, destination, stance, merge, wave options, leader) move to a `FormationCommand`. A squad is now a group of one command's units, and a unit carries its command and the one it started under. | parent, after part 0 |
+| 2 | **Units walk to their places.** Every unit walks to its place: the frame only sets places when a unit is placed or joins. The frame keeps within a slack of its units, set by discipline, `fall behind, left behind` and `no man left behind`. `FormationWheel`'s cut and `FormationShuffle`'s slide retire into walking. Order is measured. | parent |
+| 4 | **Groups split and form up.** A command's units are regrouped from where they stand (within a join distance). Groups of different commands meeting follow the one rule: a leader takes in the leaderless; merge decides between leaderless groups by cells' worth; leaders keep their own. This supersedes `FormationStrays.adopt` and folds Decision 51's merging into the rule; reinforcing a fight stays. | parent |
+| 5 | **Pouring through gaps.** `FormationNarrowing`'s filing retires: units whose places are blocked walk to the nearest way through, and the frame follows within its slack. | parent or subagent |
+| 6 | **Paths wired in.** Walking units path when the straight way is blocked or costly; the frame looks ahead and detours within the leash; deep water is swum and cliffs are climbed by the pace. | subagent, on parts 2 and 3a |
+| 7 | **Bodies slow every walker,** loose or in place. | with part 2 |
+| 8 | **Taking the downed.** Free units walk out to visible downed foes within reach and finish or capture them; the group holds up to 10 s, or as its traits say. | subagent, on part 2 |
+| 9 | **Seeking.** Stances (keep to the route, engage in sight, hunt) with a leash by discipline; a leader's trait sets the stance where the player can't; flank or rear first; `eager N`; engage distance for free units against flankers and shooters. | on parts 4 and 6 |
+
+Each part is a stacked draft PR. Every part that can move outcomes reports the mirror
+trials both ways round (Decision 97), and the benchmark from part 0.
+
+### Paths, after part 3a (#166)
+
+- **Movement modes: one rule for climbing and swimming.**
+  - Each mode has a demand from the ground (a cliff's climb difficulty; water's
+    `flows N`) and a matching ability (`climber N`, `swimmer N`).
+  - The pace is the mode's base pace times Decision 64's pair rule: full speed at or
+    above the demand, half one short, blocked beyond.
+  - **Stamina** is spent per second in the mode, not per cell. A unit at half pace takes
+    twice the moves and pays twice: "climb 1 speed 2 could move 2 up a difficulty 1
+    surface in 1 movement so 1×stam-cost, climb 0 speed 2 would take 2 movements so
+    2 stam-cost". An exhausted unit can't start.
+  - **Load:** a unit loaded past the threshold can neither swim nor climb.
+  - **Can never:** `sinks` (never swims) and `cant_climb` (never climbs), e.g. a cart.
+  - Burrowing joins the table once material damage exists.
+- **Implicit traits.** A registered trait may have a default level every unit has
+  without listing it: `climber 0` and `swimmer 0`. The Library shows them as implicit,
+  and the designer hides them unless raised.
+- **No leash; planning on what is seen.** "Detection range finds an available path if
+  otherwise blocked, do we really need a leash?"
+  - **One pathfinder per group:** the unit with the best wits, regardless of any leader;
+    ties go to a seeded draw. What the path is for still follows the leader's and units'
+    behavioural traits.
+  - **On the route,** the group follows it, searching only when the stretch it can see
+    ahead is blocked or much costlier.
+  - **Off the route or blocked,** the pathfinder searches what it can see for the nearest
+    place to rejoin the route. Cells within its detection are planned at their real cost;
+    unseen cells count as open. With no way back in sight, it heads for the visible edge
+    nearest the route or goal and plans again as more comes into view: a wall is felt
+    along. A U-shaped obstacle may be walked into and out of again, which is fair for
+    troops who can't see over it. That is for the feel test.
+  - **Sight has a shape** per unit type (for example long ahead, shorter to the sides,
+    short behind) rather than a circle: "I don't see why if a unit's vision is
+    constrained that it needs to scan the full map".
+  - **Searches are rare:** when the view ahead changes, or every second or so off the
+    route. They run within a pathing budget per tick, spread over ticks. Each cell's speed
+    share is cached per kind of walker.
+
+### Paths, after the second paths round
+
+- **Memory and learned detours.** A pathfinder's memory of what it has seen is cleared
+  once its group is back on its route. A detour that worked is kept on the command as a
+  patch to its route ("between here and here, go this way"), and every group of the
+  command follows the patched route from then on. Sharing patches across a faction
+  (scouts, maps) comes later.
+- **Climbing on stamina.**
+  - There is no breather on a climb face: stamina recovers only where the unit can
+    stand, on a passable, flat-enough cell.
+  - Units plan only climbs whose stretches between ledges fit their stamina: "they should
+    only make it so far".
+  - Running out mid-climb: open question for the user (fall or cling).
+- **Sight by obscurance.**
+  - Each cell has an obscurance. A sight line sums it cell by cell, and sight ends where
+    the sum passes the unit's sight budget.
+  - Woods obscure heavily: a few cells in, then nothing.
+  - Fog obscures lightly everywhere, shortening sight rather than blocking it.
+  - What has been seen is remembered: "remembered after traversed".
+  - This replaces the "more than two wood cells" rule in FormationSight, so detection and
+    planning see alike.
+- **Rejoining the route** where the walk to the route plus the march along it to the goal
+  is quickest overall. It never doubles back when a point ahead is quicker, and doubles
+  back only when that is the only way.
+- **Implicit traits** show in the designer, labelled implicit ("useful to know what is
+  present on a unit"); any in-game view of a unit hides them.
+- **Stamina rates:** climbing 4 a second, swimming 3 and running 2. "Reasonable for now".
+- **Rejoining, chosen.** The user, after the simulation: "quickest to the goal seems more
+  appropriate". Among ways within 3% of the quickest, the group takes the one back on
+  the route soonest.
+- **Climbing falls.** A unit that runs out of stamina on a climb face falls to the foot,
+  hurt by the drop.
+
+### Forming up, revised (part 4)
+
+The user, on the chieftain's wave taking in wave A after the flank fight: "Revert that and
+have them retain their original path, we could assign traits to leaders that either
+prefer to take units with them or join other units with their own".
+- **By default,** groups of different commands keep their own orders when they meet.
+- A leader that **gathers** takes a leaderless group it meets into its own command.
+- A leader that **joins** brings its group into the other's command.
+- The rest of the rule is unchanged: one command's groups become one; leaderless groups
+  merge only if set to; led groups send home units that started under the other's
+  command.
+
+### Rejoin, simplified
+
+The user: "Rejoin should certainly be limited towards attempting to get back to the route
+as soon as possible". The route is a guide and no faster than open ground, so the
+quickest way to the goal is, within a few percent, the nearest point on the route ahead
+of where the group left it.
+- One outward search by walking time over the ground the group knows (unseen ground
+  counts as open). It stops at the first route point it reaches ahead of the group's
+  furthest progress along the route.
+- If no point ahead can be reached, the group takes the first point behind: doubling back
+  only when it is the only way.
+- This replaces timing the march to the goal and scanning near-ties (about 54 ms a
+  search), and gives the same answers on the user's simulation (the wall, open ground and
+  the river).
+- **Falls** stay as built, to tune later. Future: a `cat_fall` trait that lessens fall
+  damage, and a feather-fall ability that removes it.
+- **Implicit traits** show on the Library's Units view until a unit designer exists.

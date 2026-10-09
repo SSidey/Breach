@@ -17,7 +17,7 @@ const TICK := 0.1
 func _def(hp: int = 400) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = 1
+	unit_def.items = [WeaponDef.innate_weapon(1)]
 	unit_def.speed = 1.0
 	return unit_def
 
@@ -72,7 +72,7 @@ func _mirror(scenario: String, battle_seed: int) -> Callable:
 	return func():
 		var sim := FormationSimulation.new(2.0, TICK)
 		sim.fight_seed = battle_seed
-		sim.damage_band = FormationField.DAMAGE_BAND
+		sim.blow_rolls = true
 		for spawn in BattleTrials._mirror_spawns(scenario, sim):
 			spawn.call()
 		return sim

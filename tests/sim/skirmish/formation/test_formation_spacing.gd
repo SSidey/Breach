@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## other; units resting on one spot in the scrum part; and a line that has turned to meet
 ## one wave holds that call while it presses, rather than swinging between two.
 
+const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
@@ -18,7 +19,7 @@ const UnitDef = preload("res://content/definitions/unit_def.gd")
 func _def(hp: int = 100) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = 2
+	unit_def.items = [WeaponDef.innate_weapon(2)]
 	unit_def.speed = 1.0
 	return unit_def
 
@@ -55,6 +56,7 @@ func test_routers_caught_by_a_friend_rest_behind_it_bodies_apart() -> void:
 	theirs.front_distance = 32.0 / 64.0
 	var friend := sim.spawn_squad(4, _line(4), "player", true)
 	friend.front_distance = 15.0 / 64.0
+	FormationMarch.sync_units(sim.squads())  # placed there
 	sim.order(friend.id, SkirmishUnit.Order.HOLD)
 	for _i in range(5):
 		sim.step()

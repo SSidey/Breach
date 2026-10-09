@@ -12,7 +12,7 @@ func _grem(cost_food: int = 8) -> UnitDef:
 	var unit := UnitDef.new()
 	unit.cost_food = cost_food
 	unit.hp = 20
-	unit.dmg = 6
+	unit.items = [WeaponDef.innate_weapon(6)]
 	return unit
 
 

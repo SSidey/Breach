@@ -6,11 +6,13 @@ extends RefCounted
 ## faster than its rearmost unit keeps up (Decision 103) - its units seeking contact as
 ## they go at the march pace. When the enemy is out of its sight, gone, or no longer
 ## retreating, or it has gone as far from its post as its discipline leashes it
-## (FormationDiscipline.pursuit_leash, Decision 107), it gives up: it marches back along the
+## (FormationDiscipline.pursuit_leash, Decision 107), or most of it has tired
+## (FormationStamina), it gives up: it marches back along the
 ## route it is on to the post it held, takes up its own route there and turns to face the
 ## way it held it, taking up its order again. Squads keep `pursuit` ({"foe", "route",
 ## "post", "post_at", "home", "direction", "order", "returning"}). Pure over the squads.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
@@ -23,14 +25,14 @@ const FormationEvents = preload("res://sim/skirmish/formation/formation_events.g
 const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd")
 const FormationSweep = preload("res://sim/skirmish/formation/formation_sweep.gd")
 const FormationDiscipline = preload("res://sim/skirmish/formation/formation_discipline.gd")
+const FormationStamina = preload("res://sim/skirmish/formation/formation_stamina.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 ## It advances while its enemy is more than this many cells ahead of its front, and its
-## foremost unit no more than LAG_CELLS behind it.
+## foremost unit no more than reach_pursuit_lag (BattleTuning) behind it.
 const CLOSE_ENOUGH := 1.0
 ## How near (cells) a route must pass a pursuer for it to join it.
 const JOIN_CELLS := 2.0
-const LAG_CELLS := 2.0
 
 
 ## Sets `squad` pursuing the retreating `foe`, along the route its quarry flees by (Decision
@@ -95,8 +97,8 @@ static func reach(squad: SkirmishSquad) -> Array:
 static func _given_up(squad: SkirmishSquad, foe: SkirmishSquad) -> bool:
 	if foe == null or foe.is_destroyed() or foe.order != SkirmishUnit.Order.RETREAT:
 		return true
-	if not FormationSight.detects(squad, foe):
-		return true
+	if not FormationSight.detects(squad, foe) or FormationStamina.squad_gives_up(squad):
+		return true  # out of sight, or too tired to go on (spec 28 part 7)
 	var reached := reach(squad)
 	return reached[0] >= reached[1]
 
@@ -126,7 +128,7 @@ static func _ahead(squad: SkirmishSquad, at: Vector2) -> float:
 	return (squad.route.distance_of(at) - own) * squad.direction
 
 
-## True if any of its units lags more than LAG_CELLS behind its place: a formation
+## True if any of its units lags more than reach_pursuit_lag behind its place: a formation
 ## pursues as a body, its frame waiting for its rearmost (Decision 103).
 static func _lagging(squad: SkirmishSquad) -> bool:
 	var forward := UnitMotion.vector(squad.heading)
@@ -134,7 +136,7 @@ static func _lagging(squad: SkirmishSquad) -> bool:
 		if squad.chasers.has(unit.id):
 			continue  # one out on its own makes its own way (Decision 112)
 		var behind := (ScrumStance.anchor(squad, unit) - ScrumReach.at(squad, unit)).dot(forward)
-		if behind > LAG_CELLS:
+		if behind > BattleTuning.current().reach_pursuit_lag:
 			return true
 	return false
 

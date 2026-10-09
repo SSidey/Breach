@@ -18,11 +18,11 @@ const TICK := 0.1
 func _def(hp: int, dmg: int, speed: float, attack_range: int = 0) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = dmg
+	unit_def.items = [WeaponDef.innate_weapon(dmg)]
 	unit_def.speed = speed
 	if attack_range > 0:
 		unit_def.preferred_position = UnitDef.Position.BACK
-		unit_def.weapons = [
+		unit_def.items = [
 			_weapon("spit", dmg, "acid", attack_range),
 			_weapon("claw", 1, "slashing", 0),
 			_weapon("bite", 1, "piercing", 0)
@@ -32,7 +32,7 @@ func _def(hp: int, dmg: int, speed: float, attack_range: int = 0) -> UnitDef:
 
 func _weapon(weapon_name: String, damage: int, damage_type: String, attack_range: int) -> WeaponDef:
 	var weapon := WeaponDef.new()
-	weapon.weapon_name = weapon_name
+	weapon.item_name = weapon_name
 	weapon.damage = damage
 	weapon.damage_type = damage_type
 	weapon.attack_range = attack_range

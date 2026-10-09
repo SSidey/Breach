@@ -23,6 +23,7 @@ const FormationSight = preload("res://sim/skirmish/formation/formation_sight.gd"
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationRendezvous = preload("res://sim/skirmish/formation/formation_rendezvous.gd")
+const FormationWalk = preload("res://sim/skirmish/formation/formation_walk.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 const SEES_PARTNER := "sees_partner"
@@ -86,7 +87,8 @@ static func _time_to_go(
 		squad.speed() * pace[0],
 		tick_seconds,
 		squad.front_distance * MapLayoutDef.CELLS_PER_TILE,
-		terrain
+		terrain,
+		FormationWalk.slack_of(squad)
 	)
 	return own_ticks >= partner_ticks - SLACK_TICKS
 

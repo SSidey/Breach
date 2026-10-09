@@ -40,7 +40,7 @@ REPO_ROOT = Path(
     subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
 )
 THRESHOLDS_FILE = REPO_ROOT / "AI_First_Development_Kit" / "config" / "thresholds.yaml"
-EXCLUDED_DIRS = {"addons", "AI_First_Development_Kit", "tests"}
+EXCLUDED_DIRS = {".claude", "addons", "AI_First_Development_Kit", "tests"}
 
 FUNC_RE = re.compile(r"^(\s*)(?:static\s+)?func\s+(\w+)\s*\([^)]*\)\s*(?:->\s*\S+)?\s*:\s*(.*)$")
 STUB_BODY_RE = re.compile(r"^\s*(pass|push_error\(.*\)|assert\(\s*false\b.*\))\s*$")

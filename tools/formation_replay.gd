@@ -27,6 +27,15 @@ const NOTABLE := [
 	"narrowed",
 	"widened",
 	"blocked",
+	"downed",
+	"finished",
+	"captured",
+	"surrendered",
+	"sent_home",
+	"came_to",
+	"borne",
+	"playing_dead",
+	"died_of_wounds",
 	"flanked",
 	"faced",
 	"fled_home",
@@ -40,6 +49,9 @@ func _init() -> void:
 		var parts: PackedStringArray = arg.split("=", true, 1)
 		args[parts[0]] = parts[1] if parts.size() > 1 else "true"
 	var log := FileAccess.get_file_as_string(args.get("log", ""))
+	var read := FormationFieldActions.parse(log)
+	var note := SimBuild.compare(read.get("build", ""))
+	print("build %s%s" % [SimBuild.id(), "" if note == "" else "  WARNING: " + note])
 	var every := int(args.get("every", 100))
 	var report := func(field, events: Array) -> void:
 		for event in events:

@@ -16,14 +16,15 @@ extends RefCounted
 ##   keeps fighting. A death of anyone involved cancels it.
 ## A squad re-forms until no further move can start. Pure over the squad it is given.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
+const SquadPlaces = preload("res://sim/skirmish/formation/squad_places.gd")
+const PlaceOrder = preload("res://sim/skirmish/formation/place_order.gd")
 
 ## How terrain changes the speed units pass one another at; 1 until lanes carry terrain.
 const TERRAIN_FACTOR := 1.0
-## Moving within a fighting squad is slowed by the crush (Decision 48).
-const CROWDING := 0.2
 ## How far behind its place a passed unit may look for free space.
 const SEARCH_RANKS := 64
 const EPSILON := 0.000001
@@ -42,6 +43,7 @@ static func step(
 	squad: SkirmishSquad, tick_seconds: float, travel_scale: float, tick: int
 ) -> Array:
 	var events := []
+	var within := false  # every living unit known to stand in the squad's columns
 	for index in range(squad.swaps.size() - 1, -1, -1):
 		var swap: Dictionary = squad.swaps[index]
 		if swap["to"].keys().any(func(u): return not u.is_alive()):
@@ -54,7 +56,9 @@ static func step(
 			unit.rank = swap["to"][unit].x
 			unit.column = swap["to"][unit].y
 		squad.swaps.remove_at(index)
-		_widen_to_fit(squad)
+		if not within or not swap["to"].keys().all(func(u): return _inside(squad, u)):
+			_widen_to_fit(squad)  # only the movers' columns have changed since it last did
+			within = true
 		var ids: Array = swap["passed"].map(func(u): return u.id)
 		events.append(
 			FormationEvents.unit_event("swapped", tick, squad, swap["mover"], {"passed": ids})
@@ -68,57 +72,95 @@ static func step(
 	return events
 
 
-## How far a unit is through a move: Vector2(ranks forward, columns across).
-static func offset(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
+## True if the unit stands within the squad's columns.
+static func _inside(squad: SkirmishSquad, unit: SkirmishUnit) -> bool:
+	return unit.column >= 0 and unit.column + unit.footprint_width <= squad.width
+
+
+## {unit: the swap under way it moves in} for the squad, as it stands: give it to offset()
+## when asking about many of its units.
+static func movers(squad: SkirmishSquad) -> Dictionary:
+	var out := {}
+	for swap in squad.swaps:
+		for unit in swap["to"]:
+			if not out.has(unit):
+				out[unit] = swap
+	return out
+
+
+## How far a unit is through a move: Vector2(ranks forward, columns across). `moving` is
+## movers() for the squad as it stands, if the caller has it.
+static func offset(squad: SkirmishSquad, unit: SkirmishUnit, moving = null) -> Vector2:
+	if squad.swaps.is_empty():
+		return Vector2.ZERO
+	if moving != null:
+		var swap = moving.get(unit)
+		return Vector2.ZERO if swap == null else _progress(swap, unit)
 	for swap in squad.swaps:
 		if swap["to"].has(unit):
-			var progress := 1.0 - float(swap["ticks"]) / float(swap["total"])
-			var from: Vector2i = swap["from"][unit]
-			var to: Vector2i = swap["to"][unit]
-			return Vector2((from.x - to.x) * progress, (to.y - from.y) * progress)
+			return _progress(swap, unit)
 	return Vector2.ZERO
 
 
+## How far `unit` is through `swap`.
+static func _progress(swap: Dictionary, unit: SkirmishUnit) -> Vector2:
+	var progress := 1.0 - float(swap["ticks"]) / float(swap["total"])
+	var from: Vector2i = swap["from"][unit]
+	var to: Vector2i = swap["to"][unit]
+	return Vector2((from.x - to.x) * progress, (to.y - from.y) * progress)
+
+
 static func _start_moves(squad: SkirmishSquad, tick_seconds: float, travel_scale: float) -> bool:
-	var claimed := {}  # Vector2i cell -> true: cells a planned move will occupy
-	var busy := []
+	var claimed := {"cells": {}, "left": 1 << 30, "right": -(1 << 30)}  # _claim
+	var occupied := SquadPlaces.occupancy(squad)  # no one moves while moves are planned
+	var busy := {}  # unit -> true: those in a move
 	for swap in squad.swaps:
-		busy.append_array(swap["to"].keys())
 		for unit in swap["to"]:
+			busy[unit] = true
 			_claim(claimed, swap["to"][unit], unit)
-	var front_first := squad.living()
-	front_first.sort_custom(
-		func(a, b): return a.rank < b.rank or (a.rank == b.rank and a.column < b.column)
-	)
+	var front_first := PlaceOrder.front_first(squad.living())
 	var started := false
-	for unit in front_first:
+	for unit: SkirmishUnit in front_first:
 		if unit.rank == 0 or busy.has(unit):
 			continue
-		var plan := _into_free_front(squad, unit, claimed)
+		var plan := _into_free_front(squad, unit, claimed, occupied)
 		if plan.is_empty():
-			plan = _through(squad, unit, busy, claimed)
+			plan = _through(squad, unit, busy, claimed, occupied)
 		if plan.is_empty():
 			continue
 		var involved: Array = plan["to"].keys()
 		var slowest: float = involved.reduce(func(least, u): return minf(least, u.speed), INF)
 		if slowest <= 0.0:
 			continue
-		var crowding := CROWDING if squad.state == SkirmishSquad.State.FIGHTING else 1.0
+		var crowding := (
+			BattleTuning.current().scrum_crowding
+			if squad.state == SkirmishSquad.State.FIGHTING
+			else 1.0
+		)
 		var pace := travel_scale * slowest * TERRAIN_FACTOR * crowding
 		var seconds: float = plan["distance"] * SkirmishSquad.RANK_DEPTH / pace
 		var ticks := maxi(1, ceili(seconds / tick_seconds - EPSILON))
-		plan.merge({"ticks": ticks, "total": ticks, "from": _places(involved)})
+		plan.merge({"ticks": ticks, "total": ticks, "from": SquadPlaces.places(involved)})
 		squad.swaps.append(plan)
-		busy.append_array(involved)
 		for moving in plan["to"]:
+			busy[moving] = true
 			_claim(claimed, plan["to"][moving], moving)
 		started = true
 	return started
 
 
+## Claims the cells `unit`'s footprint covers at `place` for a planned move: `claimed` is
+## {"cells": SquadPlaces' claimed cells, "left", "right": the columns they span}.
+static func _claim(claimed: Dictionary, place: Vector2i, unit: SkirmishUnit) -> void:
+	SquadPlaces.claim(claimed["cells"], place, unit)
+	if unit.footprint_depth > 0 and unit.footprint_width > 0:
+		claimed["left"] = mini(claimed["left"], place.y)
+		claimed["right"] = maxi(claimed["right"], place.y + unit.footprint_width)
+
+
 ## A front-preferring unit's move to the nearest free place in the front rank; {} if none.
 static func _into_free_front(
-	squad: SkirmishSquad, unit: SkirmishUnit, claimed: Dictionary
+	squad: SkirmishSquad, unit: SkirmishUnit, claimed: Dictionary, occupied: Dictionary
 ) -> Dictionary:
 	if unit.preferred_position != 0:
 		return {}
@@ -134,7 +176,7 @@ static func _into_free_front(
 		var inside := column >= 0 and column + unit.footprint_width <= squad.width
 		if not inside and not _within_combat_width(squad, column, unit, claimed):
 			continue
-		if not _free(squad, place, unit, [unit], claimed):
+		if not SquadPlaces.vacant(occupied, place, unit, [unit], claimed["cells"]):
 			continue
 		var distance := maxi(unit.rank, absi(column - unit.column))
 		if best.is_empty() or distance < best["distance"]:
@@ -149,11 +191,8 @@ static func _within_combat_width(
 ) -> bool:
 	if squad.combat_width <= 0:
 		return false
-	var left := mini(0, column)
-	var right := maxi(squad.width, column + unit.footprint_width)
-	for cell in claimed:
-		left = mini(left, cell.y)
-		right = maxi(right, cell.y + 1)
+	var left: int = mini(mini(0, column), claimed["left"])  # planned moves' columns too
+	var right: int = maxi(maxi(squad.width, column + unit.footprint_width), claimed["right"])
 	var edge := squad.combat_width / 2.0 + 0.5
 	var lateral := column - squad.width / 2.0 + squad.centre_shift
 	return (
@@ -185,32 +224,37 @@ static func _widen_to_fit(squad: SkirmishSquad) -> void:
 
 ## Moving forward a rank past weaker units ahead; {} if it can't (Decision 49).
 static func _through(
-	squad: SkirmishSquad, unit: SkirmishUnit, busy: Array, claimed: Dictionary
+	squad: SkirmishSquad,
+	unit: SkirmishUnit,
+	busy: Dictionary,
+	claimed: Dictionary,
+	occupied: Dictionary
 ) -> Dictionary:
-	var ahead := _ahead(squad, unit)
+	var ahead := SquadPlaces.ahead(occupied, unit)
 	if ahead.is_empty() or ahead.any(func(a): return busy.has(a) or not stronger(unit, a)):
 		return {}
 	var to := {unit: Vector2i(unit.rank - 1, unit.column)}
 	var back_row := unit.rank + unit.footprint_depth - 1
 	var moving := ahead + [unit]
-	var taken := claimed.duplicate()
-	_claim(taken, to[unit], unit)
+	var taken := {}  # the cells this move claims, over those claimed already
+	SquadPlaces.claim(taken, to[unit], unit)
 	var distance := 1
 	for passed in ahead:
 		var place := Vector2i(back_row, passed.column)
 		if not _fits_back_row(unit, passed):
-			place = _nearest_free_behind(squad, passed, moving, taken)
+			place = _nearest_free_behind(squad, passed, moving, [taken, occupied, claimed["cells"]])
 			if place.x < 0:
 				return {}
 			distance = maxi(distance, maxi(place.x - passed.rank, absi(place.y - passed.column)))
 		to[passed] = place
-		_claim(taken, place, passed)
+		SquadPlaces.claim(taken, place, passed)
 	return {"mover": unit, "passed": ahead, "to": to, "distance": distance}
 
 
 ## The nearest place behind `unit` where its whole footprint is free; (-1, -1) if none.
+## `held`: [the cells this move claims, SquadPlaces.occupancy, the cells claimed before it].
 static func _nearest_free_behind(
-	squad: SkirmishSquad, unit: SkirmishUnit, moving: Array, claimed: Dictionary
+	squad: SkirmishSquad, unit: SkirmishUnit, moving: Array, held: Array
 ) -> Vector2i:
 	var best := Vector2i(-1, -1)
 	var best_key := Vector3i(1 << 30, 0, 0)
@@ -219,25 +263,21 @@ static func _nearest_free_behind(
 			var place := Vector2i(rank, column)
 			var lateral := absi(column - unit.column)
 			var key := Vector3i(maxi(rank - unit.rank, lateral), lateral, rank)
-			if key < best_key and _free(squad, place, unit, moving, claimed):
+			if key < best_key and _vacant(place, unit, moving, held):
 				best = place
 				best_key = key
 	return best
 
 
-## The living units in the row directly ahead of `unit`, across its columns.
-static func _ahead(squad: SkirmishSquad, unit: SkirmishUnit) -> Array:
-	var row := unit.rank - 1
-	return squad.living().filter(
-		func(other):
-			return (
-				other != unit
-				and other.rank <= row
-				and row < other.rank + other.footprint_depth
-				and other.column < unit.column + unit.footprint_width
-				and unit.column < other.column + other.footprint_width
-			)
-	)
+## SquadPlaces.vacant over both layers of claims (`held`: as _nearest_free_behind's).
+static func _vacant(place: Vector2i, unit: SkirmishUnit, moving: Array, held: Array) -> bool:
+	if not SquadPlaces.vacant(held[1], place, unit, moving, held[0]):
+		return false
+	for rank in range(place.x, place.x + unit.footprint_depth):
+		for column in range(place.y, place.y + unit.footprint_width):
+			if held[2].has(Vector2i(rank, column)):
+				return false
+	return true
 
 
 ## A passed unit fits the row the mover leaves: one rank deep, directly ahead, within its
@@ -249,41 +289,3 @@ static func _fits_back_row(unit: SkirmishUnit, passed: SkirmishUnit) -> bool:
 		and passed.column >= unit.column
 		and passed.column + passed.footprint_width <= unit.column + unit.footprint_width
 	)
-
-
-## True if `unit`'s footprint at `place` is free of everyone but the units `moving`, and of
-## every cell a planned move claims.
-static func _free(
-	squad: SkirmishSquad, place: Vector2i, unit: SkirmishUnit, moving: Array, claimed: Dictionary
-) -> bool:
-	for rank in range(place.x, place.x + unit.footprint_depth):
-		for column in range(place.y, place.y + unit.footprint_width):
-			if claimed.has(Vector2i(rank, column)):
-				return false
-	for other in squad.living():
-		if moving.has(other):
-			continue
-		var rows := (
-			other.rank < place.x + unit.footprint_depth
-			and place.x < other.rank + other.footprint_depth
-		)
-		var columns := (
-			other.column < place.y + unit.footprint_width
-			and place.y < other.column + other.footprint_width
-		)
-		if rows and columns:
-			return false
-	return true
-
-
-static func _claim(claimed: Dictionary, place: Vector2i, unit: SkirmishUnit) -> void:
-	for rank in range(place.x, place.x + unit.footprint_depth):
-		for column in range(place.y, place.y + unit.footprint_width):
-			claimed[Vector2i(rank, column)] = true
-
-
-static func _places(units: Array) -> Dictionary:
-	var out := {}
-	for unit in units:
-		out[unit] = Vector2i(unit.rank, unit.column)
-	return out

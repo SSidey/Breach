@@ -16,7 +16,7 @@ const TICK := 0.1
 func _def(hp: int = 100) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = 2
+	unit_def.items = [WeaponDef.innate_weapon(2)]
 	unit_def.speed = 1.0
 	return unit_def
 

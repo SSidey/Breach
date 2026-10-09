@@ -4,7 +4,9 @@
 
 [resource]
 script = ExtResource("1_wbmcu")
-weapon_name = "spit"
+item_name = "spit"
 damage = 4
 damage_type = "acid"
 attack_range = 5
+innate = true
+slots = Array[String](["mouth"])

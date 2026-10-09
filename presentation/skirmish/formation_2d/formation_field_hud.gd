@@ -16,9 +16,12 @@ const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 
 const WAYS := ["north", "east", "south", "west"]
+const TENDING := ["leave", "recover", "carry"]
 
 var _scene: Node
 var _autos := {}  # route key -> CheckBox
+var _hurries := {}  # route key -> CheckBox (Decision 125: its waves run)
+var _tends := {}  # route key -> OptionButton (Decision 126: what its waves do with the downed)
 var _wait: CheckBox
 var _via_c: CheckBox
 var _holds: CheckBox  # the line won't pursue (it does by default, Decision 109)
@@ -28,6 +31,9 @@ var _status: Label
 var _log_view: TextEdit
 var _replay_view: TextEdit
 var _replay_status: Label
+## The replayed record's build against this one (SimBuild.compare) on a line of its own;
+## "" if the same.
+var _build_note := ""
 var _replaying := 0  # how many actions the replay running holds (0: not a replay)
 
 
@@ -40,10 +46,10 @@ func build(scene: Node) -> void:
 	var bar := HBoxContainer.new()
 	rows.add_child(bar)
 	for key in ["A", "B"]:
-		_button(bar, "Send %s" % key, func(): scene.act("send " + key))
-		_autos[key] = _check(bar, "Auto %s" % key, func(on): scene.act(_toggle("auto " + key, on)))
-		_button(bar, "Retreat %s" % key, func(): scene.act("retreat " + key))
+		_wave_controls(bar, scene, key)
 	_button(bar, "Send A+B", func(): scene.act("send A+B"))
+	for key in ["A", "B"]:
+		_tends[key] = _tend_choice(bar, scene, key)
 	var options := HBoxContainer.new()  # a second row, so the controls fit the window
 	rows.add_child(options)
 	_via_c = _check(options, "A goes via C", func(on): scene.act(_toggle("via_c", on)))
@@ -69,19 +75,41 @@ func build(scene: Node) -> void:
 	logs.add_child(_replay_status)
 
 
+## A route's controls: send it, send automatically, order it back, hurry it.
+func _wave_controls(bar: Container, scene: Node, key: String) -> void:
+	_button(bar, "Send %s" % key, func(): scene.act("send " + key))
+	_autos[key] = _check(bar, "Auto %s" % key, func(on): scene.act(_toggle("auto " + key, on)))
+	_button(bar, "Retreat %s" % key, func(): scene.act("retreat " + key))
+	_hurries[key] = _check(bar, "Hurry %s" % key, func(on): scene.act(_toggle("hurry " + key, on)))
+
+
+## A route's choice of what its waves do with their own downed: leave, recover, carry.
+func _tend_choice(bar: Container, scene: Node, key: String) -> OptionButton:
+	var choice := OptionButton.new()
+	for mode in TENDING:
+		choice.add_item("%s wounded: %s" % [key, mode])
+	choice.item_selected.connect(func(index): scene.act("tend %s %s" % [key, TENDING[index]]))
+	bar.add_child(choice)
+	return choice
+
+
 ## Restarts on the pasted log's seed and replays its actions; the options are the log's.
 func replay() -> void:
 	var read := FormationFieldActions.parse(_replay_view.text)
 	if read.is_empty():
-		_replay_status.text = 'Not a record: it starts\n"record 1 seed <n> captain <on|off>"'
+		_replay_status.text = 'Not a record: it starts\n"record <n> seed <n> captain <on|off>"'
 		_replaying = 0
 		return
 	_seed.text = str(read["seed"])
 	_captain.set_pressed_no_signal(read["captained"])
-	for box in [_wait, _via_c, _holds] + _autos.values():
+	for box in [_wait, _via_c, _holds] + _autos.values() + _hurries.values():
 		box.set_pressed_no_signal(false)
+	for choice in _tends.values():
+		choice.select(0)
 	_scene.restart(read["captained"], read["seed"], read["commands"])
 	_replaying = read["commands"].size()
+	var note := SimBuild.compare(read["build"])
+	_build_note = "" if note == "" else "\n" + note
 
 
 ## A fresh field: the seed typed in, or a random one; the ticked options kept (and logged).
@@ -90,10 +118,15 @@ func reset() -> void:
 	var battle_seed := int(text) if text.is_valid_int() else randi() % 1000000
 	_scene.restart(_captain.button_pressed, battle_seed)
 	_replaying = 0
+	_build_note = ""
 	_replay_status.text = ""
 	for key in _autos:
 		if _autos[key].button_pressed:
 			_scene.act(_toggle("auto " + key, true))
+		if _hurries[key].button_pressed:
+			_scene.act(_toggle("hurry " + key, true))
+		if _tends[key].selected > 0:
+			_scene.act("tend %s %s" % [key, TENDING[_tends[key].selected]])
 	for option in [[_wait, "wait"], [_via_c, "via_c"]]:
 		if option[0].button_pressed:
 			_scene.act(_toggle(option[1], true))
@@ -139,9 +172,8 @@ func show_status(field: FormationField, paused: bool, battle_seed: int) -> void:
 		_log_view.scroll_vertical = _log_view.get_line_count()
 	if _replaying > 0:  # the replayed actions are logged again as they're played
 		var played := mini(_log_view.get_line_count() - 1, _replaying)
-		_replay_status.text = (
-			"Replaying seed %d\n%d of %d actions played" % [battle_seed, played, _replaying]
-		)
+		var shown := [battle_seed, played, _replaying, _build_note]
+		_replay_status.text = "Replaying seed %d\n%d of %d actions played%s" % shown
 
 
 ## "B 8/8 + leader 1/1": rank and file and leaders counted apart.

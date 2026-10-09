@@ -1,0 +1,12 @@
+; Loaded at run time by sim/skirmish/formation/native_kernels.gd when BREACH_NATIVE=rust and
+; the library has been built (native/build.sh). native/ holds a .gdignore, so the editor
+; never scans it and a checkout without the binaries runs on GDScript, silently.
+[configuration]
+entry_symbol = "gdext_rust_init"
+compatibility_minimum = "4.7"
+reloadable = false
+
+[libraries]
+linux.x86_64 = "res://native/bin/libbreach_rust.linux.x86_64.so"
+windows.x86_64 = "res://native/bin/breach_rust.windows.x86_64.dll"
+macos = "res://native/bin/libbreach_rust.macos.universal.dylib"

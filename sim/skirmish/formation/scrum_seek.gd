@@ -15,6 +15,13 @@ const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
 const ScrumSlots = preload("res://sim/skirmish/formation/scrum_slots.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
+const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
+const SlotSearch = preload("res://sim/skirmish/formation/slot_search.gd")
+const FoeIndex = preload("res://sim/skirmish/formation/foe_index.gd")
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
+
+## Microseconds spent in plan() since it was last zeroed (the bench reads it; no outcome does).
+static var clock_usec := 0
 
 
 ## [[where, radius, unit], ...]: every body standing, for which slots are open.
@@ -22,9 +29,25 @@ static func bodies(squads: Array) -> Array:
 	return ScrumSlots.bodies(squads)
 
 
-## Plans and walks every fighting squad's units, seekers in contest order: first those
-## keeping slots still open, then the rest picking the nearest open one.
+## Plans every fighting squad's units: in GDScript (the reference), or on the battle's
+## native bodies, ctx["field"] (ScrumSeekField, Decision 129) - the same choices.
 static func plan(ctx: Dictionary) -> void:
+	var began := Time.get_ticks_usec()
+	if ctx.get("field") != null:
+		ScrumSeekField.plan(ctx)
+	else:
+		_plan(ctx)
+	clock_usec += Time.get_ticks_usec() - began
+
+
+## Plans and walks every fighting squad's units, seekers in contest order: first those
+## keeping slots still open, then the rest picking the nearest open one. `ctx["crowd"]` is
+## a BodyGrid over ctx["bodies"]; slots, foes and claims are found through grids too
+## (SlotSearch, ScrumNear), the same choices as looking through every one.
+static func _plan(ctx: Dictionary) -> void:
+	ctx["rings"] = {}  # squad -> {seeker radius -> the slots round its foes (SlotSearch)}
+	ctx["claims"] = {}  # cell -> points claimed (SlotSearch.claim)
+	ctx["foes"] = FoeIndex.of(ctx["squads"])  # where they stand as the seeking begins
 	var seekers := []
 	for squad in ctx["squads"]:
 		if squad.state == SkirmishSquad.State.FIGHTING:
@@ -41,15 +64,28 @@ static func plan(ctx: Dictionary) -> void:
 	for seeker in picking:
 		var squad: SkirmishSquad = seeker[1]
 		var unit: SkirmishUnit = seeker[2]
-		var ground := [
-			ScrumStance.anchor(squad, unit), ctx["bodies"], claimed, ctx["terrain"], ctx["seed"]
-		]
+		var ground := _ground(squad, unit, claimed, ctx, ctx["seed"])
 		var at: Vector2 = squad.loose[unit.id]["at"]
-		var slot := ScrumSlots.pick(unit, at, seeker[3], ground)
+		var slot := SlotSearch.pick(unit, at, seeker[3], ground)
 		if slot.is_empty():  # it waits behind the nearest, a pursuit too (Decision 113)
-			_press(seeker, ScrumSlots.pick(unit, at, seeker[3], ground, true), ctx)
+			_press(seeker, SlotSearch.pick(unit, at, seeker[3], ground, true), ctx)
 		else:
 			_aim(seeker, slot, claimed, ctx)
+
+
+## ScrumSlots' ground for the seeker, with SlotSearch's grids of bodies and claims.
+static func _ground(
+	squad: SkirmishSquad, unit: SkirmishUnit, claimed: Array, ctx: Dictionary, draw_seed: int
+) -> Array:
+	return [
+		ScrumStance.anchor(squad, unit),
+		ctx["bodies"],
+		claimed,
+		ctx["terrain"],
+		draw_seed,
+		ctx["crowd"],
+		ctx["claims"],
+	]
 
 
 ## The seeker's slot this tick if it still holds one that is open, or [].
@@ -59,13 +95,10 @@ static func _kept(seeker: Array, ctx: Dictionary, claimed: Array) -> Array:
 	var goal = squad.loose[unit.id]["goal"]
 	if goal == null:
 		return []
-	for slot in seeker[3]:
-		if slot[1].id == goal[0] and slot[3] == goal[1]:
-			var ground := [
-				ScrumStance.anchor(squad, unit), ctx["bodies"], claimed, ctx["terrain"], 0
-			]
-			return slot if ScrumSlots.open(unit, slot[0], ground) else []
-	return []
+	var slot := SlotSearch.find(seeker[3], goal)
+	if slot.is_empty():
+		return []
+	return slot if SlotSearch.open(unit, slot[0], _ground(squad, unit, claimed, ctx, 0)) else []
 
 
 ## Sets the seeker making for `slot` (none if empty), and claims it.
@@ -80,6 +113,7 @@ static func _aim(seeker: Array, slot: Array, claimed: Array, ctx: Dictionary) ->
 	entry["next"] = slot[0]
 	entry["foe_at"] = ScrumReach.at(slot[2], slot[1])
 	claimed.append(slot[0])
+	SlotSearch.claim(ctx["claims"], slot[0])
 	ctx["active"][squad.id] = true
 
 
@@ -101,34 +135,53 @@ static func _press(seeker: Array, slot: Array, ctx: Dictionary) -> void:
 	ctx["active"][squad.id] = true
 
 
-## [[key, squad, unit, slots], ...] for the squad's units free to seek; the rest stand
-## (touching a foe) or keep to their places.
+## [[key, squad, unit, slots], ...] for the squad's units free to seek, the slots round
+## its foes as SlotSearch.ring gives them; the rest stand (touching a foe) or keep to their
+## places.
 static func _seekers_of(squad: SkirmishSquad, ctx: Dictionary) -> Array:
-	var foes := foe_units(squad, ctx["squads"])
+	var near := FoeIndex.fought(ctx["foes"], squad)
+	var reach := BattleTuning.current().reach_contact
+	var front_left := squad.living().any(func(u): return u.preferred_position == 0)
 	var out := []
 	for unit in squad.living():
 		if squad.chasers.has(unit.id):
 			continue  # out chasing on its own (ScrumPursuit)
 		var entry: Dictionary = squad.loose[unit.id]
-		entry["touch"] = ScrumBlows.touches_any(squad, unit, foes)
+		var radius := ScrumReach.radius(unit)
+		var close := ScrumNear.around(near, entry["at"], radius + reach)
+		entry["touch"] = ScrumBlows.touches_any(squad, unit, close)
 		if entry["touch"]:
 			entry["goal"] = null
 			entry["next"] = entry["at"]
 			ctx["active"][squad.id] = true
 			continue
-		if not _may_seek(squad, unit) or foes.is_empty():
+		if not _may_seek(squad, unit, front_left) or not near["any"]:
 			entry["goal"] = null
 			continue
-		var radius := ScrumReach.radius(unit)
-		var arrival := ScrumSlots.gap_to(entry["at"], radius, foes) / maxf(unit.speed, 0.01)
+		var arrival := ScrumNear.gap_to(near, entry["at"], radius) / maxf(unit.speed, 0.01)
 		var key := ScrumContest.key(unit, arrival, ctx["seed"], ctx["tick"])
-		out.append([key, squad, unit, ScrumSlots.round_foes(foes, radius)])
+		out.append([key, squad, unit, _ring(squad, near, radius, ctx)])
 	return out
 
 
-## Front-band units seek; the rest too once no front-band unit is left.
-static func _may_seek(squad: SkirmishSquad, unit: SkirmishUnit) -> bool:
-	var front_left := squad.living().any(func(u): return u.preferred_position == 0)
+## The slots round the squad's foes (`near`: FoeIndex.fought) for a seeker of `radius`, made
+## once a tick.
+static func _ring(
+	squad: SkirmishSquad, near: Dictionary, radius: float, ctx: Dictionary
+) -> Dictionary:
+	if not ctx["rings"].has(squad):
+		ctx["rings"][squad] = {}
+	var rings: Dictionary = ctx["rings"][squad]
+	if not rings.has(radius):
+		if not rings.has("foes"):
+			rings["foes"] = FoeIndex.listed(near)
+		rings[radius] = SlotSearch.ring(rings["foes"], radius, ctx["bodies"], ctx["crowd"])
+	return rings[radius]
+
+
+## Front-band units seek; the rest too once no front-band unit is left (`front_left`: one
+## is).
+static func _may_seek(squad: SkirmishSquad, unit: SkirmishUnit, front_left: bool) -> bool:
 	return (
 		(unit.preferred_position == 0 or not front_left)
 		and unit.footprint_width == 1

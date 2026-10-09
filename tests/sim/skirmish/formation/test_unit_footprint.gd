@@ -1,8 +1,9 @@
 extends GdUnitTestSuite
 ## Footprints, per Decision 102 and spec 30: a unit's rectangle, its width by depth turned
-## to its bearing; the gap between two (so they touch within ScrumReach.CONTACT, on a face
-## or a corner, turned or not); and how deep two overlap and the shortest way out.
+## to its bearing; the gap between two (so they touch within reach_contact, on a face or a
+## corner, turned or not); and how deep two overlap and the shortest way out.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const UnitFootprint = preload("res://sim/skirmish/formation/unit_footprint.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -36,7 +37,9 @@ func test_square_footprints_touch_on_faces_and_corners_but_not_across_a_gap() ->
 
 	assert_float(_gap(here, 90.0, Vector2(1.5, 0.5))).is_equal_approx(0.0, 0.0001)
 	assert_float(_gap(here, 90.0, Vector2(1.5, 1.5))).is_equal_approx(0.0, 0.0001)
-	assert_float(_gap(here, 90.0, Vector2(2.5, 0.5))).is_greater(ScrumReach.CONTACT)
+	assert_float(_gap(here, 90.0, Vector2(2.5, 0.5))).is_greater(
+		BattleTuning.current().reach_contact
+	)
 
 
 func test_a_turned_footprint_reaches_along_its_diagonal() -> void:
@@ -45,7 +48,7 @@ func test_a_turned_footprint_reaches_along_its_diagonal() -> void:
 
 	assert_float(_gap(here, 0.0, there)).is_equal_approx(0.4, 0.0001)
 	assert_float(_gap(here, 45.0, there)).is_equal_approx(1.4 - sqrt(0.5) - 0.5, 0.0001)
-	assert_float(_gap(here, 45.0, there)).is_less_equal(ScrumReach.CONTACT)
+	assert_float(_gap(here, 45.0, there)).is_less_equal(BattleTuning.current().reach_contact)
 
 
 func test_an_overlap_is_pushed_out_the_shortest_way() -> void:

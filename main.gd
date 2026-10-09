@@ -66,9 +66,9 @@ func _ready() -> void:
 	_lane.spawn_wave(
 		"player",
 		[
-			{"hp": GREM.hp, "dmg": GREM.dmg},
-			{"hp": GREM.hp, "dmg": GREM.dmg},
-			{"hp": GREM.hp, "dmg": GREM.dmg}
+			{"hp": GREM.hp, "dmg": GREM.melee_damage()},
+			{"hp": GREM.hp, "dmg": GREM.melee_damage()},
+			{"hp": GREM.hp, "dmg": GREM.melee_damage()}
 		],
 		P,
 		1

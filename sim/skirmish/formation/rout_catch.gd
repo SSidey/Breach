@@ -7,48 +7,49 @@ extends RefCounted
 ## listed, a tie going to the friends' units' seeded draws (Decision 97). Pure.
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
-const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
-const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
+const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
+const RoutFriends = preload("res://sim/skirmish/formation/rout_friends.gd")
 
 
 ## The formation holding a router (its `entry` in the routing squad's `fleeing`): the one
 ## that caught it while it stands, else the nearest friend within `reach` of `at`.
+## `friends` is the tick's RoutFriends.
 static func holder(
 	squad: SkirmishSquad,
 	entry: Dictionary,
 	at: Vector2,
-	squads: Array,
+	friends: Dictionary,
 	reach: float,
 	fight_seed: int = 0
 ) -> SkirmishSquad:
-	for friend in squads:
-		if friend.id == entry.get("held_by") and stands(friend):
+	for friend in RoutFriends.with_id(friends, entry.get("held_by")):
+		if stands(friend):
 			return friend
-	return friend_near(squad, at, squads, reach, false, fight_seed)
+	return friend_near(squad, at, friends, reach, false, fight_seed)
 
 
 ## The nearest standing friendly formation with a unit's body within `reach` of `at`
-## (measured to the body's edge, Decision 106); if `led`, only one with a leader.
+## (measured to the body's edge, Decision 106); if `led`, only one with a leader. Ties go
+## by the units' draws. `friends` is the tick's RoutFriends.
 static func friend_near(
-	squad: SkirmishSquad, at: Vector2, squads: Array, reach: float, led: bool, fight_seed: int = 0
+	squad: SkirmishSquad,
+	at: Vector2,
+	friends: Dictionary,
+	reach: float,
+	led: bool,
+	fight_seed: int = 0
 ) -> SkirmishSquad:
-	var best: SkirmishSquad = null
-	var best_key := []
-	for friend in squads:
-		if friend == squad or friend.faction_id != squad.faction_id or not stands(friend):
+	var best := []  # [snapped gap, draw or null, unit, friend]
+	for near in RoutFriends.around(friends, squad, at, reach, led):
+		var gap: float = near[2].distance_to(at) - ScrumReach.radius(near[0])
+		if gap > reach:
 			continue
-		if led and FormationMorale.leadership(friend) < 1:
-			continue
-		for unit in friend.living():
-			var there := ScrumReach.at(friend, unit)
-			var gap := there.distance_to(at) - ScrumReach.radius(unit)
-			var key := [snappedf(gap, 0.000001), ScrumContest.draw(unit, fight_seed)]
-			if gap <= reach and behind(squad, at, there) and (best == null or key < best_key):
-				best = friend
-				best_key = key
-	return best
+		var snapped := snappedf(gap, 0.000001)
+		if ScrumNear.beats(best, snapped, near[0], fight_seed) and behind(squad, at, near[2]):
+			best = [snapped, null, near[0], near[1]]
+	return null if best.is_empty() else best[3]
 
 
 ## Cells from `at` to the formation's nearest living unit.

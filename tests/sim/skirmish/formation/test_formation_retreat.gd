@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 ## ordered to pursue, or led by a pursuer, follows; one that isn't returns to formation,
 ## though its undisciplined units may break ranks to chase, decided unit by unit.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -17,7 +18,7 @@ const UnitDef = preload("res://content/definitions/unit_def.gd")
 func _def(discipline: int, tactics: Array[String] = []) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 60
-	unit_def.dmg = 3
+	unit_def.items = [WeaponDef.innate_weapon(3)]
 	unit_def.speed = 1.0
 	unit_def.discipline = discipline
 	unit_def.tactics = tactics
@@ -37,7 +38,7 @@ func _row(unit_def: UnitDef) -> Array:
 func _retreat(mine: UnitDef, theirs: UnitDef, battle_seed: int = 1, pursue := true) -> Array:
 	var sim := FormationSimulation.new(2.0, 0.1)
 	sim.fight_seed = battle_seed
-	sim.damage_band = 0.25
+	sim.blow_rolls = true
 	var me := sim.spawn_squad(8, _row(mine), "player", true)
 	var foe := sim.spawn_squad(8, _row(theirs), "the_kingdom", false)
 	foe.pursues = pursue
@@ -83,7 +84,7 @@ func test_a_ragged_retreat_takes_a_scaled_rout() -> void:
 	var ragged := _retreat(_def(20), _def(60))
 	var drilled := _retreat(_def(60), _def(60))
 
-	assert_int(ragged[5]).is_greater_equal(ScrumPursuit.RAGGED_SHOCK * 3 / 5 - 2)
+	assert_int(ragged[5]).is_greater_equal(BattleTuning.current().pursuit_ragged_shock * 3 / 5 - 2)
 	assert_int(drilled[5]).is_less(ragged[5])
 
 
@@ -179,7 +180,8 @@ func _caught_at_home(captain: String) -> Array:
 	var field := FormationFieldActions.replay(
 		log, 480, func(_f, tick_events): events.append_array(tick_events)
 	)
-	return [field, field.sim.squads()[-1], events]
+	var wave: SkirmishSquad = field.sim.squads().filter(func(s): return s.faction_id == "player")[0]
+	return [field, wave, events]
 
 
 func test_a_wave_caught_at_home_by_units_breaking_ranks_fights_back() -> void:
@@ -195,7 +197,10 @@ func test_a_wave_caught_at_home_by_units_breaking_ranks_fights_back() -> void:
 		func(e): return e["type"] == "engaged" and e["squad"] == wave.id and e["tick"] > home
 	)
 	assert_bool(fought_back).is_true()
-	assert_int(setup[0].kingdom_line.living().size()).is_less(12)  # it cut chasers down
+	var struck := events.filter(
+		func(e): return e["type"] == "hit" and e["faction"] == "player" and e["tick"] > home
+	)
+	assert_int(struck.size()).is_greater(0)  # it strikes the chasers back
 
 
 func test_a_captain_holds_its_units_from_breaking_ranks() -> void:

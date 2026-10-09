@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## join its rear after it has been steady a while; a shaken formation holds them until it
 ## steadies.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -16,7 +17,7 @@ const TICK := 0.1
 func _def(hp: int, dmg: int) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = dmg
+	unit_def.items = [WeaponDef.innate_weapon(dmg)]
 	unit_def.speed = 1.0
 	return unit_def
 
@@ -65,7 +66,9 @@ func test_routers_are_caught_by_a_steady_friend_and_join_it() -> void:
 	var caught := _run(setup[0], 25)
 	assert_bool(_of(caught, "crushed").is_empty()).is_false()
 	assert_int(_of(caught, "rallied").size()).is_equal(0)  # not yet: it takes a while
-	var log := _run(setup[0], roundi((FormationRout.STEADY_RALLY_SECONDS + 3.0) / TICK))
+	var log := _run(
+		setup[0], roundi((BattleTuning.current().rout_steady_rally_seconds + 3.0) / TICK)
+	)
 
 	var rallied := _of(log, "rallied")
 	assert_bool(rallied.is_empty()).is_false()
@@ -82,7 +85,9 @@ func test_a_shaken_friend_holds_them_until_it_steadies() -> void:
 	assert_int(_of(held, "fled_home").size()).is_equal(0)
 	assert_int(_of(held, "rallied").size()).is_equal(0)  # not while it is shaken
 	friend.morale = 60  # it steadies
-	var log := _run(setup[0], roundi((FormationRout.STEADY_RALLY_SECONDS + 3.0) / TICK))
+	var log := _run(
+		setup[0], roundi((BattleTuning.current().rout_steady_rally_seconds + 3.0) / TICK)
+	)
 
 	assert_int(_of(log, "fled_home").size()).is_equal(0)
 	var rallied := _of(log, "rallied")

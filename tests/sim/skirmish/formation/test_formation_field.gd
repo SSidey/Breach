@@ -18,7 +18,7 @@ const TICK := 0.1
 func _def(hp: int, dmg: int) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = dmg
+	unit_def.items = [WeaponDef.innate_weapon(dmg)]
 	unit_def.speed = 1.0
 	unit_def.build_seconds = 0.1
 	return unit_def
@@ -194,17 +194,23 @@ func test_a_flank_timed_by_the_chieftain_breaks_the_line_into_its_reserve() -> v
 	assert_bool(log.any(func(e): return e["type"] == "engaged" and e["squad"] == reserve)).is_true()
 
 
-func test_route_bs_wave_narrows_through_the_ford_and_widens_after() -> void:
+func test_route_bs_wave_crosses_the_stream_at_its_full_width() -> void:
+	# Spec 30 round 3: no filing into the ford's width (part 5). Its units cross where their
+	# places lie - wading the ford, or swimming the stream either side of it (everyone
+	# swims, part 6) - and walk back to their places beyond.
 	var field := _field(400, 200)
 	_run(field, func(log): return field.waves["B"].built() == 8)
+	var wave := field.send("B")
+	var past := func(_log):
+		return wave.living().all(func(u): return u.position.x > FormationField.STREAM.end.x + 4.0)
 
-	field.send("B")
-	var log := _run(field, _has("widened"), 600)
+	_run(field, past, 900)
 
-	var narrowed: Array = log.filter(func(e): return e["type"] == "narrowed")
-	assert_int(narrowed.size()).is_equal(1)
-	assert_int(narrowed[0]["width"]).is_equal(4)
-	assert_bool(log.any(func(e): return e["type"] == "widened")).is_true()
+	(
+		assert_bool(wave.living().all(func(u): return u.position.x > FormationField.STREAM.end.x))
+		. is_true()
+	)
+	assert_int(wave.width).is_equal(8)  # it kept its shape: no narrowing
 
 
 func test_the_wood_slows_route_bs_wave() -> void:

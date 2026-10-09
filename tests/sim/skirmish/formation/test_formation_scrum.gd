@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 ## flank blows; a led line turns to meet a threat before contact; a fight that can't go on
 ## is released rather than frozen; and when it ends units regroup and march on.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
@@ -22,7 +23,7 @@ const TICK := 0.1
 func _def(hp: int, dmg: int, leadership: int = 0) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = dmg
+	unit_def.items = [WeaponDef.innate_weapon(dmg)]
 	unit_def.speed = 1.0
 	unit_def.leadership = leadership
 	return unit_def
@@ -85,8 +86,8 @@ func test_units_touch_face_to_face_and_at_a_slant_but_not_across_a_gap() -> void
 	var here := Vector2(0.5, 0.5)
 
 	assert_float(_gap(here, Vector2(1.5, 0.5))).is_equal_approx(0.0, 0.0001)
-	assert_float(_gap(here, Vector2(1.2, 1.2))).is_less_equal(ScrumReach.CONTACT)
-	assert_float(_gap(here, Vector2(2.0, 0.5))).is_greater(ScrumReach.CONTACT)
+	assert_float(_gap(here, Vector2(1.2, 1.2))).is_less_equal(BattleTuning.current().reach_contact)
+	assert_float(_gap(here, Vector2(2.0, 0.5))).is_greater(BattleTuning.current().reach_contact)
 
 
 func test_a_units_front_is_the_three_cells_ahead() -> void:
@@ -102,7 +103,8 @@ func test_a_units_front_is_the_three_cells_ahead() -> void:
 func test_contests_go_to_the_earliest_then_the_readiest() -> void:
 	var quick := SkirmishUnit.new()
 	quick.id = 1
-	quick.initiative = 10 + ScrumContest.DIE + 1  # out-rolls any roll of the other
+	var die := BattleTuning.current().combat_contest_die
+	quick.initiative = 10 + die + 1  # out-rolls any roll of the other
 	var slow := SkirmishUnit.new()
 	slow.id = 2
 	slow.initiative = 10
@@ -209,7 +211,7 @@ func test_the_scrum_replays_the_same() -> void:
 	assert_array(logs[1]).is_equal(logs[0])
 
 
-func test_a_wavering_line_still_meets_its_enemy_but_strikes_softer() -> void:
+func test_a_wavering_line_still_meets_its_enemy() -> void:
 	var sim := _sim()
 	var line := _line(sim, 8, 400)
 	_from_north(sim, 2, 400, 1)
@@ -223,6 +225,4 @@ func test_a_wavering_line_still_meets_its_enemy_but_strikes_softer() -> void:
 
 	assert_float(far.position.y).is_less(start.y - 2.0)
 	var blows: Array = _of(log, "hit").filter(func(e): return e["faction"] == "the_kingdom")
-	assert_bool(blows.is_empty()).is_false()
-	for blow in blows:  # 60% while wavering: 2 a blow (3 on a flank) at full heart
-		assert_int(blow["dmg"]).is_equal(2 if blow["flank"] else 1)
+	assert_bool(blows.is_empty()).is_false()  # it lands worse: BlowLanding's morale shift

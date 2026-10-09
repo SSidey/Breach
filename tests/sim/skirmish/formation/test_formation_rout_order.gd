@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## and where they stand, then by the seeded draw. The feel test's field with both waves
 ## sent - a line that routs into its reserve - comes out the same with every list reversed.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
@@ -86,7 +87,7 @@ func test_both_waves_sent_together_are_the_same_with_their_lists_reversed() -> v
 func _def() -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 40
-	unit_def.dmg = 1
+	unit_def.items = [WeaponDef.innate_weapon(1)]
 	unit_def.speed = 1.0
 	return unit_def
 
@@ -107,7 +108,7 @@ func _after_a_break(breaking_first: bool) -> Array:
 	var friend := sim.spawn_squad(4, _row(4), "player", true, 50)
 	breaking.order = SkirmishUnit.Order.HOLD
 	breaking.morale = 0
-	friend.morale = FormationRout.SEEN_ROUT
+	friend.morale = BattleTuning.current().rout_seen
 	if not breaking_first:
 		sim.squads().reverse()
 	sim.step()

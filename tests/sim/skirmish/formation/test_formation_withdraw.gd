@@ -5,6 +5,7 @@ extends GdUnitTestSuite
 ## go re-forms at home; the less ordered it is the wider it fans out, and a rout fans out
 ## wholly unless a friend stands between it and home.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
@@ -21,7 +22,7 @@ const UnitDef = preload("res://content/definitions/unit_def.gd")
 func _def(discipline: int) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 60
-	unit_def.dmg = 3
+	unit_def.items = [WeaponDef.innate_weapon(3)]
 	unit_def.speed = 1.0
 	unit_def.discipline = discipline
 	return unit_def
@@ -85,7 +86,7 @@ func test_it_re_forms_only_once_safe_then_marches_home() -> void:
 	var regrouped: Array = log.filter(func(e): return e["type"] == "regrouping")
 	var withdrew: Array = log.filter(func(e): return e["type"] == "withdrawing")
 	assert_bool(regrouped.is_empty()).is_false()
-	var safe_ticks := roundi(FormationRout.RALLY_SECONDS / 0.1)
+	var safe_ticks := roundi(BattleTuning.current().rout_rally_seconds / 0.1)
 	assert_int(regrouped[0]["tick"] - withdrew[0]["tick"]).is_greater_equal(safe_ticks)
 	assert_bool(me.withdraw.is_empty()).is_true()
 	assert_bool(log.any(func(e): return e["type"] == "returned" and e["squad"] == me.id)).is_true()
@@ -105,7 +106,7 @@ func test_a_rout_with_no_friend_in_its_way_fans_out_from_its_route() -> void:
 	var sim := FormationSimulation.new(2.0, 0.1)
 	sim.fight_seed = 5
 	var mine := sim.spawn_squad(4, _row(_def(30), 4), "player", true)
-	mine.front_distance = 30.0 / 64.0
+	mine.front_distance = 60.0 / 64.0  # far enough from home that its run doesn't end
 	sim.step()
 	var start := _spread_y(mine)
 	mine.morale = 0
@@ -241,4 +242,5 @@ func test_a_withdrawal_home_holds_there_facing_out() -> void:
 	var turns: Array = mine.filter(func(e): return e["type"] == "turning" and e["tick"] > home)
 	assert_int(turns.size()).is_equal(0)  # it doesn't spin at its spawn
 	assert_int(wave.order).is_equal(SkirmishUnit.Order.HOLD)
-	assert_float(lateral).is_less_equal(RoutFlight.FAN_CELLS + 4.0)  # route A's line is y 32
+	var fan := BattleTuning.current().rout_fan_cells
+	assert_float(lateral).is_less_equal(fan + 4.0)  # route A's line is y 32

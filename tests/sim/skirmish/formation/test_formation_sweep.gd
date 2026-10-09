@@ -74,10 +74,11 @@ func test_a_wider_frame_sweeps_slower_at_its_outer_files_pace() -> void:
 	assert_int(narrow).is_less(wide)
 	# 8 wide at 8 cells a second: the outer file, 4 out, would march a quarter circle (6.3
 	# cells) in 0.8 s at most; stepping on along the route too, it can't hurry, so the
-	# wheel takes about twice that.
+	# frame slows to what it can walk (FormationWalk.share) - though the frame faces south
+	# a little before its outer file has walked round, leading it by up to its slack.
 	var rate := FormationSweep.rate(_at_a_bend(8)[1], CELLS_PER_SECOND)
 	assert_float(90.0 / rate).is_equal_approx(PI * 8.0 / 4.0 / CELLS_PER_SECOND, 0.0001)
-	assert_int(wide).is_between(15, 17)
+	assert_int(wide).is_between(11, 13)
 
 
 func test_no_unit_hurries_round_a_bend_and_the_inner_files_step_shorter() -> void:

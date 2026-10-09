@@ -3,20 +3,21 @@ extends RefCounted
 ## Planned rendezvous (Decision 87, spec 27 round 2): the overlord's timing, given before
 ## departure, so waves on different routes reach their points together. The march is
 ## predicted as FormationSimulation runs it - a cell pace per tick, slowed by the ground
-## along the route (Decision 85), sweeping round bends without halting (Decision 105) no
-## faster than its outer file can walk (Decision 116), and at a gap narrower than the squad
-## the pauses to narrow and widen - so it holds until something interferes on the way (a
-## fight, a queue). Pure.
+## along the route (Decision 85), sweeping round bends (Decision 105) as fast as its
+## files, walking to their places, keep within their slack (FormationWalk, spec 30 round
+## 3) - so it holds until something interferes on the way (a fight, a queue, a gap it
+## pours through). Pure.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
-const FormationNarrowing = preload("res://sim/skirmish/formation/formation_narrowing.gd")
-const FormationWheel = preload("res://sim/skirmish/formation/formation_wheel.gd")
 
 
 ## Ticks for a squad `width` wide moving `cells_per_second` to reach `cells` along `route`,
-## setting out from `from` cells along it, over `terrain` if given.
+## setting out from `from` cells along it, over `terrain` if given, its units walking to
+## their places within `slack` cells (FormationWalk; negative: the slack at discipline
+## 50).
 static func ticks_to(
 	route: FormationRoute,
 	cells: float,
@@ -24,40 +25,62 @@ static func ticks_to(
 	cells_per_second: float,
 	tick_seconds: float,
 	from: float = 0.0,
-	terrain: FormationTerrain = null
+	terrain: FormationTerrain = null,
+	slack: float = -1.0
 ) -> int:
-	var step := cells_per_second * tick_seconds
-	var travelled := from
-	var ticks := 0
-	var narrowed := false
-	var facing := UnitMotion.bearing_to(Vector2.ZERO, route.heading_at(from), 0.0)
-	var sweep := rad_to_deg(cells_per_second / maxf(width / 2.0, 0.5)) * tick_seconds
-	while travelled < cells - 0.000001 and ticks < 1000000:
-		var here := route.point_at(travelled)
-		var ahead := route.heading_at(travelled)
-		var share := 1.0
-		if terrain != null:
-			share = maxf(0.05, terrain.factor(1.0, here, here + ahead))
-			var heading := UnitMotion.bearing_to(Vector2.ZERO, ahead, 0.0)
-			if not narrowed and _narrows(terrain, here + ahead, heading, width):
-				narrowed = true
-				ticks += 2 * roundi(FormationNarrowing.REFORM_SECONDS / tick_seconds)
-		var wanted := UnitMotion.bearing_to(Vector2.ZERO, ahead, facing)
-		var left := fposmod(wanted - facing + 180.0, 360.0) - 180.0  # the short way
-		var turned := facing + clampf(left, -sweep, sweep)  # as FormationSweep sweeps
-		var stepped := step * share
-		var walked := FormationWheel.line_share(
-			route, width, travelled, travelled + stepped, facing, turned
-		)  # no faster than its outer file walks (Decision 116)
-		facing = fposmod(facing + (turned - facing) * walked, 360.0)
-		travelled += stepped * walked
-		ticks += 1
-	return ticks
+	var march := {
+		"step": cells_per_second * tick_seconds,
+		"travelled": from,
+		"facing": UnitMotion.bearing_to(Vector2.ZERO, route.heading_at(from), 0.0),
+		"sweep": rad_to_deg(cells_per_second / maxf(width / 2.0, 0.5)) * tick_seconds,
+		"slack": slack if slack >= 0.0 else _middling_slack(),
+		"ticks": 0,
+	}
+	march["files"] = _places(route, width, from, march["facing"])
+	while march["travelled"] < cells - 0.000001 and march["ticks"] < 1000000:
+		_tick(route, width, march, terrain)
+	return march["ticks"]
 
 
-static func _narrows(terrain: FormationTerrain, at: Vector2, heading: float, width: int) -> bool:
-	var run := FormationNarrowing.run_across(terrain, at, heading, 1.0)
-	return run.x >= 1.0 and run.x < width
+## One tick of the predicted march: the frame steps and sweeps by the share its lagging
+## files allow (FormationWalk.share), and the front rank's files walk to their places.
+static func _tick(route: FormationRoute, width: int, march: Dictionary, terrain) -> void:
+	var here := route.point_at(march["travelled"])
+	var ahead := route.heading_at(march["travelled"])
+	var ground := 1.0
+	if terrain != null:
+		ground = maxf(0.05, terrain.factor(1.0, here, here + ahead))
+	var places := _places(route, width, march["travelled"], march["facing"])
+	var furthest := 0.0
+	for i in places.size():
+		furthest = maxf(furthest, march["files"][i].distance_to(places[i]))
+	var slack: float = march["slack"]
+	var keeping := clampf((slack - furthest) / (slack / 2.0), 0.0, 1.0)
+	var wanted := UnitMotion.bearing_to(Vector2.ZERO, ahead, march["facing"])
+	var left := fposmod(wanted - march["facing"] + 180.0, 360.0) - 180.0  # the short way
+	var reach: float = march["sweep"] * keeping
+	march["facing"] = fposmod(march["facing"] + clampf(left, -reach, reach), 360.0)
+	march["travelled"] += march["step"] * ground * keeping
+	places = _places(route, width, march["travelled"], march["facing"])
+	for i in places.size():
+		march["files"][i] = march["files"][i].move_toward(places[i], march["step"] * ground)
+	march["ticks"] += 1
+
+
+## The front rank's places, a line `width` wide facing `heading` at `cells` along `route`.
+static func _places(route: FormationRoute, width: int, cells: float, heading: float) -> Array:
+	var anchor := route.point_at(cells)
+	var ahead := UnitMotion.vector(heading)
+	var out := []
+	for column in range(width):
+		var across := column - width / 2.0 + 0.5
+		out.append(anchor - ahead.orthogonal() * across - ahead * 0.5)
+	return out
+
+
+static func _middling_slack() -> float:
+	var tuning := BattleTuning.current()
+	return lerpf(tuning.walk_slack_loose, tuning.walk_slack_drilled, 0.5)
 
 
 ## Ticks each wave should wait before setting out so all arrive together: {key: ticks}

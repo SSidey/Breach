@@ -14,6 +14,7 @@ extends RefCounted
 ## for the next to open (ScrumSeek, Decision 108), rather than going back to its place.
 ## Pure.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
@@ -22,8 +23,6 @@ const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 
-## Cells a unit may go from its place (Decision 75's leash; placeholder).
-const LEASH := 16.0
 ## Tolerance (cells) for bodies just touching: well above Vector2's float32 rounding.
 const EPSILON := 0.001
 
@@ -107,7 +106,7 @@ static func open(seeker: SkirmishUnit, point: Vector2, ground: Array) -> bool:
 
 ## True if `point` is within the seeker's leash, on ground it can cross.
 static func _within(seeker: SkirmishUnit, point: Vector2, ground: Array) -> bool:
-	if point.distance_to(ground[0]) > LEASH:
+	if point.distance_to(ground[0]) > BattleTuning.current().scrum_leash:
 		return false
 	var terrain: FormationTerrain = ground[3]
-	return terrain == null or terrain.factor(seeker.height, point, point) > 0.0
+	return terrain == null or terrain.factor(seeker, point, point) > 0.0

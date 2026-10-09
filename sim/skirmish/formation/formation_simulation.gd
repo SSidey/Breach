@@ -16,12 +16,19 @@ extends RefCounted
 ##                round bends (FormationSweep, Decision 105), stopping at contact or behind
 ##                where a friend stood, or join a friend from the back (Decisions 44, 51,
 ##                FormationJoins); then units seek contact (FormationScrum, Decision 88)
-##   4. combat  - melee blows (FormationMelee) and ranged blows (Decision 46)
-##   5. deaths  - the fallen die, the ranks behind step up, an empty squad is destroyed
+##   4. combat  - melee blows (FormationMelee) and ranged blows (Decision 46), each rolled
+##                against its target (BlowLanding, Decision 118)
+##   5. deaths  - the fallen are downed or die, the ranks behind step up, an empty squad is
+##                destroyed; the downed nobody guards are finished or taken (FormationWounds),
+##                the rest come to or die of their wounds (FormationRecovery, Decision 126)
 ##   6. bodies  - friends' bodies that overlap are pushed apart by mass (UnitBodies, Decision
 ##                106)
 ##   7. re-form - units swap toward their preferred places (FormationShuffle, Decision 46)
 
+const FormationTaking = preload("res://sim/skirmish/formation/formation_taking.gd")
+const FormationGroups = preload("res://sim/skirmish/formation/formation_groups.gd")
+const FormationWalk = preload("res://sim/skirmish/formation/formation_walk.gd")
+const FormationCommand = preload("res://sim/skirmish/formation/formation_command.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
@@ -33,7 +40,12 @@ const FormationUnits = preload("res://sim/skirmish/formation/formation_units.gd"
 const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
 const FormationEdges = preload("res://sim/skirmish/formation/formation_edges.gd")
 const FormationDeaths = preload("res://sim/skirmish/formation/formation_deaths.gd")
-const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
+const FormationWounds = preload("res://sim/skirmish/formation/formation_wounds.gd")
+const FormationRecovery = preload("res://sim/skirmish/formation/formation_recovery.gd")
+const FormationStrays = preload("res://sim/skirmish/formation/formation_strays.gd")
+const FormationCarry = preload("res://sim/skirmish/formation/formation_carry.gd")
+const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
+const FormationStamina = preload("res://sim/skirmish/formation/formation_stamina.gd")
 const ScrumPursuit = preload("res://sim/skirmish/formation/scrum_pursuit.gd")
 const ScrumTurn = preload("res://sim/skirmish/formation/scrum_turn.gd")
 const FormationScrum = preload("res://sim/skirmish/formation/formation_scrum.gd")
@@ -41,20 +53,17 @@ const UnitBodies = preload("res://sim/skirmish/formation/unit_bodies.gd")
 const FormationSweep = preload("res://sim/skirmish/formation/formation_sweep.gd")
 const FormationStaging = preload("res://sim/skirmish/formation/formation_staging.gd")
 const FormationMelee = preload("res://sim/skirmish/formation/formation_melee.gd")
+const BlowLanding = preload("res://sim/skirmish/formation/blow_landing.gd")
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
-const FormationNarrowing = preload("res://sim/skirmish/formation/formation_narrowing.gd")
-const FormationWheel = preload("res://sim/skirmish/formation/formation_wheel.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const FormationFronts = preload("res://sim/skirmish/formation/formation_fronts.gd")
 const FormationJoins = preload("res://sim/skirmish/formation/formation_joins.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 const MELEE_REACH := FormationContact.MELEE_REACH
-const ATTACK_INTERVAL_SECONDS := 1.0
 const TRAVEL_SCALE := 0.125  # tiles per second at speed 1: 8 cells a second (Decision 68)
-const EPSILON := 0.000001
 ## States in which a squad doesn't march (a rout flees on its own: FormationRout).
 const STANDING := [
 	SkirmishSquad.State.DESTROYED,
@@ -69,9 +78,12 @@ var tick_seconds: float
 ## each squad within its own columns.
 var combat_width := 0
 ## The battle seed (Decision 93): every random draw comes from it - contests for cells,
-## and each blow's damage, rolled within damage_band of its value (0: no roll).
+## and each blow's roll.
 var fight_seed := 0
-var damage_band := 0.0
+## Whether each blow is rolled against its target's parry, dodge and defence, and its damage
+## within its weapons' range (Decisions 118 and 119, BlowLanding); off, every blow lands as
+## a plain hit at its weapons' full damage.
+var blow_rolls := false
 ## The ground (Decision 85); null is open, level ground everywhere.
 var terrain: FormationTerrain = null
 
@@ -81,6 +93,7 @@ var _next_squad_id := 1
 var _next_unit_id := 1
 var _pending_orders := {}  # squad id -> SkirmishUnit.Order
 var _tick := 0
+var _field: Object = NativeKernels.body_field()  # the bodies, native or null (Decision 129)
 
 
 func _init(length: float, seconds_per_tick: float) -> void:
@@ -108,7 +121,10 @@ func spawn_squad(
 			FormationUnits.make(placement[0], placement[1], faction_id, direction, _next_unit_id)
 		)
 		_next_unit_id += 1
-	var squad := SkirmishSquad.new(_next_squad_id, faction_id, direction, home, width, members)
+	var orders := FormationCommand.new(home, path)
+	var squad := SkirmishSquad.new(
+		_next_squad_id, faction_id, direction, home, width, members, orders
+	)
 	_next_squad_id += 1
 	squad.route = path
 	FormationMarch.face(squad)
@@ -116,7 +132,7 @@ func spawn_squad(
 	squad.morale = FormationMorale.ceiling(squad)
 	squad.combat_width = combat_width
 	_squads.append(squad)
-	FormationMarch.sync_units(_squads)
+	FormationMarch.sync_units([squad])  # placed: its units stand on their places
 	return squad
 
 
@@ -145,19 +161,29 @@ func step() -> Array:
 	var events := []
 	_apply_orders(events)
 	_engage(events)
+	FormationPathing.step(_squads, terrain, _tick, fight_seed, events)
 	_move(events)
 	var pace := TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
 	events.append_array(
-		FormationScrum.step(_squads, _tick, pace, tick_seconds, fight_seed, terrain)
+		FormationScrum.step(_squads, _tick, pace, tick_seconds, fight_seed, terrain, _field)
 	)
 	_fight(events)
 	FormationDeaths.bury(_squads, _tick, events)
+	FormationTaking.step(_squads, _tick, tick_seconds, fight_seed, events)  # out to the downed
+	FormationWounds.tend(_squads, _tick, _attack_interval_ticks(), fight_seed, events)
+	var strays := FormationRecovery.step(_squads, tick_seconds, _tick, fight_seed, events)
+	_next_squad_id = FormationStrays.adopt(strays, _squads, _next_squad_id, fight_seed)
 	FormationMorale.step(_squads, _tick, _attack_interval_ticks(), events)
 	events.append_array(FormationRout.step(_squads, _tick, pace, tick_seconds, terrain, fight_seed))
-	UnitBodies.step(_squads, fight_seed)  # after every move: friends' bodies part (Decision 106)
+	strays = FormationCarry.step(_squads, _tick, fight_seed, events)  # the wounded borne
+	_next_squad_id = FormationStrays.adopt(strays, _squads, _next_squad_id, fight_seed)
+	_next_squad_id = FormationGroups.step(_squads, _tick, fight_seed, events, _next_squad_id)
+	FormationStamina.step(_squads, tick_seconds)  # runners tire, the rest recover
+	UnitBodies.step(_squads, fight_seed, _field)  # after every move: bodies part (Decision 106)
 	for entry in _squads:
 		events.append_array(FormationShuffle.step(entry, tick_seconds, TRAVEL_SCALE, _tick))
-	FormationMarch.sync_units(_squads)
+	var walking := [tick_seconds, TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE]
+	FormationMarch.sync_units(_squads, walking, terrain)  # units walk to their places
 	return events
 
 
@@ -188,9 +214,9 @@ func _engage(events: Array) -> void:
 	FormationEdges.engage(_squads, _tick, events, fight_seed)
 
 
-## Every squad decides its move from where all stood as the tick began, then all moves
-## land together (Decision 97).
+## Each squad decides its move from the tick's start; all moves land together (Decision 97).
 func _move(events: Array) -> void:
+	var ground := {"squads": _squads}  # the bodies lying on the field, found once (drag)
 	var marching := {}  # squad id -> [mover, where it wants to get, its route's end]
 	var waiting := []
 	for mover in _squads:
@@ -210,17 +236,14 @@ func _move(events: Array) -> void:
 		var travel := FormationMarch.travel_sign(mover, end)
 		if travel != mover.direction and ScrumTurn.begin(mover, travel, _tick, events):
 			continue  # an about-face is a re-form: its units walk to their places (Decision 92)
-		if FormationNarrowing.holds(mover, terrain, _tick, tick_seconds, events):
-			continue
+		var keeping := FormationWalk.share(mover, terrain)  # within its slack of its units
+		if keeping <= 0.0:
+			continue  # it waits for them (spec 30 round 3)
 		var cells_per_second := mover.speed() * TRAVEL_SCALE * MapLayoutDef.CELLS_PER_TILE
-		var before := mover.heading
-		FormationSweep.step(mover, cells_per_second, tick_seconds)  # round bends (Decision 105)
+		FormationSweep.step(mover, cells_per_second, tick_seconds * keeping)  # Decision 105
 		var open_step := mover.speed() * TRAVEL_SCALE * tick_seconds
 		var step := FormationMarch.pace(mover, terrain, open_step, _tick, events)
-		var walk := step / maxf(mover.speed(), EPSILON) * MapLayoutDef.CELLS_PER_TILE
-		var share := FormationWheel.share(mover, before, travel * step, walk)  # Decision 116
-		FormationWheel.cut_sweep(mover, before, share)
-		step *= share
+		step *= GroundBodies.drag(mover, ground) * keeping  # bodies on the ground (Decision 121)
 		marching[mover.id] = [mover, FormationMarch.toward(mover, travel * step, end), end]
 	_march(marching, events)
 	for mover in waiting:
@@ -250,22 +273,27 @@ func _march(marching: Dictionary, events: Array) -> void:
 
 
 func _fight(events: Array) -> void:
-	for entry in _squads:
-		for unit in entry.living():
-			unit.target_id = 0
 	var interval := _attack_interval_ticks()
-	var blows := FormationMelee.blows(_squads, interval, fight_seed, terrain)
-	var shots := FormationCombat.ranged_blows(_squads, _attack_interval_ticks(), fight_seed)
+	var blows := FormationMelee.blows(_squads, interval, fight_seed, _field)  # targets cleared
+	var shots := FormationCombat.ranged_blows(_squads, interval, fight_seed)
+	var rolls := [fight_seed, _tick] if blow_rolls else []
+	BlowLanding.land(blows, shots, _squads, terrain, rolls, _field)
 	for shot in shots:
-		shot[2] = BattleRolls.damage(shot[2], damage_band, fight_seed, [_tick, shot[0].id, 1])
 		shot[1].hp -= shot[2]
-		var spat := {"target": shot[1].id, "dmg": shot[2], "damage_type": shot[0].damage_type}
+		var spat := {
+			"target": shot[1].id,
+			"dmg": shot[2],
+			"damage_type": shot[0].damage_type,
+			"blow": shot[4]
+		}
 		events.append(FormationEvents.unit_event("spat", _tick, shot[3], shot[0], spat))
 	for blow in blows:
-		blow[2] = BattleRolls.damage(blow[2], damage_band, fight_seed, [_tick, blow[0].id, 0])
 		blow[1].hp -= blow[2]
 		events.append(FormationEvents.hit(_tick, blow))
+	FormationWounds.surrender(blows, _squads, fight_seed, _tick, events)
+	FormationStamina.strike(blows + shots)
 
 
+## Ticks in a second: a weapon's attack interval is in seconds (Decision 120).
 func _attack_interval_ticks() -> int:
-	return maxi(1, roundi(ATTACK_INTERVAL_SECONDS / tick_seconds))
+	return maxi(1, roundi(1.0 / tick_seconds))

@@ -1,4 +1,5 @@
 """Tests for base_ref.resolve (Decision 50), against throwaway git repositories."""
+import os
 import subprocess
 import sys
 import tempfile
@@ -7,6 +8,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import base_ref  # noqa: E402
+
+# Run from a git hook, git's GIT_INDEX_FILE (and kin) would point the throwaway repos'
+# commands at the real repo's index - and empty it. They must not leak in.
+for _name in [name for name in os.environ if name.startswith("GIT_")]:
+    del os.environ[_name]
 
 
 def git(repo, *args):

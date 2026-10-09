@@ -2,9 +2,10 @@ extends GdUnitTestSuite
 ## Manoeuvres, per Decision 94 and spec 27 round 7: a formation always has one, the
 ## highest-priority that applies - combat, its route, re-forming, then the player's order -
 ## and marches only on the order. A re-formed line facing an enemy that has stopped closing
-## in is let go, so the formation re-forms and marches on; narrowing at a gap is a re-form
-## at the formation's own pace; contact mid-re-form is combat.
+## in is let go, so the formation re-forms and marches on; contact mid-re-form is combat.
 
+const FormationTaking = preload("res://sim/skirmish/formation/formation_taking.gd")
+const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationField = preload("res://sim/skirmish/formation/formation_field.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -20,7 +21,7 @@ const TICK := 0.1
 func _def(discipline: int = 30) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 400
-	unit_def.dmg = 1
+	unit_def.items = [WeaponDef.innate_weapon(1)]
 	unit_def.speed = 1.0
 	unit_def.discipline = discipline
 	return unit_def
@@ -50,6 +51,7 @@ func _faced_south(sim: FormationSimulation) -> SkirmishSquad:
 	var east := FormationRoute.new(PackedVector2Array([Vector2(0, 20), Vector2(128, 20)]))
 	var squad := sim.spawn_squad(4, _row(4), "player", true, 0, east)
 	squad.front_distance = 30.0 / 64.0
+	FormationMarch.sync_units([squad])  # placed there
 	sim.step()
 	squad.stance = {"anchor": squad.position, "heading": 180.0}
 	return squad
@@ -109,31 +111,6 @@ func test_contact_mid_re_form_is_combat() -> void:
 	assert_bool(foe.is_destroyed()).is_false()
 
 
-func _narrowing_ticks(discipline: int) -> int:
-	var sim := _sim()
-	sim.terrain = FormationTerrain.new(Vector2i(64, 32))
-	sim.terrain.paint(Rect2i(20, 0, 2, 32), {"depth": 3.0})
-	sim.terrain.paint(Rect2i(20, 8, 2, 4), {"depth": 0.0})
-	var route := FormationRoute.new(PackedVector2Array([Vector2(0, 10), Vector2(64, 10)]))
-	var squad := sim.spawn_squad(8, _row(8, discipline), "player", true, 0, route)
-	var began := -1
-	for tick in range(1, 300):
-		var log := sim.step()
-		if began < 0 and log.any(func(e): return e["type"] == "narrowed"):
-			began = tick
-		if began >= 0 and squad.manoeuvre == FormationManoeuvre.Kind.ORDER:
-			return tick - began
-	return 300
-
-
-func test_narrowing_is_a_re_form_at_the_formations_pace() -> void:
-	var drilled := _narrowing_ticks(60)
-	var ragged := _narrowing_ticks(20)
-
-	assert_int(drilled).is_greater(0)
-	assert_int(drilled).is_less(ragged)
-
-
 func test_a_wave_re_forming_at_its_corner_as_a_fights_does_not_stick() -> void:
 	# the round 6 feel test: B re-formed facing the line fighting A, and stayed there
 	var field := FormationField.new(
@@ -161,8 +138,11 @@ func test_a_wave_re_forming_at_its_corner_as_a_fights_does_not_stick() -> void:
 	for _i in range(1200):
 		field.step()
 		var moving := wave.state in [SkirmishSquad.State.MOVING, SkirmishSquad.State.HOLDING]
+		moving = moving and not FormationTaking.holding(wave)  # a hold to take the downed
 		still = still + 1 if moving and wave.position == last else 0
 		longest = maxi(longest, still)
 		last = wave.position
 
-	assert_int(longest).is_less(60)
+	# Not stuck: its longest pause is a regroup for a unit come to and walking back to join
+	# it (Decision 126), now a little later after it holds to take its downed foes.
+	assert_int(longest).is_less(90)

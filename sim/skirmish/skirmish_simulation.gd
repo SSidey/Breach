@@ -49,7 +49,7 @@ func spawn(
 	unit.faction_id = faction_id
 	unit.hp = unit_def.hp
 	unit.max_hp = unit_def.hp
-	unit.dmg = unit_def.dmg
+	unit.dmg = unit_def.melee_damage()
 	unit.speed = unit_def.speed
 	unit.home_distance = 0.0 if at_player_end else route_length
 	unit.distance = unit.home_distance

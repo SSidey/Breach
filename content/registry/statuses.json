@@ -1,0 +1,6 @@
+{
+  "about": "Statuses (Decision 125): discrete things on a unit, with their tags. A unit's condition is the one number its statuses (and traits and surroundings) make of its state.",
+  "statuses": [
+    {"id": "wounded", "tags": ["wound"], "description": "A time downed each: each lowers condition by wounds_condition (Decision 126); rest, medics and structures remove them one at a time."}
+  ]
+}

@@ -1,16 +1,39 @@
 class_name UnitDef
 extends Resource
-## Player unit definition (e.g. Grem). See specs/07-data-resource-schemas.md.
+## A unit type's sheet (Decision 117, spec 28; specs/07-data-resource-schemas.md): its
+## archetype tags, attributes and rated traits; body; movement; mind; senses; band; what
+## it fights with; and its cost. Derived stats (load, death's door...) are worked out from
+## the attributes where they are used, never set here.
 
 ## Where in a formation the unit wants to stand (Decision 46).
 enum Position { FRONT, MID, BACK }
 
+const ContentRegistry = preload("res://content/definitions/content_registry.gd")
 const MAX_FOOTPRINT := 8
+## The five attributes (Decision 117), each defaulting to AVERAGE.
+const ATTRIBUTES := ["strength", "agility", "constitution", "willpower", "wits"]
+const AVERAGE := 10
 
+## Archetype tags tech can target as a group, beside the type itself (human, martial,
+## cavalry, archer...).
+@export var tags: Array[String] = []
+## Attributes (Decision 117): strength (load, wield and damage scaling, shoving), agility
+## (dodge, attack speed, turning, initiative), constitution (HP, stamina, physical maladies,
+## death's door), willpower (magical maladies, fear, courage, ward) and wits (casting,
+## mana, initiative, perception). AVERAGE is ordinary.
+@export var strength: int = AVERAGE
+@export var agility: int = AVERAGE
+@export var constitution: int = AVERAGE
+@export var willpower: int = AVERAGE
+@export var wits: int = AVERAGE
+## Rated traits (Decision 64), id -> level: climber 2, darksight 1, mob 16...
+@export var traits: Dictionary = {}
 @export var cost_food: int = 0
 @export var hp: int = 0
-@export var dmg: int = 0
 @export var speed: float = 0.0
+## How much faster than its march it runs (Decision 125): a formation hurrying, pursuing or
+## fleeing runs at its slowest unit's run, spending stamina.
+@export var run_pace: float = 1.5
 ## Formation slots the unit occupies, depth (ranks) x width (columns), per Decision 40:
 ## 1x1 a grem, 2x1 cavalry, 2x2 a brute, up to 8x8 (a dragon, the widest lane).
 @export var footprint_depth: int = 1
@@ -24,6 +47,12 @@ const MAX_FOOTPRINT := 8
 ## How far it detects others, in cells (Decision 87; placeholder). Line of sight and light
 ## come with terrain.
 @export var detection_range: float = 40.0
+## The shape of its sight when it plans a way (spec 30, PathSight): how far it sees ahead,
+## square to either side and behind, as shares of its detection range, eased between by
+## the angle off its facing. Placeholders.
+@export var sight_ahead: float = 1.0
+@export var sight_side: float = 0.5
+@export var sight_behind: float = 0.25
 ## Its will to fight (Decision 82): a formation's morale ceiling is its units' mean courage.
 @export var courage: int = 60
 ## How much it steadies a formation it leads (Decision 81); 0 for rank and file.
@@ -44,8 +73,43 @@ const MAX_FOOTPRINT := 8
 ## it turns, and the share of its speed it makes moving straight back (sideways is between).
 @export var turn_rate: float = 450.0
 @export var backward_pace: float = 0.4
-## What it fights with (Decision 47). Without weapons it strikes once for `dmg`.
-@export var weapons: Array[WeaponDef] = []
+## How well it fights hand to hand and at range (Decision 118), 0 to 100: a blow's roll
+## is centred on it. Its parry comes from its melee skill, its dodge from its agility.
+@export var melee_skill: int = 40
+@export var ranged_skill: int = 40
+## What a blow must get past, after its parry and dodge, to land fully: short of it, it
+## grazes (Decision 118).
+@export var defence: int = 10
+## A critical blow's damage, times a hit's (Decision 118).
+@export var critical: float = 1.5
+## Damage types it takes more of, less of, or none of (Decision 119): weak x1.5,
+## resistant x0.5, immune x0 (BattleTuning).
+@export var weaknesses: Array[String] = []
+@export var resistances: Array[String] = []
+@export var immunities: Array[String] = []
+## Its own armour (a hide) and ward (a charm), taken off each mundane or magical blow
+## before what it wears adds (Decision 119, ArmourDef).
+@export var armour: int = 0
+@export var ward: int = 0
+## HP it regenerates a second (Decision 121), whether struck or not, up to its limit per
+## rest - that many times its max HP - and stopped for a while by a blow of a type listed
+## in regeneration_stops (a troll's by fire or acid). Downed, it stops unless it has the
+## "regenerates_downed" trait.
+@export var regeneration: float = 0.0
+@export var regeneration_limit: float = 1.0
+@export var regeneration_stops: Array[String] = []
+## What it carries (Decisions 47 and 120): weapons, armour and tools (ItemDef), and its
+## innate weapons (fists, a bite) - its every blow comes from a weapon.
+@export var items: Array[ItemDef] = []
+## The slots its body has for items (hand, hand, back...): an item fits if its slots are
+## free. A creature with no hands has no hand slot.
+@export var slots: Array[String] = []
+## How well it handles items by tag (axe, polearm...), tag -> level: 0 untrained (none
+## listed), 1 trained, 2 mastered.
+@export var proficiencies: Dictionary = {}
+## How quickly it strikes (Decision 120): its weapons' intervals are divided by this, so
+## 1.25 makes a 1-second weapon strike every 0.8 s.
+@export var attack_speed: float = 1.0
 
 
 func validate() -> PackedStringArray:
@@ -54,8 +118,6 @@ func validate() -> PackedStringArray:
 		errors.append("cost_food must be >= 0, got %d" % cost_food)
 	if hp < 0:
 		errors.append("hp must be >= 0, got %d" % hp)
-	if dmg < 0:
-		errors.append("dmg must be >= 0, got %d" % dmg)
 	if speed < 0.0:
 		errors.append("speed must be >= 0, got %f" % speed)
 	for field in ["footprint_depth", "footprint_width"]:
@@ -63,31 +125,136 @@ func validate() -> PackedStringArray:
 			errors.append("%s must be 1..%d, got %d" % [field, MAX_FOOTPRINT, get(field)])
 	if position_priority < 0:
 		errors.append("position_priority must be >= 0, got %d" % position_priority)
-	for weapon in weapons:
-		if weapon == null:
-			errors.append("weapons must not contain an empty entry")
-		else:
-			errors.append_array(weapon.validate())
+	errors.append_array(_item_errors())
 	if build_seconds <= 0.0:
 		errors.append("build_seconds must be > 0, got %f" % build_seconds)
+	for skill in ["melee_skill", "ranged_skill", "defence", "armour", "ward"]:
+		if get(skill) < 0:
+			errors.append("%s must be >= 0, got %d" % [skill, get(skill)])
+	if regeneration < 0.0 or regeneration_limit < 0.0:
+		errors.append("regeneration and its limit must be >= 0")
+	if critical < 1.0:
+		errors.append("critical must be >= 1, got %f" % critical)
+	if attack_speed <= 0.0:
+		errors.append("attack_speed must be > 0, got %f" % attack_speed)
+	for attribute in ATTRIBUTES:
+		if get(attribute) < 0:
+			errors.append("%s must be >= 0, got %d" % [attribute, get(attribute)])
+	for trait_id in traits:
+		if not trait_id is String or not traits[trait_id] is int or traits[trait_id] < 0:
+			errors.append("traits must map names to levels >= 0, got %s" % str(trait_id))
 	return errors
 
 
-## The damage of one melee strike: every melee weapon together, or `dmg` without weapons.
+## The level of a rated trait it has, its own or one an item it carries grants, the
+## higher; one it doesn't list it has at the registry's default (0: not at all).
+func trait_level(trait_id: String) -> int:
+	var level := int(traits.get(trait_id, ContentRegistry.implicit().get(trait_id, 0)))
+	for item in items:  # what its items grant it; their own traits are theirs (Decision 128)
+		if item != null:
+			level = maxi(level, int(item.grants.get(trait_id, 0)))
+	return level
+
+
+## The damage of one melee strike: every melee weapon together (0 without one).
 func melee_damage() -> int:
-	if weapons.is_empty():
-		return dmg
 	var total := 0
-	for weapon in weapons:
+	for weapon in _weapons():
 		if weapon.is_melee():
 			total += weapon.damage
 	return total
 
 
+## Whether it can parry (Decision 118): it holds a melee weapon, not an innate one, or a
+## shield.
+func can_parry() -> bool:
+	for weapon in _weapons():
+		if weapon.is_melee() and not weapon.innate:
+			return true
+	return items.any(func(item): return item != null and item.tags.has("shield"))
+
+
+## Seconds between its melee blows: its melee weapons strike together, as often as the
+## slowest of them allows, scaled by its attack speed (a second without weapons).
+func melee_seconds() -> float:
+	var longest := 0.0
+	for weapon in _weapons():
+		if weapon.is_melee():
+			longest = maxf(longest, weapon.attack_seconds)
+	return (longest if longest > 0.0 else 1.0) / attack_speed
+
+
 ## The hardest-hitting ranged weapon, or null for a melee-only unit.
 func ranged_weapon() -> WeaponDef:
 	var best: WeaponDef = null
-	for weapon in weapons:
+	for weapon in _weapons():
 		if not weapon.is_melee() and (best == null or weapon.damage > best.damage):
 			best = weapon
 	return best
+
+
+## What is wrong with its items: an invalid one, or one its body has no room or part for.
+func _item_errors() -> PackedStringArray:
+	var errors := PackedStringArray()
+	for item in items:
+		if item == null:
+			errors.append("items must not contain an empty entry")
+			continue
+		errors.append_array(item.validate())
+		if item.innate and not _has_slots(slots, item.slots):
+			errors.append("%s: part of a body part it hasn't" % item.item_name)
+	var short := _slots_short()
+	if not short.is_empty():
+		errors.append("its items need slots it hasn't free: %s" % ", ".join(short))
+	return errors
+
+
+## The weapons it can use: those it carries, and its innate ones free to strike.
+func weapons() -> Array[WeaponDef]:
+	return _weapons()
+
+
+## The weapons it can use: those it carries, and its innate ones whose body parts no
+## carried item holds (fists are no use with a spear in both hands).
+func _weapons() -> Array[WeaponDef]:
+	var free := _free_slots()
+	var out: Array[WeaponDef] = []
+	for item in items:
+		if item is WeaponDef and (not item.innate or _has_slots(free, item.slots)):
+			out.append(item)
+	return out
+
+
+## The slots its body has left once its carried items take theirs.
+func _free_slots() -> Array[String]:
+	var free := slots.duplicate()
+	for item in items:
+		if item != null and not item.innate:
+			for slot in item.slots:
+				free.erase(slot)
+	return free
+
+
+## The slots its carried items need that its body hasn't free (none: they all fit).
+func _slots_short() -> Array[String]:
+	var free := slots.duplicate()
+	var short: Array[String] = []
+	for item in items:
+		if item == null or item.innate:
+			continue
+		for slot in item.slots:
+			if free.has(slot):
+				free.erase(slot)
+			else:
+				short.append(slot)
+	return short
+
+
+## Whether `have` holds every slot `need` names, as many times as it names it.
+static func _has_slots(have: Array[String], need: Array[String]) -> bool:
+	var left := have.duplicate()
+	for slot in need:
+		if not left.has(slot):
+			return false
+		left.erase(slot)
+	return true

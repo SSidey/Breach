@@ -16,7 +16,7 @@ const TICK := 0.1
 func _def(dmg: int = 4) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 200
-	unit_def.dmg = dmg
+	unit_def.items = [WeaponDef.innate_weapon(dmg)]
 	unit_def.speed = 1.0
 	return unit_def
 
@@ -48,22 +48,26 @@ func test_from_a_woods_edge_a_squad_sees_out() -> void:
 	assert_bool(FormationSight.detects(other, watcher, ground)).is_true()
 
 
-func test_a_striker_on_higher_ground_hits_harder() -> void:
+func test_a_striker_on_higher_ground_lands_more_criticals() -> void:
 	var sim := FormationSimulation.new(1.0, TICK)
+	sim.blow_rolls = true
+	sim.fight_seed = 7
 	sim.terrain = FormationTerrain.new(Vector2i(64, 32))
-	sim.terrain.paint(Rect2i(40, 0, 24, 32), {"height": 4})  # the kingdom's hill
+	sim.terrain.paint(Rect2i(39, 0, 25, 32), {"height": 4})  # the kingdom's hill, where it holds
 	var east := FormationRoute.new(PackedVector2Array([Vector2(0, 10), Vector2(64, 10)]))
 	var west := FormationRoute.new(PackedVector2Array([Vector2(40, 10), Vector2(0, 10)]))
-	sim.spawn_squad(1, [[_def(4), Vector2i(0, 0)]], "player", true, 0, east)
-	var line := sim.spawn_squad(1, [[_def(4), Vector2i(0, 0)]], "the_kingdom", true, 0, west)
+	var stout := _def(4)
+	stout.hp = 100000
+	sim.spawn_squad(1, [[stout, Vector2i(0, 0)]], "player", true, 0, east)
+	var line := sim.spawn_squad(1, [[stout, Vector2i(0, 0)]], "the_kingdom", true, 0, west)
 	sim.order(line.id, SkirmishUnit.Order.HOLD)
 
 	var hits := []
-	for _i in range(120):
+	for _i in range(1200):
 		hits.append_array(sim.step().filter(func(e): return e["type"] == "hit"))
 
 	var downhill := hits.filter(func(h): return h["faction"] == "the_kingdom")
 	var uphill := hits.filter(func(h): return h["faction"] == "player")
-	assert_bool(downhill.is_empty() or uphill.is_empty()).is_false()
-	assert_int(downhill[0]["dmg"]).is_equal(roundi(4 * FormationMelee.HIGH_GROUND))
-	assert_int(uphill[0]["dmg"]).is_equal(4)
+	var critical := func(h): return h["blow"] == "critical"
+	assert_int(downhill.size()).is_greater(60)
+	assert_int(downhill.filter(critical).size()).is_greater(uphill.filter(critical).size() + 5)

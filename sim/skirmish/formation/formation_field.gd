@@ -13,9 +13,10 @@ extends RefCounted
 ## units seek contact (Decision 88), and a captained line turns to meet a flank. A broken
 ## line routs east into the kingdom's reserve on the hill (Decisions 82, 89); the player's
 ## routers who reach home go back to the reserve. The ground matters (Decision 85): the
-## wood slows and hides, B's wave narrows through the ford, and the reserve fights down
+## wood slows and hides, B's wave pours through the ford, and the reserve fights down
 ## from the hill. The player's domain builders fill both waves in turn. Pure.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationProduction = preload("res://sim/skirmish/formation/formation_production.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
@@ -61,8 +62,6 @@ const HILL := Rect2(92, 16, 20, 32)
 const STREAM_DEPTH := 1.2
 const FORD_DEPTH := 0.4
 const HILL_QUARTERS := 8
-## Each blow's damage rolls within this band (Decision 93; placeholder until spec 28).
-const DAMAGE_BAND := 0.25
 
 var tick_seconds: float
 var sim: FormationSimulation
@@ -71,6 +70,12 @@ var routes := {}  # "A" / "B" -> FormationRoute
 var waves := {}  # "A" / "B" -> FormationProduction
 var kingdom_line: SkirmishSquad
 var kingdom_reserve: SkirmishSquad
+## Routes whose waves the player has ordered to hurry (Decision 125): key -> true; each
+## step its waves in the field run (sent before the order or after).
+var hurried := {}
+## What each route's waves do with their own downed (Decision 126): key -> "recover" or
+## "carry"; a route not here leaves them.
+var tending := {}
 
 var _tick := 0
 
@@ -105,7 +110,7 @@ func _init(
 	sim = FormationSimulation.new(float(SIZE.x) / MapLayoutDef.CELLS_PER_TILE, seconds_per_tick)
 	sim.combat_width = WAVE_WIDTH
 	sim.fight_seed = battle_seed
-	sim.damage_band = DAMAGE_BAND
+	sim.blow_rolls = true
 	sim.terrain = _ground()
 	var points := route_points()
 	for key in points:
@@ -130,6 +135,12 @@ func _init(
 ## One tick: the builders fill the waves, full waves announce (and depart if automatic),
 ## then the fight.
 func step() -> Array:
+	for squad in sim.squads():  # a hurried route's waves run, sent before or after the order
+		if squad.faction_id == "player":
+			squad.hurry = hurried.keys().any(func(key): return squad.route == waves[key].route)
+			for key in tending:
+				if squad.route == waves[key].route:
+					squad.tends = tending[key]
 	var events := player.step(waves, tick_seconds, _tick)
 	for key in waves:
 		events.append_array(waves[key].step(sim))
@@ -199,7 +210,8 @@ func set_wait(waiting: bool) -> void:
 ## The field's terrain (Decision 85).
 static func _ground() -> FormationTerrain:
 	var terrain := FormationTerrain.new(SIZE)
-	terrain.paint(Rect2i(WOOD), {"cost": 0.5, "blocks_sight": true})
+	var wood_obscurance := BattleTuning.current().sight_wood_obscurance
+	terrain.paint(Rect2i(WOOD), {"cost": 0.5, "blocks_sight": true, "obscurance": wood_obscurance})
 	terrain.paint(Rect2i(STREAM), {"depth": STREAM_DEPTH})
 	terrain.paint(Rect2i(FORD), {"depth": FORD_DEPTH})
 	for ring in range(HILL_QUARTERS):

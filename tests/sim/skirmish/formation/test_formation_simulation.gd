@@ -15,7 +15,7 @@ const TICK := 0.1
 func _def(hp: int, dmg: int, speed: float, depth: int = 1, width: int = 1) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = dmg
+	unit_def.items = [WeaponDef.innate_weapon(dmg)]
 	unit_def.speed = speed
 	unit_def.footprint_depth = depth
 	unit_def.footprint_width = width
@@ -89,7 +89,8 @@ func test_a_back_band_unit_fights_only_once_the_front_has_fallen() -> void:
 	# The militia beats the front grem on 2 hp; the grem behind comes on and finishes it.
 	var log := _run(sim, func(): return theirs.is_destroyed() or mine.is_destroyed())
 
-	var first_death: int = _of(log, "died").filter(func(e): return e["unit"] == front_id)[0]["tick"]
+	var downed := _of(log, "downed").filter(func(e): return e["unit"] == front_id)
+	var first_death: int = downed[0]["tick"]
 	var back_hits := _of(log, "hit").filter(func(e): return e["unit"] == back_id)
 	assert_bool(back_hits.all(func(e): return e["tick"] > first_death)).is_true()
 	assert_int(back_hits.size()).is_greater(0)

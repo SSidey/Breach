@@ -12,17 +12,18 @@ extends RefCounted
 ##   (flank blows) while it turns. Once clear it is in flight, at its full pace. Until it
 ##   has turned, a unit still facing a foe it touches strikes it (ScrumBlows). The less
 ##   ordered the formation, the wider its units fan out from the route's line: up to
-##   RoutFlight.FAN_DEGREES either side, by a seeded angle per unit, for one with no
+##   rout_fan_degrees (BattleTuning) either side, by a seeded angle per unit, for one with no
 ##   discipline. Ground it can't cross turns it back onto the route (a ford it fanned
 ##   away from), and holds it only if that is barred too.
-## - **Safe:** with no enemy within FormationRout.ENEMY_NEAR of it, and none pursuing it,
-##   for FormationRout.RALLY_SECONDS - the test a rout rallies by - it re-forms on its route
+## - **Safe:** with no enemy within rout_enemy_near of it, and none pursuing it,
+##   for rout_rally_seconds - the test a rout rallies by - it re-forms on its route
 ##   where its units stand, facing home, and marches home (its order). One whose units are
 ##   all home, with nowhere further to go, re-forms there at once, facing out the way it
 ##   will hold, and fights as any other. Its units fan out no further than a rout's, by its
 ##   disorder.
 ## Squads keep `withdraw` ({"safe_ticks"}). Pure over the squads it is given.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
@@ -35,6 +36,9 @@ const FormationDiscipline = preload("res://sim/skirmish/formation/formation_disc
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
+const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 
 const CELLS := float(MapLayoutDef.CELLS_PER_TILE)
 ## How near (cells, along its route) home a unit has nowhere further to go.
@@ -58,7 +62,9 @@ static func begin(squad: SkirmishSquad, tick: int, events: Array) -> void:
 static func disorder(squad: SkirmishSquad) -> float:
 	if FormationDiscipline.meets_threats(squad):
 		return 0.0
-	return 1.0 - float(FormationDiscipline.of(squad)) / FormationDiscipline.MEETS_THREATS
+	return (
+		1.0 - float(FormationDiscipline.of(squad)) / BattleTuning.current().discipline_meets_threats
+	)
 
 
 ## One tick of withdrawals: units flee, and squads that have been safe long enough re-form.
@@ -78,25 +84,31 @@ static func step(
 		if squad.state in [SkirmishSquad.State.ROUTING, SkirmishSquad.State.DESTROYED]:
 			squad.withdraw = {}
 			continue
-		var foes := ScrumBlows.hostile_units(squad, squads)
+		var foes := ScrumNear.index(ScrumBlows.hostile_units(squad, squads))
+		var reach := BattleTuning.current().reach_contact
 		var engaged := {}  # units still touching a foe: disengaging, not yet in flight
 		for unit in squad.living():
-			if ScrumBlows.touches_any(squad, unit, foes):
+			var at := ScrumReach.at(squad, unit)
+			var close := ScrumNear.around(foes, at, ScrumReach.radius(unit) + reach)
+			if ScrumBlows.touches_any(squad, unit, close):
 				engaged[unit.id] = true
 		withdrawing.append([squad, _safe(squad, squads, foes), engaged])
 	for entry in withdrawing:
 		var squad: SkirmishSquad = entry[0]
+		var order := [disorder(squad), FormationDiscipline.reform_pace(squad)]  # its units'
 		for unit in squad.living():
-			_flee(squad, unit, [pace, seconds, fight_seed, entry[2].has(unit.id)], terrain)
+			var motion := [pace, seconds, fight_seed, entry[2].has(unit.id)] + order
+			_flee(squad, unit, motion, terrain)
 		squad.withdraw["safe_ticks"] = squad.withdraw["safe_ticks"] + 1 if entry[1] else 0
 		var long_enough: bool = (
-			squad.withdraw["safe_ticks"] * seconds >= FormationRout.RALLY_SECONDS
+			squad.withdraw["safe_ticks"] * seconds >= BattleTuning.current().rout_rally_seconds
 		)
 		if long_enough or _home(squad):
 			_reform_here(squad, tick, events)
 
 
-## `motion` is [pace (cells a tick at speed 1), seconds, fight seed, still disengaging].
+## `motion` is [pace (cells a tick at speed 1), seconds, fight seed, still disengaging,
+## its squad's disorder, its re-form pace].
 ## Disengaging is a manoeuvre, as re-forming is: until it is clear of the foes it touches,
 ## a unit turns and steps away at its formation's re-form pace; then it is in flight.
 static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, motion: Array, terrain) -> void:
@@ -108,18 +120,22 @@ static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, motion: Array, terra
 		return  # home
 	var homeward := _homeward(squad.route, along, home)
 	var full: float = unit.speed * motion[0]
-	var heading := homeward.rotated(RoutFlight.fan(unit, motion[2]) * disorder(squad))
+	var heading := DetMath.rotated(homeward, RoutFlight.fan(unit, motion[2]) * motion[4])
 	var side := homeward.orthogonal()
 	var aside: float = (at - squad.route.point_at(along)).dot(side)
-	if absf(aside) >= RoutFlight.FAN_CELLS * disorder(squad) and heading.dot(side) * aside > 0.0:
+	if (
+		absf(aside) >= BattleTuning.current().rout_fan_cells * motion[4]
+		and heading.dot(side) * aside > 0.0
+	):
 		heading = homeward  # fanned out as far as its disorder takes it (a rout's at most)
-	if terrain != null and terrain.factor(unit.height, at, at + heading) <= 0.0:
+	var reach := maxf(full, 1.0)  # where its step lands, a run's longer than a cell
+	if terrain != null and terrain.factor(unit, at, at + heading * reach) <= 0.0:
 		var onto: Vector2 = squad.route.point_at(move_toward(along, home, LOOK_CELLS)) - at
 		heading = onto.normalized() if onto.length() > 0.000001 else homeward  # back to the road
 	if terrain != null:
-		full *= terrain.factor(unit.height, at, at + heading)
+		full *= terrain.factor(unit, at, at + heading * reach)
 	var to := at + heading * maxf(full, 0.000001)
-	var efficacy := FormationDiscipline.reform_pace(squad)
+	var efficacy: float = motion[5]
 	var turning: float = motion[1] * efficacy  # a turn is a re-form
 	var step: float = full * minf(efficacy, 1.0) if motion[3] else full
 	entry["at"] = UnitMotion.walk(unit, at, to, step, turning)
@@ -146,15 +162,17 @@ static func _homeward(route, along: float, home: float) -> Vector2:
 	return way.normalized()
 
 
-## True if no standing enemy is near the squad and none pursues it.
-static func _safe(squad: SkirmishSquad, squads: Array, foes: Array) -> bool:
+## True if no standing enemy is near the squad and none pursues it. `foes` is the index
+## (ScrumNear) of its standing enemies.
+static func _safe(squad: SkirmishSquad, squads: Array, foes: Dictionary) -> bool:
 	for other in squads:
 		if other.pursuit.get("foe") == squad.id and not other.pursuit.get("returning", false):
 			return false
+	var near := BattleTuning.current().rout_enemy_near
 	for unit in squad.living():
 		var at := ScrumReach.at(squad, unit)
-		for entry in foes:
-			if ScrumReach.at(entry[1], entry[0]).distance_to(at) <= FormationRout.ENEMY_NEAR:
+		for found in BodyGrid.near(foes["grid"], at, near + ScrumNear.MARGIN):
+			if foes["points"][found].distance_to(at) <= near:
 				return false
 	return true
 

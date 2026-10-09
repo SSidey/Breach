@@ -12,3 +12,7 @@ __pycache__/
 
 # Designer app: per-machine Godot path (tools/designer/README.md)
 tools/designer/local_config.json
+
+# Native core (native/README.md): built libraries and build trees, never committed
+native/bin/
+native/rust/target/

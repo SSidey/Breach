@@ -1,0 +1,146 @@
+extends GdUnitTestSuite
+## The native core's BodyField (Decision 129, NativeKernels): Godot's hash() reproduced bit
+## for bit, a roster kept across ticks (units enrolled once, the dead dropped, a unit that
+## changes squad moved with it), and the scrum's slot search on the field choosing exactly
+## what ScrumSeek's GDScript chooses - whatever the list order. Skipped where the library
+## isn't built (native/build.sh): the switch falls back to GDScript.
+
+const NativeKernels = preload("res://sim/skirmish/formation/native_kernels.gd")
+const BodyFieldSync = preload("res://sim/skirmish/formation/body_field_sync.gd")
+const ScrumSeek = preload("res://sim/skirmish/formation/scrum_seek.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
+const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
+const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const FormationBench = preload("res://sim/skirmish/formation/formation_bench.gd")
+
+
+func after_test() -> void:
+	NativeKernels.use(NativeKernels.GDSCRIPT)
+
+
+func _field() -> Object:
+	NativeKernels.use(NativeKernels.RUST)
+	var field := NativeKernels.body_field()
+	NativeKernels.use(NativeKernels.GDSCRIPT)
+	if field == null:
+		print("test_body_field: the Rust core isn't built - skipped")
+	return field
+
+
+func test_the_core_hashes_as_godot_does() -> void:
+	var field := _field()
+	if field == null:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 129
+	for trial in range(2000):
+		var wide := rng.randi() * (1 << 31) + rng.randi()  # 62 bits, as the draws are
+		var shapes := [
+			[rng.randi_range(-9, 1 << 30), rng.randi_range(0, 9000), rng.randi_range(1, 5000)],
+			[rng.randi(), rng.randi_range(1, 5000), rng.randi_range(1, 5000), trial % 9, "slot"],
+			[rng.randi(), wide, wide - trial, "part"],
+			[rng.randi(), "squad", rng.randi_range(1, 99), trial % 2],
+			[-wide, 0, 1],
+		]
+		for keys in shapes:
+			assert_int(field.godot_hash(keys)).is_equal(hash(keys))
+
+
+func _unit(unit_id: int, at: Vector2) -> SkirmishUnit:
+	var unit := SkirmishUnit.new()
+	unit.id = unit_id
+	unit.hp = 10
+	unit.position = at
+	return unit
+
+
+func test_the_roster_is_kept_across_syncs_and_changes_only_where_units_do() -> void:
+	var field := _field()
+	if field == null:
+		return
+	var units: Array[SkirmishUnit] = [_unit(1, Vector2(1, 1)), _unit(2, Vector2(2, 1))]
+	var one := SkirmishSquad.new(1, "player", 1, 0.0, 2, units)
+	var others: Array[SkirmishUnit] = [_unit(3, Vector2(5, 5))]
+	var other := SkirmishSquad.new(2, "player", 1, 0.0, 1, others)
+	BodyFieldSync.bodies(field, [one, other], 7)
+	assert_int(field.count()).is_equal(3)
+	one.units[0].state = SkirmishUnit.State.DEAD
+	var moved := one.units[1]
+	one.units.erase(moved)
+	other.units.append(moved)
+	moved.position = Vector2(6, 5)
+	var synced := BodyFieldSync.bodies(field, [one, other], 7)
+	assert_int(field.count()).is_equal(2)  # the dead dropped, the mover kept
+	assert_array(synced[0]).is_equal([other.units[0], moved])
+	assert_array(Array(field.points())).is_equal([Vector2(5, 5), Vector2(6, 5)])
+
+
+## A mid-fight scrum of a 40-a-side clash: the squads after `ticks` ticks under GDScript.
+func _scrum(ticks: int, reversed: bool) -> Array:
+	var sim := FormationBench.clash(40, 10, 2)
+	for _tick in range(ticks):
+		sim.step()
+	var squads: Array = sim.squads().duplicate()
+	if reversed:
+		squads.reverse()
+		for squad in squads:
+			squad.units.reverse()
+	return squads
+
+
+func _ctx(squads: Array, field: Object) -> Dictionary:
+	var ctx := {"squads": squads, "tick": 7, "seed": 2, "terrain": null, "active": {}}
+	ctx["field"] = field
+	ctx["bodies"] = ScrumSeek.bodies(squads)
+	ctx["crowd"] = BodyGrid.of_bodies(ctx["bodies"])
+	return ctx
+
+
+## Every unit's seeking state after one plan, by unit id, with the squads made active.
+func _planned(squads: Array, field: Object) -> Array:
+	var ctx := _ctx(squads, field)
+	ScrumSeek.plan(ctx)
+	var out := []
+	for squad in squads:
+		for unit_id in squad.loose:
+			var entry: Dictionary = squad.loose[unit_id]
+			var held := [entry["goal"], entry["next"], entry.get("foe_at"), entry.get("touch")]
+			out.append([unit_id, held])
+	out.sort_custom(func(a, b): return a[0] < b[0])
+	var active: Array = ctx["active"].keys()
+	active.sort()
+	return [out, active]
+
+
+func _saved(squads: Array) -> Array:
+	return squads.map(func(squad): return squad.loose.duplicate(true))
+
+
+func _restore(squads: Array, saved: Array) -> void:
+	for index in range(squads.size()):
+		squads[index].loose = saved[index].duplicate(true)
+
+
+func test_the_slot_search_on_the_field_seeks_as_gdscript_does() -> void:
+	var field := _field()
+	if field == null:
+		return
+	# Moments while the scrum is under way (with DetMath it ends by tick 150, not 165)
+	for ticks in [95, 110, 130, 140]:
+		var squads := _scrum(ticks, false)
+		var saved := _saved(squads)
+		var reference := _planned(squads, null)
+		var seeking: Array = reference[0].filter(func(e): return e[1][0] != null)
+		assert_bool(seeking.is_empty()).is_false()  # the scrum is under way
+		_restore(squads, saved)
+		var planned := var_to_bytes(_planned(squads, field))
+		assert_array(Array(planned)).is_equal(Array(var_to_bytes(reference)))
+
+
+func test_the_slot_search_on_the_field_is_the_same_whatever_the_list_order() -> void:
+	var field := _field()
+	if field == null:
+		return
+	var forward := _planned(_scrum(120, false), field)
+	var backward := _planned(_scrum(120, true), _field())
+	assert_array(Array(var_to_bytes(backward))).is_equal(Array(var_to_bytes(forward)))

@@ -18,7 +18,7 @@ const TICK := 0.1
 func _melee(hp: int, dmg: int, speed: float = 1.0) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = hp
-	unit_def.dmg = dmg
+	unit_def.items = [WeaponDef.innate_weapon(dmg)]
 	unit_def.speed = speed
 	return unit_def
 
@@ -26,13 +26,13 @@ func _melee(hp: int, dmg: int, speed: float = 1.0) -> UnitDef:
 func _spitter(hp: int = 400) -> UnitDef:
 	var unit_def := _melee(hp, 0)
 	unit_def.preferred_position = UnitDef.Position.BACK
-	unit_def.weapons = [_weapon("spit", 4, 5), _weapon("claw", 1, 0), _weapon("bite", 1, 0)]
+	unit_def.items = [_weapon("spit", 4, 5), _weapon("claw", 1, 0), _weapon("bite", 1, 0)]
 	return unit_def
 
 
 func _weapon(weapon_name: String, damage: int, attack_range: int) -> WeaponDef:
 	var weapon := WeaponDef.new()
-	weapon.weapon_name = weapon_name
+	weapon.item_name = weapon_name
 	weapon.damage = damage
 	weapon.attack_range = attack_range
 	return weapon

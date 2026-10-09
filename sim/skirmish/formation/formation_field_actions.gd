@@ -65,6 +65,17 @@ static func apply(field: FormationField, given: Dictionary) -> bool:
 			field.set_auto(wave, on)
 		"wait":
 			field.set_wait(on)
+		"tend":
+			if not field.waves.has(wave) or given["value"] not in ["leave", "recover", "carry"]:
+				return false
+			field.tending[wave] = "" if given["value"] == "leave" else given["value"]
+		"hurry":
+			if not field.waves.has(wave):
+				return false
+			if on:
+				field.hurried[wave] = true
+			else:
+				field.hurried.erase(wave)
 		"route":
 			if not field.waves.has(wave) or not field.routes.has(given["value"]):
 				return false

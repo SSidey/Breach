@@ -3,8 +3,10 @@ extends GdUnitTestSuite
 ## slope, liquid in bands of a unit's height, cliffs and deep water impassable, and a squad
 ## keeping the pace of the worst cell its front rank steps into.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const TerrainWalker = preload("res://sim/skirmish/formation/terrain_walker.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 
@@ -18,7 +20,7 @@ func _terrain() -> FormationTerrain:
 func _def() -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 20
-	unit_def.dmg = 1
+	unit_def.items = [WeaponDef.innate_weapon(1)]
 	unit_def.speed = 1.0
 	return unit_def
 
@@ -65,11 +67,15 @@ func test_water_slows_by_depth_against_height() -> void:
 		return ground.factor(height, Vector2(x - 0.5, 0.5), Vector2(x + 0.5, 0.5))
 
 	assert_float(at.call(10, 1.0)).is_equal(1.0)
-	assert_float(at.call(11, 1.0)).is_equal_approx(FormationTerrain.WADING, 0.0001)
-	assert_float(at.call(12, 1.0)).is_equal_approx(FormationTerrain.SLOW_WADING, 0.0001)
+	assert_float(at.call(11, 1.0)).is_equal_approx(BattleTuning.current().ground_wading, 0.0001)
+	assert_float(at.call(12, 1.0)).is_equal_approx(
+		BattleTuning.current().ground_slow_wading, 0.0001
+	)
 	assert_float(at.call(13, 1.0)).is_equal(0.0)
 	# A brute, twice as tall, wades it.
-	assert_float(at.call(13, 2.0)).is_equal_approx(FormationTerrain.SLOW_WADING, 0.0001)
+	assert_float(at.call(13, 2.0)).is_equal_approx(
+		BattleTuning.current().ground_slow_wading, 0.0001
+	)
 
 
 func test_a_squad_half_in_a_wood_slows_as_a_whole() -> void:
@@ -86,19 +92,34 @@ func test_a_squad_half_in_a_wood_slows_as_a_whole() -> void:
 	assert_float(x).is_greater(22.0)
 
 
-func test_deep_water_across_the_route_halts_the_squad() -> void:
+func _crossing(sinks: bool) -> Array:
 	var sim := FormationSimulation.new(1.0, TICK)
 	sim.terrain = _terrain()
 	sim.terrain.paint(Rect2i(20, 0, 2, 32), {"depth": 2.0})
 	var route := FormationRoute.new(PackedVector2Array([Vector2(0, 10), Vector2(64, 10)]))
 	var squad := sim.spawn_squad(2, _line(2), "player", true, 0, route)
-
+	if sinks:
+		for unit in squad.units:
+			unit.walker = TerrainWalker.grounded(unit.height)
 	var log := []
-	for _i in range(80):
+	for _i in range(160):
 		log.append_array(sim.step())
+	return [squad, log]
 
-	assert_float(squad.position.x).is_less_equal(20.0)
-	assert_int(log.filter(func(e): return e["type"] == "blocked").size()).is_equal(1)
+
+func test_deep_water_across_the_route_halts_a_squad_that_cannot_swim() -> void:
+	var crossing := _crossing(true)
+
+	assert_float(crossing[0].position.x).is_less_equal(20.0)
+	assert_int(crossing[1].filter(func(e): return e["type"] == "blocked").size()).is_equal(1)
+
+
+func test_a_squad_that_swims_crosses_deep_water_slowly() -> void:
+	# spec 30 round 3: everyone swims, at the swim pace (ground_swim_pace)
+	var crossing := _crossing(false)
+
+	assert_float(crossing[0].position.x).is_greater(22.0)
+	assert_bool(crossing[1].any(func(e): return e["type"] == "blocked")).is_false()
 
 
 func test_without_terrain_nothing_changes() -> void:

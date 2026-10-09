@@ -22,7 +22,7 @@ func _route(points: Array) -> FormationRoute:
 func _def(detection: float = 40.0, tactics: Array[String] = []) -> UnitDef:
 	var unit_def := UnitDef.new()
 	unit_def.hp = 50
-	unit_def.dmg = 1
+	unit_def.items = [WeaponDef.innate_weapon(1)]
 	unit_def.speed = 1.0
 	unit_def.detection_range = detection
 	unit_def.leadership = 2 if not tactics.is_empty() else 0

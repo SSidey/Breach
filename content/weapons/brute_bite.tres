@@ -4,6 +4,8 @@
 
 [resource]
 script = ExtResource("1_kixot")
-weapon_name = "bite"
+item_name = "bite"
 damage = 3
 damage_type = "piercing"
+innate = true
+slots = Array[String](["mouth"])

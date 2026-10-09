@@ -12,15 +12,17 @@ const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const FormationContact = preload("res://sim/skirmish/formation/formation_contact.gd")
 const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
+const SquadMemo = preload("res://sim/skirmish/formation/squad_memo.gd")
 
 
 ## Locks free squads onto the hostile fronts they reach. Adds "engaged" events.
 static func engage(squads: Array, tick: int, fight_seed: int, events: Array) -> void:
 	var picks := {}  # attacker -> foe, every one chosen before any lock lands
+	var memo := SquadMemo.new()  # a lock moves no squad
 	for attacker in squads:
 		if not FormationContact.can_engage(attacker) or attacker.engaged_with != 0:
 			continue
-		var foe := FormationContact.nearest_hostile(attacker, squads, fight_seed)
+		var foe := FormationContact.nearest_hostile(attacker, squads, fight_seed, memo)
 		if foe != null:
 			picks[attacker] = foe
 	for attacker in picks:
@@ -31,6 +33,6 @@ static func engage(squads: Array, tick: int, fight_seed: int, events: Array) -> 
 		if foe.engaged_with != 0 or not FormationContact.can_engage(foe):
 			continue  # one getting away doesn't turn to fight (Decision 111)
 		var pickers := picks.keys().filter(func(a): return picks[a] == foe)
-		var nearest := FormationContact.nearest_hostile(foe, pickers, fight_seed)
+		var nearest := FormationContact.nearest_hostile(foe, pickers, fight_seed, memo)
 		if nearest != null:  # reach is mutual, so one always is
 			FormationLocks.lock(foe, nearest)

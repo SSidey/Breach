@@ -1,0 +1,32 @@
+{
+  "about": "Traits (Decision 64, rated; Decision 128): each id, what it does, its tags - which say where it may sit - and optionally 'only', narrowing that further. An item's own traits must be allowed on the item; what it 'grants' its carrier must be allowed on a unit.",
+  "traits": [
+    {"id": "cunning", "tags": ["behaviour"], "description": "Plays dead more readily, and is harder to see through doing it; a leader's helps its formation's downed (Decision 127)."},
+    {"id": "thorough", "tags": ["behaviour"], "description": "Hard to fool: sees through foes playing dead (Decision 127)."},
+    {"id": "captor", "tags": ["behaviour"], "description": "Captures downed foes rather than finishing them (Decision 121)."},
+    {"id": "never_surrenders", "tags": ["behaviour"], "description": "A routing unit with it never surrenders (Decision 121)."},
+    {"id": "messenger", "tags": ["tactic"], "description": "A leader's: lets one downed foe go home per level, a morale blow to its side (Decision 121)."},
+    {"id": "gathers", "tags": ["tactic"], "description": "A leader's: takes a leaderless friendly group it meets after a fight into its own command (spec 30 round 3)."},
+    {"id": "joins", "tags": ["tactic"], "description": "A leader's: brings its group into the command of a friendly group it meets after a fight (spec 30 round 3)."},
+    {"id": "retreats_at_march", "tags": ["drill"], "description": "Its formation retreats at a march rather than a run, if its leader or every unit has it (Decision 126)."},
+    {"id": "pursues_at_march", "tags": ["drill"], "description": "Its formation pursues at a march rather than a run, if its leader or every unit has it (Decision 126)."},
+    {"id": "fall_behind_left_behind", "tags": ["drill"], "description": "Its formation never waits for a unit lagging behind its place, if its leader or every unit has it (spec 30 round 3)."},
+    {"id": "no_man_left_behind", "tags": ["drill"], "description": "Its formation waits for every unit lagging behind its place, even one that has fallen far behind, if its leader or every unit has it (spec 30 round 3)."},
+    {"id": "hardened", "tags": ["physical"], "description": "Shrugs off its first N wounds (Decision 126)."},
+    {"id": "regenerates_downed", "tags": ["physical"], "only": ["unit"], "description": "Its regeneration keeps running while it is downed (Decision 121)."},
+    {"id": "hauler", "tags": ["physical"], "only": ["unit"], "description": "Carries more before it can't move: a higher load limit per level (Decision 120)."},
+    {"id": "burrower", "tags": ["movement"], "description": "Digs through ground of dig_difficulty up to its level (Decision 64)."},
+    {"id": "climber", "tags": ["movement"], "default": 0, "description": "Climbs a cliff of climb_difficulty up to its level at the climb pace, one level short at half (Decision 64); every unit has it at 0 (spec 30)."},
+    {"id": "swimmer", "tags": ["movement"], "default": 0, "description": "Swims water at least its height deep that flows up to its level at the swim pace, one level short at half (Decision 64, spec 30 round 3); every unit has it at 0."},
+    {"id": "cant_climb", "tags": ["movement"], "description": "Never climbs, whatever the cliff - a cart (spec 30)."},
+    {"id": "sinks", "tags": ["movement"], "description": "Never swims, at any load - the opposite of the norm, a cart (spec 30 round 3)."},
+    {"id": "darksight", "tags": ["sense"], "description": "Sees in the dark (Decision 83)."},
+    {"id": "siege", "tags": ["combat"], "only": ["weapon"], "description": "A weapon's: damages structures (Decision 47)."},
+    {"id": "wounding", "tags": ["combat"], "only": ["weapon"], "description": "A weapon's: a foe it downs takes N wounds more (Decision 126)."},
+    {"id": "dig_difficulty", "tags": ["ground"], "description": "How hard it is to dig: a burrower of at least this level gets through (Decision 64)."},
+    {"id": "climb_difficulty", "tags": ["ground"], "description": "How hard it is to climb: a climber of at least this level gets up (Decision 64)."},
+    {"id": "flows", "tags": ["ground"], "description": "It is a liquid, flowing at this rate (Decision 64)."},
+    {"id": "loose", "tags": ["ground"], "description": "It falls and settles (Decision 64)."},
+    {"id": "glows", "tags": ["ground"], "description": "It lights its surroundings at this level (Decision 64)."}
+  ]
+}

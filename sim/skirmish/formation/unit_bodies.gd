@@ -4,38 +4,39 @@ extends RefCounted
 ## footprint - a grem 1 cell across, a brute 2 - and no two bodies overlap. After every
 ## move each tick, each pair whose bodies overlap is pushed apart the shortest way:
 ## - **Friends** split the push by mass (footprint area): a brute moves a grem more than a
-##   grem moves a brute. A unit in its formation's frame resists, RESIST times its mass,
+##   grem moves a brute. A unit in its formation's frame resists, bodies_resist times its mass,
 ##   but gives way: pushed, it leaves its place and walks back to it (its squad re-forms).
 ##   To another squad's loose unit it doesn't give way - a squad's space is kept by its
 ##   units in control of it - so the loose one takes the whole push; nor to its own
-##   squad's when only brushed (under BRUSH deep). Routers in flight still push through,
+##   squad's when only brushed (under bodies_brush deep). Routers in flight still push through,
 ##   and its own squad's loose units still shove their way through it.
 ## - **Foes** are not pushed (Decision 105): two that overlap - one shoved into the other by
 ##   its friends - each step back half the overlap, so no one is pushed into an enemy.
 ## - **Two units both in their frames** are kept apart by the frames (their own places, and
 ##   friends queueing between squads: Decision 84).
-## Pushes are worked out from one snapshot, then applied together, PASSES times a tick; a
+## Pushes are worked out from one snapshot, then applied together, bodies_passes times a tick; a
 ## pair whose bodies lie exactly on each other parts along an angle seeded by the battle
 ## and the two units, never by a world direction or the list (Decision 97). Pure over the
 ## squads it is given.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
+const NativeKernels = preload("res://sim/skirmish/formation/native_kernels.gd")
+const BodyParting = preload("res://sim/skirmish/formation/body_parting.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
-## How many times over a unit in its frame weighs, against being pushed (placeholder).
-const RESIST := 4.0
-const PASSES := 3
 ## Cells a bucket of the pair search spans: at least the widest body.
 const BUCKET := 2.0
-## A loose friend of its own squad overlapping a unit in its frame by less than this (cells)
-## only brushes it: it keeps its place (placeholder).
-const BRUSH := 0.05
 ## Overlaps shallower than this (cells) are left: Vector2's float32 rounding, not a push.
 const EPSILON := 0.001
+
+## Microseconds spent in step() since it was last zeroed (the bench reads it; no outcome does).
+static var clock_usec := 0
 
 
 ## The body's radius in cells.
@@ -52,10 +53,32 @@ static func at(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
 	return unit.position
 
 
-## Pushes apart every pair of bodies that overlap.
-static func step(squads: Array, fight_seed: int) -> void:
-	for _pass in range(PASSES):
-		var bodies := _bodies(squads, fight_seed)
+## Pushes apart every pair of bodies that overlap: in GDScript (the reference) or, when the
+## switch picks Rust and it is built, on the battle's native `field` (a BodyField kept
+## across ticks; without one, a field made for this step alone).
+static func step(squads: Array, fight_seed: int, field: Object = null) -> void:
+	var began := Time.get_ticks_usec()
+	if field == null:
+		field = NativeKernels.body_field()
+	if field != null:
+		var way := func(draw: int, other_draw: int) -> Vector2:
+			return part_way(fight_seed, draw, other_draw)
+		BodyParting.step(field, squads, fight_seed, way, NativeKernels.threaded)
+	else:
+		_passes(_drawn(squads, fight_seed), fight_seed)
+	clock_usec += Time.get_ticks_usec() - began
+
+
+## The way two bodies lying exactly on each other part: seeded by the battle and their draws.
+static func part_way(fight_seed: int, draw: int, other_draw: int) -> Vector2:
+	var angle := TAU * BattleRolls.uniform(fight_seed, [draw, other_draw, "part"])
+	return DetMath.rotated(Vector2.RIGHT, angle)
+
+
+## The GDScript passes: pairs found and pushed from one snapshot, then applied together.
+static func _passes(drawn: Array, fight_seed: int) -> void:
+	for _pass in range(BattleTuning.current().bodies_passes):
+		var bodies := _bodies(drawn)
 		var moves := {}  # body index -> how far it is pushed
 		for pair in _pairs(bodies):
 			_push(bodies, pair, fight_seed, moves)
@@ -65,36 +88,61 @@ static func step(squads: Array, fight_seed: int) -> void:
 			_move(bodies[index], moves[index])
 
 
-## [[squad, unit, where, its draw], ...] for every living unit of a standing squad, in the
-## order of their draws (not the list's).
-static func _bodies(squads: Array, fight_seed: int) -> Array:
+## [[squad, unit, its draw], ...] for every living unit of a standing squad, in the order
+## of their draws (not the list's): the same all through a step.
+static func _drawn(squads: Array, fight_seed: int) -> Array:
 	var out := []
 	for squad in squads:
 		if squad.state == SkirmishSquad.State.DESTROYED:
 			continue
 		for unit in squad.living():
-			out.append([squad, unit, at(squad, unit), ScrumContest.draw(unit, fight_seed)])
-	out.sort_custom(func(a, b): return a[3] < b[3])
+			out.append([squad, unit, ScrumContest.draw(unit, fight_seed)])
+	out.sort_custom(func(a, b): return a[2] < b[2])
 	return out
 
 
-## [[i, j], ...] for bodies near enough to overlap, i < j, found through buckets.
+## [[squad, unit, where, its draw], ...]: the drawn bodies (_drawn) where they stand now.
+static func _bodies(drawn: Array) -> Array:
+	var out := []
+	for entry in drawn:
+		out.append([entry[0], entry[1], at(entry[0], entry[1]), entry[2]])
+	return out
+
+
+## [[i, j], ...] in order, for bodies that overlap, i < j, not both in their frames,
+## found through buckets from the bodies out of their frames.
 static func _pairs(bodies: Array) -> Array:
+	var count := bodies.size()
 	var buckets := {}
-	for index in range(bodies.size()):
+	var homes := []
+	var framed := []
+	var radii := []
+	for index in range(count):
 		var key := Vector2i((bodies[index][2] / BUCKET).floor())
+		homes.append(key)
+		framed.append(_framed(bodies[index]))
+		radii.append(radius(bodies[index][1]))
 		if not buckets.has(key):
 			buckets[key] = []
 		buckets[key].append(index)
-	var out := []
-	for index in range(bodies.size()):
-		var home := Vector2i((bodies[index][2] / BUCKET).floor())
+	var found := PackedInt64Array()
+	for index in range(count):
+		if framed[index]:
+			continue  # a pair of two in their frames is kept apart by the frames
 		for dy in range(-1, 2):
 			for dx in range(-1, 2):
-				for other in buckets.get(home + Vector2i(dx, dy), []):
-					if other > index and not (_framed(bodies[index]) and _framed(bodies[other])):
-						out.append([index, other])
-	out.sort()
+				for other in buckets.get(homes[index] + Vector2i(dx, dy), []):
+					if not framed[other] and other <= index:
+						continue
+					var one := mini(index, other)
+					var two := maxi(index, other)
+					var apart: Vector2 = bodies[two][2] - bodies[one][2]
+					if radii[one] + radii[two] - apart.length() > EPSILON:  # as _push weighs it
+						found.append(one * count + two)
+	found.sort()
+	var out := []
+	for pair in found:
+		out.append([pair / count, pair % count])
 	return out
 
 
@@ -114,7 +162,7 @@ static func _push(bodies: Array, pair: Array, fight_seed: int, moves: Dictionary
 		return
 	var way := apart.normalized()
 	if apart.length() < EPSILON:
-		way = Vector2.RIGHT.rotated(TAU * BattleRolls.uniform(fight_seed, [a[3], b[3], "part"]))
+		way = part_way(fight_seed, a[3], b[3])
 	var share := 0.5
 	if a[0].faction_id == b[0].faction_id:
 		share = _mass(b) / (_mass(a) + _mass(b))
@@ -134,14 +182,14 @@ static func _push(bodies: Array, pair: Array, fight_seed: int, moves: Dictionary
 static func _keeps(keeper: Array, other: Array, depth: float) -> bool:
 	if not _framed(keeper) or not other[0].loose.has(other[1].id):
 		return false
-	return keeper[0] != other[0] or depth < BRUSH
+	return keeper[0] != other[0] or depth < BattleTuning.current().bodies_brush
 
 
-## What a body weighs against a push: its footprint's area, RESIST times over in its frame.
+## What a body weighs against a push: its footprint's area, bodies_resist times over in its frame.
 static func _mass(body: Array) -> float:
 	var unit: SkirmishUnit = body[1]
 	var area := float(unit.footprint_width * unit.footprint_depth)
-	return area * RESIST if _framed(body) else area
+	return area * BattleTuning.current().bodies_resist if _framed(body) else area
 
 
 ## Moves the body by `push`: a router's flight, a loose unit's point, or - for one in its

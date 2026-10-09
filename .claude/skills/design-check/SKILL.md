@@ -1,6 +1,6 @@
 ---
 name: design-check
-description: "Check a Breach design decision or simulation change against the project's two standing principles before it is proposed, recorded or committed: a general rule over special cases (a special case needs the user's own reason), and identity or spawn order never deciding outcomes. Use whenever proposing or recording a Decision, answering feel-test feedback with a rule change, or changing anything under sim/ that affects outcomes (targeting, ordering, tie-breaks, contests, movement, morale), and when invoked as /design-check."
+description: "Check a Breach design decision or simulation change against the project's standing principles before it is proposed, recorded or committed: a general rule over special cases (a special case needs the user's own reason), identity or spawn order never deciding outcomes, and per-tick work staying local and bounded. Use whenever proposing or recording a Decision, answering feel-test feedback with a rule change, or changing anything under sim/ that affects outcomes (targeting, ordering, tie-breaks, contests, movement, morale), and when invoked as /design-check."
 ---
 
 # Checking a design against the standing principles
@@ -65,8 +65,24 @@ An id names a unit or squad. It never ranks one. Ids are handed out in spawn ord
 Write the answer to the spec's `order-independent` row, or an **Order** line in the
 Decision.
 
-## 3. Then
+## 3. Work stays bounded (`principles/bounded-work.md`)
 
-- Put both answers in the PR body under the rubric checklist.
-- If either check turned up something you didn't fix, say so plainly in the PR and to
+For each pass the change adds or touches that runs every tick:
+
+1. **What bounds each loop?** A radius or a count (through `BodyGrid` or another index),
+   or the size of the battle? Look for hidden scans too: `erase`, `has`, `find`,
+   `duplicate`, `filter`, `map` or `living()` inside a loop over the same things, and
+   sort comparators that hash on every comparison (take each key once, then sort).
+2. **Does it re-check what can't have changed?** Prefer a work list fed by the changes
+   (a dug tile queues the tiles it supports), kept in a deterministic order, if every
+   change that matters queues it.
+3. **Measure:** `godot --headless --path . --script res://tools/scaling_check.gd` (also
+   in CI) must pass; for a slow pass, `tools/tick_phases.gd` shows which phase grows.
+
+Write the answer to the spec's `bounded-work` row, or a **Bounded** line in the Decision.
+
+## 4. Then
+
+- Put the answers in the PR body under the rubric checklist.
+- If any check turned up something you didn't fix, say so plainly in the PR and to
   the user. Don't leave it for a reviewer to find.

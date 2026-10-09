@@ -2,26 +2,26 @@ class_name FormationMelee
 extends RefCounted
 ## This tick's melee blows (Decision 88): units in the scrum strike the foes they touch
 ## (ScrumBlows), and hostiles strike routers within reach from behind (RoutBlows).
-## A striker on higher ground hits harder (Decision 85; x HIGH_GROUND, a placeholder until
-## spec 28 defines a step of damage).
+## How each lands - high ground and flanks among what shifts it - is BlowLanding's.
 ## Pure over the squads it is given; FormationSimulation applies the blows.
 
 const RoutBlows = preload("res://sim/skirmish/formation/rout_blows.gd")
 const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
-const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
-
-const HIGH_GROUND := 1.25
+const ScrumBlowsField = preload("res://sim/skirmish/formation/scrum_blows_field.gd")
 
 
-## [[attacker, target, damage, flank], ...]; updates each striker's target and cooldown.
-## `fight_seed` breaks ties between equal targets (Decision 97).
-static func blows(
-	squads: Array, interval: int, fight_seed: int, terrain: FormationTerrain = null
-) -> Array:
-	var out := ScrumBlows.blows(squads, interval, fight_seed)
+## [[attacker, target, damage, flank], ...]; clears every living unit's target, then
+## updates each striker's target and cooldown. `fight_seed` breaks ties between equal
+## targets (Decision 97). Given the battle's native bodies (`field`, NativeKernels), the
+## scrum's search runs on them (ScrumBlowsField).
+static func blows(squads: Array, interval: int, fight_seed: int, field: Object = null) -> Array:
+	var out := []
+	if field != null:
+		out = ScrumBlowsField.blows(field, squads, interval, fight_seed)
+	else:
+		for squad in squads:
+			for unit in squad.living():
+				unit.target_id = 0
+		out = ScrumBlows.blows(squads, interval, fight_seed)
 	out.append_array(RoutBlows.blows(squads, interval, fight_seed))
-	if terrain != null:
-		for blow in out:
-			if terrain.high_ground(blow[0].position, blow[1].position):
-				blow[2] = roundi(blow[2] * HIGH_GROUND)
 	return out

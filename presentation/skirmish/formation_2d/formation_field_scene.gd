@@ -24,6 +24,8 @@ const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.g
 const FormationPursuit = preload("res://sim/skirmish/formation/formation_pursuit.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
+const FallenDrawing = preload("res://presentation/skirmish/formation_2d/fallen_drawing.gd")
+const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const FormationFieldHud = preload("res://presentation/skirmish/formation_2d/formation_field_hud.gd")
 
 const CELL_PX := 8.0
@@ -95,7 +97,7 @@ func restart(captained: bool, battle_seed: int, queued: Array = []) -> void:
 	_battle_seed = battle_seed
 	_queued = queued.duplicate()
 	_field = FormationFieldActions.field(battle_seed, captained)
-	_log = PackedStringArray([FormationRecord.header(battle_seed, captained)])
+	_log = PackedStringArray([FormationRecord.header(battle_seed, captained, SimBuild.id())])
 	_previous = {}
 	_current = {}
 	_snapshot()
@@ -132,10 +134,21 @@ func _draw() -> void:
 	var fraction := 1.0 if _clock.is_paused() else _clock.fraction()
 	_draw_staging()
 	for squad in _field.sim.squads():
+		for unit in squad.units:
+			if not unit.is_alive() and unit.state != SkirmishUnit.State.CARRIED:
+				var radius := minf(unit.footprint_width, unit.footprint_depth) / 2.0 * CELL_PX - 0.5
+				var centre: Vector2 = ORIGIN + unit.position * CELL_PX
+				FallenDrawing.draw(self, unit, centre, radius, COLOURS[squad.faction_id])
+	for squad in _field.sim.squads():
 		for unit in squad.living():
 			_draw_unit(squad, unit, fraction)
 		_draw_morale(squad)
 		_draw_pursuit(squad)
+	for squad in _field.sim.squads():
+		for unit in squad.units:
+			if unit.state == SkirmishUnit.State.CARRIED:  # on top of its bearer
+				var centre: Vector2 = ORIGIN + unit.position * CELL_PX
+				FallenDrawing.draw(self, unit, centre, CELL_PX * 0.5, COLOURS[squad.faction_id])
 
 
 func _draw_route(key: String) -> void:

@@ -13,6 +13,8 @@ const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
+const FormationWalk = preload("res://sim/skirmish/formation/formation_walk.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 
@@ -24,17 +26,21 @@ static func length(squad: SkirmishSquad, fallback: float) -> float:
 
 
 ## How far the squad moves this tick on `terrain` (Decision 85): `step` at the pace of the
-## worst cell its front rank steps into. Where it can't go at all it halts, reported once
-## as "blocked".
+## worst cell its front rank steps into that it can cross - a unit whose way is barred
+## squeezes in and pours through (FormationWalk.target_of, spec 30 round 3). Where none of
+## its front can go it halts, reported once as "blocked".
 static func pace(
 	squad: SkirmishSquad, terrain: FormationTerrain, step: float, tick: int, events: Array
 ) -> float:
 	if terrain == null:
 		return step
 	var ahead := UnitMotion.vector(squad.heading)
-	var worst := 1.0
+	var worst := INF
 	for unit in squad.fighters():
-		worst = minf(worst, terrain.factor(unit.height, unit.position, unit.position + ahead))
+		var factor := terrain.factor(unit, unit.position, unit.position + ahead)
+		if factor > 0.0:  # one stepping onto ground it can't cross pours (FormationWalk)
+			worst = minf(worst, factor)
+	worst = 0.0 if worst == INF else worst
 	if worst <= 0.0 and not squad.blocked:
 		events.append(FormationEvents.squad_event("blocked", tick, squad))
 	squad.blocked = worst <= 0.0
@@ -94,26 +100,37 @@ static func check_ends(mover: SkirmishSquad, route_end: float, tick: int, events
 		events.append(FormationEvents.squad_event("returned", tick, mover))
 
 
-## Units mirror their squad's placement - including any swap under way - so views can read
-## unit.distance (along the route) and unit.position (the centre of its cells).
-static func sync_units(squads: Array) -> void:
+## Units follow their squad's placement - including any swap under way - and views read
+## unit.distance (along the route). Placing (no `timing`) sets each unit on its place;
+## otherwise a unit in its place walks there ([seconds, cells a second at speed 1],
+## FormationWalk), and loose and fleeing units stand where their own moves took them.
+static func sync_units(squads: Array, timing := [], terrain: FormationTerrain = null) -> void:
+	if not timing.is_empty():
+		timing = timing + [GroundBodies.ground(squads)]
 	for entry in squads:
+		var moving := FormationShuffle.movers(entry)
 		for unit in entry.units:
-			var swapping := FormationShuffle.offset(entry, unit)
+			if not unit.is_alive():
+				continue  # the fallen lie where they fell (Decision 126)
+			var swapping := FormationShuffle.offset(entry, unit, moving)
 			unit.distance = (
 				entry.unit_distance(unit) + entry.direction * swapping.x * SkirmishSquad.RANK_DEPTH
 			)
-			var ahead := UnitMotion.vector(entry.heading)
-			var shift := ahead * swapping.x - ahead.orthogonal() * swapping.y
-			unit.position = (
-				SquadFrame.place(
-					entry.position, entry.heading, entry.width, entry.centre_shift, unit
-				)
-				+ shift
-			)
-			if entry.loose.has(unit.id):
-				unit.position = entry.loose[unit.id]["at"]
-			else:
-				unit.bearing = entry.heading
 			if entry.fleeing.has(unit.id):
 				unit.position = FormationRout.where(entry, unit.id)
+				if not entry.loose.has(unit.id):
+					unit.bearing = entry.heading
+			elif entry.loose.has(unit.id):
+				unit.position = entry.loose[unit.id]["at"]
+			elif timing.is_empty():
+				unit.position = FormationWalk.place_of(entry, unit, moving)
+				unit.foothold = unit.position
+				unit.bearing = entry.heading
+			else:
+				FormationWalk.walk(
+					entry,
+					unit,
+					FormationWalk.target_of(entry, unit, terrain, moving),
+					timing,
+					terrain
+				)

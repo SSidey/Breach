@@ -1,42 +1,28 @@
 class_name FormationMorale
 extends RefCounted
-## Morale (Decision 82, spec 27 round 3): a formation's will to fight, 0 to 100 (all
-## numbers placeholders).
-## - **Ceiling:** its living units' mean courage, plus 10 for each point of its best
+## Morale (Decision 82, spec 27 round 3): a formation's will to fight, 0 to 100. Its
+## numbers are BattleTuning's (`morale_*`, content/tuning/battle_tuning.tres).
+## - **Ceiling:** its living units' mean courage, plus a step for each point of its best
 ##   living leader's leadership (Decision 81), at most 100. A fallen leader lowers it.
-## - **Bands:** steady, shaken, wavering (strikes half again more
-##   slowly) and routing at 0. Short of a rout, a formation still meets its enemy at every
-##   band (Decision 101), but the more shaken it is the softer its blows land: BLOW_SHARE
-##   of their damage, by band.
-## - **Shock** drains it: impact when struck on a side (15) or the rear (30) or by an
-##   arriving wing (10); 4 for each unit of its own that falls; 10 per point of leadership
-##   when a leader falls.
-## - **Pressure**, each second, by the sides it fights on: two 3, three 9, four 18. A side
-##   with a friendly squad within 2 cells is supported and counts one less.
-## - **Recovery**, each second out of contact: 2 plus its leadership, up to the ceiling.
+## - **Bands:** steady, shaken, wavering (strikes half again more slowly) and routing at
+##   0. Short of a rout, a formation still meets its enemy at every band (Decision 101),
+##   but the more shaken it is the softer its blows land: a share of their damage, by band.
+## - **Shock** drains it: impact when struck on a side or the rear; a loss for each unit of
+##   its own that falls, and per point of leadership when a leader falls.
+## - **Pressure**, each second, by how many sides it fights on. A side with a friendly
+##   squad near is supported and counts one less.
+## - **Recovery**, each second out of contact: a little plus its leadership, up to the
+##   ceiling.
 ## Pure over the squads it is given; the simulation calls it.
 
 enum Band { STEADY, SHAKEN, WAVERING, ROUTING }
-
-## The share of its blows' damage a formation lands, by band (placeholders).
-const BLOW_SHARE := [1.0, 0.8, 0.6, 0.0]
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const SquadEdges = preload("res://sim/skirmish/formation/squad_edges.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
-
-const SIDE_IMPACT := 15
-const REAR_IMPACT := 30
-const WING_IMPACT := 10
-const LOSS := 4
-const LEADER_LOSS := 10
-const RECOVERY := 2
-const PRESSURE := [0, 0, 3, 9, 18]
-const SUPPORT_CELLS := 2.0
-const STEADY_AT := 50
-const SHAKEN_AT := 25
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 
 
 static func ceiling(squad: SkirmishSquad) -> int:
@@ -46,7 +32,10 @@ static func ceiling(squad: SkirmishSquad) -> int:
 	var courage := 0
 	for unit in living:
 		courage += unit.courage
-	return mini(100, roundi(float(courage) / living.size()) + 10 * leadership(squad))
+	return mini(
+		100,
+		roundi(float(courage) / living.size()) + _tuning().morale_per_leadership * leadership(squad)
+	)
 
 
 ## The best living leader's leadership (Decision 81).
@@ -59,9 +48,9 @@ static func leadership(squad: SkirmishSquad) -> int:
 
 static func band(squad: SkirmishSquad) -> Band:
 	var morale := _morale(squad)
-	if morale >= STEADY_AT:
+	if morale >= _tuning().morale_steady_at:
 		return Band.STEADY
-	if morale >= SHAKEN_AT:
+	if morale >= _tuning().morale_shaken_at:
 		return Band.SHAKEN
 	return Band.WAVERING if morale > 0 else Band.ROUTING
 
@@ -78,10 +67,10 @@ static func shock(squad: SkirmishSquad, amount: int, tick: int, events: Array) -
 
 ## The shock of this tick's dead in a squad: each loss, and more for each leader.
 static func losses(squad: SkirmishSquad, fallen: Array, tick: int, events: Array) -> void:
-	var amount := LOSS * fallen.size()
+	var amount := _tuning().morale_loss * fallen.size()
 	for unit in fallen:
 		if unit.leadership > 0:
-			amount += LEADER_LOSS * unit.leadership
+			amount += _tuning().morale_leader_loss * unit.leadership
 			var extra := {"unit": unit.id, "leadership": unit.leadership}
 			events.append(FormationEvents.squad_event("leader_fell", tick, squad, extra))
 	shock(squad, amount, tick, events)
@@ -98,11 +87,21 @@ static func step(squads: Array, tick: int, ticks_per_second: int, events: Array)
 		var sides := _sides_engaged(squad)
 		var morale := _morale(squad)
 		if sides.is_empty():
-			morale += RECOVERY + leadership(squad)
+			morale += roundi(_tuning().morale_recovery * _condition(squad)) + leadership(squad)
 		else:
 			var count := maxi(1, sides.size() - _supported(squad, squads, sides))
-			morale -= PRESSURE[mini(count, PRESSURE.size() - 1)]
+			var pressure := _tuning().morale_pressure
+			morale -= pressure[mini(count, pressure.size() - 1)]
 		_set_morale(squad, mini(morale, ceiling(squad)), tick, events)
+
+
+## Its units' mean condition (Decision 125), which their morale recovers by.
+static func _condition(squad: SkirmishSquad) -> float:
+	var living := squad.living()
+	if living.is_empty():
+		return 1.0
+	var total: float = living.reduce(func(sum, u): return sum + u.condition, 0.0)
+	return clampf(total / living.size(), 0.0, _tuning().condition_cap)
 
 
 ## The edges (SquadEdges) a squad is fought on: its front and its flank contacts.
@@ -117,7 +116,7 @@ static func _sides_engaged(squad: SkirmishSquad) -> Array:
 
 
 static func _supported(squad: SkirmishSquad, squads: Array, sides: Array) -> int:
-	var area := SquadEdges.bounds(squad).grow(SUPPORT_CELLS)
+	var area := SquadEdges.bounds(squad).grow(_tuning().morale_support_cells)
 	var covered := 0
 	for edge in [SquadEdges.LEFT, SquadEdges.RIGHT]:
 		if not sides.has(edge):
@@ -148,3 +147,7 @@ static func _set_morale(squad: SkirmishSquad, value: int, tick: int, events: Arr
 	if after != before:
 		var extra := {"band": Band.keys()[after], "morale": squad.morale}
 		events.append(FormationEvents.squad_event("morale_band", tick, squad, extra))
+
+
+static func _tuning() -> BattleTuning:
+	return BattleTuning.current()

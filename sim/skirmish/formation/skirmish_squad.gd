@@ -11,6 +11,8 @@ const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
+const FormationCommand = preload("res://sim/skirmish/formation/formation_command.gd")
+const PlaceOrder = preload("res://sim/skirmish/formation/place_order.gd")
 
 ## Tiles between one rank and the next: one cell (Decisions 48 and 68).
 const RANK_DEPTH := 1.0 / MapLayoutDef.CELLS_PER_TILE
@@ -57,10 +59,26 @@ var flank_contacts := {}
 var loose := {}
 var stance := {}
 var fight_since := -1
+## Whether it has fought since it set out: groups of different commands form up only
+## after both have (FormationGroups).
+var fought := false
+## Its units out taking the downed (FormationTaking): unit id -> the body; the tick they
+## set out (-1: none), and the tick it gave up on them (-1: none) - it then marches on.
+var taking := {}
+var taking_since := -1
+var took_until := -1
+## Group pathfinding (FormationPathing): how many of its command's route patches its route
+## carries, and where along it (cells) it last looked ahead.
+var patched_count := 0
+var looked_at := -INF
 ## Pursuit (ScrumPursuit, Decision 109): whether it may pursue a retreating enemy (false:
 ## ordered not to), and its units out chasing one on their own (unit id -> {"unit", "foe",
 ## "from", "leash"}).
-var pursues := true
+var pursues: bool:
+	get:
+		return command.pursues
+	set(value):
+		command.pursues = value
 var chasers := {}
 ## A pursuit under way (FormationPursuit): the enemy, the post it left, and how it held it.
 var pursuit := {}
@@ -77,6 +95,17 @@ var morale := -1
 ## Routing (FormationRout): each fleeing unit's place, and ticks with no enemy near.
 var fleeing := {}
 var rally_ticks := 0
+## Its command's orders (FormationCommand): hurrying and tending its own downed.
+var hurry: bool:
+	get:
+		return command.hurry
+	set(value):
+		command.hurry = value
+var tends: String:
+	get:
+		return command.tends
+	set(value):
+		command.tends = value
 ## Halted by ground it can't cross (FormationMarch.pace); reported once.
 var blocked := false
 ## Narrowed through a gap (FormationNarrowing): its painted places (unit id -> [rank,
@@ -97,7 +126,13 @@ var combat_width := 0
 ## Units that joined as reinforcements: only they spread beyond the painted columns.
 var joined: Array[SkirmishUnit] = []
 ## Whether this wave merges into a friendly squad it catches up with on the march.
-var merges := false
+var merges: bool:
+	get:
+		return command.merges
+	set(value):
+		command.merges = value
+## The command this group of units follows (spec 30 round 3).
+var command: FormationCommand
 ## How far the squad's columns sit off the lane's centre, so widening on one side moves no
 ## one on screen.
 var centre_shift := 0.0
@@ -109,8 +144,10 @@ func _init(
 	travel_direction: int,
 	home: float,
 	formation_width: int,
-	members: Array[SkirmishUnit] = []
+	members: Array[SkirmishUnit] = [],
+	orders: FormationCommand = null
 ) -> void:
+	command = orders if orders != null else FormationCommand.new(home)
 	id = squad_id
 	faction_id = faction
 	direction = travel_direction
@@ -119,8 +156,7 @@ func _init(
 	front_distance = home
 	width = maxi(formation_width, 1)
 	for unit in members:
-		unit.squad_id = id
-		units.append(unit)
+		FormationCommand.enlist(self, unit)
 
 
 func living() -> Array[SkirmishUnit]:
@@ -167,21 +203,22 @@ func fighters() -> Array[SkirmishUnit]:
 ## Returns the units that stepped up.
 func compact() -> Array[SkirmishUnit]:
 	var moved: Array[SkirmishUnit] = []
+	var stepped := {}  # unit -> true: those in `moved`
+	var cells := _cells()  # who stands where, kept as units step up
+	var heading := _headed_for()  # mid-move: the places moves under way are heading for
 	var any := true
 	while any:
 		any = false
-		var order_by_place := living()
-		order_by_place.sort_custom(
-			func(a, b): return a.rank < b.rank or (a.rank == b.rank and a.column < b.column)
-		)
-		for unit in order_by_place:
-			if swaps.any(func(swap): return swap["to"].has(unit)):
+		var order_by_place := PlaceOrder.front_first(living())
+		for unit: SkirmishUnit in order_by_place:
+			if heading["movers"].has(unit):
 				continue  # mid-move: it takes the place its move is heading for
 			var into_front_ok := unit.rank > 1 or unit.preferred_position == 0
-			if unit.rank > 0 and into_front_ok and _clear_ahead(unit):
-				unit.rank -= 1
+			if unit.rank > 0 and into_front_ok and _clear_ahead(unit, cells, heading["cells"]):
+				_step_up(unit, cells)
 				any = true
-				if not moved.has(unit):
+				if not stepped.has(unit):
+					stepped[unit] = true
 					moved.append(unit)
 	var remaining := living()
 	if not remaining.is_empty() and not remaining.any(func(u): return u.rank == 0):
@@ -192,27 +229,55 @@ func compact() -> Array[SkirmishUnit]:
 	return moved
 
 
-func _clear_ahead(unit: SkirmishUnit) -> bool:
-	var row := unit.rank - 1
-	for other in living():
-		if other == unit:
-			continue
-		var rows_overlap := other.rank <= row and row < other.rank + other.footprint_depth
-		var columns_overlap := (
-			other.column < unit.column + unit.footprint_width
-			and unit.column < other.column + other.footprint_width
-		)
-		if rows_overlap and columns_overlap:
-			return false
-	for swap in swaps:  # nor a place a move under way is heading for
+## {"movers": {unit: true} for the units moving in swaps under way, "cells": {Vector2i(rank,
+## column): [mover, ...]} for the places their moves are heading for}.
+func _headed_for() -> Dictionary:
+	var movers := {}
+	var cells := {}
+	for swap in swaps:
 		for mover in swap["to"]:
+			movers[mover] = true
 			var to: Vector2i = swap["to"][mover]
-			var rows_meet: bool = to.x <= row and row < to.x + mover.footprint_depth
-			var columns_meet: bool = (
-				to.y < unit.column + unit.footprint_width
-				and unit.column < to.y + mover.footprint_width
-			)
-			if mover != unit and rows_meet and columns_meet:
+			for rank in range(to.x, to.x + mover.footprint_depth):
+				for column in range(to.y, to.y + mover.footprint_width):
+					if not cells.has(Vector2i(rank, column)):
+						cells[Vector2i(rank, column)] = []
+					cells[Vector2i(rank, column)].append(mover)
+	return {"movers": movers, "cells": cells}
+
+
+## {Vector2i(rank, column): [unit, ...]}: the places the living units' footprints cover.
+func _cells() -> Dictionary:
+	var cells := {}
+	for unit in living():
+		for rank in range(unit.rank, unit.rank + unit.footprint_depth):
+			for column in range(unit.column, unit.column + unit.footprint_width):
+				if not cells.has(Vector2i(rank, column)):
+					cells[Vector2i(rank, column)] = []
+				cells[Vector2i(rank, column)].append(unit)
+	return cells
+
+
+## The unit steps up a rank, and `cells` (_cells) with it.
+func _step_up(unit: SkirmishUnit, cells: Dictionary) -> void:
+	for column in range(unit.column, unit.column + unit.footprint_width):
+		cells[Vector2i(unit.rank + unit.footprint_depth - 1, column)].erase(unit)
+		if not cells.has(Vector2i(unit.rank - 1, column)):
+			cells[Vector2i(unit.rank - 1, column)] = []
+		cells[Vector2i(unit.rank - 1, column)].append(unit)
+	unit.rank -= 1
+
+
+## True if no other living unit (`cells`: _cells) stands in the row ahead of the unit across
+## its columns, nor is a move under way heading there (`heading`: _headed_for's cells).
+func _clear_ahead(unit: SkirmishUnit, cells: Dictionary, heading: Dictionary) -> bool:
+	var row := unit.rank - 1
+	for column in range(unit.column, unit.column + unit.footprint_width):
+		for other in cells.get(Vector2i(row, column), []):
+			if other != unit:
+				return false
+		for mover in heading.get(Vector2i(row, column), []):
+			if mover != unit:
 				return false
 	return true
 

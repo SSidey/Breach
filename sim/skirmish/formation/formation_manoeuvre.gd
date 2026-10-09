@@ -19,6 +19,7 @@ enum Kind { COMBAT, WITHDRAW, ROUTE, RE_FORM, ORDER }
 
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const FormationContact = preload("res://sim/skirmish/formation/formation_contact.gd")
+const SquadMemo = preload("res://sim/skirmish/formation/squad_memo.gd")
 
 const NAMES := ["combat", "withdraw", "route", "re-form", "order"]
 
@@ -26,15 +27,17 @@ const NAMES := ["combat", "withdraw", "route", "re-form", "order"]
 ## Settles each squad's manoeuvre this tick. A gap's narrowing becomes a re-form: its
 ## units walk to their new places rather than the squad waiting a fixed time.
 static func step(squads: Array) -> void:
+	var memo := SquadMemo.new()  # loosening a squad moves no frame or unit
 	for squad in squads:
 		if squad.narrow_ticks > 0:
 			squad.narrow_ticks = 0
 			_loosen(squad)
-		squad.manoeuvre = current(squad, squads)
+		squad.manoeuvre = current(squad, squads, memo)
 
 
-## The highest-priority manoeuvre that applies to the squad now.
-static func current(squad: SkirmishSquad, squads: Array) -> Kind:
+## The highest-priority manoeuvre that applies to the squad now. `memo`: the phase's
+## (SquadMemo).
+static func current(squad: SkirmishSquad, squads: Array, memo: SquadMemo = null) -> Kind:
 	if not squad.withdraw.is_empty():
 		return Kind.WITHDRAW
 	var fighting := (
@@ -42,7 +45,7 @@ static func current(squad: SkirmishSquad, squads: Array) -> Kind:
 		or squad.engaged_with != 0
 		or not squad.flank_contacts.is_empty()
 	)
-	if fighting or FormationContact.skirmishing(squad, squads):
+	if fighting or FormationContact.skirmishing(squad, squads, memo):
 		return Kind.COMBAT
 	if not squad.loose.is_empty() or not squad.stance.is_empty():
 		return Kind.RE_FORM

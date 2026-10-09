@@ -24,7 +24,7 @@ REPO_ROOT = Path(
     subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
 )
 THRESHOLDS_FILE = REPO_ROOT / "AI_First_Development_Kit" / "config" / "thresholds.yaml"
-EXCLUDED_DIRS = {"addons", "AI_First_Development_Kit"}
+EXCLUDED_DIRS = {".claude", "addons", "AI_First_Development_Kit"}
 
 
 def read_threshold(key: str, default: int) -> int:

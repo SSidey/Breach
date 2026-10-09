@@ -22,7 +22,7 @@ from pathlib import Path
 REPO_ROOT = Path(
     subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
 )
-EXCLUDED_DIRS = {"addons", "AI_First_Development_Kit"}
+EXCLUDED_DIRS = {".claude", "addons", "AI_First_Development_Kit"}
 FORBIDDEN_STEMS = {"utils", "util", "helpers", "helper", "common", "base", "manager", "data"}
 
 

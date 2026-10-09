@@ -16,11 +16,12 @@ extends RefCounted
 ## - **Engaging:** squads whose units come within reach fight, whatever their faces.
 ## - **Regrouping:** when the fight ends the squad closes ranks over its dead (SquadRanks)
 ##   and its units walk to their places at its re-form pace; it moves on once all are back.
-## - **Manoeuvres** go by priority (Decision 94); a fight stalled STALL_SECONDS is released.
+## - **Manoeuvres** go by priority (Decision 94); a fight stalled scrum_stall_seconds is released.
 ## Each phase decides from where units stood before it began, never letting a squad listed
 ## earlier move first and change what a later one sees (Decision 97).
 ## Squads keep `loose`, `stance`, `fight_since` and `stall_ticks`. Pure over the squads.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumBlows = preload("res://sim/skirmish/formation/scrum_blows.gd")
@@ -29,6 +30,7 @@ const ScrumEngage = preload("res://sim/skirmish/formation/scrum_engage.gd")
 const ScrumRegroup = preload("res://sim/skirmish/formation/scrum_regroup.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const UnitShuffle = preload("res://sim/skirmish/formation/unit_shuffle.gd")
+const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
 const UnitSteer = preload("res://sim/skirmish/formation/unit_steer.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
@@ -40,13 +42,16 @@ const FormationLocks = preload("res://sim/skirmish/formation/formation_locks.gd"
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
+const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
+const FoeIndex = preload("res://sim/skirmish/formation/foe_index.gd")
+const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
+const ScrumFaceField = preload("res://sim/skirmish/formation/scrum_face_field.gd")
+const ScrumWalkField = preload("res://sim/skirmish/formation/scrum_walk_field.gd")
 
-const STALL_SECONDS := 2.0
-## Walking within a fight is slowed by the crush (Decision 48; FormationShuffle.CROWDING).
-const CROWDING := 0.2
 
-
-## One tick of the scrum. `cells_per_second` is the march pace at speed 1. Returns
+## One tick of the scrum. `cells_per_second` is the march pace at speed 1; given the
+## battle's native bodies (`field`, NativeKernels), the slot search runs on them. Returns
 ## "faced" and "disengaged" events.
 static func step(
 	squads: Array,
@@ -54,13 +59,13 @@ static func step(
 	cells_per_second: float,
 	tick_seconds: float,
 	fight_seed: int,
-	terrain: FormationTerrain = null
+	terrain: FormationTerrain = null,
+	field: Object = null
 ) -> Array:
 	var events := ScrumEngage.step(squads, tick, fight_seed)
 	for squad in squads:
 		_prepare(squad, tick)
-	for squad in squads:
-		ScrumStance.anticipate(squad, squads, tick, events, terrain, fight_seed)
+	ScrumStance.anticipate_all(squads, tick, events, terrain, fight_seed)
 	FormationManoeuvre.step(squads)
 	var ctx := {
 		"squads": squads,
@@ -70,8 +75,11 @@ static func step(
 		"seed": fight_seed,
 		"terrain": terrain,
 		"bodies": ScrumSeek.bodies(squads),
+		"lying": GroundBodies.ground(squads),
 		"active": {},
+		"field": field,  # the bodies, native (Decision 129), or null
 	}
+	ctx["crowd"] = BodyGrid.of_bodies(ctx["bodies"])  # the bodies, found by where they stand
 	_seek(ctx)
 	ScrumRegroup.step(squads, ctx["pace"], tick_seconds, fight_seed)
 	ScrumPursuit.step(squads, tick, cells_per_second, tick_seconds, fight_seed)
@@ -99,6 +107,7 @@ static func _prepare(squad: SkirmishSquad, tick: int) -> void:
 	var fighting := squad.state == SkirmishSquad.State.FIGHTING
 	if fighting and squad.fight_since < 0:
 		squad.fight_since = tick
+		squad.fought = true
 		squad.stall_ticks = 0
 	elif not fighting:
 		if squad.fight_since >= 0 and squad.painted.is_empty():
@@ -118,9 +127,36 @@ static func _seek(ctx: Dictionary) -> void:
 	var fighting: Array = ctx["squads"].filter(
 		func(s): return s.state == SkirmishSquad.State.FIGHTING
 	)
+	walk(fighting, ctx)
+	face(fighting, ctx)  # after all have moved (a unit stepped up to is seen)
+
+
+## Walks the fighting squads' units a step each (_walk), each from the bodies as they
+## stood before any stepped: in GDScript (the reference), or on the battle's native
+## bodies, ctx["field"] (ScrumWalkField, Decision 129) - the same steps.
+static func walk(fighting: Array, ctx: Dictionary) -> void:
+	if ctx.get("field") != null:
+		ScrumWalkField.walk(ctx)
+		return
 	for squad in fighting:  # in the crush, but at the march pace in a pursuit
-		_walk(squad, ctx["pace"] * (CROWDING if squad.pursuit.is_empty() else 1.0), ctx)
-	var turns := []  # after all have moved (a unit stepped up to is seen), before any turn
+		_walk(
+			squad,
+			(
+				ctx["pace"]
+				* (BattleTuning.current().scrum_crowding if squad.pursuit.is_empty() else 1.0)
+			),
+			ctx
+		)
+
+
+## Turns the fighting squads' units once each (_faces), all decided before any turns: in
+## GDScript (the reference), or on the battle's native bodies, ctx["field"]
+## (ScrumFaceField, Decision 129) - the same bearings.
+static func face(fighting: Array, ctx: Dictionary) -> void:
+	if ctx.get("field") != null:
+		ScrumFaceField.face(ctx)
+		return
+	var turns := []
 	for squad in fighting:
 		turns.append_array(_faces(squad, ctx))
 	for turn in turns:
@@ -140,28 +176,49 @@ static func _walk(squad: SkirmishSquad, pace: float, ctx: Dictionary) -> void:
 		entry["toward"] = null
 		if entry["goal"] != null:
 			entry["toward"] = entry["next"]
-			var to := UnitSteer.toward(unit, entry["at"], entry["next"], ctx["bodies"], ctx["seed"])
-			entry["at"] = UnitMotion.move(unit, entry["at"], to, full)
+			var to := UnitSteer.toward(
+				unit, entry["at"], entry["next"], ctx["bodies"], ctx["seed"], ctx["crowd"]
+			)
+			entry["at"] = UnitMotion.move(
+				unit, entry["at"], to, full * _footing(unit, entry["at"], to, ctx)
+			)
 		elif not entry.get("touch", false):
 			var place := ScrumStance.anchor(squad, unit)
 			var heading: float = squad.stance.get("heading", squad.heading)
 			var speed := full / seconds
 			entry["toward"] = UnitShuffle.look(unit, entry["at"], place, heading, speed)
-			var to := UnitSteer.toward(unit, entry["at"], place, ctx["bodies"], ctx["seed"])
-			entry["at"] = UnitMotion.move(unit, entry["at"], to, full)
+			var to := UnitSteer.toward(
+				unit, entry["at"], place, ctx["bodies"], ctx["seed"], ctx["crowd"]
+			)
+			entry["at"] = UnitMotion.move(
+				unit, entry["at"], to, full * _footing(unit, entry["at"], to, ctx)
+			)
 			entry["next"] = entry["at"]
+
+
+## The share of its pace a loose unit keeps stepping towards `to` over the bodies on the
+## ground (GroundBodies, spec 30 round 3).
+static func _footing(unit: SkirmishUnit, at: Vector2, to: Vector2, ctx: Dictionary) -> float:
+	var way := to - at
+	if way.length() < 0.000001:
+		return 1.0
+	return GroundBodies.underfoot(unit, at + way.normalized() * 0.5, ctx["lying"])
 
 
 ## [[unit, the bearing it turns towards], ...]: each unit turns once a tick towards the
 ## nearest foe it touches, or else so as to arrive facing what it will do - its foe at the
 ## slot it seeks, or its squad's way at its place - the quicker way (UnitShuffle).
 static func _faces(squad: SkirmishSquad, ctx: Dictionary) -> Array:
-	var foes := ScrumSeek.foe_units(squad, ctx["squads"])
+	if not ctx.has("facing"):  # where they now stand, after the walk: one index a faction
+		ctx["facing"] = FoeIndex.of(ctx["squads"])
+	var near := FoeIndex.fought(ctx["facing"], squad)
+	var reach := BattleTuning.current().reach_contact
 	var out := []
 	for unit in squad.living():
 		if squad.chasers.has(unit.id):
 			continue
 		var entry: Dictionary = squad.loose[unit.id]
+		var foes := ScrumNear.around(near, entry["at"], ScrumReach.radius(unit) + reach)
 		var look = ScrumBlows.nearest_touching(squad, unit, foes, ctx["seed"])
 		if look == null and entry["goal"] != null:
 			look = _seeking_look(unit, entry, ctx)
@@ -175,7 +232,9 @@ static func _faces(squad: SkirmishSquad, ctx: Dictionary) -> Array:
 ## Where a unit making for `entry`'s slot looks: so as to arrive facing the foe it will
 ## touch there, the quicker way (UnitShuffle).
 static func _seeking_look(unit: SkirmishUnit, entry: Dictionary, ctx: Dictionary):
-	var speed: float = unit.speed * ctx["pace"] * CROWDING / ctx["seconds"]
+	var speed: float = (
+		unit.speed * ctx["pace"] * BattleTuning.current().scrum_crowding / ctx["seconds"]
+	)
 	var bearing := UnitMotion.bearing_to(entry["next"], entry["foe_at"], unit.bearing)
 	return UnitShuffle.look(unit, entry["at"], entry["next"], bearing, speed)
 
@@ -192,7 +251,7 @@ static func _stall(
 		for foe_id in ScrumSeek.foe_ids(squad, squads):
 			quiet = quiet and not active.has(foe_id)
 		squad.stall_ticks = squad.stall_ticks + 1 if quiet else 0
-		if squad.stall_ticks >= roundi(STALL_SECONDS / tick_seconds):
+		if squad.stall_ticks >= roundi(BattleTuning.current().scrum_stall_seconds / tick_seconds):
 			stalled.append(squad)
 	for squad in stalled:
 		squad.stall_ticks = 0

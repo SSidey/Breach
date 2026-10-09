@@ -4,9 +4,13 @@
 
 [resource]
 script = ExtResource("1_sqbii")
-weapon_name = "fists"
-damage = 7
+item_name = "fists"
+damage = 5
+strength_requirement = 10
+strength_scaling = 0.5
 damage_type = "bludgeoning"
 traits = {
 "siege": 1
 }
+innate = true
+slots = Array[String](["hand", "hand"])

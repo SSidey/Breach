@@ -16,6 +16,8 @@ API:
     GET  /api/libraries/<library>     content/designer/<library>.json (null if absent)
     PUT  /api/libraries/<library>     write it -> {changed, import}; saving "terrain" also
                                       regenerates content/terrain/terrain_library.tres
+    GET  /api/registry                the tags, traits and statuses (content/registry), each
+                                      trait's targets, and where each is used (Decision 128)
 """
 
 from __future__ import annotations
@@ -33,6 +35,7 @@ from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from designer_repo import DesignerRepo, find_godot  # noqa: E402
+from content_library import read_registry  # noqa: E402
 
 DESIGNER_DIR = Path(__file__).resolve().parent
 REPO_ROOT = DESIGNER_DIR.parents[1]
@@ -48,11 +51,13 @@ STATIC_FILES = {
     "/planner_examples.js": ("planner_examples.js", "text/javascript; charset=utf-8"),
     "/planner_subnodes.js": ("planner_subnodes.js", "text/javascript; charset=utf-8"),
     "/planner.js": ("planner.js", "text/javascript; charset=utf-8"),
+    "/library.html": ("library.html", "text/html; charset=utf-8"),
+    "/library.js": ("library.js", "text/javascript; charset=utf-8"),
 }
 MAX_BODY_BYTES = 16 * 1024 * 1024
 ## Bumped whenever the API gains or changes an endpoint; repo.js compares it with its own
 ## REQUIRED_API so a server started before an update says "restart serve.py".
-API_VERSION = 3
+API_VERSION = 4
 
 
 def make_handler(repo: DesignerRepo, static_dir: Path = DESIGNER_DIR, log_requests: bool = True):
@@ -96,6 +101,8 @@ def make_handler(repo: DesignerRepo, static_dir: Path = DESIGNER_DIR, log_reques
                             "api_version": API_VERSION,
                         }
                     )
+                elif parts == ["api", "registry"] and method == "GET":
+                    self._send_json(read_registry(repo.root))
                 elif parts == ["api", "maps"] and method == "GET":
                     self._send_json(repo.list_maps())
                 elif len(parts) == 4 and parts[:2] == ["api", "maps"] and parts[3] == "view":

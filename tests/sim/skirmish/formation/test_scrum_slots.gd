@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## slot is not open under another body or a nearer seeker's claim, nor beyond the leash; and
 ## a seeker takes the nearest open one, ties going by its own frame.
 
+const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const ScrumSlots = preload("res://sim/skirmish/formation/scrum_slots.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
@@ -46,7 +47,7 @@ func test_a_slot_under_a_body_or_a_claim_or_past_the_leash_is_not_open() -> void
 		assert_bool(ScrumSlots.open(seeker, point, [place, [], [Vector2(11, 10.6)], null, 0]))
 		. is_false()
 	)
-	var far := place + Vector2(ScrumSlots.LEASH + 1.0, 0)
+	var far := place + Vector2(BattleTuning.current().scrum_leash + 1.0, 0)
 	assert_bool(ScrumSlots.open(seeker, far, [place, [], [], null, 0])).is_false()
 
 

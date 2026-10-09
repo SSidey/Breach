@@ -8,6 +8,7 @@ extends RefCounted
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
 const EPSILON := 0.000001
 
@@ -35,4 +36,4 @@ static func look(
 ## Seconds the unit takes to turn from one bearing to another.
 static func _turning(unit: SkirmishUnit, from: float, to: float) -> float:
 	var cosine := clampf(UnitMotion.vector(from).dot(UnitMotion.vector(to)), -1.0, 1.0)
-	return rad_to_deg(acos(cosine)) / maxf(unit.turn_rate, EPSILON)
+	return rad_to_deg(DetMath.acos(cosine)) / maxf(unit.turn_rate, EPSILON)

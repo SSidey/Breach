@@ -11,6 +11,7 @@ extends RefCounted
 
 enum Departure { MANUAL, AUTO_WHEN_FULL }
 
+const FormationMarch = preload("res://sim/skirmish/formation/formation_march.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
 const WaveTemplate = preload("res://sim/skirmish/formation/wave_template.gd")
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
@@ -115,6 +116,7 @@ func send(sim: FormationSimulation, wait_ticks: int = 0) -> SkirmishSquad:
 		squad.width = clampi(span, 1, squad.width)
 		SquadRanks.close(squad)
 	_centre(squad)
+	FormationMarch.sync_units([squad])  # placed as it is sent: its units stand on their places
 	_filled.fill(false)
 	_announced = false
 	return squad
