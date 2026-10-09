@@ -31,6 +31,9 @@ var _status: Label
 var _log_view: TextEdit
 var _replay_view: TextEdit
 var _replay_status: Label
+## The replayed record's build against this one (SimBuild.compare) on a line of its own;
+## "" if the same.
+var _build_note := ""
 var _replaying := 0  # how many actions the replay running holds (0: not a replay)
 
 
@@ -94,7 +97,7 @@ func _tend_choice(bar: Container, scene: Node, key: String) -> OptionButton:
 func replay() -> void:
 	var read := FormationFieldActions.parse(_replay_view.text)
 	if read.is_empty():
-		_replay_status.text = 'Not a record: it starts\n"record 1 seed <n> captain <on|off>"'
+		_replay_status.text = 'Not a record: it starts\n"record <n> seed <n> captain <on|off>"'
 		_replaying = 0
 		return
 	_seed.text = str(read["seed"])
@@ -105,6 +108,8 @@ func replay() -> void:
 		choice.select(0)
 	_scene.restart(read["captained"], read["seed"], read["commands"])
 	_replaying = read["commands"].size()
+	var note := SimBuild.compare(read["build"])
+	_build_note = "" if note == "" else "\n" + note
 
 
 ## A fresh field: the seed typed in, or a random one; the ticked options kept (and logged).
@@ -113,6 +118,7 @@ func reset() -> void:
 	var battle_seed := int(text) if text.is_valid_int() else randi() % 1000000
 	_scene.restart(_captain.button_pressed, battle_seed)
 	_replaying = 0
+	_build_note = ""
 	_replay_status.text = ""
 	for key in _autos:
 		if _autos[key].button_pressed:
@@ -166,9 +172,8 @@ func show_status(field: FormationField, paused: bool, battle_seed: int) -> void:
 		_log_view.scroll_vertical = _log_view.get_line_count()
 	if _replaying > 0:  # the replayed actions are logged again as they're played
 		var played := mini(_log_view.get_line_count() - 1, _replaying)
-		_replay_status.text = (
-			"Replaying seed %d\n%d of %d actions played" % [battle_seed, played, _replaying]
-		)
+		var shown := [battle_seed, played, _replaying, _build_note]
+		_replay_status.text = "Replaying seed %d\n%d of %d actions played%s" % shown
 
 
 ## "B 8/8 + leader 1/1": rank and file and leaders counted apart.

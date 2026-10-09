@@ -97,7 +97,7 @@ func restart(captained: bool, battle_seed: int, queued: Array = []) -> void:
 	_battle_seed = battle_seed
 	_queued = queued.duplicate()
 	_field = FormationFieldActions.field(battle_seed, captained)
-	_log = PackedStringArray([FormationRecord.header(battle_seed, captained)])
+	_log = PackedStringArray([FormationRecord.header(battle_seed, captained, SimBuild.id())])
 	_previous = {}
 	_current = {}
 	_snapshot()
