@@ -125,7 +125,8 @@ func test_the_slot_search_on_the_field_seeks_as_gdscript_does() -> void:
 	var field := _field()
 	if field == null:
 		return
-	for ticks in [95, 110, 130, 160]:
+	# Moments while the scrum is under way (with DetMath it ends by tick 150, not 165)
+	for ticks in [95, 110, 130, 140]:
 		var squads := _scrum(ticks, false)
 		var saved := _saved(squads)
 		var reference := _planned(squads, null)

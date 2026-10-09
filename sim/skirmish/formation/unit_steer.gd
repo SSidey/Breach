@@ -15,6 +15,7 @@ const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
 const EPSILON := 0.000001
 
@@ -71,9 +72,9 @@ static func _round(at: Vector2, centre: Vector2, reach: float, side: Vector2) ->
 	var gap := to_centre.length()
 	if gap <= reach + EPSILON:
 		return centre + side * reach
-	var angle := asin(reach / gap)
-	var turned := to_centre.normalized().rotated(angle)
-	var other := to_centre.normalized().rotated(-angle)
+	var angle := DetMath.asin(reach / gap)
+	var turned := DetMath.rotated(to_centre.normalized(), angle)
+	var other := DetMath.rotated(to_centre.normalized(), -angle)
 	if other.dot(side) > turned.dot(side):
 		turned = other
 	return at + turned * sqrt(gap * gap - reach * reach)

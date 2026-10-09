@@ -4,6 +4,8 @@
 //! no fused multiply-add (Rust never contracts `a * b + c` on its own, and the library
 //! targets baseline x86-64, which has no FMA instructions to choose).
 
+use crate::det_math;
+
 /// Godot's `Vector2` with `real_t` = f32, its operators as Godot's C++ has them.
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct V2 {
@@ -77,13 +79,13 @@ pub fn snapped(value: f64, step: f64) -> f64 {
 
 /// `UnitMotion.vector(bearing)`: the unit vector of a bearing (degrees clockwise from
 /// north), exact on the quarter bearings. `deg_to_rad` is `bearing * (PI / 180)`; `sin` and
-/// `cos` are the C library's, as the engine's are.
+/// `cos` are DetMath's (`det_math.rs`), the same bits on every platform.
 #[inline]
 pub fn bearing_vector(bearing: f64) -> V2 {
     const EPSILON: f64 = 0.000001;
     let angle = bearing * (std::f64::consts::PI / 180.0);
-    let x = angle.sin();
-    let y = -angle.cos();
+    let x = det_math::sin(angle);
+    let y = -det_math::cos(angle);
     V2 {
         x: if x.abs() > EPSILON { x as f32 } else { 0.0 },
         y: if y.abs() > EPSILON { y as f32 } else { 0.0 },

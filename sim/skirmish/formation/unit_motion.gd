@@ -10,17 +10,37 @@ extends RefCounted
 ## blow from outside its front is a flank blow (Decision 88). Pure.
 
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
 const EPSILON := 0.000001
+## The vectors of the bearings 0, 90, 180 and 270, and how far out they're looked up.
+const QUARTER_VECTORS := [Vector2(0, -1), Vector2(1, 0), Vector2(0, 1), Vector2(-1, 0)]
+const QUARTER_RANGE := 1e6
+## How many other bearings' vectors are remembered before starting afresh.
+const REMEMBERED := 8192
+
+static var _vectors := {}
 
 
 ## The unit vector of a bearing; exact on the quarter bearings (no 1e-16 residue to tip a
-## point across a cell's edge).
+## point across a cell's edge). DetMath's sin and cos are slow in GDScript and most
+## bearings asked about are quarter bearings, which are looked up (the same vectors
+## DetMath gives them, test_det_math.gd), or a unit's own bearing, asked about many times
+## a tick, which is remembered: a pure function's results, so nothing else changes.
 static func vector(bearing: float) -> Vector2:
+	if fposmod(bearing, 90.0) == 0.0 and absf(bearing) < QUARTER_RANGE:
+		return QUARTER_VECTORS[posmod(int(bearing / 90.0), 4)]
+	var known = _vectors.get(bearing)
+	if known != null:
+		return known
+	if _vectors.size() >= REMEMBERED:
+		_vectors.clear()
 	var angle := deg_to_rad(bearing)
-	var x := sin(angle)
-	var y := -cos(angle)
-	return Vector2(x if absf(x) > EPSILON else 0.0, y if absf(y) > EPSILON else 0.0)
+	var x := DetMath.sin(angle)
+	var y := -DetMath.cos(angle)
+	var made := Vector2(x if absf(x) > EPSILON else 0.0, y if absf(y) > EPSILON else 0.0)
+	_vectors[bearing] = made
+	return made
 
 
 ## The bearing of a squad facing (SquadFrame: 0 north, 1 east, 2 south, 3 west).
@@ -33,7 +53,7 @@ static func bearing_to(from: Vector2, to: Vector2, current: float) -> float:
 	var way := to - from
 	if way.length() < EPSILON:
 		return current
-	return fposmod(rad_to_deg(atan2(way.x, -way.y)), 360.0)
+	return fposmod(rad_to_deg(DetMath.atan2(way.x, -way.y)), 360.0)
 
 
 ## Degrees from bearing `from` to `to` the short way round: positive clockwise, in
@@ -65,7 +85,7 @@ static func pace(unit: SkirmishUnit, heading: Vector2, bearing = null) -> float:
 		return 1.0
 	var facing: float = unit.bearing if bearing == null else bearing
 	var cosine := clampf(heading.normalized().dot(vector(facing)), -1.0, 1.0)
-	var off := rad_to_deg(acos(cosine)) / 180.0
+	var off := rad_to_deg(DetMath.acos(cosine)) / 180.0
 	return 1.0 - (1.0 - unit.backward_pace) * off
 
 

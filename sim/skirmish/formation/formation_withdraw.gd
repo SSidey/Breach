@@ -36,6 +36,7 @@ const FormationDiscipline = preload("res://sim/skirmish/formation/formation_disc
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const FormationEvents = preload("res://sim/skirmish/formation/formation_events.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
 const CELLS := float(MapLayoutDef.CELLS_PER_TILE)
 ## How near (cells, along its route) home a unit has nowhere further to go.
@@ -111,7 +112,7 @@ static func _flee(squad: SkirmishSquad, unit: SkirmishUnit, motion: Array, terra
 		return  # home
 	var homeward := _homeward(squad.route, along, home)
 	var full: float = unit.speed * motion[0]
-	var heading := homeward.rotated(RoutFlight.fan(unit, motion[2]) * disorder(squad))
+	var heading := DetMath.rotated(homeward, RoutFlight.fan(unit, motion[2]) * disorder(squad))
 	var side := homeward.orthogonal()
 	var aside: float = (at - squad.route.point_at(along)).dot(side)
 	if (

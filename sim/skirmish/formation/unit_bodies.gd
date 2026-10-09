@@ -28,6 +28,7 @@ const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const NativeKernels = preload("res://sim/skirmish/formation/native_kernels.gd")
 const BodyParting = preload("res://sim/skirmish/formation/body_parting.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
 ## Cells a bucket of the pair search spans: at least the widest body.
 const BUCKET := 2.0
@@ -70,7 +71,8 @@ static func step(squads: Array, fight_seed: int, field: Object = null) -> void:
 
 ## The way two bodies lying exactly on each other part: seeded by the battle and their draws.
 static func part_way(fight_seed: int, draw: int, other_draw: int) -> Vector2:
-	return Vector2.RIGHT.rotated(TAU * BattleRolls.uniform(fight_seed, [draw, other_draw, "part"]))
+	var angle := TAU * BattleRolls.uniform(fight_seed, [draw, other_draw, "part"])
+	return DetMath.rotated(Vector2.RIGHT, angle)
 
 
 ## The GDScript passes: pairs found and pushed from one snapshot, then applied together.

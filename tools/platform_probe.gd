@@ -6,8 +6,14 @@ extends SceneTree
 ## the transcendental ones (sin, cos, acos, asin, atan2, pow, ease, Vector2.rotated), which
 ## come from the platform's maths library, and, as controls, ones IEEE 754 fixes exactly
 ## (sqrt, distance_to, normalized, fposmod, snappedf), plus hash() and float formatting.
+## The `det` lines are DetMath and DetPow, which sim/ calls in place of the transcendental
+## ones: built from IEEE 754's exact operations, they must match on every platform
+## (test_det_math.gd pins them).
 ##
 ##   godot --headless --path . --script res://tools/platform_probe.gd
+
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
+const DetPow = preload("res://sim/skirmish/formation/det_pow.gd")
 
 const COUNT := 4096
 
@@ -45,9 +51,26 @@ func _init() -> void:
 	_line("normalized (control)", _flat(points.map(func(p): return p.normalized())))
 	_line("fposmod (control)", xs.map(func(x): return fposmod(x, 360.0)))
 	_line("snappedf (control)", xs.map(func(x): return snappedf(x, 0.0001)))
+	_det_lines(xs, units, positive, points)
 	_text("hash", range(COUNT).map(func(i): return str(hash([i, "unit", 0, xs[i]]))))
 	_text("format", xs.map(func(x): return "%.6f|%s" % [x, str(x)]))
 	quit(0)
+
+
+## The same inputs through DetMath and DetPow: these lines must match everywhere.
+func _det_lines(xs: Array, units: Array, positive: Array, points: Array) -> void:
+	_line("det sin", xs.map(func(x): return DetMath.sin(x)))
+	_line("det cos", xs.map(func(x): return DetMath.cos(x)))
+	_line("det acos", units.map(func(x): return DetMath.acos(x)))
+	_line("det asin", units.map(func(x): return DetMath.asin(x)))
+	var pairs := range(COUNT).map(func(i): return DetMath.atan2(xs[i], xs[COUNT - 1 - i]))
+	_line("det atan2", pairs)
+	_line("det pow", range(COUNT).map(func(i): return DetPow.pow(positive[i], units[i] * 3.0)))
+	_line("det ease", range(COUNT).map(func(i): return DetPow.ease(absf(units[i]), xs[i] / 10.0)))
+	_line("det exp", xs.map(func(x): return DetPow.exp(x)))
+	_line("det log", positive.map(func(x): return DetPow.log(x)))
+	var turned := range(COUNT).map(func(i): return DetMath.rotated(points[i], units[i] * PI))
+	_line("det rotated", _flat(turned))
 
 
 ## COUNT floats spread over [low, high], from a fixed LCG (exact integer arithmetic).

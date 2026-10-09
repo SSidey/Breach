@@ -12,6 +12,7 @@ extends RefCounted
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 const UnitDef = preload("res://content/definitions/unit_def.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
 ## Where it looks from (cells) and which way (a unit vector).
 var origin: Vector2
@@ -44,7 +45,7 @@ static func of(
 
 ## How far it sees in the direction `way` (a unit vector).
 func reach(way: Vector2) -> float:
-	var turned := acos(clampf(way.dot(facing), -1.0, 1.0)) / (PI / 2.0)  # 0 ahead to 2 behind
+	var turned := DetMath.acos(clampf(way.dot(facing), -1.0, 1.0)) / (PI / 2.0)  # 0 ahead to 2 behind
 	if turned <= 1.0:
 		return lerpf(ahead, side, turned)
 	return lerpf(side, behind, turned - 1.0)

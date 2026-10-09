@@ -15,6 +15,7 @@ const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const RoutCatch = preload("res://sim/skirmish/formation/rout_catch.gd")
 const BattleRolls = preload("res://sim/skirmish/formation/battle_rolls.gd")
+const DetMath = preload("res://sim/skirmish/formation/det_math.gd")
 
 
 ## The unit's own flight angle (radians) off its route's line, at full disorder.
@@ -30,7 +31,7 @@ static func step(
 	squad: SkirmishSquad, unit: SkirmishUnit, entry: Dictionary, home: float, motion: Array
 ) -> void:
 	var full: float = unit.speed * motion[0]
-	var aside := sin(fan(unit, motion[1])) * full
+	var aside := DetMath.sin(fan(unit, motion[1])) * full
 	var fanned: float = entry.get("fanned", 0.0)
 	var heading: Vector2 = (
 		squad.route.heading_at(entry["along"]) if squad.route != null else Vector2.RIGHT
@@ -39,7 +40,7 @@ static func step(
 	var at: Vector2 = motion[3]
 	var refuge = _refuge(squad, at, [entry["along"], home, motion[1]], motion[4])
 	if refuge != null:  # it makes for the friend, turning aside only if it would miss it
-		var most := sin(deg_to_rad(BattleTuning.current().rout_fan_degrees)) * full
+		var most := DetMath.sin(deg_to_rad(BattleTuning.current().rout_fan_degrees)) * full
 		aside = clampf(_short_of(refuge, at, side), -most, most)
 	var terrain = motion[2]
 	var open: bool = terrain == null or terrain.factor(unit, at, at + side * aside) > 0.0

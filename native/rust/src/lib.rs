@@ -4,6 +4,7 @@
 //! scrum's slot search (ScrumSeek, SlotSearch, ScrumSlots, ScrumNear). GDScript keeps the
 //! rules and stays the reference; the switch is `BREACH_NATIVE` (NativeKernels).
 
+mod det_math;
 mod field;
 mod field_parting;
 mod ghash;
