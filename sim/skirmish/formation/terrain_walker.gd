@@ -59,9 +59,11 @@ static func grounded(unit_height: float) -> TerrainWalker:
 
 
 ## A key naming what decides its pace on every cell: walkers with the same key share
-## their speed shares (WalkerShares).
+## their speed shares (WalkerShares). The height goes in by its exact bits, never as text:
+## how a float is written differs between platforms (Decision 130).
 func kind() -> String:
-	return "%s|%d|%d|%d|%d" % [height, swimmer, climber, int(swims), int(climbs)]
+	var bits := PackedFloat64Array([height]).to_byte_array().hex_encode()
+	return "%s|%d|%d|%d|%d" % [bits, swimmer, climber, int(swims), int(climbs)]
 
 
 ## Decision 64's pair rule, an ability against a demand: the share of the mode's pace it
