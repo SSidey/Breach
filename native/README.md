@@ -136,12 +136,14 @@ The per-tick files are byte-identical between `BREACH_NATIVE=gdscript` and `rust
 
 | set | runs | ticks hashed | per-tick file (GDScript = Rust) |
 |---|---:|---:|---|
-| standard | 26 | 14,099 | `4caaed38d06694cc63081f0cc93384ae44353e67ce1a10a41296ad2d5df4bcca` |
+| standard | 26 | 14,099 | `63ae199a4af4152e3968f3f5dc1afbb65c881069a389192e48f82a3395f81cbe` |
 | clash160 | 1 | 210 | `846075a85ef4f9b1ebd6eb8f75205daab8f6dc03cf29382131e4b283d65b58d0` (run `85b79694...`) |
 | wide | 2 | 553 | `e2752a95a9013632502e1c0a6bd33b4aed7f3523422ba76d77d7cd71478bdb77` (runs `bc12ed86...`, `205db987...`) |
 
 These are with DetMath (sim/ calls no platform transcendental function), so every
-platform should give them. Before DetMath they were `bf2111e4...` (standard),
+platform gives them (checked on Windows). The standard set's hash is after groups
+find their way round barred ground (#177), which changed its terrain battles; with
+DetMath alone it was `4caaed38...`. Before DetMath they were `bf2111e4...` (standard),
 `a0b69851...` (clash160) and `62361719...` (wide), the same as GDScript at
 `origin/feature/movement-integrate` (f4a6490) before the Rust core, and they differed on
 Windows.
