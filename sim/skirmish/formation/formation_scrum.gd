@@ -30,6 +30,7 @@ const ScrumEngage = preload("res://sim/skirmish/formation/scrum_engage.gd")
 const ScrumRegroup = preload("res://sim/skirmish/formation/scrum_regroup.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const UnitShuffle = preload("res://sim/skirmish/formation/unit_shuffle.gd")
+const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
 const UnitSteer = preload("res://sim/skirmish/formation/unit_steer.gd")
 const FormationManoeuvre = preload("res://sim/skirmish/formation/formation_manoeuvre.gd")
 const SquadRanks = preload("res://sim/skirmish/formation/squad_ranks.gd")
@@ -67,6 +68,7 @@ static func step(
 		"seed": fight_seed,
 		"terrain": terrain,
 		"bodies": ScrumSeek.bodies(squads),
+		"lying": GroundBodies.lying_in(squads),
 		"active": {},
 	}
 	_seek(ctx)
@@ -146,15 +148,28 @@ static func _walk(squad: SkirmishSquad, pace: float, ctx: Dictionary) -> void:
 		if entry["goal"] != null:
 			entry["toward"] = entry["next"]
 			var to := UnitSteer.toward(unit, entry["at"], entry["next"], ctx["bodies"], ctx["seed"])
-			entry["at"] = UnitMotion.move(unit, entry["at"], to, full)
+			entry["at"] = UnitMotion.move(
+				unit, entry["at"], to, full * _footing(unit, entry["at"], to, ctx)
+			)
 		elif not entry.get("touch", false):
 			var place := ScrumStance.anchor(squad, unit)
 			var heading: float = squad.stance.get("heading", squad.heading)
 			var speed := full / seconds
 			entry["toward"] = UnitShuffle.look(unit, entry["at"], place, heading, speed)
 			var to := UnitSteer.toward(unit, entry["at"], place, ctx["bodies"], ctx["seed"])
-			entry["at"] = UnitMotion.move(unit, entry["at"], to, full)
+			entry["at"] = UnitMotion.move(
+				unit, entry["at"], to, full * _footing(unit, entry["at"], to, ctx)
+			)
 			entry["next"] = entry["at"]
+
+
+## The share of its pace a loose unit keeps stepping towards `to` over the bodies on the
+## ground (GroundBodies, spec 30 round 3).
+static func _footing(unit: SkirmishUnit, at: Vector2, to: Vector2, ctx: Dictionary) -> float:
+	var way := to - at
+	if way.length() < 0.000001:
+		return 1.0
+	return GroundBodies.underfoot(unit, at + way.normalized() * 0.5, ctx["lying"])
 
 
 ## [[unit, the bearing it turns towards], ...]: each unit turns once a tick towards the

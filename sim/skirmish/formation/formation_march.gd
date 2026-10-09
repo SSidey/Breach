@@ -13,6 +13,7 @@ const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 const FormationRout = preload("res://sim/skirmish/formation/formation_rout.gd")
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
+const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
 const FormationWalk = preload("res://sim/skirmish/formation/formation_walk.gd")
 const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
@@ -100,6 +101,8 @@ static func check_ends(mover: SkirmishSquad, route_end: float, tick: int, events
 ## otherwise a unit in its place walks there ([seconds, cells a second at speed 1],
 ## FormationWalk), and loose and fleeing units stand where their own moves took them.
 static func sync_units(squads: Array, timing := [], terrain: FormationTerrain = null) -> void:
+	if not timing.is_empty():
+		timing = timing + [GroundBodies.lying_in(squads)]
 	for entry in squads:
 		for unit in entry.units:
 			if not unit.is_alive():
