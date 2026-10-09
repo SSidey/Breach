@@ -49,18 +49,29 @@ static func toward(
 		var aside: float = (body[0] - at).dot(across)
 		if along <= EPSILON or along >= minf(length, look) or absf(aside) >= clearance - EPSILON:
 			continue
-		var key := [snappedf(along, EPSILON), ScrumContest.draw(body[2], fight_seed)]
-		if best.is_empty() or key < best[0]:
+		var key := snappedf(along, EPSILON)  # then the body's draw, weighed only on a tie
+		if (
+			best.is_empty()
+			or key < best[0]
+			or (key == best[0] and _drawn_first(body[2], best[1][2], fight_seed))
+		):
 			best = [key, body, aside, clearance]
 	if best.is_empty():
 		return goal
 	var side := -signf(best[2])
 	if absf(best[2]) < EPSILON:  # dead centre: a seeded draw picks the side
-		var keys := [ScrumContest.draw(unit, fight_seed), best[0][1], "steer"]
+		var keys := [
+			ScrumContest.draw(unit, fight_seed), ScrumContest.draw(best[1][2], fight_seed), "steer"
+		]
 		side = 1.0 if BattleRolls.uniform(fight_seed, keys) < 0.5 else -1.0
 	return _round(
 		at, best[1][0], best[3] + BattleTuning.current().bodies_steer_clear, across * side
 	)
+
+
+## True if `unit`'s draw goes before `other`'s.
+static func _drawn_first(unit: SkirmishUnit, other: SkirmishUnit, fight_seed: int) -> bool:
+	return ScrumContest.draw(unit, fight_seed) < ScrumContest.draw(other, fight_seed)
 
 
 ## The point where the unit's way from `at` grazes a circle of `reach` about `centre` on the

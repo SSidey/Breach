@@ -44,6 +44,7 @@ const FormationEvents = preload("res://sim/skirmish/formation/formation_events.g
 const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain.gd")
 const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
+const FoeIndex = preload("res://sim/skirmish/formation/foe_index.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
 
 
@@ -187,7 +188,9 @@ static func _footing(unit: SkirmishUnit, at: Vector2, to: Vector2, ctx: Dictiona
 ## nearest foe it touches, or else so as to arrive facing what it will do - its foe at the
 ## slot it seeks, or its squad's way at its place - the quicker way (UnitShuffle).
 static func _faces(squad: SkirmishSquad, ctx: Dictionary) -> Array:
-	var near := ScrumNear.index(ScrumSeek.foe_units(squad, ctx["squads"]))  # where they now stand
+	if not ctx.has("facing"):  # where they now stand, after the walk: one index a faction
+		ctx["facing"] = FoeIndex.of(ctx["squads"])
+	var near := FoeIndex.fought(ctx["facing"], squad)
 	var reach := BattleTuning.current().reach_contact
 	var out := []
 	for unit in squad.living():

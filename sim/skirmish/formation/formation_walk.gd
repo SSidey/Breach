@@ -80,9 +80,10 @@ static func _way(unit: SkirmishUnit, place: Vector2, terrain: FormationTerrain) 
 	return best
 
 
-## Where `unit` belongs in its squad's frame now, including any swap under way.
-static func place_of(squad: SkirmishSquad, unit: SkirmishUnit) -> Vector2:
-	var swapping := FormationShuffle.offset(squad, unit)
+## Where `unit` belongs in its squad's frame now, including any swap under way (`moving`:
+## FormationShuffle.movers for the squad, if the caller has it).
+static func place_of(squad: SkirmishSquad, unit: SkirmishUnit, moving = null) -> Vector2:
+	var swapping := FormationShuffle.offset(squad, unit, moving)
 	var ahead := UnitMotion.vector(squad.heading)
 	var shift := ahead * swapping.x - ahead.orthogonal() * swapping.y
 	var at := SquadFrame.place(squad.position, squad.heading, squad.width, squad.centre_shift, unit)
@@ -102,11 +103,12 @@ static func share(squad: SkirmishSquad, terrain: FormationTerrain = null) -> flo
 		return 1.0
 	var slack := slack_of(squad)
 	var furthest := 0.0
+	var moving := FormationShuffle.movers(squad)
 	for unit in squad.living():
 		if squad.loose.has(unit.id) or squad.fleeing.has(unit.id):
 			continue
-		var target := target_of(squad, unit, terrain)
-		if not target.is_equal_approx(place_of(squad, unit)):
+		var target := target_of(squad, unit, terrain, moving)
+		if not target.is_equal_approx(place_of(squad, unit, moving)):
 			continue  # its place is barred: it pours through the gap behind the frame
 		var lag := unit.position.distance_to(target)
 		if lag <= _tuning().walk_lost or rule == "no_man_left_behind":
@@ -119,14 +121,14 @@ static func share(squad: SkirmishSquad, terrain: FormationTerrain = null) -> flo
 ## formation pours through a gap narrower than itself and fans out again past it (spec 30
 ## round 3, part 5). On open ground (no terrain) its place.
 static func target_of(
-	squad: SkirmishSquad, unit: SkirmishUnit, terrain: FormationTerrain = null
+	squad: SkirmishSquad, unit: SkirmishUnit, terrain: FormationTerrain = null, moving = null
 ) -> Vector2:
 	if squad.taking.has(unit.id):  # out taking a downed foe (FormationTaking): beside it
 		var body: SkirmishUnit = squad.taking[unit.id]
 		var off := unit.position - body.position
 		var beside := minf(off.length(), _tuning().wounds_reach * 0.5)
 		return body.position + (off.normalized() * beside if off.length() > EPSILON else off)
-	var place := place_of(squad, unit)
+	var place := place_of(squad, unit, moving)
 	if terrain == null or terrain.factor(unit, place, place) > 0.0:
 		return place
 	var across := UnitMotion.vector(squad.heading).orthogonal()

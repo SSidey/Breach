@@ -24,12 +24,15 @@ static func index(foes: Array) -> Dictionary:
 	return {"foes": foes, "points": points, "grid": BodyGrid.build(points), "widest": widest}
 
 
-## The foes whose bodies' edges may come within `reach` of `point`, in the list's order.
+## The foes whose bodies' edges may come within `reach` of `point`, in the list's order;
+## of those of the squads its "only" names ({squad: true}), if it has one (FoeIndex).
 static func around(near: Dictionary, point: Vector2, reach: float) -> Array:
 	var foes: Array = near["foes"]
+	var only = near.get("only")
 	var out := []
 	for found in BodyGrid.near(near["grid"], point, reach + near["widest"] + MARGIN):
-		out.append(foes[found])
+		if only == null or only.has(foes[found][1]):
+			out.append(foes[found])
 	return out
 
 
@@ -42,6 +45,7 @@ static func gap_to(near: Dictionary, at: Vector2, radius: float) -> float:
 	var foes: Array = near["foes"]
 	var points: Array = near["points"]
 	var grid: Dictionary = near["grid"]
+	var only = near.get("only")  # as around()
 	var centre := BodyGrid.cell_of(at)
 	var span := BodyGrid.ring_span(grid, centre)
 	var least := INF
@@ -58,6 +62,8 @@ static func gap_to(near: Dictionary, at: Vector2, radius: float) -> float:
 		if BodyGrid.floor_of(ring_number) - widest - radius - MARGIN > bound:
 			break
 		for found in BodyGrid.ring(grid, centre, ring_number, at, bound + widest + radius):
+			if only != null and not only.has(foes[found][1]):
+				continue
 			var edge: float = points[found].distance_to(at)
 			least = minf(least, edge - ScrumReach.radius(foes[found][0]) - radius)
 	near["last"] = [at, least + radius]

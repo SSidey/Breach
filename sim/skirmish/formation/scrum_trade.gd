@@ -13,6 +13,7 @@ const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const SkirmishUnit = preload("res://sim/skirmish/skirmish_unit.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
+const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 
 ## Cells nearer than its closest yet that count as getting nearer.
 const PROGRESS := 0.001
@@ -37,30 +38,75 @@ static func trade(squad: SkirmishSquad, fight_seed: int) -> void:
 			>= BattleTuning.current().scrum_trade_seconds - 0.000001
 		):
 			stalled.append(squad.loose[unit_id]["unit"])
-	stalled.sort_custom(
-		func(a, b): return ScrumContest.draw(a, fight_seed) < ScrumContest.draw(b, fight_seed)
-	)
+	if stalled.is_empty():
+		return
+	var draws := {}  # unit -> its draw, worked out once before sorting
+	for unit in stalled:
+		draws[unit] = ScrumContest.draw(unit, fight_seed)
+	stalled.sort_custom(func(a, b): return draws[a] < draws[b])
+	var places := _places(squad, stalled)
 	for unit in stalled:
 		if not squad.loose.has(unit.id):
 			continue
 		var at: Vector2 = squad.loose[unit.id]["at"]
-		var friend := _nearest_place(squad, unit, at, fight_seed)
+		var friend := _nearest_place(squad, unit, at, [places, fight_seed])
 		if friend != null:
 			_swap(squad, unit, friend)
+			_traded(places, unit, friend)
 		elif squad.stance.is_empty():
 			squad.loose.erase(unit.id)
 			unit.position = ScrumStance.anchor(squad, unit)  # its body stands there from now
 
 
+## Notes in `places` (_places) that the two traded places: anchors stay with the places.
+static func _traded(places: Dictionary, unit: SkirmishUnit, friend: SkirmishUnit) -> void:
+	if places.is_empty():
+		return
+	var held: Array = places["held"]
+	var mine: int = places["of"][unit]
+	var theirs: int = places["of"][friend]
+	held[mine] = friend
+	held[theirs] = unit
+	places["of"][unit] = theirs
+	places["of"][friend] = mine
+
+
+## The squad's places as its living units hold them, found by where they stand: {"points":
+## each one's anchor, "grid" over them, "held": who holds each, "of": unit -> its place,
+## "order": unit -> where it comes in the living units}. Places trade only between
+## interchangeable units, whose anchors at a place are the same. {} if one of `stalled`
+## holds none of them: then every living unit is looked through.
+static func _places(squad: SkirmishSquad, stalled: Array) -> Dictionary:
+	var living := squad.living()
+	var points := []
+	var of := {}
+	var order := {}
+	for index in range(living.size()):
+		points.append(ScrumStance.anchor(squad, living[index]))
+		of[living[index]] = index
+		order[living[index]] = index
+	if stalled.any(func(unit): return not of.has(unit)):
+		return {}
+	return {
+		"points": points, "grid": BodyGrid.build(points), "held": living, "of": of, "order": order
+	}
+
+
 ## The interchangeable friend whose place is nearest `at`, and nearer than the unit's own;
-## null if none. Ties by the friends' draws.
+## null if none. Ties by the friends' draws (then the living units' order, as looking
+## through them all). `lookup`: [_places, the fight seed].
 static func _nearest_place(
-	squad: SkirmishSquad, unit: SkirmishUnit, at: Vector2, fight_seed: int
+	squad: SkirmishSquad, unit: SkirmishUnit, at: Vector2, lookup: Array
 ) -> SkirmishUnit:
+	var places: Dictionary = lookup[0]
+	var fight_seed: int = lookup[1]
 	var own := ScrumStance.anchor(squad, unit).distance_to(at)
 	var best: SkirmishUnit = null
 	var best_key := []
-	for friend in squad.living():
+	if places.is_empty():
+		places = _places(squad, [])  # as the squad's units stand now
+	for index in BodyGrid.near(places["grid"], at, own + BodyGrid.MARGIN):
+		var friend: SkirmishUnit = places["held"][index]
 		var same: bool = (  # interchangeable: the painted layout keeps its meaning
 			friend.definition == unit.definition
 			and friend.preferred_position == unit.preferred_position
@@ -69,10 +115,14 @@ static func _nearest_place(
 		)
 		if friend == unit or not same or squad.chasers.has(friend.id):
 			continue
-		var there := ScrumStance.anchor(squad, friend).distance_to(at)
+		var there: float = places["points"][index].distance_to(at)
 		if there >= own - PROGRESS:
 			continue
-		var key := [snappedf(there, 0.000001), ScrumContest.draw(friend, fight_seed)]
+		var key := [
+			snappedf(there, 0.000001),
+			ScrumContest.draw(friend, fight_seed),
+			places["order"][friend],
+		]
 		if best_key.is_empty() or key < best_key:
 			best = friend
 			best_key = key

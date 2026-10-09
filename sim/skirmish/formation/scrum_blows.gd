@@ -16,6 +16,7 @@ const FormationCombat = preload("res://sim/skirmish/formation/formation_combat.g
 const FormationMorale = preload("res://sim/skirmish/formation/formation_morale.gd")
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
+const FoeIndex = preload("res://sim/skirmish/formation/foe_index.gd")
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 
 
@@ -23,11 +24,11 @@ const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 ## target and cooldown.
 static func blows(squads: Array, interval: int, fight_seed: int) -> Array:
 	var out := []
+	var index := FoeIndex.of(squads)  # one grid a faction, as they stand
 	for squad in squads:
-		var foes := _struck_by(squad, squads)
-		if foes.is_empty():
+		var near := FoeIndex.struck(index, squad)
+		if near.is_empty():
 			continue
-		var near := ScrumNear.index(foes)
 		var reach := BattleTuning.current().reach_contact
 		for unit in squad.living():
 			var where := ScrumReach.at(squad, unit)
@@ -61,22 +62,6 @@ static func touches_any(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array) -
 	return false
 
 
-## [[unit, squad], ...] for the living units of squads hostile to `squad`, but not routing.
-## The enemies the squad's units strike when they touch them: any, for a squad fighting;
-## for one retreating, any still in a unit's front until it has turned away (Decision 101);
-## for any other, only the units of retreating squads - a retreat is struck as it goes
-## (Decision 95).
-static func _struck_by(squad: SkirmishSquad, squads: Array) -> Array:
-	if squad.state in [SkirmishSquad.State.ROUTING, SkirmishSquad.State.DESTROYED]:
-		return []
-	var all := _hostile(squad, squads)
-	if squad.state == SkirmishSquad.State.FIGHTING:
-		return all
-	if squad.order == SkirmishUnit.Order.RETREAT:
-		return all  # but only a foe still in its front (blows)
-	return all.filter(func(e): return e[1].order == SkirmishUnit.Order.RETREAT)
-
-
 ## [[unit, squad], ...] for the living units of squads hostile to `squad`, not routing.
 static func hostile_units(squad: SkirmishSquad, squads: Array) -> Array:
 	return _hostile(squad, squads)
@@ -98,18 +83,27 @@ static func _hostile(squad: SkirmishSquad, squads: Array) -> Array:
 static func _pick(squad: SkirmishSquad, unit: SkirmishUnit, foes: Array, fight_seed: int) -> Array:
 	var where := ScrumReach.at(squad, unit)
 	var best := []
-	var best_key := []
+	var best_key := []  # [front, distance]; the draw is weighed only on a tie of the two
 	for entry in foes:
 		var other: SkirmishUnit = entry[0]
 		if not ScrumReach.touching(squad, unit, entry[1], other):
 			continue
 		var there := ScrumReach.at(entry[1], other)
 		var front := 0 if ScrumReach.in_front(unit.bearing, where, there) else 1
-		var key := [front, where.distance_to(there), ScrumContest.draw(other, fight_seed)]
-		if best.is_empty() or key < best_key:
+		var key := [front, where.distance_to(there)]
+		if (
+			best.is_empty()
+			or key < best_key
+			or (not best_key < key and _drawn_first(other, best[0], fight_seed))
+		):
 			best = [other, entry[1], there]
 			best_key = key
 	return best
+
+
+## True if `unit`'s draw goes before `other`'s: the last of _pick's key.
+static func _drawn_first(unit: SkirmishUnit, other: SkirmishUnit, fight_seed: int) -> bool:
+	return ScrumContest.draw(unit, fight_seed) < ScrumContest.draw(other, fight_seed)
 
 
 ## Where the nearest enemy the unit touches stands, or null if it touches none.

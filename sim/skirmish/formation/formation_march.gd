@@ -108,10 +108,11 @@ static func sync_units(squads: Array, timing := [], terrain: FormationTerrain = 
 	if not timing.is_empty():
 		timing = timing + [GroundBodies.lying_in(squads)]
 	for entry in squads:
+		var moving := FormationShuffle.movers(entry)
 		for unit in entry.units:
 			if not unit.is_alive():
 				continue  # the fallen lie where they fell (Decision 126)
-			var swapping := FormationShuffle.offset(entry, unit)
+			var swapping := FormationShuffle.offset(entry, unit, moving)
 			unit.distance = (
 				entry.unit_distance(unit) + entry.direction * swapping.x * SkirmishSquad.RANK_DEPTH
 			)
@@ -122,10 +123,14 @@ static func sync_units(squads: Array, timing := [], terrain: FormationTerrain = 
 			elif entry.loose.has(unit.id):
 				unit.position = entry.loose[unit.id]["at"]
 			elif timing.is_empty():
-				unit.position = FormationWalk.place_of(entry, unit)
+				unit.position = FormationWalk.place_of(entry, unit, moving)
 				unit.foothold = unit.position
 				unit.bearing = entry.heading
 			else:
 				FormationWalk.walk(
-					entry, unit, FormationWalk.target_of(entry, unit, terrain), timing, terrain
+					entry,
+					unit,
+					FormationWalk.target_of(entry, unit, terrain, moving),
+					timing,
+					terrain
 				)
