@@ -17,6 +17,7 @@ const ScrumSlots = preload("res://sim/skirmish/formation/scrum_slots.gd")
 const ScrumStance = preload("res://sim/skirmish/formation/scrum_stance.gd")
 const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
 const SlotSearch = preload("res://sim/skirmish/formation/slot_search.gd")
+const FoeIndex = preload("res://sim/skirmish/formation/foe_index.gd")
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
 
 ## Microseconds spent in plan() since it was last zeroed (the bench reads it; no outcome does).
@@ -46,6 +47,7 @@ static func plan(ctx: Dictionary) -> void:
 static func _plan(ctx: Dictionary) -> void:
 	ctx["rings"] = {}  # squad -> {seeker radius -> the slots round its foes (SlotSearch)}
 	ctx["claims"] = {}  # cell -> points claimed (SlotSearch.claim)
+	ctx["foes"] = FoeIndex.of(ctx["squads"])  # where they stand as the seeking begins
 	var seekers := []
 	for squad in ctx["squads"]:
 		if squad.state == SkirmishSquad.State.FIGHTING:
@@ -137,8 +139,7 @@ static func _press(seeker: Array, slot: Array, ctx: Dictionary) -> void:
 ## its foes as SlotSearch.ring gives them; the rest stand (touching a foe) or keep to their
 ## places.
 static func _seekers_of(squad: SkirmishSquad, ctx: Dictionary) -> Array:
-	var foes := foe_units(squad, ctx["squads"])
-	var near := ScrumNear.index(foes)
+	var near := FoeIndex.fought(ctx["foes"], squad)
 	var reach := BattleTuning.current().reach_contact
 	var front_left := squad.living().any(func(u): return u.preferred_position == 0)
 	var out := []
@@ -154,22 +155,27 @@ static func _seekers_of(squad: SkirmishSquad, ctx: Dictionary) -> Array:
 			entry["next"] = entry["at"]
 			ctx["active"][squad.id] = true
 			continue
-		if not _may_seek(squad, unit, front_left) or foes.is_empty():
+		if not _may_seek(squad, unit, front_left) or not near["any"]:
 			entry["goal"] = null
 			continue
 		var arrival := ScrumNear.gap_to(near, entry["at"], radius) / maxf(unit.speed, 0.01)
 		var key := ScrumContest.key(unit, arrival, ctx["seed"], ctx["tick"])
-		out.append([key, squad, unit, _ring(squad, foes, radius, ctx)])
+		out.append([key, squad, unit, _ring(squad, near, radius, ctx)])
 	return out
 
 
-## The slots round the squad's foes for a seeker of `radius`, made once a tick.
-static func _ring(squad: SkirmishSquad, foes: Array, radius: float, ctx: Dictionary) -> Dictionary:
+## The slots round the squad's foes (`near`: FoeIndex.fought) for a seeker of `radius`, made
+## once a tick.
+static func _ring(
+	squad: SkirmishSquad, near: Dictionary, radius: float, ctx: Dictionary
+) -> Dictionary:
 	if not ctx["rings"].has(squad):
 		ctx["rings"][squad] = {}
 	var rings: Dictionary = ctx["rings"][squad]
 	if not rings.has(radius):
-		rings[radius] = SlotSearch.ring(foes, radius, ctx["bodies"], ctx["crowd"])
+		if not rings.has("foes"):
+			rings["foes"] = FoeIndex.listed(near)
+		rings[radius] = SlotSearch.ring(rings["foes"], radius, ctx["bodies"], ctx["crowd"])
 	return rings[radius]
 
 

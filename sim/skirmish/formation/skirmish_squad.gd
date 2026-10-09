@@ -12,6 +12,7 @@ const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
 const SquadFrame = preload("res://sim/skirmish/formation/squad_frame.gd")
 const FormationCommand = preload("res://sim/skirmish/formation/formation_command.gd")
+const PlaceOrder = preload("res://sim/skirmish/formation/place_order.gd")
 
 ## Tiles between one rank and the next: one cell (Decisions 48 and 68).
 const RANK_DEPTH := 1.0 / MapLayoutDef.CELLS_PER_TILE
@@ -198,22 +199,22 @@ func fighters() -> Array[SkirmishUnit]:
 ## Returns the units that stepped up.
 func compact() -> Array[SkirmishUnit]:
 	var moved: Array[SkirmishUnit] = []
+	var stepped := {}  # unit -> true: those in `moved`
 	var cells := _cells()  # who stands where, kept as units step up
+	var heading := _headed_for()  # mid-move: the places moves under way are heading for
 	var any := true
 	while any:
 		any = false
-		var order_by_place := living()
-		order_by_place.sort_custom(
-			func(a, b): return a.rank < b.rank or (a.rank == b.rank and a.column < b.column)
-		)
-		for unit in order_by_place:
-			if swaps.any(func(swap): return swap["to"].has(unit)):
+		var order_by_place := PlaceOrder.front_first(living())
+		for unit: SkirmishUnit in order_by_place:
+			if heading["movers"].has(unit):
 				continue  # mid-move: it takes the place its move is heading for
 			var into_front_ok := unit.rank > 1 or unit.preferred_position == 0
-			if unit.rank > 0 and into_front_ok and _clear_ahead(unit, cells):
+			if unit.rank > 0 and into_front_ok and _clear_ahead(unit, cells, heading["cells"]):
 				_step_up(unit, cells)
 				any = true
-				if not moved.has(unit):
+				if not stepped.has(unit):
+					stepped[unit] = true
 					moved.append(unit)
 	var remaining := living()
 	if not remaining.is_empty() and not remaining.any(func(u): return u.rank == 0):
@@ -222,6 +223,23 @@ func compact() -> Array[SkirmishUnit]:
 			unit.rank -= shift
 		front_distance -= direction * shift * RANK_DEPTH
 	return moved
+
+
+## {"movers": {unit: true} for the units moving in swaps under way, "cells": {Vector2i(rank,
+## column): [mover, ...]} for the places their moves are heading for}.
+func _headed_for() -> Dictionary:
+	var movers := {}
+	var cells := {}
+	for swap in swaps:
+		for mover in swap["to"]:
+			movers[mover] = true
+			var to: Vector2i = swap["to"][mover]
+			for rank in range(to.x, to.x + mover.footprint_depth):
+				for column in range(to.y, to.y + mover.footprint_width):
+					if not cells.has(Vector2i(rank, column)):
+						cells[Vector2i(rank, column)] = []
+					cells[Vector2i(rank, column)].append(mover)
+	return {"movers": movers, "cells": cells}
 
 
 ## {Vector2i(rank, column): [unit, ...]}: the places the living units' footprints cover.
@@ -247,22 +265,15 @@ func _step_up(unit: SkirmishUnit, cells: Dictionary) -> void:
 
 
 ## True if no other living unit (`cells`: _cells) stands in the row ahead of the unit across
-## its columns, nor is a move under way heading there.
-func _clear_ahead(unit: SkirmishUnit, cells: Dictionary) -> bool:
+## its columns, nor is a move under way heading there (`heading`: _headed_for's cells).
+func _clear_ahead(unit: SkirmishUnit, cells: Dictionary, heading: Dictionary) -> bool:
 	var row := unit.rank - 1
 	for column in range(unit.column, unit.column + unit.footprint_width):
 		for other in cells.get(Vector2i(row, column), []):
 			if other != unit:
 				return false
-	for swap in swaps:  # nor a place a move under way is heading for
-		for mover in swap["to"]:
-			var to: Vector2i = swap["to"][mover]
-			var rows_meet: bool = to.x <= row and row < to.x + mover.footprint_depth
-			var columns_meet: bool = (
-				to.y < unit.column + unit.footprint_width
-				and unit.column < to.y + mover.footprint_width
-			)
-			if mover != unit and rows_meet and columns_meet:
+		for mover in heading.get(Vector2i(row, column), []):
+			if mover != unit:
 				return false
 	return true
 

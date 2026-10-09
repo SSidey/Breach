@@ -200,12 +200,30 @@ static func _consider(search: Dictionary, index: int) -> void:
 		distance,
 		-snappedf((slot[0] - at).dot(search["ahead"]), 0.000001),
 		snappedf(slot[0].distance_to(ground[0]), 0.000001),
-		ScrumContest.draw(slot[1], ground[4]),
-		BattleRolls.uniform(ground[4], [seeker.id, slot[1].id, slot[3], "slot"]),
 	]
-	if best < 0 or key < search["key"] or (key == search["key"] and index < best):
-		search["best"] = index
-		search["key"] = key
+	if best >= 0 and not key < search["key"]:
+		if search["key"] < key or not _draws_first(search, index, best):
+			return
+	search["best"] = index
+	search["key"] = key
+
+
+## True if slot `index` goes before slot `best` on the last of their keys - the foe's draw,
+## then the seeker's roll for the slot, then the slot listed first - the rest being equal.
+## The draws are worked out only for such a tie.
+static func _draws_first(search: Dictionary, index: int, best: int) -> bool:
+	var mine := _draws(search, search["slots"][index])
+	var theirs := _draws(search, search["slots"][best])
+	return mine < theirs or (mine == theirs and index < best)
+
+
+## [the foe's draw, the seeker's roll] for the slot: the tail of _consider's key.
+static func _draws(search: Dictionary, slot: Array) -> Array:
+	var draw_seed: int = search["ground"][4]
+	return [
+		ScrumContest.draw(slot[1], draw_seed),
+		BattleRolls.uniform(draw_seed, [search["seeker"].id, slot[1].id, slot[3], "slot"]),
+	]
 
 
 ## True if a claim (claim()) lies within a body's breadth of `point`.
