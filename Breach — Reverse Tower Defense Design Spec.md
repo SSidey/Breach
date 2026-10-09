@@ -6255,6 +6255,13 @@ replays to share".
 - The probe runs at the head of every benchmark report (`tools/run_benches.ps1`).
 - Still to watch: compilers fusing multiply-adds (e.g. on Apple silicon), and Godot
   built-ins that hide transcendental maths.
+- Its change routes every call site at once, so it may change more pre-existing files
+  than a change normally may (17 against 11): the user, "This PR can be bigger given the
+  need" (#186).
+- DetMath costs about 0.6 µs a call in GDScript against 0.05 µs for the platform's, which
+  made the early fight about 20% slower. The answer is porting the passes that call it
+  most (facing first) to Rust, checked by timing that pass alone - not reworking the
+  rules to avoid the calls.
 
 **Alternatives:**
 
