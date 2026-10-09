@@ -7,7 +7,9 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tools/tick_phases.gd -- \
 ##       [engine=gdscript|rust] [side=1024] [width=32] [settle=10] [fight=5] [seed=1]
-##       [stage=fight|march] [retreat=<squad id>]
+##       [stage=fight|march] [retreat=<squad id>] [squads=1] [archers=0]
+## squads=N splits each side into N squads of side/N on parallel lanes (FormationBench.lanes);
+## archers=K makes the grems' back K a squad spitters, which shoot.
 ## stage=march times `fight` ticks of the march before contact, `settle` ticks after the
 ## start, instead of the fight. retreat orders that squad to retreat once the fight has
 ## settled in (its withdrawal, and its enemies' chasers, timed).
@@ -66,7 +68,14 @@ func _init() -> void:
 
 
 func _settled(side: int, width: int, args: Dictionary) -> Sim:
-	var sim := FormationBench.clash(side, width, int(args.get("seed", 1)))
+	var lanes := int(args.get("squads", 1))
+	var archers := int(args.get("archers", 0))
+	var battle_seed := int(args.get("seed", 1))
+	var sim := (
+		FormationBench.lanes(lanes, side / lanes, width, battle_seed, archers)
+		if lanes > 1
+		else FormationBench.clash(side, width, battle_seed, archers)
+	)
 	if args.get("stage", "fight") == "march":
 		for _i in range(int(args.get("settle", 10))):
 			sim.step()
@@ -204,10 +213,7 @@ func _scrum_events(sim: Sim) -> Array:
 	var events := ScrumEngage.step(squads, sim.tick_number(), sim.fight_seed)
 	for squad in squads:
 		Scrum._prepare(squad, sim.tick_number())
-	for squad in squads:
-		ScrumStance.anticipate(
-			squad, squads, sim.tick_number(), events, sim.terrain, sim.fight_seed
-		)
+	ScrumStance.anticipate_all(squads, sim.tick_number(), events, sim.terrain, sim.fight_seed)
 	FormationManoeuvre.step(squads)
 	_lap("scrum: engage, prepare, stance")
 	return events

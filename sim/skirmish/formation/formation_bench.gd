@@ -7,9 +7,13 @@ extends RefCounted
 ## (tools/formation_bench.gd). Reads the clock, so not part of any battle.
 
 const FormationSimulation = preload("res://sim/skirmish/formation/formation_simulation.gd")
+const FormationRoute = preload("res://sim/skirmish/formation/formation_route.gd")
+const MapLayoutDef = preload("res://content/definitions/map_layout_def.gd")
 
 ## Ticks a battle may take to come to contact before it is given up on.
 const CONTACT_LIMIT := 2000
+## Cells between neighbouring lanes' centre lines (lanes()).
+const LANE_SPACING := 12.0
 
 
 ## {"march": [avg ms, worst ms], "fight": [avg ms, worst ms], "contact": tick (-1 if none)}
@@ -36,20 +40,52 @@ static func measure(per_side: int, options: Dictionary) -> Dictionary:
 	return {"march": _spread(marching), "fight": _spread(fighting), "contact": contact}
 
 
-## The battle: `per_side` grems at the player's end against as many militia, `width` wide.
-static func clash(per_side: int, width: int, battle_seed: int) -> FormationSimulation:
+## The battle: `per_side` grems at the player's end against as many militia, `width` wide;
+## the grems' last `archers` (their back ranks) spitters, which shoot.
+static func clash(
+	per_side: int, width: int, battle_seed: int, archers: int = 0
+) -> FormationSimulation:
 	var sim := FormationSimulation.new(2.0, 0.1)
 	sim.fight_seed = battle_seed
+	_spawn_pair(sim, [per_side, width, archers], null)
+	return sim
+
+
+## Many squads: `lanes` parallel lanes LANE_SPACING cells apart, each with a squad of
+## `per_squad` grems against as many militia, `width` wide (the grems' last `archers`
+## spitters), so the per-pair passes meet many squads at once.
+static func lanes(
+	lane_count: int, per_squad: int, width: int, battle_seed: int, archers: int = 0
+) -> FormationSimulation:
+	var sim := FormationSimulation.new(2.0, 0.1)
+	sim.fight_seed = battle_seed
+	var length := 2.0 * MapLayoutDef.CELLS_PER_TILE
+	for lane in range(lane_count):
+		var y := lane * LANE_SPACING
+		var route := FormationRoute.new(PackedVector2Array([Vector2(0, y), Vector2(length, y)]))
+		_spawn_pair(sim, [per_squad, width, archers], route)
+	return sim
+
+
+## A grem squad at the player's end and a militia one at the other; `shape` = [units,
+## width, archers].
+static func _spawn_pair(sim: FormationSimulation, shape: Array, route: FormationRoute) -> void:
+	var grem: Resource = load("res://content/units/grem.tres")
+	var spitter: Resource = load("res://content/units/grem_spitter.tres")
 	var sides := [
-		[load("res://content/units/grem.tres"), "player", true],
+		[grem, "player", true],
 		[load("res://content/units/kingdom_militia.tres"), "the_kingdom", false],
 	]
+	var count: int = shape[0]
+	var width: int = shape[1]
 	for side in sides:
 		var placements := []
-		for index in range(per_side):
-			placements.append([side[0], Vector2i(index / width, index % width)])
-		sim.spawn_squad(width, placements, side[1], side[2])
-	return sim
+		for index in range(count):
+			var shoots: bool = side[0] == grem and index >= count - shape[2]
+			placements.append(
+				[spitter if shoots else side[0], Vector2i(index / width, index % width)]
+			)
+		sim.spawn_squad(width, placements, side[1], side[2], 0, route)
 
 
 ## [average, worst] of the times, or [0, 0] for none.

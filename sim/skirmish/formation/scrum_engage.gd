@@ -18,15 +18,20 @@ const FormationEvents = preload("res://sim/skirmish/formation/formation_events.g
 const ScrumContest = preload("res://sim/skirmish/formation/scrum_contest.gd")
 const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
 
+## Cells added to how far apart two squads' boxes may be and still have units within
+## reach: far above float rounding, so no pair is missed.
+const MARGIN := 0.01
+
 
 ## Locks free squads onto hostile squads their units have come within reach of. Returns
 ## "engaged" events.
 static func step(squads: Array, tick: int, fight_seed: int = 0) -> Array:
 	var picks := {}  # squad -> the foe it locks onto, every one chosen before any lands
 	var near := {}  # squad -> its units, found by where they stand (ScrumNear), made as needed
+	var spans := {}  # squad -> _span's, made as needed
 	for squad in squads:
 		if _free(squad):
-			var foe := _nearest(squad, squads, fight_seed, near)
+			var foe := _nearest(squad, squads, fight_seed, [near, spans])
 			if foe != null:
 				picks[squad] = foe
 	var events := []
@@ -48,17 +53,28 @@ static func _free(squad: SkirmishSquad) -> bool:
 
 
 ## The hostile squad nearest `squad` within reach_engage (between their nearest units' cells),
-## ties by the squads' draws; null if none is.
+## ties by the squads' draws; null if none is. A squad whose units' box is too far from
+## `squad`'s for any two to be in reach is passed over unlooked-at. `found` = [ScrumNear's
+## index of each squad's units, each squad's _span], filled as needed.
 static func _nearest(
-	squad: SkirmishSquad, squads: Array, fight_seed: int, near: Dictionary
+	squad: SkirmishSquad, squads: Array, fight_seed: int, found: Array
 ) -> SkirmishSquad:
+	var near: Dictionary = found[0]
+	var mine := _span(squad, found[1])
+	var reach := BattleTuning.current().reach_engage + 0.000001
 	var best: SkirmishSquad = null
 	var best_key := []
 	for other in squads:
-		if other.faction_id == squad.faction_id or not FormationContact.engageable(other):
+		if other.faction_id == squad.faction_id or other.state == SkirmishSquad.State.DESTROYED:
 			continue
+		var theirs := _span(other, found[1])
+		if (
+			theirs[2].is_empty()
+			or _apart(mine[0], theirs[0]) > reach + mine[1] + theirs[1] + MARGIN
+		):
+			continue  # not engageable (FormationContact), or out of reach
 		if not near.has(other):
-			near[other] = ScrumNear.index(other.living().map(func(foe): return [foe, other]))
+			near[other] = ScrumNear.index(theirs[2].map(func(foe): return [foe, other]))
 		var gap := _gap(squad, other, near[other])
 		var key := [snappedf(gap, 0.000001), ScrumContest.squad_draw(other, fight_seed)]
 		if (
@@ -68,6 +84,28 @@ static func _nearest(
 			best = other
 			best_key = key
 	return best
+
+
+## [the box round where the squad's living units stand (ScrumReach.at), its widest body's
+## radius, its living units].
+static func _span(squad: SkirmishSquad, spans: Dictionary) -> Array:
+	if not spans.has(squad):
+		var living := squad.living()
+		var box := Rect2()
+		var widest := 0.0
+		for index in range(living.size()):
+			var at := ScrumReach.at(squad, living[index])
+			box = Rect2(at, Vector2.ZERO) if index == 0 else box.expand(at)
+			widest = maxf(widest, ScrumReach.radius(living[index]))
+		spans[squad] = [box, widest, living]
+	return spans[squad]
+
+
+## How far apart two boxes are (0 where they meet).
+static func _apart(one: Rect2, other: Rect2) -> float:
+	var across := maxf(maxf(other.position.x - one.end.x, one.position.x - other.end.x), 0.0)
+	var down := maxf(maxf(other.position.y - one.end.y, one.position.y - other.end.y), 0.0)
+	return Vector2(across, down).length()
 
 
 ## Cells between the two squads' nearest units' bodies (0 where they touch or overlap),
