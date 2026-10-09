@@ -106,7 +106,7 @@ static func check_ends(mover: SkirmishSquad, route_end: float, tick: int, events
 ## FormationWalk), and loose and fleeing units stand where their own moves took them.
 static func sync_units(squads: Array, timing := [], terrain: FormationTerrain = null) -> void:
 	if not timing.is_empty():
-		timing = timing + [GroundBodies.lying_in(squads)]
+		timing = timing + [GroundBodies.ground(squads)]
 	for entry in squads:
 		for unit in entry.units:
 			if not unit.is_alive():
