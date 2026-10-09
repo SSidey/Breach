@@ -45,6 +45,7 @@ const FormationTerrain = preload("res://sim/skirmish/formation/formation_terrain
 const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 const ScrumNear = preload("res://sim/skirmish/formation/scrum_near.gd")
 const ScrumReach = preload("res://sim/skirmish/formation/scrum_reach.gd")
+const ScrumFaceField = preload("res://sim/skirmish/formation/scrum_face_field.gd")
 
 
 ## One tick of the scrum. `cells_per_second` is the march pace at speed 1; given the
@@ -134,7 +135,17 @@ static func _seek(ctx: Dictionary) -> void:
 			),
 			ctx
 		)
-	var turns := []  # after all have moved (a unit stepped up to is seen), before any turn
+	face(fighting, ctx)  # after all have moved (a unit stepped up to is seen)
+
+
+## Turns the fighting squads' units once each (_faces), all decided before any turns: in
+## GDScript (the reference), or on the battle's native bodies, ctx["field"]
+## (ScrumFaceField, Decision 129) - the same bearings.
+static func face(fighting: Array, ctx: Dictionary) -> void:
+	if ctx.get("field") != null:
+		ScrumFaceField.face(ctx)
+		return
+	var turns := []
 	for squad in fighting:
 		turns.append_array(_faces(squad, ctx))
 	for turn in turns:

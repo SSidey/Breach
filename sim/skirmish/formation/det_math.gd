@@ -8,8 +8,9 @@ extends RefCounted
 ## Cody-Waite range reduction by pi/2 in three exact parts, then its minimax polynomials.
 ## Its constants are built from their exact bits, as Godot's float literals can be an ulp
 ## off. f64 throughout, within about 1e-15 of the true value; deterministic, not correctly
-## rounded. The Rust core's copy of sin and cos (native/rust/src/det_math.rs) does the
-## same operations in the same order. Pow, exp, log and ease are in DetPow. Pure.
+## rounded. The Rust core's copy of sin, cos, asin, acos and atan2
+## (native/rust/src/det_math.rs) does the same operations in the same order. Pow, exp, log
+## and ease are in DetPow. Pure.
 
 const DetPow = preload("res://sim/skirmish/formation/det_pow.gd")
 

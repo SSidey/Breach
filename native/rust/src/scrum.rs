@@ -99,10 +99,10 @@ struct Ring {
 }
 
 /// A fighting squad's foes, indexed.
-struct Foes {
-    bodies: Vec<u32>,
-    grid: Grid,
-    widest: f64,
+pub struct Foes {
+    pub bodies: Vec<u32>,
+    pub grid: Grid,
+    pub widest: f64,
 }
 
 struct Seeker {
@@ -284,20 +284,8 @@ impl<'a> Plan<'a> {
         out
     }
 
-    /// ScrumSeek.foe_units: the living units of the squads it fights, not routing, in
-    /// the list's order.
     fn foes(&self, ids: &[i64]) -> Foes {
-        let field = self.field;
-        let mut bodies = Vec::new();
-        for &sq in &field.order {
-            let squad = &field.squads[sq as usize];
-            if squad.flags & ROUTING == 0 && ids.contains(&squad.id) {
-                bodies.extend_from_slice(&squad.members);
-            }
-        }
-        let points: Vec<V2> = bodies.iter().map(|&b| field.at[b as usize]).collect();
-        let widest = bodies.iter().map(|&b| field.radius[b as usize]).fold(0.0, f64::max);
-        Foes { grid: Grid::build(&points), bodies, widest }
+        foes_of(self.field, ids)
     }
 
     /// One unit: it stands touching a foe, keeps to its place, or seeks (Some).
@@ -617,6 +605,21 @@ impl<'a> Plan<'a> {
             if back.length() as f64 <= breadth { at } else { s.point.add(back.normalized().scale(breadth)) };
         self.out.foe_ats[m] = field.at[s.foe as usize];
     }
+}
+
+/// ScrumSeek.foe_units: the living units of the squads with these ids, not routing, in
+/// the list's order, indexed where they stand.
+pub fn foes_of(field: &Field, ids: &[i64]) -> Foes {
+    let mut bodies = Vec::new();
+    for &sq in &field.order {
+        let squad = &field.squads[sq as usize];
+        if squad.flags & ROUTING == 0 && ids.contains(&squad.id) {
+            bodies.extend_from_slice(&squad.members);
+        }
+    }
+    let points: Vec<V2> = bodies.iter().map(|&b| field.at[b as usize]).collect();
+    let widest = bodies.iter().map(|&b| field.radius[b as usize]).fold(0.0, f64::max);
+    Foes { grid: Grid::build(&points), bodies, widest }
 }
 
 /// ScrumNear.gap_to: cells from `at` to the nearest foe body's edge, less `radius` (0 if

@@ -45,6 +45,7 @@ static func plan(ctx: Dictionary) -> void:
 	var synced_at := Time.get_ticks_usec()
 	spent[0] += synced_at - began
 	var batch := _gather(synced[0], synced[1], ctx["squads"])
+	ctx["seek_batch"] = batch  # the facing after the walk turns these units (ScrumFaceField)
 	var called := Time.get_ticks_usec()
 	var tuning := BattleTuning.current()
 	var ints := PackedInt64Array([ctx["tick"], ctx["seed"], tuning.combat_contest_die])

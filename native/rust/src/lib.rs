@@ -1,15 +1,18 @@
 //! Breach's native core (Decision 129: Rust for the simulation's hot core, through
 //! GDExtension with godot-rust). One class, `BodyField`: the bodies' state, owned here and
-//! kept across ticks, and the hot passes that run on it - body parting (UnitBodies) and the
-//! scrum's slot search (ScrumSeek, SlotSearch, ScrumSlots, ScrumNear). GDScript keeps the
-//! rules and stays the reference; the switch is `BREACH_NATIVE` (NativeKernels).
+//! kept across ticks, and the hot passes that run on it - body parting (UnitBodies), the
+//! scrum's slot search (ScrumSeek, SlotSearch, ScrumSlots, ScrumNear) and its facing
+//! (FormationScrum._faces, UnitShuffle, UnitMotion). GDScript keeps the rules and stays the
+//! reference; the switch is `BREACH_NATIVE` (NativeKernels).
 
 mod det_math;
+mod facing;
 mod field;
 mod field_parting;
 mod ghash;
 mod grid;
 mod maths;
+mod motion;
 mod parting;
 mod scrum;
 
@@ -183,13 +186,81 @@ impl BodyField {
         ]
     }
 
+    /// FormationScrum's facing on the field, after the walk, for the units the tick's
+    /// plan() was given (`squads` = per fighting squad [id, foes, units], `foe_ids`,
+    /// `members` and `speeds` as plan's). `floats` = [reach_contact, the front's least
+    /// dot (ScrumReach.in_front), tick seconds, pace (cells a tick at speed 1),
+    /// scrum_crowding]; per unit: where it stands now, `motion` = [bearing, turn rate,
+    /// backward pace], flags (1: it makes for a slot, 2: its walk chose a point to look
+    /// at), its next point, the foe there and that point. Returns every unit's bearing
+    /// after its turn.
+    #[func]
+    #[allow(clippy::too_many_arguments)]
+    fn face(
+        &mut self,
+        floats: PackedFloat64Array,
+        squads: PackedInt64Array,
+        foe_ids: PackedInt64Array,
+        members: PackedInt32Array,
+        ats: PackedVector2Array,
+        motion: PackedFloat64Array,
+        speeds: PackedFloat64Array,
+        flags: PackedByteArray,
+        nexts: PackedVector2Array,
+        foe_ats: PackedVector2Array,
+        towards: PackedVector2Array,
+    ) -> PackedFloat64Array {
+        let began = Instant::now();
+        let f = floats.as_slice();
+        let params =
+            facing::Params { reach: f[0], front: f[1], seconds: f[2], pace: f[3], crowding: f[4] };
+        let triples = squads.as_slice();
+        let foe_counts: Vec<i32> = triples.chunks(3).map(|c| c[1] as i32).collect();
+        let member_counts: Vec<i32> = triples.chunks(3).map(|c| c[2] as i32).collect();
+        let (ats, nexts, foe_ats, towards) = (v2s(&ats), v2s(&nexts), v2s(&foe_ats), v2s(&towards));
+        let input = facing::FaceIn {
+            foe_counts: &foe_counts,
+            foe_ids: foe_ids.as_slice(),
+            member_counts: &member_counts,
+            members: members.as_slice(),
+            ats: &ats,
+            motion: motion.as_slice(),
+            speeds: speeds.as_slice(),
+            flags: flags.as_slice(),
+            nexts: &nexts,
+            foe_ats: &foe_ats,
+            towards: &towards,
+        };
+        let out = facing::face(&mut self.field, &input, &params);
+        self.usec = began.elapsed().as_micros() as i64;
+        PackedFloat64Array::from(out.as_slice())
+    }
+
+    /// DetMath's `op` ("sin", "cos", "asin", "acos", or "atan2" of a and b) over the
+    /// inputs, as the core computes it (the suite proves it against the GDScript).
+    #[func]
+    fn det_math(op: GString, a: PackedFloat64Array, b: PackedFloat64Array) -> PackedFloat64Array {
+        let f: fn(f64, f64) -> f64 = match op.to_string().as_str() {
+            "sin" => |x, _| det_math::sin(x),
+            "cos" => |x, _| det_math::cos(x),
+            "asin" => |x, _| det_math::asin(x),
+            "acos" => |x, _| det_math::acos(x),
+            "atan2" => det_math::atan2,
+            _ => return PackedFloat64Array::new(),
+        };
+        let (a, b) = (a.as_slice(), b.as_slice());
+        let out: Vec<f64> =
+            (0..a.len()).map(|i| f(a[i], b.get(i).copied().unwrap_or(0.0))).collect();
+        PackedFloat64Array::from(out.as_slice())
+    }
+
     /// Bodies on the field.
     #[func]
     fn count(&self) -> i64 {
         self.field.count() as i64
     }
 
-    /// Microseconds of native work in the last sync, part or plan.
+    /// Microseconds of native work in the last sync, part, plan or face.
     #[func]
     fn usec(&self) -> i64 {
         self.usec

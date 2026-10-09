@@ -27,7 +27,6 @@ const GroundBodies = preload("res://sim/skirmish/formation/ground_bodies.gd")
 const BodyGrid = preload("res://sim/skirmish/formation/body_grid.gd")
 const SkirmishSquad = preload("res://sim/skirmish/formation/skirmish_squad.gd")
 const BattleTuning = preload("res://content/definitions/battle_tuning.gd")
-const UnitMotion = preload("res://sim/skirmish/formation/unit_motion.gd")
 
 var _spent := {}
 var _last := 0
@@ -216,9 +215,5 @@ func _walk_and_face(ctx: Dictionary) -> void:
 		var crowding := BattleTuning.current().scrum_crowding if squad.pursuit.is_empty() else 1.0
 		Scrum._walk(squad, ctx["pace"] * crowding, ctx)
 	_lap("scrum: walk (steering)")
-	var turns := []
-	for squad in fighting:
-		turns.append_array(Scrum._faces(squad, ctx))
-	for turn in turns:
-		UnitMotion.turn(turn[0], turn[1], ctx["seconds"])
+	Scrum.face(fighting, ctx)
 	_lap("scrum: face foes")

@@ -8,18 +8,21 @@ reference behind one switch. The first production piece is in place:
 - **Body parting** (UnitBodies) runs on the field.
 - **The scrum's slot search** (ScrumSeek with SlotSearch, ScrumSlots and ScrumNear) runs
   on the field.
+- **The scrum's facing** (FormationScrum._faces and the turns: ScrumBlows.nearest_touching,
+  UnitShuffle.look, UnitMotion's bearing_to, pace and turn) runs on the field, after the
+  walk, for the units the slot search was given.
 
-Both reproduce the GDScript reference bit for bit. The C++ kernel from the spike
+All three reproduce the GDScript reference bit for bit. The C++ kernel from the spike
 (#174) is retired.
 
 | | |
 |---|---|
 | Switch | `sim/skirmish/formation/native_kernels.gd`: `BREACH_NATIVE=gdscript\|rust` (env), else project setting `breach/native/engine`, else `gdscript`. `BREACH_NATIVE_THREADS=1` lets body parting use Rayon. A checkout without the library runs on GDScript, silently. |
 | Rust | `native/rust/` - `godot` 0.5.5 (`api-4-7`), class `BodyField` |
-| GDScript side | `body_field_sync.gd` (the sync), `body_parting.gd` (parting on the field), `scrum_seek_field.gd` (the slot search on the field) |
+| GDScript side | `body_field_sync.gd` (the sync), `body_parting.gd` (parting on the field), `scrum_seek_field.gd` (the slot search on the field), `scrum_face_field.gd` (the facing on the field) |
 | Owner | `FormationSimulation._field`: one field a battle, made when the battle is (null under GDScript) |
-| Benchmarks | `tools/native_bench.gd` (the two passes, split), `tools/tick_phases.gd` (a whole tick, phase by phase), `tools/formation_bench.gd` (whole ticks) |
-| Identity | `tools/formation_digest.gd` (every set, both engines); `tests/sim/skirmish/formation/test_body_field.gd` and `test_body_parting.gd`; the whole suite under `BREACH_NATIVE=rust` |
+| Benchmarks | `tools/native_bench.gd` (parting and the slot search, split), `tools/facing_bench.gd` (the facing pass alone, and DetMath), `tools/tick_phases.gd` (a whole tick, phase by phase), `tools/formation_bench.gd` (whole ticks) |
+| Identity | `tools/formation_digest.gd` (every set, both engines); `tests/sim/skirmish/formation/test_body_field.gd`, `test_body_parting.gd` and `test_face_field.gd`; the whole suite under `BREACH_NATIVE=rust` |
 
 ## The native state and its boundary
 
@@ -41,6 +44,11 @@ ScrumSeekField.plan ------ plan(rules' say) ---> seek: touch, contest order, kep
   per unit: may seek, speed, place, goal           (native/rust/src/grid.rs); claims
   <- per unit: touch/stand/aim/press/idle, goal, next, foe_at
   within(unit, point) <- asked only on terrain
+ScrumFaceField.face ------ face(after the walk) -> facing: the touching foe (front, distance,
+  the plan's units, each: where it stands now,     draw), UnitShuffle.look, bearing_to,
+  bearing, turn rate, backward pace, and what      the turn at its rate (motion.rs,
+  its entry makes for (next, foe_at, toward)       DetMath's atan2 and acos)
+  <- every unit's bearing after its turn
 ```
 
 **What the field owns.** Everything about a body that doesn't change tick to tick:
@@ -93,9 +101,12 @@ The rules for matching Godot bit for bit (`native/rust/src/maths.rs`):
   in its own precision. `distance_to`, `length` and `dot` are f32 and widened when they
   meet an f64; `Vector2 * float` narrows the float first.
 - `snappedf` is `floor(v / step + 0.5) * step`.
-- `UnitMotion.vector` is `bearing * (PI / 180)` through `DetMath.sin` and `DetMath.cos`
-  (`det_math.rs` is the same operations in the same order, and `cargo test` checks it
-  against bits printed by Godot). sim/ calls no platform transcendental function: the C
+- `UnitMotion.vector` is `bearing * (PI / 180)` through `DetMath.sin` and `DetMath.cos`;
+  `bearing_to`, `pace` and UnitShuffle's turning go through `DetMath.atan2` and
+  `DetMath.acos` (`det_math.rs` has sin, cos, asin, acos and atan2, the same operations
+  in the same order; `cargo test` checks them against bits printed by Godot, and
+  `test_face_field.gd` against the GDScript on 20,000 inputs each). `motion.rs` has
+  Godot's `fposmod`, `clampf`, `maxf` and `rad_to_deg` as the engine computes them. sim/ calls no platform transcendental function: the C
   library's differ between glibc, the Windows CRT and Apple's libm, so a battle wouldn't
   replay across machines. DetMath and DetPow use only IEEE 754's exact operations;
   `test_det_math.gd` pins their bits and `tools/platform_probe.gd` prints them.
@@ -135,6 +146,9 @@ The suite proves the same:
   across ticks while units die and change squad, and a 40-a-side battle.
 - `test_body_field.gd`: the hash, the roster, and the slot search planning a mid-fight
   scrum the same as GDScript at four moments and whatever the list order.
+- `test_face_field.gd`: DetMath's bits in Rust, and a mid-fight scrum planned, walked and
+  turned to the same bearings as GDScript at four moments, with every unit given a
+  bearing of its own and its looks moved, and whatever the list order.
 - The whole suite under `BREACH_NATIVE=rust`, including its reversed-list tests:
   955 of 955 pass, as they do on GDScript.
 
@@ -172,7 +186,27 @@ Where the Rust passes' time goes, at 1,024 a side:
 - **Rayon** (`BREACH_NATIVE_THREADS=1`, parting only) is within noise or slower at every
   size: 3 ms isn't worth a thread pool.
 
-### Where a tick's time goes now (`tools/tick_phases.gd`, 1,024 a side, 32 wide)
+### The facing pass (`tools/facing_bench.gd`, 1,024 a side, 32 wide)
+
+DetMath (#186) made the early fight's "scrum: face foes" phase 33 -> 49 ms: about 0.6-0.8
+us a call in GDScript, and the pass makes about 3,900 atan2, 3,700 acos and 2,900 sin+cos
+calls. Timed alone, 20 repetitions on one snapshot (tick 100), the bearings restored
+between them; ms a pass, median:
+
+| engine | before (GDScript facing) | after |
+|---|---:|---:|
+| GDScript | 42.4 | 44.8 (the same code; noise) |
+| Rust | 44.9 | **4.5** (gather 3.7, call 0.4 of which the core 0.4, write back 0.4) |
+
+The GDScript pass split: foe grids 5.6, the touching foe 18, looks and bearings 22 (DetMath
+about 10 of it), turns 1.9. DetMath alone: about 650-860 ns a call in GDScript, 13-20 ns
+in Rust (one call over 100,000 inputs, the boundary included). What remains under Rust is
+GDScript reading each unit's loose entry (3.7 ms): it goes when the field owns positions.
+
+`tools/tick_phases.gd engine=rust side=1024 stage=fight fight=5`: the whole tick 204-220
+-> 148-162 ms, "scrum: face foes" 45-51 -> 5 ms (below the 181 ms of before DetMath).
+
+### Where a tick's time goes (`tools/tick_phases.gd`, 1,024 a side, 32 wide, before facing)
 
 | phase | GDScript | Rust |
 |---|---:|---:|
@@ -209,7 +243,7 @@ Reading it: at 1,024 a side the tick is about 3.5x faster, but it is still 2.4x 
 The next ports, in order of payoff:
 
 1. Positions owned by the field, which removes the syncs.
-2. ScrumNear, facing and steering.
+2. ScrumNear and steering (facing is done).
 3. Blows.
 4. A profile of the deaths/wounds phase, which may be a GDScript fix rather than a port.
 
