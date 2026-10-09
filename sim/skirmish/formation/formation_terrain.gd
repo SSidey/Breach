@@ -27,6 +27,9 @@ var walker_shares := {}
 ## How much each cell hides what lies beyond it, and the fog (spec 30).
 var obscurance: TerrainObscurance
 
+## The fastest ground painted (a road's cost above 1): searches divide their estimates by
+## it, so a quicker way along a road is never overlooked (PathSearch).
+var fastest := 1.0
 var _cost := PackedFloat32Array()
 var _height := PackedInt32Array()
 var _depth := PackedFloat32Array()
@@ -59,6 +62,7 @@ func paint(area: Rect2i, props: Dictionary) -> void:
 		for x in range(clipped.position.x, clipped.end.x):
 			var index := y * size.x + x
 			_cost[index] = props.get("cost", _cost[index])
+			fastest = maxf(fastest, _cost[index])
 			_height[index] = props.get("height", _height[index])
 			_depth[index] = props.get("depth", _depth[index])
 			_climb[index] = props.get("climb", _climb[index])

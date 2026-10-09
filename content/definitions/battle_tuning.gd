@@ -275,22 +275,22 @@ static var _current: BattleTuning = null
 ## How far (cells) a pursuing formation's foremost unit may lag behind its place before the
 ## frame waits for it.
 @export var reach_pursuit_lag := 0.0
-## Seconds a squad holds while narrowing at a gap or widening past it.
-@export var reach_narrow_seconds := 0.0
 
 @export_group("Walking (spec 30 round 3)")
-## Cells a unit may lag behind its place before its formation waits (at discipline 100,
-## and at 0; between by discipline); past walk_lost it has fallen behind (waited for only if
-## no man is left behind); past walk_face_travel it faces where it walks.
+## Cells a unit may lag its place before its formation waits (at discipline 100, 0); past
+## walk_lost it has fallen behind; past walk_face_travel it faces where it walks.
 @export var walk_slack_drilled := 0.0
 @export var walk_slack_loose := 0.0
 @export var walk_lost := 0.0
 @export var walk_face_travel := 0.0
-## Cells within which friendly groups form up (FormationGroups) and fallen-behind units
-## split off together; the reach (cells) and hold (seconds) of taking the downed.
+## Cells to form up or split off together; the reach and hold (seconds) of taking the downed.
 @export var group_join := 0.0
 @export var take_reach := 0.0
 @export var take_hold := 0.0
+## Groups look path_look cells ahead every path_relook, going round if path_detour_gain quicker.
+@export var path_look := 0.0
+@export var path_relook := 0.0
+@export var path_detour_gain := 0.0
 
 
 ## The tuning in play: content/tuning/battle_tuning.tres, loaded once.

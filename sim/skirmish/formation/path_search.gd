@@ -188,7 +188,8 @@ func _sees(index: int) -> bool:
 
 ## The least time from the cell at `index` to the goal at full pace on open ground: the
 ## octile distance to a goal cell; for a route, the straight distance to its line less
-## ON_ROUTE (a step's pace is never above 1).
+## ON_ROUTE - each over the fastest ground painted (a road can be quicker than open
+## ground), so the estimate never overestimates.
 func _estimate(index: int) -> float:
 	if _remaining[index] < 0.0:
 		var cell := _cell(index)
@@ -200,6 +201,7 @@ func _estimate(index: int) -> float:
 		else:
 			var centre := _centre(cell)
 			_remaining[index] = maxf(0.0, centre.distance_to(_on_route(centre)) - ON_ROUTE)
+		_remaining[index] /= _terrain.fastest
 	return _remaining[index]
 
 
