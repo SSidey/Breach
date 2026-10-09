@@ -19,8 +19,11 @@ const BodyParting = preload("res://sim/skirmish/formation/body_parting.gd")
 const ScrumSeek = preload("res://sim/skirmish/formation/scrum_seek.gd")
 const ScrumSeekField = preload("res://sim/skirmish/formation/scrum_seek_field.gd")
 
+## "rest" is the tick less the two passes. The b.* columns are parts of "bodies" and the
+## s.* columns parts of "seek", with each *.core inside its *.call: don't add them up.
 const COLUMNS := [
 	"tick",
+	"rest",
 	"bodies",
 	"b.sync",
 	"b.call",
@@ -82,7 +85,9 @@ func _measure(per_side: int, width: int, options: Dictionary) -> Array:
 	for _i in range(options["fight"]):
 		sim.step()
 	var ticks := float(options["fight"]) * 1000.0
-	var out := [(Time.get_ticks_usec() - began) / ticks, UnitBodies.clock_usec / ticks]
+	var tick := (Time.get_ticks_usec() - began) / ticks
+	var rest := tick - (UnitBodies.clock_usec + ScrumSeek.clock_usec) / ticks
+	var out := [tick, rest, UnitBodies.clock_usec / ticks]
 	for spent in BodyParting.spent:
 		out.append(spent / ticks)
 	out.append(ScrumSeek.clock_usec / ticks)

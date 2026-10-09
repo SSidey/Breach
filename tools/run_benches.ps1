@@ -8,6 +8,7 @@
 # On Windows use Godot 4.7.2's console build (Godot_v4.7.2-stable_win64_console.exe) so
 # its output reaches the report. Build the native core first (native\build.ps1, or
 # native/build.sh elsewhere). Steps:
+#   0. platform maths: a hash per maths primitive, to diff between machines
 #   1. identity: the per-tick digests under each engine, against the reference hashes -
 #      the same battles must replay bit for bit on every machine and engine
 #   2. a whole tick, phase by phase (tools/tick_phases.gd), mid-fight and marching
@@ -101,6 +102,10 @@ Write-Report "Engines: $($engines -join ', ')"
 
 Write-Report "`n== Importing the project"
 Invoke-Native @("--headless", "--path", $root, "--import") | Out-Null
+
+Write-Report "`n== Platform maths (tools/platform_probe.gd): diff these lines between machines"
+Invoke-Godot "res://tools/platform_probe.gd" @() "" |
+	Where-Object { $_ -match "^\s+\S|platform_probe" } | ForEach-Object { Write-Report $_ }
 
 if (-not $SkipDigests) {
 	Write-Report "`n== Identity: per-tick digests against the reference build"
